@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { readdirSync, existsSync } from 'fs';
 import { join, dirname, normalize } from 'path';
 import { homedir } from 'os';
+import { spawnSync } from 'child_process';
 
 export async function fsRoutes(app: FastifyInstance) {
   app.get('/api/v1/fs/browse', async (request, reply) => {
@@ -40,5 +41,48 @@ export async function fsRoutes(app: FastifyInstance) {
     } catch {
       return reply.status(403).send({ error: 'Cannot read directory' });
     }
+  });
+
+  app.post('/api/v1/fs/pick-folder', async (_request, reply) => {
+    const platform = process.platform;
+    let selectedPath: string | null = null;
+
+    try {
+      if (platform === 'win32') {
+        const ps = [
+          'Add-Type -AssemblyName System.Windows.Forms;',
+          '$d = New-Object System.Windows.Forms.FolderBrowserDialog;',
+          '$d.ShowNewFolderButton = $true;',
+          'if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $d.SelectedPath }',
+        ].join(' ');
+        const result = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], {
+          encoding: 'utf-8',
+          timeout: 120000,
+        });
+        if (result.status === 0 && result.stdout?.trim()) {
+          selectedPath = result.stdout.trim();
+        }
+      } else if (platform === 'darwin') {
+        const result = spawnSync('osascript', ['-e', 'POSIX path of (choose folder)'], {
+          encoding: 'utf-8',
+          timeout: 120000,
+        });
+        if (result.status === 0 && result.stdout?.trim()) {
+          selectedPath = result.stdout.trim().replace(/\/$/, '');
+        }
+      } else {
+        const result = spawnSync('zenity', ['--file-selection', '--directory'], {
+          encoding: 'utf-8',
+          timeout: 120000,
+        });
+        if (result.status === 0 && result.stdout?.trim()) {
+          selectedPath = result.stdout.trim();
+        }
+      }
+    } catch {
+      return reply.send({ path: null, error: 'not_supported' });
+    }
+
+    return reply.send({ path: selectedPath });
   });
 }

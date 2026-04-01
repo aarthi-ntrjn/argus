@@ -34,6 +34,11 @@ export async function removeRepository(id: string): Promise<void> {
   await apiFetch<void>(`/repositories/${id}`, { method: 'DELETE' });
 }
 
+export async function pickFolder(): Promise<string | null> {
+  const result = await apiFetch<{ path: string | null; error?: string }>('/fs/pick-folder', { method: 'POST' });
+  return result.path;
+}
+
 export interface SessionFilters { repositoryId?: string; status?: string; type?: string; }
 
 export async function getSessions(filters?: SessionFilters): Promise<Session[]> {
