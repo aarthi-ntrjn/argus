@@ -131,7 +131,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T047 [US3] Implement `SessionController`: stop via `process.kill(pid, 'SIGTERM')` (Unix) or `taskkill /PID {pid} /T` (Windows); persist `ControlAction` records at `backend/src/services/session-controller.ts`
+- [X] T047 [US3] Implement `SessionController`: stop via `process.kill(pid, 'SIGTERM')` (Unix) or `taskkill /PID {pid} /T` (Windows); persist `ControlAction` records at `backend/src/services/session-controller.ts`
 - [ ] T048 [US3] Implement `POST /api/v1/sessions/:id/stop` route handler using `SessionController` at `backend/src/api/routes/sessions.ts`
 - [ ] T049 [US3] Implement `POST /api/v1/sessions/:id/send` route handler: `501` for `copilot-cli` with message "Prompt injection not supported for Copilot CLI in v1", `202` accepted for `claude-code`; persist `ControlAction` at `backend/src/api/routes/sessions.ts`
 - [ ] T050 [US3] Wire `action.updated` WebSocket broadcast in `event-dispatcher.ts` triggered by `ControlAction` status changes at `backend/src/api/ws/event-dispatcher.ts`
