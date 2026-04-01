@@ -76,6 +76,8 @@ npm run test:e2e          # headless
 npm run test:e2e:ui       # interactive Playwright UI (pick tests, see trace)
 ```
 
+> **Note**: For `--ui` mode, start the dev server first in a separate terminal (`npm run dev`), then run the UI command. If no server is running Playwright may fail to open the window.
+
 **Config**: `playwright.config.ts`  
 **Tests**: `frontend/tests/e2e/sc-001-*.spec.ts`, `sc-002-*.spec.ts`, `sc-004-*.spec.ts`
 
