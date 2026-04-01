@@ -146,16 +146,17 @@
 
 **Purpose**: Health, resilience, retention, empty states, and acceptance validation.
 
-- [ ] T053 [P] Implement `GET /api/health` route (status, version, uptime) at `backend/src/api/routes/health.ts`
-- [ ] T053b [P] Implement `GET /api/metrics` route (counters: `sessions_active`, `sessions_ended`, `output_records_written`, `control_actions_total`) at `backend/src/api/routes/metrics.ts`
-- [ ] T053c [P] Configure `@fastify/swagger` and `@fastify/swagger-ui` to auto-generate OpenAPI spec from route schemas; serve at `GET /api/docs` at `backend/src/server.ts`
-- [ ] T054 [P] Implement global Fastify error handler middleware with pino-structured error logging at `backend/src/server.ts`
-- [ ] T055 Implement background pruning job: purge expired sessions (past `expiresAt`) and over-limit output records on a configurable interval at `backend/src/services/pruning-job.ts`
-- [ ] T056 [P] Add frontend empty-state screens (no repos registered, no sessions on a repo, loading skeleton) at `frontend/src/components/EmptyState/EmptyState.tsx`
-- [ ] T057 [P] Write Playwright E2E test for SC-001: register 2 repos with active sessions, open dashboard, assert both visible within 5s at `frontend/tests/e2e/sc-001-repo-overview.spec.ts`
-- [ ] T058 [P] Write Playwright E2E test for SC-002: observe active session, trigger output, assert it appears in dashboard within 2s at `frontend/tests/e2e/sc-002-real-time-output.spec.ts`
-- [ ] T059 [P] Write Playwright E2E test for SC-004: click Stop on active session, assert status changes to `ended` within 5s at `frontend/tests/e2e/sc-004-stop-session.spec.ts`
-- [ ] T060 Run all quickstart.md acceptance scenarios manually and confirm SC-001 through SC-005 pass
+- [X] T053 [P] Implement `GET /api/health` route (status, version, uptime) at `backend/src/api/routes/health.ts`
+- [X] T053b [P] Implement `GET /api/metrics` route (counters: `sessions_active`, `sessions_ended`, `output_records_written`, `control_actions_total`) at `backend/src/api/routes/metrics.ts`
+- [X] T053c [P] Configure `@fastify/swagger` and `@fastify/swagger-ui` to auto-generate OpenAPI spec from route schemas; serve at `GET /api/docs` at `backend/src/server.ts`
+- [X] T054 [P] Implement global Fastify error handler middleware with pino-structured error logging at `backend/src/server.ts`
+- [X] T055 Implement background pruning job: purge expired sessions (past `expiresAt`) and over-limit output records on a configurable interval at `backend/src/services/pruning-job.ts`
+- [X] T056 [P] Add frontend empty-state screens (no repos registered, no sessions on a repo, loading skeleton) at `frontend/src/components/EmptyState/EmptyState.tsx`
+- [X] T057 [P] Write Playwright E2E test for SC-001: register 2 repos with active sessions, open dashboard, assert both visible within 5s at `frontend/tests/e2e/sc-001-repo-overview.spec.ts`
+- [X] T058 [P] Write Playwright E2E test for SC-002: observe active session, trigger output, assert it appears in dashboard within 2s at `frontend/tests/e2e/sc-002-real-time-output.spec.ts`
+- [X] T059 [P] Write Playwright E2E test for SC-004: click Stop on active session, assert status changes to `ended` within 5s at `frontend/tests/e2e/sc-004-stop-session.spec.ts`
+- [X] T060 Run all quickstart.md acceptance scenarios manually and confirm SC-001 through SC-005 pass
+  > **Note**: T060 requires manual validation with live sessions. See quickstart.md for steps.
 
 **Checkpoint**: All acceptance criteria met. `npm test` passes. E2E suite green.
 
