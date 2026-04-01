@@ -40,12 +40,12 @@ export interface SessionOutput {
 }
 
 export interface DashboardSettings {
-  showEndedSessions: boolean;
+  hideEndedSessions: boolean;
   hideReposWithNoActiveSessions: boolean;
 }
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
-  showEndedSessions: true,
+  hideEndedSessions: false,
   hideReposWithNoActiveSessions: false,
 };
 

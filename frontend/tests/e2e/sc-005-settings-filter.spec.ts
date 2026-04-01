@@ -24,10 +24,10 @@ function mockApis(page: import('@playwright/test').Page) {
 test.describe('SC-005: Dashboard Settings — Filter Ended Sessions', () => {
 
   // US1: Toggle visibility
-  test('hides ended/completed sessions when showEndedSessions is false', async ({ page }) => {
+  test('hides ended/completed sessions when hideEndedSessions is true', async ({ page }) => {
     await mockApis(page);
     await page.addInitScript(() => {
-      localStorage.setItem('argus:settings', JSON.stringify({ showEndedSessions: false }));
+      localStorage.setItem('argus:settings', JSON.stringify({ hideEndedSessions: true }));
     });
     await page.goto('/');
     await expect(page.getByText('active-repo')).toBeVisible({ timeout: 5000 });
@@ -36,10 +36,10 @@ test.describe('SC-005: Dashboard Settings — Filter Ended Sessions', () => {
     await expect(page.getByText('Ended session')).not.toBeVisible();
   });
 
-  test('shows all sessions when showEndedSessions is true (default)', async ({ page }) => {
+  test('shows all sessions when hideEndedSessions is false (default)', async ({ page }) => {
     await mockApis(page);
     await page.addInitScript(() => {
-      localStorage.setItem('argus:settings', JSON.stringify({ showEndedSessions: true }));
+      localStorage.setItem('argus:settings', JSON.stringify({ hideEndedSessions: false }));
     });
     await page.goto('/');
     await expect(page.getByText('Active session')).toBeVisible({ timeout: 5000 });
@@ -56,10 +56,10 @@ test.describe('SC-005: Dashboard Settings — Filter Ended Sessions', () => {
   });
 
   // US2: Persistence
-  test('persists showEndedSessions=false preference across page reload', async ({ page }) => {
+  test('persists hideEndedSessions=true preference across page reload', async ({ page }) => {
     await mockApis(page);
     await page.addInitScript(() => {
-      localStorage.setItem('argus:settings', JSON.stringify({ showEndedSessions: false }));
+      localStorage.setItem('argus:settings', JSON.stringify({ hideEndedSessions: true }));
     });
     await page.goto('/');
     await expect(page.getByText('Completed session')).not.toBeVisible();
@@ -85,19 +85,19 @@ test.describe('SC-005: Dashboard Settings — Filter Ended Sessions', () => {
     await expect(page.getByRole('button', { name: /settings/i })).toBeVisible({ timeout: 5000 });
   });
 
-  test('clicking gear icon opens settings panel with Show ended sessions toggle', async ({ page }) => {
+  test('clicking gear icon opens settings panel with Hide ended sessions toggle', async ({ page }) => {
     await mockApis(page);
     await page.goto('/');
     await page.getByRole('button', { name: /settings/i }).click();
-    await expect(page.getByText('Show ended sessions')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText('Hide ended sessions')).toBeVisible({ timeout: 3000 });
   });
 
-  test('toggling Show ended sessions off via panel hides ended sessions immediately', async ({ page }) => {
+  test('toggling Hide ended sessions on via panel hides ended sessions immediately', async ({ page }) => {
     await mockApis(page);
     await page.goto('/');
     await expect(page.getByText('Completed session')).toBeVisible({ timeout: 5000 });
     await page.getByRole('button', { name: /settings/i }).click();
-    await page.getByRole('checkbox', { name: /show ended sessions/i }).uncheck();
+    await page.getByRole('checkbox', { name: /hide ended sessions/i }).check();
     await expect(page.getByText('Completed session')).not.toBeVisible();
     await expect(page.getByText('Ended session')).not.toBeVisible();
     await expect(page.getByText('Active session')).toBeVisible();
@@ -132,7 +132,7 @@ test.describe('SC-005: Dashboard Settings — Hide Repos with No Active Sessions
   test('hides repos with only ended sessions when hideReposWithNoActiveSessions is true', async ({ page }) => {
     await mockTwoRepoApis(page);
     await page.addInitScript(() => {
-      localStorage.setItem('argus:settings', JSON.stringify({ showEndedSessions: true, hideReposWithNoActiveSessions: true }));
+      localStorage.setItem('argus:settings', JSON.stringify({ hideEndedSessions: false, hideReposWithNoActiveSessions: true }));
     });
     await page.goto('/');
     await expect(page.getByText('active-repo')).toBeVisible({ timeout: 5000 });
@@ -142,7 +142,7 @@ test.describe('SC-005: Dashboard Settings — Hide Repos with No Active Sessions
   test('shows all repos when hideReposWithNoActiveSessions is false (default)', async ({ page }) => {
     await mockTwoRepoApis(page);
     await page.addInitScript(() => {
-      localStorage.setItem('argus:settings', JSON.stringify({ showEndedSessions: true, hideReposWithNoActiveSessions: false }));
+      localStorage.setItem('argus:settings', JSON.stringify({ hideEndedSessions: false, hideReposWithNoActiveSessions: false }));
     });
     await page.goto('/');
     await expect(page.getByText('active-repo')).toBeVisible({ timeout: 5000 });
@@ -153,7 +153,7 @@ test.describe('SC-005: Dashboard Settings — Hide Repos with No Active Sessions
     const allEndedSessions = TWO_REPOS_SESSIONS.map(s => ({ ...s, status: 'completed' }));
     await mockTwoRepoApis(page, allEndedSessions);
     await page.addInitScript(() => {
-      localStorage.setItem('argus:settings', JSON.stringify({ showEndedSessions: true, hideReposWithNoActiveSessions: true }));
+      localStorage.setItem('argus:settings', JSON.stringify({ hideEndedSessions: false, hideReposWithNoActiveSessions: true }));
     });
     await page.goto('/');
     await expect(page.getByText('active-repo')).not.toBeVisible();

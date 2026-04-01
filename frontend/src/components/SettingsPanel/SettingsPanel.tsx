@@ -13,12 +13,12 @@ export function SettingsPanel({ settings, onToggle }: SettingsPanelProps) {
       <label className="flex items-center gap-3 cursor-pointer select-none py-1">
         <input
           type="checkbox"
-          aria-label="Show ended sessions"
-          checked={settings.showEndedSessions}
-          onChange={e => onToggle('showEndedSessions', e.target.checked)}
+          aria-label="Hide ended sessions"
+          checked={settings.hideEndedSessions}
+          onChange={e => onToggle('hideEndedSessions', e.target.checked)}
           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
-        <span className="text-sm text-gray-700">Show ended sessions</span>
+        <span className="text-sm text-gray-700">Hide ended sessions</span>
       </label>
       <label className="flex items-center gap-3 cursor-pointer select-none py-1">
         <input

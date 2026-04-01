@@ -5,16 +5,16 @@
 ### Toggling Ended Session Visibility
 
 1. Open the Argus dashboard (`http://localhost:7411`)
-2. Click the **gear icon** () in the dashboard header/toolbar
-3. In the settings panel, find **"Show ended sessions"**  it is on by default
-4. Toggle it off to hide all completed/ended sessions from the repository cards
-5. Toggle it back on to show them again
+2. Click the **gear icon** (⚙) in the dashboard header/toolbar
+3. In the settings panel, find **"Hide ended sessions"** — it is off by default (ended sessions are shown)
+4. Toggle it on to hide all completed/ended sessions from the repository cards
+5. Toggle it off again to show them
 
 Your preference is automatically saved and will be restored the next time you open the dashboard.
 
 ### Empty State
 
-If "Show ended sessions" is off and all sessions in a repository card are ended, the card shows an empty-state message instead of a blank area.
+If "Hide ended sessions" is on and all sessions in a repository card are ended, the card shows an empty-state message instead of a blank area.
 
 ---
 
