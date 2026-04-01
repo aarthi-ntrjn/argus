@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { getRepositories, getSessions, addRepository, removeRepository, apiFetch, queryClient } from '../services/api';
+import { getRepositories, getSessions, addRepository, removeRepository, pickFolder, apiFetch, queryClient } from '../services/api';
 import type { Repository, Session } from '../types';
 import SessionCard from '../components/SessionCard/SessionCard';
-import { FolderBrowser } from '../components/FolderBrowser';
 
 interface RepoWithSessions extends Repository {
   sessions: Session[];
@@ -19,15 +18,14 @@ export default function DashboardPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addTab, setAddTab] = useState<'single' | 'scan'>('single');
   const [newRepoPath, setNewRepoPath] = useState('');
-  const [showBrowser, setShowBrowser] = useState(false);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [pickingFolder, setPickingFolder] = useState(false);
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
 
   // Scan tab state
   const [scanPath, setScanPath] = useState('');
-  const [showScanBrowser, setShowScanBrowser] = useState(false);
   const [scannedRepos, setScannedRepos] = useState<ScannedRepo[]>([]);
   const [scanning, setScanning] = useState(false);
 
@@ -55,12 +53,35 @@ export default function DashboardPage() {
       await queryClient.invalidateQueries({ queryKey: ['repositories'] });
       setShowAddModal(false);
       setNewRepoPath('');
-      setShowBrowser(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to add repository';
       setAddError(msg);
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleBrowse = async () => {
+    setPickingFolder(true);
+    try {
+      const path = await pickFolder();
+      if (path) setNewRepoPath(path);
+    } catch {
+      setAddError('Folder picker not available — enter path manually');
+    } finally {
+      setPickingFolder(false);
+    }
+  };
+
+  const handleBrowseForScan = async () => {
+    setPickingFolder(true);
+    try {
+      const path = await pickFolder();
+      if (path) setScanPath(path);
+    } catch {
+      setAddError('Folder picker not available — enter path manually');
+    } finally {
+      setPickingFolder(false);
     }
   };
 
@@ -78,7 +99,6 @@ export default function DashboardPage() {
       setScanning(false);
     }
   };
-
   const handleAddSelected = async () => {
     setAdding(true);
     setAddError(null);
@@ -102,12 +122,10 @@ export default function DashboardPage() {
   const closeModal = () => {
     setShowAddModal(false);
     setNewRepoPath('');
-    setShowBrowser(false);
     setAddError(null);
     setAddTab('single');
     setScanPath('');
     setScannedRepos([]);
-    setShowScanBrowser(false);
   };
 
   const handleRemoveRepo = async () => {
@@ -216,25 +234,23 @@ export default function DashboardPage() {
             {addTab === 'single' && (
               <form onSubmit={handleAddRepo}>
                 <div className="mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowBrowser(!showBrowser)}
-                    className="text-sm text-blue-600 hover:underline mb-2"
-                  >
-                    {showBrowser ? 'Hide browser' : 'Browse…'}
-                  </button>
-                  {showBrowser && (
-                    <div className="border rounded mb-3 max-h-64 overflow-y-auto">
-                      <FolderBrowser onSelect={(p) => { setNewRepoPath(p); setShowBrowser(false); }} />
-                    </div>
-                  )}
-                  <input
-                    type="text"
-                    value={newRepoPath}
-                    onChange={(e) => setNewRepoPath(e.target.value)}
-                    placeholder="Enter repository path..."
-                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={newRepoPath}
+                      onChange={(e) => setNewRepoPath(e.target.value)}
+                      placeholder="Enter repository path..."
+                      className="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleBrowse}
+                      disabled={pickingFolder}
+                      className="bg-gray-100 text-gray-700 px-3 py-2 rounded hover:bg-gray-200 disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {pickingFolder ? '…' : 'Browse…'}
+                    </button>
+                  </div>
                 </div>
                 {addError && <p className="text-red-500 text-sm mb-3">{addError}</p>}
                 <div className="flex justify-end gap-2">
@@ -249,19 +265,23 @@ export default function DashboardPage() {
             {addTab === 'scan' && (
               <div>
                 <div className="mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowScanBrowser(!showScanBrowser)}
-                    className="text-sm text-blue-600 hover:underline mb-2"
-                  >
-                    {showScanBrowser ? 'Hide browser' : 'Browse for folder…'}
-                  </button>
-                  {showScanBrowser && (
-                    <div className="border rounded mb-3 max-h-64 overflow-y-auto">
-                      <FolderBrowser onSelect={(p) => { setScanPath(p); setShowScanBrowser(false); }} />
-                    </div>
-                  )}
-                  {scanPath && <p className="text-sm text-gray-600 mb-2">Selected: <span className="font-mono">{scanPath}</span></p>}
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={scanPath}
+                      onChange={(e) => setScanPath(e.target.value)}
+                      placeholder="Enter folder path to scan..."
+                      className="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleBrowseForScan}
+                      disabled={pickingFolder}
+                      className="bg-gray-100 text-gray-700 px-3 py-2 rounded hover:bg-gray-200 disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {pickingFolder ? '…' : 'Browse…'}
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={handleScan}
