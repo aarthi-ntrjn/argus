@@ -185,6 +185,10 @@
 
 - [ ] T069 Fix `SessionMonitor.runScan()` in `backend/src/services/session-monitor.ts` to detect sessions that were active but are no longer returned by `CopilotCliDetector.scan()` (e.g., because the session directory was cleaned up on process exit): after each scan, diff the set of currently-returned active session IDs against a `Map<string, Session>` of previously-active sessions; for any session that has disappeared or now has `status: 'ended'`, call `updateSessionStatus(id, 'ended', endedAt)` in `backend/src/db/database.ts` and emit `session.ended`; add `updateSessionStatus` export to `database.ts` if not present
 
+### Addendum: Bug — Copilot CLI session not detected (path mismatch)
+
+- [ ] T070 Fix `getRepositoryByPath` in `backend/src/db/database.ts` and `CopilotCliDetector.processSessionDir` in `backend/src/services/copilot-cli-detector.ts` to handle path variations on Windows (case, trailing separator, forward vs backslash): normalize both the registered repo path and the `workspace.cwd` to lowercase with `path.normalize()` before comparing; update `getRepositoryByPath` to perform a case-insensitive lookup using `LOWER(path) = LOWER(?)` so sessions whose `cwd` differs only in case or separators are correctly matched to their repo
+
 **Checkpoint**: All acceptance criteria met. `npm test` passes. E2E suite green.
 
 ---
