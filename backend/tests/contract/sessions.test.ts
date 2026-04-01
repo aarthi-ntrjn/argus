@@ -74,4 +74,11 @@ describe('Sessions API', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  describe('POST /api/v1/sessions/:id/send', () => {
+    it('returns 404 for unknown session', async () => {
+      const res = await request.post('/api/v1/sessions/unknown-id/send').send({ prompt: 'test' });
+      expect(res.status).toBe(404);
+    });
+  });
 });
