@@ -47,7 +47,7 @@ export class SessionMonitor extends EventEmitter {
       const runningPids = new Set(processes.map((p) => p.pid));
       const now = new Date().toISOString();
       for (const session of activeSessions) {
-        if (!session.pid || !runningPids.has(session.pid)) {
+        if (session.pid != null && !runningPids.has(session.pid)) {
           updateSessionStatus(session.id, 'ended', now);
         }
       }

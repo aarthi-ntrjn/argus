@@ -203,7 +203,7 @@
 
 ### Addendum: Bug — Claude Code sessions marked ended on server restart
 
-- [ ] T074 Fix `reconcileStaleSessions()` in `backend/src/services/session-monitor.ts`: the condition `if (!session.pid || ...)` evaluates `!null` as `true`, so every Claude Code session created via hooks (which always have `pid: null`) is incorrectly marked `ended` on every server restart; fix by changing the condition to `if (session.pid != null && !runningPids.has(session.pid))` so sessions without a known PID are skipped — their lifecycle is managed by hooks, not by PID presence
+- [X] T074 Fix `reconcileStaleSessions()` in `backend/src/services/session-monitor.ts`: the condition `if (!session.pid || ...)` evaluates `!null` as `true`, so every Claude Code session created via hooks (which always have `pid: null`) is incorrectly marked `ended` on every server restart; fix by changing the condition to `if (session.pid != null && !runningPids.has(session.pid))` so sessions without a known PID are skipped — their lifecycle is managed by hooks, not by PID presence
 
 **Checkpoint**: All acceptance criteria met. `npm test` passes. E2E suite green.
 
