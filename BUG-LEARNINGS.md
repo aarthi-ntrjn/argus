@@ -16,3 +16,17 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 - Any `try/catch` that silences errors should `console.warn` the error so failures surface during development.
 - Add integration tests that pass **real fixture files** (not mocked values) through the full parse → insert pipeline.
 **Fix summary**: Added `toIso(val: string | Date)` helper in `copilot-cli-detector.ts`; coerces `created_at`/`updated_at` to ISO strings via `new Date(val).toISOString()` before constructing the `Session` object.
+
+---
+
+## T074 — Claude Code sessions marked ended on server restart
+
+**Date**: 2026-04-01
+**Symptom**: After restarting the Argus server, all Claude Code sessions appeared as `ended` in the dashboard even though Claude was still actively running.
+**Root cause**: `reconcileStaleSessions()` in `session-monitor.ts` used `if (!session.pid || ...)` to decide whether to mark a session ended. `!null === true` in JavaScript, so every Claude Code session created via hooks (which always store `pid: null`) was unconditionally marked `ended` on every startup.
+**Why it was missed**: The original T072 task description explicitly said to mark sessions ended "whose pid is null" — that was incorrect guidance baked into the spec. There were no integration tests for `reconcileStaleSessions()` behaviour with null-PID sessions, so the bug shipped with the fix.
+**How to prevent**:
+- Never use falsy checks (`!value`) to guard null vs zero/absent — use explicit `!= null` comparisons when null has semantic meaning distinct from 0 or undefined.
+- When a session field can legitimately be null (no PID assigned), document what null means and handle it explicitly in any code that branches on that field.
+- Add regression tests for startup reconciliation covering both the null-PID (skip) and dead-PID (end) cases.
+**Fix summary**: Changed condition in `reconcileStaleSessions()` from `!session.pid ||` to `session.pid != null &&` so sessions without a known PID are skipped; added two regression tests in `tests/unit/session-monitor.test.ts`.
