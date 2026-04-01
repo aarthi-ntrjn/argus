@@ -4,7 +4,7 @@ import { join, dirname, normalize, basename } from 'path';
 import { homedir } from 'os';
 import { spawnSync } from 'child_process';
 
-function findGitRepos(dirPath: string, results: Array<{ path: string; name: string }> = []): Array<{ path: string; name: string }> {
+export function findGitRepos(dirPath: string, results: Array<{ path: string; name: string }> = []): Array<{ path: string; name: string }> {
   // If this dir is itself a git repo, add it and don't recurse into it
   if (existsSync(join(dirPath, '.git'))) {
     results.push({ path: dirPath, name: basename(dirPath) });
@@ -74,10 +74,10 @@ export async function fsRoutes(app: FastifyInstance) {
     const body = request.body as { path?: string };
     const scanPath = body?.path ? normalize(body.path) : null;
     if (!scanPath) {
-      return reply.status(400).send({ error: 'MISSING_PATH', message: 'path is required' });
+      return reply.status(400).send({ error: 'MISSING_PATH', message: 'path is required', requestId: request.id });
     }
     if (!existsSync(scanPath)) {
-      return reply.status(404).send({ error: 'PATH_NOT_FOUND', message: 'The specified folder does not exist.' });
+      return reply.status(404).send({ error: 'PATH_NOT_FOUND', message: 'The specified folder does not exist.', requestId: request.id });
     }
     app.log.info({ scanPath }, 'Starting recursive git repo scan');
     try {
@@ -86,7 +86,7 @@ export async function fsRoutes(app: FastifyInstance) {
       return reply.send({ repos });
     } catch (err) {
       app.log.error({ scanPath, err }, 'Scan failed');
-      return reply.send({ repos: [], error: 'SCAN_FAILED' });
+      return reply.status(500).send({ error: 'SCAN_FAILED', message: 'Failed to scan folder.', requestId: request.id, repos: [] });
     }
   });
 
