@@ -13,8 +13,9 @@ export const queryClient = new QueryClient({
 const BASE = '/api/v1';
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = init?.body ? { 'Content-Type': 'application/json' } : {};
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...init,
   });
   if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
