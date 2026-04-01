@@ -8,7 +8,7 @@ Client-side only. Stored in `localStorage` under key `argus:settings` as JSON.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `showEndedSessions` | `boolean` | `true` | When `false`, sessions with status `completed` or `ended` are hidden from all repository cards |
+| `hideEndedSessions` | `boolean` | `false` | When `true`, sessions with status `completed` or `ended` are hidden from all repository cards |
 | `hideReposWithNoActiveSessions` | `boolean` | `false` | When `true`, repository cards are hidden if they have no sessions with status `active`, `idle`, `waiting`, or `error` |
 
 **Validation rules:**
@@ -50,7 +50,7 @@ DashboardSettings.showEndedSessions:
 // localStorage key: "argus:settings"
 // Value (JSON string):
 {
-  "showEndedSessions": true,
+  "hideEndedSessions": false,
   "hideReposWithNoActiveSessions": false
 }
 ```

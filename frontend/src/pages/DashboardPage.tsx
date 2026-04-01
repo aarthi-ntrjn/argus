@@ -55,9 +55,9 @@ export default function DashboardPage() {
 
   const reposWithSessions: RepoWithSessions[] = repos.map((repo) => {
     const repoSessions = sessions.filter((s) => s.repositoryId === repo.id);
-    const visibleSessions = settings.showEndedSessions
-      ? repoSessions
-      : repoSessions.filter(s => !ENDED_STATUSES.has(s.status));
+    const visibleSessions = settings.hideEndedSessions
+      ? repoSessions.filter(s => !ENDED_STATUSES.has(s.status))
+      : repoSessions;
     return { ...repo, sessions: visibleSessions };
   }).filter((repo) => {
     if (!settings.hideReposWithNoActiveSessions) return true;
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                 </div>
                 {repo.sessions.length === 0 ? (
                   <p className="text-gray-400 text-sm">
-                    {settings.showEndedSessions ? 'No sessions' : 'No active sessions'}
+                    {settings.hideEndedSessions ? 'No active sessions' : 'No sessions'}
                   </p>
                 ) : (
                   <div className="space-y-2">
