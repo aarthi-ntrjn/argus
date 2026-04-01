@@ -11,7 +11,10 @@ import { addClient, removeClient, broadcast } from './api/ws/event-dispatcher.js
 import repositoriesRoutes from './api/routes/repositories.js';
 import sessionsRoutes from './api/routes/sessions.js';
 import hooksRoutes, { setClaudeDetector } from './api/routes/hooks.js';
+import healthRoutes from './api/routes/health.js';
+import metricsRoutes from './api/routes/metrics.js';
 import { SessionMonitor } from './services/session-monitor.js';
+import { startPruningJob } from './services/pruning-job.js';
 import type { Session, Repository } from './models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -70,10 +73,8 @@ export async function buildServer() {
   await app.register(repositoriesRoutes);
   await app.register(sessionsRoutes);
   await app.register(hooksRoutes);
-
-  app.get('/api/health', async (_req, reply) => {
-    return reply.send({ status: 'ok', version: '1.0.0', uptime: process.uptime() });
-  });
+  await app.register(healthRoutes);
+  await app.register(metricsRoutes);
 
   app.register(async (fastify) => {
     fastify.get('/ws', { websocket: true }, (connection) => {
@@ -106,6 +107,7 @@ export async function startServer() {
   });
 
   await monitor.start();
+  startPruningJob();
 
   process.on('SIGTERM', async () => { monitor?.stop(); await app.close(); process.exit(0); });
   process.on('SIGINT', async () => { monitor?.stop(); await app.close(); process.exit(0); });
