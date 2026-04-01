@@ -1,10 +1,13 @@
-import { readdirSync, existsSync, readFileSync } from 'fs';
+import { readdirSync, existsSync, readFileSync, openSync, readSync, closeSync, statSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
 import psList from 'ps-list';
 import { randomUUID } from 'crypto';
-import { getSession, upsertSession, getRepositoryByPath } from '../db/database.js';
+import chokidar, { type FSWatcher } from 'chokidar';
+import { upsertSession, getRepositoryByPath } from '../db/database.js';
+import { OutputStore } from './output-store.js';
+import { parseJsonlLine } from './events-parser.js';
 import type { Session } from '../models/index.js';
 
 const DEFAULT_SESSION_DIR = join(homedir(), '.copilot', 'session-state');
@@ -18,14 +21,17 @@ interface WorkspaceYaml {
 }
 
 export class CopilotCliDetector {
+  private watchers = new Map<string, FSWatcher>();
+  private filePositions = new Map<string, number>();
+  private sequenceCounters = new Map<string, number>();
+  private outputStore = new OutputStore();
+
   constructor(private sessionStateDir: string = DEFAULT_SESSION_DIR) {}
 
   async scan(): Promise<Session[]> {
     if (!existsSync(this.sessionStateDir)) return [];
-
     const runningPids = await this.getRunningPids();
     const sessions: Session[] = [];
-
     try {
       const entries = readdirSync(this.sessionStateDir, { withFileTypes: true });
       for (const entry of entries) {
@@ -34,7 +40,6 @@ export class CopilotCliDetector {
         if (session) sessions.push(session);
       }
     } catch { /* ignore */ }
-
     return sessions;
   }
 
@@ -80,7 +85,60 @@ export class CopilotCliDetector {
     };
 
     upsertSession(session);
+
+    if (isRunning) {
+      this.watchEventsFile(sessionId, dirPath);
+    }
+
     return session;
+  }
+
+  private watchEventsFile(sessionId: string, dirPath: string): void {
+    if (this.watchers.has(sessionId)) return;
+    const eventsFile = join(dirPath, 'events.jsonl');
+    if (!existsSync(eventsFile)) return;
+
+    this.filePositions.set(sessionId, statSync(eventsFile).size);
+    this.sequenceCounters.set(sessionId, 0);
+
+    const watcher = chokidar.watch(eventsFile, { persistent: false, usePolling: false });
+    watcher.on('change', () => this.readNewLines(sessionId, eventsFile));
+    this.watchers.set(sessionId, watcher);
+  }
+
+  private readNewLines(sessionId: string, filePath: string): void {
+    try {
+      const currentSize = statSync(filePath).size;
+      const lastPos = this.filePositions.get(sessionId) ?? 0;
+      if (currentSize <= lastPos) return;
+
+      const fd = openSync(filePath, 'r');
+      const buffer = Buffer.alloc(currentSize - lastPos);
+      readSync(fd, buffer, 0, buffer.length, lastPos);
+      closeSync(fd);
+      this.filePositions.set(sessionId, currentSize);
+
+      const newContent = buffer.toString('utf-8');
+      const lines = newContent.split('\n').filter((l) => l.trim());
+      let seq = this.sequenceCounters.get(sessionId) ?? 0;
+
+      const outputs = lines.map((line) => {
+        seq++;
+        return parseJsonlLine(line, sessionId, seq);
+      }).filter((o): o is NonNullable<typeof o> => o !== null);
+
+      this.sequenceCounters.set(sessionId, seq);
+      if (outputs.length > 0) {
+        this.outputStore.insertOutput(sessionId, outputs);
+      }
+    } catch { /* ignore */ }
+  }
+
+  stopWatchers(): void {
+    for (const watcher of this.watchers.values()) {
+      watcher.close().catch(() => { /* ignore */ });
+    }
+    this.watchers.clear();
   }
 
   private findLockFile(dirPath: string): string | null {
