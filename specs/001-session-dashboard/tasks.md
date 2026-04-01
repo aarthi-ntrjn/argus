@@ -20,7 +20,7 @@
 **Purpose**: Initialize monorepo structure, tooling, and test runners. All Phase 1 tasks can run in parallel after T001.
 
 - [X] T001 Create monorepo directory structure: `backend/`, `frontend/`, root `package.json` workspace config
-- [ ] T002 [P] Initialize backend `package.json` with TypeScript 5, Fastify 4, ws, better-sqlite3, chokidar, pino, js-yaml, ps-list at `backend/package.json`
+- [X] T002 [P] Initialize backend `package.json` with TypeScript 5, Fastify 4, ws, better-sqlite3, chokidar, pino, js-yaml, ps-list at `backend/package.json`
 - [ ] T003 [P] Initialize frontend with Vite + React 18 + TypeScript: `frontend/package.json` and `frontend/vite.config.ts`
 - [ ] T004 [P] Configure backend `tsconfig.json` for Node 22, strict mode, ESM output at `backend/tsconfig.json`
 - [ ] T005 [P] Configure frontend `tsconfig.json` for Vite + React at `frontend/tsconfig.json`
