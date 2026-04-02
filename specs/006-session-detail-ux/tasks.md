@@ -141,9 +141,9 @@
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T134 [P] Update `README.md` with new session UX features: two-pane layout, quick command buttons (Esc/Exit/Merge/Pull latest), inline prompt input, last output preview, Claude process ID display
-- [ ] T135 Verify frontend build passes: `cd frontend && npm run build` — 0 TypeScript errors
-- [ ] T136 Verify all backend tests pass: `cd backend && npm test` — all existing tests still green plus new T115/T122 tests
+- [X] T134 [P] Update `README.md` with new session UX features: two-pane layout, quick command buttons (Esc/Exit/Merge/Pull latest), inline prompt input, last output preview, Claude process ID display
+- [X] T135 Verify frontend build passes: `cd frontend && npm run build` — 0 TypeScript errors
+- [X] T136 Verify all backend tests pass: `cd backend && npm test` — all existing tests still green plus new T115/T122 tests
 
 ---
 
