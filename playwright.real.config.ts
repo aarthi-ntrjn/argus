@@ -20,7 +20,7 @@ export default defineConfig({
   globalSetup: './frontend/tests/e2e/real-server/global-setup.ts',
   globalTeardown: './frontend/tests/e2e/real-server/global-teardown.ts',
   use: {
-    baseURL: `http://localhost:${TEST_PORT}`,
+    baseURL: `http://127.0.0.1:${TEST_PORT}`,
     trace: 'on-first-retry',
   },
   projects: [
@@ -30,13 +30,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev --workspace=backend',
-    url: `http://localhost:${TEST_PORT}`,
+    command: `npx tsx backend/start-test-server.mjs ${TEST_PORT} "${TEST_DB_PATH}"`,
+    url: `http://127.0.0.1:${TEST_PORT}`,
     reuseExistingServer: false,
     timeout: 60 * 1000,
-    env: {
-      ARGUS_PORT: String(TEST_PORT),
-      ARGUS_DB_PATH: TEST_DB_PATH,
-    },
   },
 });

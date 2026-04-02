@@ -38,7 +38,7 @@ test.describe('SC-001 (real server): Repository Overview', () => {
 
   test('dashboard shows both repo names within 5s', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('test-repo-alpha')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('test-repo-beta')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'test-repo-alpha' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'test-repo-beta' })).toBeVisible({ timeout: 5000 });
   });
 });

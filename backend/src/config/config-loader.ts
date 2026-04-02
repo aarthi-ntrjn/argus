@@ -22,7 +22,12 @@ export function loadConfig(): ArgusConfig {
   }
   try {
     const raw = readFileSync(CONFIG_PATH, 'utf-8');
-    return { ...DEFAULTS, ...JSON.parse(raw) };
+    const fileConfig = JSON.parse(raw);
+    const merged = { ...DEFAULTS, ...fileConfig };
+    // Environment variables always override config file
+    if (process.env.ARGUS_PORT) merged.port = parseInt(process.env.ARGUS_PORT, 10);
+    if (process.env.ARGUS_DB_PATH) merged.dbPath = process.env.ARGUS_DB_PATH;
+    return merged;
   } catch {
     return { ...DEFAULTS };
   }

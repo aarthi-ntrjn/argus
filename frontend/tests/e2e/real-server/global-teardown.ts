@@ -6,6 +6,10 @@ export default async function globalTeardown() {
     rmSync(TEST_REPOS_DIR, { recursive: true, force: true });
   }
   if (existsSync(TEST_DB_PATH)) {
-    rmSync(TEST_DB_PATH, { force: true });
+    try {
+      rmSync(TEST_DB_PATH, { force: true });
+    } catch {
+      // The DB may still be locked by the server process on Windows; ignore
+    }
   }
 }
