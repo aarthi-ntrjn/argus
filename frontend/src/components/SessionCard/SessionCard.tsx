@@ -62,6 +62,9 @@ export default function SessionCard({ session, selected, onSelect }: Props) {
             <SessionTypeIcon type={session.type} size={13} />
             {session.type}
           </span>
+          {session.model && (
+            <span className="text-[10px] text-gray-400 font-mono truncate max-w-[120px]">{session.model}</span>
+          )}
           {isInactive(session) ? (
             <span className="text-xs px-2 py-0.5 rounded font-medium bg-amber-100 text-amber-700">inactive</span>
           ) : (
