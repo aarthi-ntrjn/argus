@@ -1,8 +1,11 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, openSync, readSync, closeSync, statSync } from 'fs';
+import { join, dirname, normalize } from 'path';
 import { homedir } from 'os';
 import psList from 'ps-list';
+import chokidar, { type FSWatcher } from 'chokidar';
 import { getSession, upsertSession, getRepositories, getRepositoryByPath, getSessions } from '../db/database.js';
+import { OutputStore } from './output-store.js';
+import { parseClaudeJsonlLine, parseModel } from './claude-code-jsonl-parser.js';
 import type { Session } from '../models/index.js';
 
 const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json');
@@ -24,7 +27,13 @@ interface HookPayload {
   [key: string]: unknown;
 }
 
+const ACTIVE_JSONL_THRESHOLD_MS = 30 * 60 * 1000;
+
 export class ClaudeCodeDetector {
+  private outputStore = new OutputStore();
+  private watchers = new Map<string, FSWatcher>();
+  private filePositions = new Map<string, number>();
+  private sequenceCounters = new Map<string, number>();
   injectHooks(): void {
     try {
       mkdirSync(dirname(CLAUDE_SETTINGS_PATH), { recursive: true });
@@ -98,8 +107,6 @@ export class ClaudeCodeDetector {
       return;
     }
 
-    // On Windows psList does not return process cwd, so we cannot match by path.
-    // Instead check whether any Claude process is running at all and capture its PID.
     const claudeProcess = processes.find(p =>
       p.name.toLowerCase().includes('claude') || p.cmd?.toLowerCase().includes('claude')
     );
@@ -114,24 +121,31 @@ export class ClaudeCodeDetector {
       );
 
       for (const repo of getRepositories()) {
-        // Match repo path to Claude project dir by encoding forward (not decoding back)
         const expectedDirName = this.claudeProjectDirName(repo.path).toLowerCase();
         if (!projectDirNames.has(expectedDirName)) continue;
 
-        // Already have an active session — nothing to do
         const activeSessions = getSessions({ repositoryId: repo.id, status: 'active', type: 'claude-code' });
         if (activeSessions.length > 0) continue;
 
         const now = new Date().toISOString();
-
-        // Re-activate the most recently ended session for this repo, if any
         const allSessions = getSessions({ repositoryId: repo.id, type: 'claude-code' });
         const mostRecentEnded = allSessions
           .filter(s => s.status === 'ended')
           .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt))[0];
 
         if (mostRecentEnded) {
+          // Only re-activate if the JSONL file is recent (< 30 min) — prevents ghost sessions on Windows
+          const jsonlPath = join(
+            projectsDir,
+            this.claudeProjectDirName(repo.path),
+            `${mostRecentEnded.id}.jsonl`,
+          );
+          if (!existsSync(jsonlPath)) continue;
+          const mtime = statSync(jsonlPath).mtime;
+          if (Date.now() - mtime.getTime() > ACTIVE_JSONL_THRESHOLD_MS) continue;
+
           upsertSession({ ...mostRecentEnded, status: 'active', endedAt: null, lastActivityAt: now, pid: claudePid });
+          this.watchJsonlFile(mostRecentEnded.id, repo.path);
         } else {
           upsertSession({
             id: `claude-startup-${repo.id}-${Date.now()}`,
@@ -144,6 +158,7 @@ export class ClaudeCodeDetector {
             lastActivityAt: now,
             summary: null,
             expiresAt: null,
+            model: null,
           });
         }
       }
@@ -154,7 +169,8 @@ export class ClaudeCodeDetector {
     const { hook_event_name, session_id, cwd } = payload;
     if (!session_id) return;
 
-    const repo = cwd ? getRepositoryByPath(cwd) : null;
+    const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
+    const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
     if (!repo) return;
 
     const existing = getSession(session_id);
@@ -171,6 +187,7 @@ export class ClaudeCodeDetector {
       lastActivityAt: now,
       summary: null,
       expiresAt: null,
+      model: null,
     };
 
     if (hook_event_name === 'Stop') {
@@ -182,5 +199,74 @@ export class ClaudeCodeDetector {
     }
 
     upsertSession(session);
+
+    // Start JSONL watcher if not already watching
+    this.watchJsonlFile(session_id, repo.path);
+  }
+
+  private watchJsonlFile(sessionId: string, repoPath: string): void {
+    if (this.watchers.has(sessionId)) return;
+    const jsonlPath = join(
+      homedir(), '.claude', 'projects',
+      this.claudeProjectDirName(repoPath),
+      `${sessionId}.jsonl`,
+    );
+    if (!existsSync(jsonlPath)) return;
+
+    // Load all existing lines
+    this.filePositions.set(sessionId, 0);
+    this.sequenceCounters.set(sessionId, 0);
+    this.readNewJsonlLines(sessionId, jsonlPath, true);
+
+    const watcher = chokidar.watch(jsonlPath, { persistent: false, usePolling: false });
+    watcher.on('change', () => this.readNewJsonlLines(sessionId, jsonlPath, false));
+    this.watchers.set(sessionId, watcher);
+  }
+
+  private readNewJsonlLines(sessionId: string, filePath: string, updateModel: boolean): void {
+    try {
+      const currentSize = statSync(filePath).size;
+      const lastPos = this.filePositions.get(sessionId) ?? 0;
+      if (currentSize <= lastPos) return;
+
+      const fd = openSync(filePath, 'r');
+      const buffer = Buffer.alloc(currentSize - lastPos);
+      readSync(fd, buffer, 0, buffer.length, lastPos);
+      closeSync(fd);
+      this.filePositions.set(sessionId, currentSize);
+
+      const lines = buffer.toString('utf-8').split('\n').filter(l => l.trim());
+      let seq = this.sequenceCounters.get(sessionId) ?? 0;
+      const outputs = [];
+
+      for (const line of lines) {
+        seq++;
+        const items = parseClaudeJsonlLine(line, sessionId, seq);
+        outputs.push(...items);
+
+        if (updateModel) {
+          const model = parseModel(line);
+          if (model) {
+            const existing = getSession(sessionId);
+            if (existing && !existing.model) {
+              upsertSession({ ...existing, model });
+            }
+            updateModel = false;
+          }
+        }
+      }
+
+      this.sequenceCounters.set(sessionId, seq);
+      if (outputs.length > 0) {
+        this.outputStore.insertOutput(sessionId, outputs);
+      }
+    } catch { /* ignore */ }
+  }
+
+  stopWatchers(): void {
+    for (const watcher of this.watchers.values()) {
+      watcher.close().catch(() => { /* ignore */ });
+    }
+    this.watchers.clear();
   }
 }

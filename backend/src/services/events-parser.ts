@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { SessionOutput, OutputType } from '../models/index.js';
+import type { SessionOutput, OutputType, OutputRole } from '../models/index.js';
 
 interface JsonlEvent {
   type: string;
@@ -17,11 +17,17 @@ const EVENT_TYPE_MAP: Record<string, OutputType> = {
   'user.message': 'message',
 };
 
+const EVENT_ROLE_MAP: Record<string, OutputRole | null> = {
+  'assistant.message': 'assistant',
+  'user.message': 'user',
+};
+
 export function parseJsonlLine(line: string, sessionId: string, sequenceNumber: number): SessionOutput | null {
   if (!line.trim()) return null;
   try {
     const event = JSON.parse(line) as JsonlEvent;
     const outputType: OutputType = EVENT_TYPE_MAP[event.type] ?? 'message';
+    const role: OutputRole | null = event.type in EVENT_ROLE_MAP ? EVENT_ROLE_MAP[event.type] : null;
     return {
       id: randomUUID(),
       sessionId,
@@ -29,6 +35,7 @@ export function parseJsonlLine(line: string, sessionId: string, sequenceNumber: 
       type: outputType,
       content: typeof event.content === 'string' ? event.content : JSON.stringify(event),
       toolName: typeof event.tool_name === 'string' ? event.tool_name : null,
+      role,
       sequenceNumber,
     };
   } catch {

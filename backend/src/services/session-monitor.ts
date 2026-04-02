@@ -59,6 +59,8 @@ export class SessionMonitor extends EventEmitter {
       clearInterval(this.scanInterval);
       this.scanInterval = null;
     }
+    this.cliDetector.stopWatchers();
+    this.claudeDetector.stopWatchers();
   }
 
   getCopilotCliDetector(): CopilotCliDetector {

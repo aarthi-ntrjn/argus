@@ -13,6 +13,7 @@ describe('EventsParser', () => {
     expect(result?.type).toBe('message');
     expect(result?.content).toBe('Hello!');
     expect(result?.sequenceNumber).toBe(1);
+    expect(result?.role).toBe('assistant');
   });
 
   it('maps tool.execution_start to tool_use type', () => {
@@ -25,6 +26,7 @@ describe('EventsParser', () => {
     const result = parseJsonlLine(line, 'session-1', 2);
     expect(result?.type).toBe('tool_use');
     expect(result?.toolName).toBe('bash');
+    expect(result?.role).toBeNull();
   });
 
   it('maps tool.execution_complete to tool_result type', () => {
@@ -35,6 +37,7 @@ describe('EventsParser', () => {
     });
     const result = parseJsonlLine(line, 'session-1', 3);
     expect(result?.type).toBe('tool_result');
+    expect(result?.role).toBeNull();
   });
 
   it('maps session.start to status_change type', () => {
@@ -45,6 +48,7 @@ describe('EventsParser', () => {
     });
     const result = parseJsonlLine(line, 'session-1', 4);
     expect(result?.type).toBe('status_change');
+    expect(result?.role).toBeNull();
   });
 
   it('maps user.message to message type', () => {
@@ -55,6 +59,7 @@ describe('EventsParser', () => {
     });
     const result = parseJsonlLine(line, 'session-1', 5);
     expect(result?.type).toBe('message');
+    expect(result?.role).toBe('user');
   });
 
   it('maps unknown types to message', () => {

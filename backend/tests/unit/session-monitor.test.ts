@@ -32,6 +32,7 @@ vi.mock('../../src/services/repository-scanner.js', () => ({
 vi.mock('../../src/services/copilot-cli-detector.js', () => ({
   CopilotCliDetector: vi.fn().mockImplementation(() => ({
     scan: vi.fn(async () => []),
+    stopWatchers: vi.fn(),
   })),
 }));
 
@@ -39,6 +40,7 @@ vi.mock('../../src/services/claude-code-detector.js', () => ({
   ClaudeCodeDetector: vi.fn().mockImplementation(() => ({
     injectHooks: vi.fn(),
     scanExistingSessions: vi.fn(async () => {}),
+    stopWatchers: vi.fn(),
   })),
 }));
 

@@ -19,6 +19,7 @@ vi.mock('fs', async (importOriginal) => {
     ...actual,
     existsSync: vi.fn(() => true),
     readdirSync: vi.fn((_p: unknown, _opts?: unknown) => fakeReaddirEntries),
+    statSync: vi.fn(() => ({ mtime: new Date() })),
   };
 });
 

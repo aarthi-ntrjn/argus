@@ -8,13 +8,26 @@ interface Props {
   className?: string;
 }
 
-const TYPE_LABELS: Record<string, { label: string; light: string; dark: string }> = {
-  message:       { label: 'MSG',    light: 'bg-blue-100 text-blue-700',   dark: 'bg-blue-900 text-blue-300' },
+type BadgeStyle = { label: string; light: string; dark: string };
+
+const TYPE_LABELS: Record<string, BadgeStyle> = {
   tool_use:      { label: 'TOOL',   light: 'bg-purple-100 text-purple-700', dark: 'bg-purple-900 text-purple-300' },
-  tool_result:   { label: 'RESULT', light: 'bg-green-100 text-green-700', dark: 'bg-green-900 text-green-300' },
-  error:         { label: 'ERR',    light: 'bg-red-100 text-red-700',     dark: 'bg-red-900 text-red-300' },
+  tool_result:   { label: 'RESULT', light: 'bg-green-100 text-green-700',   dark: 'bg-green-900 text-green-300' },
+  error:         { label: 'ERR',    light: 'bg-red-100 text-red-700',       dark: 'bg-red-900 text-red-300' },
   status_change: { label: 'STATUS', light: 'bg-yellow-100 text-yellow-700', dark: 'bg-yellow-900 text-yellow-300' },
 };
+
+const ROLE_LABELS: Record<string, BadgeStyle> = {
+  user:      { label: 'YOU', light: 'bg-gray-100 text-gray-600', dark: 'bg-gray-700 text-gray-400' },
+  assistant: { label: 'AI',  light: 'bg-blue-100 text-blue-700', dark: 'bg-blue-900 text-blue-300' },
+};
+
+function getBadge(item: SessionOutput): BadgeStyle {
+  if (item.type === 'message') {
+    return ROLE_LABELS[item.role ?? ''] ?? { label: 'MSG', light: 'bg-blue-100 text-blue-700', dark: 'bg-blue-900 text-blue-300' };
+  }
+  return TYPE_LABELS[item.type] ?? { label: item.type.toUpperCase(), light: 'bg-gray-100 text-gray-700', dark: 'bg-gray-700 text-gray-300' };
+}
 
 function formatTime(timestamp: string): string {
   return new Date(timestamp).toLocaleTimeString();
@@ -38,11 +51,7 @@ export default function SessionDetail({ items, dark = false, className }: Props)
   return (
     <div className={`overflow-y-auto max-h-[600px] p-4 space-y-2 font-mono text-sm ${dark ? 'bg-gray-900' : ''} ${className ?? ''}`}>
       {items.map((item) => {
-        const typeInfo = TYPE_LABELS[item.type] ?? {
-          label: item.type.toUpperCase(),
-          light: 'bg-gray-100 text-gray-700',
-          dark: 'bg-gray-700 text-gray-300',
-        };
+        const typeInfo = getBadge(item);
         const badgeColor = dark ? typeInfo.dark : typeInfo.light;
         return (
           <div key={item.id} className="flex gap-3 items-start">
@@ -55,7 +64,7 @@ export default function SessionDetail({ items, dark = false, className }: Props)
             {item.toolName && (
               <span className={`text-xs whitespace-nowrap shrink-0 ${dark ? 'text-purple-400' : 'text-purple-600'}`}>[{item.toolName}]</span>
             )}
-            <span className={`break-all ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{item.content}</span>
+            <span className={`min-w-0 break-words whitespace-pre-wrap ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{item.content}</span>
           </div>
         );
       })}

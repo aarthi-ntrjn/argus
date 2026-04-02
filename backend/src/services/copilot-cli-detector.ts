@@ -85,6 +85,7 @@ export class CopilotCliDetector {
       lastActivityAt: toIso(workspace.updated_at),
       summary: workspace.summary ?? null,
       expiresAt: null,
+      model: null,
     };
 
     upsertSession(session);

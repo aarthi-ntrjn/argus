@@ -85,6 +85,9 @@ export default function SessionPage() {
               <SessionTypeIcon type={session.type} size={14} />
               {session.type}
             </span>
+            {session.model && (
+              <span className="text-xs text-gray-500 font-mono">{session.model}</span>
+            )}
             {isInactive(session) ? (
               <span className="text-sm px-3 py-1 rounded-full font-medium bg-amber-100 text-amber-700">inactive</span>
             ) : (
