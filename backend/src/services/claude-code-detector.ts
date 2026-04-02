@@ -3,7 +3,7 @@ import { join, dirname, normalize } from 'path';
 import { homedir } from 'os';
 import psList from 'ps-list';
 import chokidar, { type FSWatcher } from 'chokidar';
-import { getSession, upsertSession, getRepositories, getRepositoryByPath, getSessions } from '../db/database.js';
+import { getSession, upsertSession, getRepositories, getRepositoryByPath } from '../db/database.js';
 import { OutputStore } from './output-store.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { parseClaudeJsonlLine, parseModel } from './claude-code-jsonl-parser.js';
@@ -125,43 +125,53 @@ export class ClaudeCodeDetector {
         const expectedDirName = this.claudeProjectDirName(repo.path).toLowerCase();
         if (!projectDirNames.has(expectedDirName)) continue;
 
-        const activeSessions = getSessions({ repositoryId: repo.id, status: 'active', type: 'claude-code' });
-        if (activeSessions.length > 0) continue;
+        const projectDir = join(projectsDir, this.claudeProjectDirName(repo.path));
 
-        const now = new Date().toISOString();
-        const allSessions = getSessions({ repositoryId: repo.id, type: 'claude-code' });
-        const mostRecentEnded = allSessions
-          .filter(s => s.status === 'ended')
-          .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt))[0];
-
-        if (mostRecentEnded) {
-          // Only re-activate if the JSONL file is recent (< 30 min) — prevents ghost sessions on Windows
-          const jsonlPath = join(
-            projectsDir,
-            this.claudeProjectDirName(repo.path),
-            `${mostRecentEnded.id}.jsonl`,
-          );
-          if (!existsSync(jsonlPath)) continue;
-          const mtime = statSync(jsonlPath).mtime;
-          if (Date.now() - mtime.getTime() > ACTIVE_JSONL_THRESHOLD_MS) continue;
-
-          upsertSession({ ...mostRecentEnded, status: 'active', endedAt: null, lastActivityAt: now, pid: claudePid });
-          this.watchJsonlFile(mostRecentEnded.id, repo.path);
-        } else {
-          upsertSession({
-            id: `claude-startup-${repo.id}-${Date.now()}`,
-            repositoryId: repo.id,
-            type: 'claude-code',
-            pid: claudePid,
-            status: 'active',
-            startedAt: now,
-            endedAt: null,
-            lastActivityAt: now,
-            summary: null,
-            expiresAt: null,
-            model: null,
-          });
+        // Find the most recently modified JSONL file — its basename IS the real session ID
+        let jsonlEntries: Array<{ id: string; path: string; mtime: Date }>;
+        try {
+          jsonlEntries = readdirSync(projectDir)
+            .filter(f => f.endsWith('.jsonl'))
+            .map(f => {
+              const fp = join(projectDir, f);
+              return { id: f.slice(0, -6), path: fp, mtime: statSync(fp).mtime };
+            })
+            .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+        } catch {
+          continue;
         }
+
+        const mostRecent = jsonlEntries[0];
+        if (!mostRecent) continue;
+        if (Date.now() - mostRecent.mtime.getTime() > ACTIVE_JSONL_THRESHOLD_MS) continue;
+
+        const sessionId = mostRecent.id;
+        const now = new Date().toISOString();
+
+        // If already active, just ensure the watcher is running (e.g. after server restart)
+        const existingSession = getSession(sessionId);
+        if (existingSession?.status === 'active') {
+          this.watchJsonlFile(sessionId, repo.path);
+          continue;
+        }
+
+        // Activate the session using its real ID
+        const base: Session = existingSession ?? {
+          id: sessionId,
+          repositoryId: repo.id,
+          type: 'claude-code',
+          pid: claudePid,
+          status: 'active',
+          startedAt: now,
+          endedAt: null,
+          lastActivityAt: now,
+          summary: null,
+          expiresAt: null,
+          model: null,
+        };
+
+        upsertSession({ ...base, status: 'active', endedAt: null, lastActivityAt: now, pid: claudePid });
+        this.watchJsonlFile(sessionId, repo.path);
       }
     } catch { /* ignore */ }
   }

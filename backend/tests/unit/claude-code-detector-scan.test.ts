@@ -18,16 +18,25 @@ const FAKE_DIR_NAME = FAKE_REPO_PATH.replace(/[:\\/]/g, '-');
 // Mutable statSync mtime — individual tests can override
 let mockMtime = new Date(); // recent by default
 
-// Mock fs so we control what project directories the detector "sees"
-// readdirSync returns a fake Claude project dir matching FAKE_REPO_PATH
-let fakeReaddirEntries: Array<{ name: string; isDirectory: () => boolean }> = [];
+// JSONL files to return when readdirSync is called on the project dir
+let fakeJsonlFiles: string[] = ['test-session-abc123.jsonl'];
+
+// Mock fs: readdirSync returns project-dir entries when called with withFileTypes,
+// and JSONL filenames when called on the individual project dir
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>();
   return {
     ...actual,
     existsSync: vi.fn(() => true),
-    readdirSync: vi.fn((_p: unknown, _opts?: unknown) => fakeReaddirEntries),
-    statSync: vi.fn(() => ({ mtime: mockMtime })),
+    readdirSync: vi.fn((_p: unknown, opts?: unknown) => {
+      if (opts && typeof opts === 'object' && 'withFileTypes' in opts) {
+        // Called on projectsDir — return the project directory listing
+        return [{ name: FAKE_DIR_NAME, isDirectory: () => true }];
+      }
+      // Called on an individual project dir — return JSONL filenames
+      return fakeJsonlFiles;
+    }),
+    statSync: vi.fn(() => ({ mtime: mockMtime, size: 0 })),
   };
 });
 
@@ -41,11 +50,9 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     // Reset to default: Claude is running, mtime is recent
     mockPsListResult = [{ pid: 4242, name: 'claude', cmd: 'claude' }];
     mockMtime = new Date();
+    fakeJsonlFiles = ['test-session-abc123.jsonl'];
 
     dbModule = await import('../../src/db/database.js');
-
-    // Reset fake dir entries to the default (one matching dir)
-    fakeReaddirEntries = [{ name: FAKE_DIR_NAME, isDirectory: () => true }];
 
     // Insert a repo matching FAKE_REPO_PATH
     dbModule.insertRepository({
@@ -66,8 +73,10 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
   it('re-activates an ended session when Claude is running and JSONL file is recent', async () => {
     mockMtime = new Date(); // recent
     const now = new Date().toISOString();
+    const sessionId = 'hook-session-was-ended';
+    fakeJsonlFiles = [`${sessionId}.jsonl`];
     dbModule.upsertSession({
-      id: 'hook-session-was-ended',
+      id: sessionId,
       repositoryId: 'repo-scan-test',
       type: 'claude-code',
       pid: null,
@@ -77,12 +86,13 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
       lastActivityAt: now,
       summary: null,
       expiresAt: null,
+      model: null,
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
     await new ClaudeCodeDetector().scanExistingSessions();
 
-    const session = dbModule.getSession('hook-session-was-ended');
+    const session = dbModule.getSession(sessionId);
     expect(session?.status).toBe('active');
   });
 
@@ -90,8 +100,10 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     // Set mtime to 31 minutes ago
     mockMtime = new Date(Date.now() - 31 * 60 * 1000);
     const now = new Date().toISOString();
+    const sessionId = 'hook-session-stale-mtime';
+    fakeJsonlFiles = [`${sessionId}.jsonl`];
     dbModule.upsertSession({
-      id: 'hook-session-stale-mtime',
+      id: sessionId,
       repositoryId: 'repo-scan-test',
       type: 'claude-code',
       pid: null,
@@ -101,25 +113,22 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
       lastActivityAt: now,
       summary: null,
       expiresAt: null,
+      model: null,
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
     await new ClaudeCodeDetector().scanExistingSessions();
 
-    const session = dbModule.getSession('hook-session-stale-mtime');
+    const session = dbModule.getSession(sessionId);
     expect(session?.status).toBe('ended');
   });
 
-  it('does NOT re-activate when Claude is running but no JSONL file exists', async () => {
-    // existsSync returns false for the JSONL file (but true for the project dir check)
-    const { existsSync } = await import('fs');
-    (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) =>
-      typeof p === 'string' && !p.endsWith('.jsonl')
-    );
-
+  it('does NOT re-activate when no JSONL files exist in the project dir', async () => {
+    fakeJsonlFiles = []; // no JSONL files
     const now = new Date().toISOString();
+    const sessionId = 'hook-session-no-jsonl';
     dbModule.upsertSession({
-      id: 'hook-session-no-jsonl',
+      id: sessionId,
       repositoryId: 'repo-scan-test',
       type: 'claude-code',
       pid: null,
@@ -129,30 +138,34 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
       lastActivityAt: now,
       summary: null,
       expiresAt: null,
+      model: null,
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
     await new ClaudeCodeDetector().scanExistingSessions();
 
-    const session = dbModule.getSession('hook-session-no-jsonl');
+    const session = dbModule.getSession(sessionId);
     expect(session?.status).toBe('ended');
   });
 
-  it('creates a new session when Claude is running and no prior session exists', async () => {
+  it('creates a new session with the JSONL filename as ID when Claude is running and no prior session exists', async () => {
+    fakeJsonlFiles = ['brand-new-session-xyz.jsonl'];
+
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
     await new ClaudeCodeDetector().scanExistingSessions();
 
-    const sessions = dbModule.getSessions({ repositoryId: 'repo-scan-test', type: 'claude-code' });
-    expect(sessions.length).toBeGreaterThan(0);
-    expect(sessions[0].status).toBe('active');
+    const session = dbModule.getSession('brand-new-session-xyz');
+    expect(session).not.toBeUndefined();
+    expect(session?.status).toBe('active');
   });
 
   it('does nothing when no Claude process is running', async () => {
     mockPsListResult = [{ pid: 1, name: 'other-process', cmd: 'other-process' }];
-
     const now = new Date().toISOString();
+    const sessionId = 'hook-session-no-claude';
+    fakeJsonlFiles = [`${sessionId}.jsonl`];
     dbModule.upsertSession({
-      id: 'hook-session-no-claude',
+      id: sessionId,
       repositoryId: 'repo-scan-test',
       type: 'claude-code',
       pid: null,
@@ -162,13 +175,54 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
       lastActivityAt: now,
       summary: null,
       expiresAt: null,
+      model: null,
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
     await new ClaudeCodeDetector().scanExistingSessions();
 
-    const session = dbModule.getSession('hook-session-no-claude');
+    const session = dbModule.getSession(sessionId);
     expect(session?.status).toBe('ended');
+  });
+
+  // T089 regression: scanExistingSessions must use JSONL filename as session ID,
+  // not the old ended-session ID or a fake claude-startup-* ID
+  it('T089: activates with real JSONL-derived session ID, not old DB ID or fake startup ID', async () => {
+    const realSessionId = 'real-new-claude-session-abc123';
+    fakeJsonlFiles = [`${realSessionId}.jsonl`];
+
+    // Insert an OLD ended session with a different ID (simulates previous run)
+    const now = new Date().toISOString();
+    dbModule.upsertSession({
+      id: 'old-ended-session-from-last-run',
+      repositoryId: 'repo-scan-test',
+      type: 'claude-code',
+      pid: null,
+      status: 'ended',
+      startedAt: now,
+      endedAt: now,
+      lastActivityAt: now,
+      summary: null,
+      expiresAt: null,
+      model: null,
+    });
+
+    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    await new ClaudeCodeDetector().scanExistingSessions();
+
+    // The new session MUST be created with the real JSONL-derived ID
+    const newSession = dbModule.getSession(realSessionId);
+    expect(newSession).not.toBeUndefined();
+    expect(newSession?.status).toBe('active');
+
+    // The old ended session must NOT be re-activated
+    const oldSession = dbModule.getSession('old-ended-session-from-last-run');
+    expect(oldSession?.status).toBe('ended');
+
+    // No fake claude-startup-* sessions must exist
+    const allSessions = dbModule.getSessions({ repositoryId: 'repo-scan-test' });
+    const fakeSession = allSessions.find(s => s.id.startsWith('claude-startup-'));
+    expect(fakeSession).toBeUndefined();
   });
 });
 

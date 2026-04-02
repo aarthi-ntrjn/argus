@@ -102,3 +102,13 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: Unit tests used simplified flat event objects that matched the old assumed shape, so all tests passed even though real events had a completely different structure.
 **How to prevent**: When adding a new event-source parser, always sample real on-disk event files first and write tests against those exact shapes. Never write parser tests using hand-crafted events without verifying against real data.
 **Fix summary**: vents-parser.ts  xtractContent reads vent.data.content, vent.data.arguments, vent.data.result.content; 	oolName reads vent.data.toolName; parseModelFromEvent also checks vent.data.model on 	ool.execution_complete events.
+---
+
+## T089 - Claude Code spawns new session instead of activating existing one
+
+**Date**: 2026-04-02
+**Symptom**: When a Claude Code command was issued, a new session appeared instead of the existing one transitioning to running. The existing session never showed as active.
+**Root cause**: scanExistingSessions() in claude-code-detector.ts used the wrong session IDs. It invented fake claude-startup-{repo.id}-{timestamp} IDs or reused old ended-session IDs. But Claude Code hook payloads always carry the REAL session ID, which is the JSONL filename (basename without .jsonl). When hooks fired with realId, getSession(realId) returned undefined, creating a new session. Additionally on server restart, active sessions were skipped entirely so their JSONL watchers were never restarted.
+**Why it was missed**: Tests mocked readdirSync to return the same value for all calls, masking JSONL filename-based ID discovery. Fake IDs were never compared against real hook payloads in tests.
+**How to prevent**: Always use the JSONL filename (without extension) as the Claude Code session ID. When mocking readdirSync in tests, distinguish calls with {withFileTypes:true} (returning dir entries) from plain calls (returning JSONL filenames). Write a regression test that inserts a session with a known ID matching a JSONL filename and verifies it gets reused.
+**Fix summary**: claude-code-detector.ts - scanExistingSessions() per-repo block replaced: scans project dir for *.jsonl files sorted by mtime, uses newest filename (minus .jsonl) as session ID, restarts watcher for already-active sessions instead of skipping, removes fake claude-startup-* ID path entirely.
