@@ -330,3 +330,11 @@ Stream B — Output legibility:
 - The chokidar watcher pattern in `ClaudeCodeDetector` mirrors `CopilotCliDetector.watchEventsFile()` — reuse the same private Map + file position tracking pattern
 - T004 DB migration uses `PRAGMA table_info` check: SQLite's `ALTER TABLE ADD COLUMN` has no `IF NOT EXISTS` syntax, so the check is necessary for idempotency
 - Commit after each task or logical group; push to `007-session-stream-model-fixes`
+
+
+### Addendum: T106T109  UI polish: branch colour, PID font, preview bg, output stream density
+
+- [ ] T106 Change branch badge in `frontend/src/pages/DashboardPage.tsx` from purple (`text-purple-700 bg-purple-50`) to blue (`text-blue-700 bg-blue-50`) on line ~214
+- [ ] T107 Add `font-mono` class to the PID `<span>` in `frontend/src/components/SessionCard/SessionCard.tsx` (line ~78) so PID uses the same monospace font as the model name and code IDs
+- [ ] T108 Change the preview strip in `frontend/src/components/SessionCard/SessionCard.tsx` from dark (`bg-gray-900 text-gray-300`) to light (`bg-gray-100 text-gray-600`) to match the card's light theme consistently
+- [ ] T109 Reduce output stream density in `frontend/src/components/SessionDetail/SessionDetail.tsx`: change container `text-sm`  `text-xs` and `space-y-2`  `space-y-1`; change prose wrapper `prose-sm`  `prose-xs` (or add explicit `text-xs leading-snug`); reduce badge column from `w-28`  `w-24`

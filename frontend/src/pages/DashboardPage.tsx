@@ -211,7 +211,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <p className="text-sm text-gray-500">{repo.path}</p>
                         {repo.branch && (
-                          <span className="inline-flex items-center gap-1 text-xs font-mono text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">⎇ {repo.branch}</span>
+                          <span className="inline-flex items-center gap-1 text-xs font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">⎇ {repo.branch}</span>
                         )}
                       </div>
                     </div>
