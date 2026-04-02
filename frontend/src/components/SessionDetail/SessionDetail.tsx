@@ -55,14 +55,14 @@ export default function SessionDetail({ items, dark = false, className }: Props)
   }
 
   return (
-    <div className={`overflow-y-auto max-h-[600px] p-4 space-y-2 font-mono text-sm ${dark ? 'bg-gray-900' : ''} ${className ?? ''}`}>
+    <div className={`overflow-y-auto max-h-[600px] p-4 space-y-1 font-mono text-xs ${dark ? 'bg-gray-900' : ''} ${className ?? ''}`}>
       {items.map((item) => {
         const typeInfo = getBadge(item);
         const badgeColor = dark ? typeInfo.dark : typeInfo.light;
         return (
           <div key={item.id} className="flex gap-3 items-start">
             {/* Column 1: badge, toolname, timestamp */}
-            <div className="flex flex-col gap-0.5 w-28 shrink-0">
+            <div className="flex flex-col gap-0.5 w-24 shrink-0">
               <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}>
                 {typeInfo.label}
               </span>
@@ -75,11 +75,11 @@ export default function SessionDetail({ items, dark = false, className }: Props)
             </div>
             {/* Column 2: content */}
             {item.type === 'message' ? (
-              <div className={`min-w-0 prose prose-sm max-w-none break-words ${dark ? 'prose-invert text-gray-200' : 'text-gray-800'}`}>
+              <div className={`min-w-0 prose prose-xs max-w-none break-words leading-snug ${dark ? 'prose-invert text-gray-200' : 'text-gray-800'}`}>
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    p: ({ children }) => <p className="my-0.5 whitespace-pre-wrap">{children}</p>,
+                    p: ({ children }) => <p className="my-0 leading-snug whitespace-pre-wrap">{children}</p>,
                     code: ({ children, className }) => {
                       const isBlock = className?.includes('language-');
                       return isBlock

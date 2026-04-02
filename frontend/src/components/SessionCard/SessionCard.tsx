@@ -75,7 +75,7 @@ export default function SessionCard({ session, selected, onSelect }: Props) {
           {session.model && (
             <span className="text-[10px] text-gray-400 font-mono truncate max-w-[120px]">{session.model}</span>
           )}
-          {session.pid && <span className="text-xs text-gray-400">PID: {session.pid}</span>}
+          {session.pid && <span className="text-xs text-gray-400 font-mono">PID: {session.pid}</span>}
           {!session.pid && session.type === 'claude-code' && (
             <span className="text-xs text-gray-400 font-mono">ID: {claudeShortId(session.id)}</span>
           )}
@@ -113,7 +113,7 @@ export default function SessionCard({ session, selected, onSelect }: Props) {
 
       {/* Last output preview — below interactive controls so it never obscures the prompt */}
       {previewContent && (
-        <p className="text-xs text-gray-300 bg-gray-900 mt-1 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono">{previewContent}</p>
+        <p className="text-xs text-gray-600 bg-gray-100 mt-1 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono">{previewContent}</p>
       )}
     </div>
   );
