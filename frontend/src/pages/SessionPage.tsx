@@ -101,12 +101,12 @@ export default function SessionPage() {
               </span>
             )}
             {session.pid && (
-              <span className="text-sm text-gray-500">PID: {session.pid}</span>
+              <span className="text-xs text-gray-500 font-mono">PID: {session.pid}</span>
             )}
             {!session.pid && session.type === 'claude-code' && (
-              <span className="text-sm text-gray-500 font-mono">ID: {claudeShortId(session.id)}</span>
+              <span className="text-xs text-gray-500 font-mono">ID: {claudeShortId(session.id)}</span>
             )}
-            <span className="text-sm text-gray-500">
+            <span className="text-xs text-gray-500 font-mono">
               Duration: {getElapsed(session.startedAt, session.endedAt)}
             </span>
           </div>
