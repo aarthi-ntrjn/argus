@@ -102,13 +102,17 @@
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T017 Verify `backend/src/api/routes/sessions.ts` — confirm `GET /api/v1/sessions` response serializes `model` from each session row; confirm `GET /api/v1/sessions/:id/output` response serializes `role` from each output row; both fields are added via T004 DB query updates so this task is a spot-check — fix any missing field in serialization or type casting
+- [X] T017 Verify `backend/src/api/routes/sessions.ts` — confirm `GET /api/v1/sessions` response serializes `model` from each session row; confirm `GET /api/v1/sessions/:id/output` response serializes `role` from each output row; both fields are added via T004 DB query updates so this task is a spot-check — fix any missing field in serialization or type casting
 
-- [ ] T018 Update `README.md` — add: (a) Claude Code output streaming (now reads `~/.claude/projects/**/*.jsonl`); (b) model badge on session cards; (c) active state detection uses JSONL file modification time; (d) output stream role labels (YOU/AI) for user and assistant messages
+- [X] T018 Update `README.md` — add: (a) Claude Code output streaming (now reads `~/.claude/projects/**/*.jsonl`); (b) model badge on session cards; (c) active state detection uses JSONL file modification time; (d) output stream role labels (YOU/AI) for user and assistant messages
 
-- [ ] T019 [P] Write E2E test in `frontend/tests/e2e/sc-007-stream-model.spec.ts` — test: (a) session card shows model text when `session.model` is set; (b) output pane shows 'AI' badge for assistant messages; (c) output pane shows 'YOU' badge for user messages; (d) long content in output pane wraps and does not overflow the pane width; use mock API responses from existing Playwright patterns in `sc-006-session-ux.spec.ts`
+- [X] T019 [P] Write E2E test in `frontend/tests/e2e/sc-007-stream-model.spec.ts` — test: (a) session card shows model text when `session.model` is set; (b) output pane shows 'AI' badge for assistant messages; (c) output pane shows 'YOU' badge for user messages; (d) long content in output pane wraps and does not overflow the pane width; use mock API responses from existing Playwright patterns in `sc-006-session-ux.spec.ts`
 
-- [ ] T020 Run `cd backend && npm test` (all tests green) and `cd frontend && npm run build` (0 TypeScript errors, build succeeds); fix any compilation or test failures before committing
+- [X] T020 Run `cd backend && npm test` (all tests green) and `cd frontend && npm run build` (0 TypeScript errors, build succeeds); fix any compilation or test failures before committing
+
+### Addendum: US4 — PST timestamp display
+
+- [ ] T021 [US4] Update `formatTime` in `frontend/src/components/SessionDetail/SessionDetail.tsx`: change `new Date(timestamp).toLocaleTimeString()` to `new Date(timestamp).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', second: '2-digit' })` so all output stream timestamps display in Pacific time (PST/PDT) regardless of the browser's local time zone
 
 ---
 
