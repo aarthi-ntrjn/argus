@@ -383,4 +383,5 @@ Each phase checkpoint delivers independently demonstrable value:
 
 ### Addendum: Bug  Preview strip light theme inconsistent, user wants dark consistently
 
-- [ ] T093 Fix `frontend/src/components/SessionCard/SessionCard.tsx` preview strip: T108 changed the preview strip from dark (`bg-gray-900 text-gray-300`) to light (`bg-gray-100 text-gray-600`), but the user wants a consistently dark code-preview aesthetic across all session cards regardless of selection state. The light `bg-gray-100` on a white/blue-50 card background has poor contrast and loses the "code output" feel. Fix: change the preview `<p>` classes back to `bg-gray-900 text-gray-300` (and keep the rest: `text-xs mt-1 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono`).
+- [X] T093 Fix `frontend/src/components/SessionCard/SessionCard.tsx` preview strip: T108 changed the preview strip from dark (`bg-gray-900 text-gray-300`) to light (`bg-gray-100 text-gray-600`), but the user wants a consistently dark code-preview aesthetic across all session cards regardless of selection state. The light `bg-gray-100` on a white/blue-50 card background has poor contrast and loses the "code output" feel. Fix: change the preview `<p>` classes back to `bg-gray-900 text-gray-300` (and keep the rest: `text-xs mt-1 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono`).
+
