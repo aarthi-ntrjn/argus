@@ -114,6 +114,18 @@
 
 - [X] T021 [US4] Update `formatTime` in `frontend/src/components/SessionDetail/SessionDetail.tsx`: change `new Date(timestamp).toLocaleTimeString()` to `new Date(timestamp).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', second: '2-digit' })` so all output stream timestamps display in Pacific time (PST/PDT) regardless of the browser's local time zone
 
+### Addendum: US5 — Session status labels & icons (resting / running)
+
+**Goal**: Replace the text-only "active"/"inactive" status badges with labelled icon badges using `lucide-react`. Rename statuses: **active → running** (▶ Play icon), **inactive → resting** (💤 Zzzz icon).
+
+- [ ] T022 Install `lucide-react` into `frontend/package.json` by running `npm install lucide-react` in the `frontend/` directory; verify it appears in `dependencies`
+
+- [ ] T023 [US5] Update `frontend/src/components/SessionCard/SessionCard.tsx`: (a) import `Play` and `ZzzIcon` from `lucide-react`; (b) in `STATUS_COLORS`, rename the `active` key to `running` keeping the same `bg-green-100 text-green-800` classes; (c) in the status badge render: replace the inline `inactive` span with a new span showing `<ZzzIcon size={11} className="inline mr-0.5" /> resting` using `bg-amber-100 text-amber-700` classes; (d) for the active/running case (the else branch using `STATUS_COLORS[session.status]`), when `session.status === 'active'` or `session.status === 'running'` render `<Play size={11} className="inline mr-0.5" /> running` using `bg-green-100 text-green-800` classes; all other statuses fall through to the existing `{session.status}` text rendering
+
+- [ ] T024 [US5] Update `frontend/src/components/SessionPage/SessionPage.tsx`: (a) import `Play` and `ZzzIcon` from `lucide-react`; (b) rename `active` key to `running` in the local `STATUS_COLORS` map (same green classes); (c) mirror the same inactive→resting badge replacement from T023 (use larger `size={13}` for this page's larger badge, `text-sm px-3 py-1` classes); (d) for the running/active case render `<Play size={13} className="inline mr-0.5" /> running` with green classes
+
+- [ ] T025 Run `cd frontend && npm run build` — confirm 0 TypeScript errors and build succeeds; fix any type or import errors before committing
+
 ---
 
 ## Dependencies & Execution Order
