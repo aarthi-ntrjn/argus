@@ -79,20 +79,32 @@ test.describe('SC-006: Session Detail UX', () => {
 
   // ─── US2: Quick Command Buttons ─────────────────────────────────────────────
 
-  test('US2: session card shows quick command buttons', async ({ page }) => {
+  test('US2: session card shows the actions menu button', async ({ page }) => {
     await mockApis(page);
     await page.goto('/');
     await expect(page.getByText('Working on feature')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('button', { name: /esc/i }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /exit/i }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /session actions menu/i }).first()).toBeVisible();
   });
 
-  test('US2: claude-code card shows merge and pull latest buttons', async ({ page }) => {
+  test('US2: opening the actions menu shows Esc, Exit, Merge, Pull latest', async ({ page }) => {
     await mockApis(page);
     await page.goto('/');
     await expect(page.getByText('Working on feature')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('button', { name: /merge/i }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /pull latest/i }).first()).toBeVisible();
+    await page.getByRole('button', { name: /session actions menu/i }).first().click();
+    await expect(page.getByRole('button', { name: /^Esc$/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Exit$/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Merge$/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Pull latest$/i })).toBeVisible();
+  });
+
+  test('US2: copilot-cli card also shows the actions menu with Merge and Pull', async ({ page }) => {
+    await mockApis(page);
+    await page.goto('/');
+    await expect(page.getByText('Another session')).toBeVisible({ timeout: 5000 });
+    // Open the menu on the copilot-cli card (second actions menu button)
+    await page.getByRole('button', { name: /session actions menu/i }).nth(1).click();
+    await expect(page.getByRole('button', { name: /^Merge$/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Pull latest$/i })).toBeVisible();
   });
 
   // ─── US3: Inline Prompt Input ───────────────────────────────────────────────

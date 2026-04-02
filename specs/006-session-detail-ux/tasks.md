@@ -147,6 +147,42 @@
 
 ---
 
+## Phase 9: UX Refinement — Unified Prompt Bar
+
+**Purpose**: Consolidate the separate `QuickCommands` button row and `InlinePrompt` input into a single `SessionPromptBar` component. Quick commands (Esc, Exit, Merge, Pull latest) move into a `⋮` dropdown menu next to the Send button. Fix: Merge and Pull are now shown for **all** session types (copilot-cli included), not just claude-code.
+
+**Goal**: For claude-code sessions: `[input ___________] [Send] [⋮]`. For copilot-cli sessions: `[⋮ Actions]` standalone. The `⋮` dropdown contains all four commands for every session type.
+
+**Independent Test**: Open the dashboard with a copilot-cli session and a claude-code session. Both cards show the `⋮` menu. The claude-code card also shows the text input + Send button. Opening the menu on the copilot-cli card shows Esc, Exit, Merge, Pull latest. Clicking Merge on copilot-cli shows an inline error (backend 501). Clicking Merge on claude-code sends the prompt.
+
+### Implementation for Phase 9
+
+- [ ] T137 [US7] Create `frontend/src/components/SessionPromptBar/SessionPromptBar.tsx`: unified component that renders (a) for claude-code — `[input] [Send] [⋮ menu]` inline row, (b) for all session types — a `⋮` dropdown button containing Esc, Exit (confirm), Merge (confirm), Pull latest (confirm); dropdown opens on click and closes on outside click or Escape; error shown inline below; merge all logic from `QuickCommands.tsx` and `InlinePrompt.tsx`
+- [ ] T138 [US7] Update `frontend/src/components/SessionCard/SessionCard.tsx`: remove `QuickCommands` and `InlinePrompt` imports and JSX, add `SessionPromptBar` import, replace both `<div onClick stopPropagation>` sections with a single `<div onClick={e => e.stopPropagation()}><SessionPromptBar session={session} /></div>`; also move last-output preview BELOW the SessionPromptBar row so the send input is never obscured by output text
+- [ ] T139 [P] [US7] Delete `frontend/src/components/QuickCommands/QuickCommands.tsx` — merged into SessionPromptBar
+- [ ] T140 [P] [US7] Delete `frontend/src/components/InlinePrompt/InlinePrompt.tsx` — merged into SessionPromptBar
+- [ ] T141 [P] [US7] Update `frontend/tests/e2e/sc-006-session-ux.spec.ts`: fix quick command tests to open the `⋮` menu first before looking for Esc/Exit/Merge/Pull; fix inline prompt test to still find `placeholder=/send a prompt/i`; add test that copilot-cli card shows the `⋮` menu with Merge and Pull visible
+- [ ] T142 Verify `cd frontend && npm run build` passes — 0 TypeScript errors
+
+---
+
+## Phase 10: Session Type Icons
+
+**Purpose**: Add recognisable brand icons next to the session-type label in every place the type is displayed (SessionCard badge, SessionPage badge). No new npm dependency — icons are self-contained inline SVG components.
+
+**Goal**: The `claude-code` badge shows the Claude (Anthropic) logo and the `copilot-cli` badge shows the GitHub Copilot logo, both rendered as 14×14 inline SVGs aligned with the label text.
+
+**Independent Test**: Open the dashboard — both session-type badges show their icon to the left of the text. The same icons appear on the full SessionPage header.
+
+### Implementation for Phase 10
+
+- [ ] T143 [US8] Create `frontend/src/components/SessionTypeIcon/SessionTypeIcon.tsx`: a component that accepts `type: string` and renders a 14×14 inline SVG; for `'claude-code'` render the Claude/Anthropic logo SVG path; for `'copilot-cli'` render the GitHub Copilot SVG path; for unknown types render nothing (`null`); no external dependency — paths are embedded directly
+- [ ] T144 [P] [US8] Update the type badge in `frontend/src/components/SessionCard/SessionCard.tsx` to render `<SessionTypeIcon type={session.type} />` immediately before the label text inside the badge `<span>`, with `inline-flex items-center gap-1` on the span
+- [ ] T145 [P] [US8] Update the type badge in `frontend/src/pages/SessionPage.tsx` with the same `<SessionTypeIcon>` and `inline-flex items-center gap-1` treatment
+- [ ] T146 Verify `cd frontend && npm run build` passes — 0 TypeScript errors
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

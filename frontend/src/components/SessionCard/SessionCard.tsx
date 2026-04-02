@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { Session } from '../../types';
 import { getSessionOutput } from '../../services/api';
-import QuickCommands from '../QuickCommands/QuickCommands';
-import InlinePrompt from '../InlinePrompt/InlinePrompt';
+import SessionPromptBar from '../SessionPromptBar/SessionPromptBar';
+import SessionTypeIcon from '../SessionTypeIcon/SessionTypeIcon';
 
 interface Props {
   session: Session;
@@ -51,7 +51,8 @@ export default function SessionCard({ session, selected, onSelect }: Props) {
       {/* Header row */}
       <div className="flex justify-between items-start">
         <div className="flex flex-wrap gap-2 items-center">
-          <span className={`text-xs px-2 py-0.5 rounded font-medium ${TYPE_COLORS[session.type] ?? 'bg-gray-100'}`}>
+          <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium ${TYPE_COLORS[session.type] ?? 'bg-gray-100'}`}>
+            <SessionTypeIcon type={session.type} size={13} />
             {session.type}
           </span>
           <span className={`text-xs px-2 py-0.5 rounded font-medium ${STATUS_COLORS[session.status] ?? 'bg-gray-100'}`}>
@@ -78,21 +79,14 @@ export default function SessionCard({ session, selected, onSelect }: Props) {
       {/* Summary */}
       {session.summary && <p className="text-sm text-gray-600 mt-2 truncate">{session.summary}</p>}
 
-      {/* Last output preview */}
-      {lastLine && (
-        <p className="text-xs text-gray-400 mt-1 truncate font-mono">{lastLine}</p>
-      )}
-
-      {/* Quick commands */}
-      <div className="mt-2" onClick={e => e.stopPropagation()}>
-        <QuickCommands session={session} />
+      {/* Prompt bar (send + ⋮ actions) */}
+      <div onClick={e => e.stopPropagation()}>
+        <SessionPromptBar session={session} />
       </div>
 
-      {/* Inline prompt — claude-code only */}
-      {session.type === 'claude-code' && (
-        <div onClick={e => e.stopPropagation()}>
-          <InlinePrompt session={session} />
-        </div>
+      {/* Last output preview — below interactive controls so it never obscures the prompt */}
+      {lastLine && (
+        <p className="text-xs text-gray-400 mt-1 truncate font-mono">{lastLine}</p>
       )}
     </div>
   );
