@@ -154,3 +154,14 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: The refactor task T108 was implemented based on a misinterpretation of "different gray colors"  assumed the user wanted lighter/consistent grays, when they actually wanted the dark style kept but applied uniformly.
 **How to prevent**: When a user says "make consistent," clarify whether they mean consistent with the light card theme or consistent dark. Do not change darklight without explicit confirmation.
 **Fix summary**: Reverted `SessionCard.tsx` preview `<p>` classes back to `bg-gray-900 text-gray-300`.
+
+---
+
+## T094 — Stale null-PID Claude Code sessions never cleaned up when another Claude process is running
+
+**Date**: 2026-04-03
+**Symptom**: A Claude Code session ID (e.g., `8c20d263 | 26h 2m`) appeared in the dashboard with no corresponding real session, showing as active indefinitely even after the original Claude Code process had long since exited.
+**Root cause**: `reconcileClaudeCodeSessions()` in `session-monitor.ts` used `claudeRunning` (whether *any* Claude process is running) as the guard for null-PID sessions: `session.pid == null && !claudeRunning`. If any other Claude session was active on the machine, `claudeRunning = true` and no null-PID sessions were ever cleaned up, regardless of how old they were.
+**Why it was missed**: The T091 fix was written to prevent null-PID sessions from being prematurely ended at startup. The guard `!claudeRunning` was correct for the single-session case but broke down when multiple Claude Code sessions existed simultaneously.
+**How to prevent**: When cleaning up sessions per-session state, use per-session signals (e.g., the session's own JSONL file freshness) rather than global process-presence signals. Global signals (is any Claude running?) cannot distinguish between the session you're checking and an unrelated session.
+**Fix summary**: `session-monitor.ts` — null-PID branch now stats the session's JSONL file (`~/.claude/projects/{projectDir}/{sessionId}.jsonl`); if the file is missing or older than `ACTIVE_JSONL_THRESHOLD_MS` (30 min), the session is ended. `claude-code-detector.ts` — exported `ACTIVE_JSONL_THRESHOLD_MS` and made `claudeProjectDirName` a public static method for reuse.
