@@ -112,3 +112,14 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: Tests mocked readdirSync to return the same value for all calls, masking JSONL filename-based ID discovery. Fake IDs were never compared against real hook payloads in tests.
 **How to prevent**: Always use the JSONL filename (without extension) as the Claude Code session ID. When mocking readdirSync in tests, distinguish calls with {withFileTypes:true} (returning dir entries) from plain calls (returning JSONL filenames). Write a regression test that inserts a session with a known ID matching a JSONL filename and verifies it gets reused.
 **Fix summary**: claude-code-detector.ts - scanExistingSessions() per-repo block replaced: scans project dir for *.jsonl files sorted by mtime, uses newest filename (minus .jsonl) as session ID, restarts watcher for already-active sessions instead of skipping, removes fake claude-startup-* ID path entirely.
+
+---
+
+## T090 — Claude Code session transitions to ended after every AI response instead of only on exit
+
+**Date**: 2026-04-02
+**Symptom**: After Claude Code responded to a request, the session card immediately showed "ended". Issuing another command would flip it back to active, then ended again on the next response.
+**Root cause**: `handleHookPayload` in `claude-code-detector.ts` mapped `hook_event_name === 'Stop'` to `status: 'ended'`. But Claude Code's `Stop` hook fires at the end of every AI turn (when the model finishes generating output) — not when the user exits the Claude Code terminal. Actual session termination is detected separately by `reconcileStaleSessions()` via PID check.
+**Why it was missed**: The `Stop` hook was assumed to be analogous to a process exit signal. No test exercised the session's status after a `Stop` hook arrived, only that the HTTP 200 was returned.
+**How to prevent**: When mapping external hook events to session lifecycle states, verify the exact semantics of each event in the source tool's documentation. Add a test that checks the DB-persisted session status after each hook type fires — not just the HTTP response code.
+**Fix summary**: `claude-code-detector.ts` — `Stop` branch now sets `status: 'idle'` and leaves `endedAt` null. Session transitions to `ended` only via `reconcileStaleSessions()` when the PID is no longer running.
