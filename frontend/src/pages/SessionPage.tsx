@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { getSession, getSessionOutput, stopSession, sendPrompt, queryClient } from '../services/api';
 import SessionDetail from '../components/SessionDetail/SessionDetail';
 import ControlPanel from '../components/ControlPanel/ControlPanel';
+import SessionTypeIcon from '../components/SessionTypeIcon/SessionTypeIcon';
 
 function getElapsed(startedAt: string, endedAt: string | null): string {
   const end = endedAt ? new Date(endedAt) : new Date();
@@ -85,7 +86,8 @@ export default function SessionPage() {
 
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex flex-wrap gap-3 items-center mb-2">
-            <span className={`text-sm px-3 py-1 rounded-full font-medium ${TYPE_COLORS[session.type] ?? 'bg-gray-100'}`}>
+            <span className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full font-medium ${TYPE_COLORS[session.type] ?? 'bg-gray-100'}`}>
+              <SessionTypeIcon type={session.type} size={14} />
               {session.type}
             </span>
             <span className={`text-sm px-3 py-1 rounded-full font-medium ${STATUS_COLORS[session.status] ?? 'bg-gray-100'}`}>
