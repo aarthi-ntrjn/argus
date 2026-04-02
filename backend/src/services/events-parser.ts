@@ -22,6 +22,19 @@ const EVENT_ROLE_MAP: Record<string, OutputRole | null> = {
   'user.message': 'user',
 };
 
+function extractContent(event: JsonlEvent): string {
+  if (typeof event.content === 'string') return event.content;
+  // Strip fields already shown elsewhere; stringify only the remaining meaningful data
+  const { type: _t, timestamp: _ts, tool_name: _tn, content: _c, ...rest } = event;
+  const keys = Object.keys(rest);
+  if (keys.length === 0) return '';
+  if (keys.length === 1) {
+    const val = rest[keys[0]];
+    return typeof val === 'string' ? val : JSON.stringify(val);
+  }
+  return JSON.stringify(rest);
+}
+
 export function parseJsonlLine(line: string, sessionId: string, sequenceNumber: number): SessionOutput | null {
   if (!line.trim()) return null;
   try {
@@ -33,7 +46,7 @@ export function parseJsonlLine(line: string, sessionId: string, sequenceNumber: 
       sessionId,
       timestamp: event.timestamp ?? new Date().toISOString(),
       type: outputType,
-      content: typeof event.content === 'string' ? event.content : JSON.stringify(event),
+      content: extractContent(event),
       toolName: typeof event.tool_name === 'string' ? event.tool_name : null,
       role,
       sequenceNumber,
