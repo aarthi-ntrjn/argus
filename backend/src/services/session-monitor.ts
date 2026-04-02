@@ -41,17 +41,48 @@ export class SessionMonitor extends EventEmitter {
 
   private async reconcileStaleSessions(): Promise<void> {
     try {
-      const activeSessions = getSessions({ status: 'active' });
-      if (activeSessions.length === 0) return;
+      const sessions = [
+        ...getSessions({ status: 'active' }),
+        ...getSessions({ status: 'idle' }),
+      ];
+      if (sessions.length === 0) return;
       const processes = await psList();
       const runningPids = new Set(processes.map((p) => p.pid));
       const now = new Date().toISOString();
-      for (const session of activeSessions) {
+      for (const session of sessions) {
         if (session.pid != null && !runningPids.has(session.pid)) {
           updateSessionStatus(session.id, 'ended', now);
         }
       }
     } catch { /* ignore — stale reconciliation is best-effort */ }
+  }
+
+  private async reconcileClaudeCodeSessions(): Promise<void> {
+    try {
+      const liveSessions = [
+        ...getSessions({ status: 'active', type: 'claude-code' }),
+        ...getSessions({ status: 'idle', type: 'claude-code' }),
+      ];
+      if (liveSessions.length === 0) return;
+
+      const processes = await psList();
+      const runningPids = new Set(processes.map((p) => p.pid));
+      const claudeRunning = processes.some(p =>
+        p.name.toLowerCase().includes('claude') || p.cmd?.toLowerCase().includes('claude')
+      );
+      const now = new Date().toISOString();
+
+      for (const session of liveSessions) {
+        const shouldEnd =
+          (session.pid != null && !runningPids.has(session.pid)) ||
+          (session.pid == null && !claudeRunning);
+        if (shouldEnd) {
+          updateSessionStatus(session.id, 'ended', now);
+          const endedSession: Session = { ...session, status: 'ended', endedAt: now };
+          this.emit('session.ended', endedSession);
+        }
+      }
+    } catch { /* ignore — liveness check is best-effort */ }
   }
 
   stop(): void {
@@ -74,6 +105,7 @@ export class SessionMonitor extends EventEmitter {
   private async runScan(): Promise<void> {
     try {
       await this.scanner.scan();
+      await this.reconcileClaudeCodeSessions();
       const sessions = await this.cliDetector.scan();
       const currentScanIds = new Set<string>(sessions.map((s) => s.id));
 

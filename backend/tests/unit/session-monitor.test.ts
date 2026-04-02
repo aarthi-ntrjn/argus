@@ -4,11 +4,14 @@ import { join } from 'path';
 import { mkdirSync } from 'fs';
 import { randomUUID } from 'crypto';
 
+// Mutable so individual tests can control which processes are "running"
+let mockPsListResult: Array<{ pid: number; name: string; cmd?: string }> = [
+  { pid: 9999, name: 'some-process', cmd: 'some-process' },
+];
+
 // Mock ps-list to control which PIDs are "running"
 vi.mock('ps-list', () => ({
-  default: vi.fn(async () => [
-    { pid: 9999, name: 'some-process', cmd: 'some-process' },
-  ]),
+  default: vi.fn(async () => mockPsListResult),
 }));
 
 // Mock config to avoid reading real watch dirs
@@ -56,6 +59,7 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
     process.env.ARGUS_DB_PATH = join(tmpdir(), `argus-sm-test-${randomUUID()}.db`);
     mkdirSync(tmpdir(), { recursive: true });
     vi.resetModules();
+    mockPsListResult = [{ pid: 9999, name: 'some-process', cmd: 'some-process' }];
     const db = await import('../../src/db/database.js');
     closeDb = db.closeDb;
     upsertSession = db.upsertSession;
@@ -79,8 +83,13 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
     vi.resetModules();
   });
 
-  it('should NOT mark an active Claude Code session (pid: null) as ended on startup', async () => {
+  it('should NOT mark an active Claude Code session (pid: null) as ended on startup when Claude is running', async () => {
     const now = new Date().toISOString();
+    // Claude IS running — session should stay alive
+    mockPsListResult = [
+      { pid: 9999, name: 'some-process', cmd: 'some-process' },
+      { pid: 4242, name: 'claude', cmd: 'claude' },
+    ];
     upsertSession({
       id: 'claude-hook-session-1',
       repositoryId: 'repo-1',
@@ -92,15 +101,15 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
       lastActivityAt: now,
       summary: null,
       expiresAt: null,
+      model: null,
     });
 
     const monitor = new SessionMonitor();
     await monitor.start();
     monitor.stop();
 
-    const sessions = getSessions({ status: 'active' }) as Array<{ id: string; status: string }>;
+    const sessions = getSessions({}) as Array<{ id: string; status: string }>;
     const session = sessions.find(s => s.id === 'claude-hook-session-1');
-    expect(session, 'Claude hook session should still be active after startup').toBeDefined();
     expect(session?.status).toBe('active');
   });
 
@@ -117,6 +126,7 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
       lastActivityAt: now,
       summary: null,
       expiresAt: null,
+      model: null,
     });
 
     const monitor = new SessionMonitor();
@@ -125,6 +135,60 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
 
     const allSessions = getSessions({}) as Array<{ id: string; status: string }>;
     const session = allSessions.find(s => s.id === 'copilot-dead-pid-session');
+    expect(session?.status).toBe('ended');
+  });
+
+  // T091 regression: idle sessions (post-Stop hook) must also be reconciled at startup
+  it('T091: should mark an idle Claude Code session with a dead PID as ended on startup', async () => {
+    const now = new Date().toISOString();
+    upsertSession({
+      id: 'claude-idle-dead-pid',
+      repositoryId: 'repo-1',
+      type: 'claude-code',
+      pid: 55555,          // dead PID — not in ps-list
+      status: 'idle',      // session was idle (Stop hook fired before process exit)
+      startedAt: now,
+      endedAt: null,
+      lastActivityAt: now,
+      summary: null,
+      expiresAt: null,
+      model: null,
+    });
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const allSessions = getSessions({}) as Array<{ id: string; status: string }>;
+    const session = allSessions.find(s => s.id === 'claude-idle-dead-pid');
+    expect(session?.status).toBe('ended');
+  });
+
+  // T091 regression: null-PID Claude Code sessions end when no Claude process is running
+  it('T091: should mark null-PID Claude Code session as ended when no Claude process is running', async () => {
+    const now = new Date().toISOString();
+    // No Claude process in the mock — only unrelated processes
+    mockPsListResult = [{ pid: 9999, name: 'some-process', cmd: 'some-process' }];
+    upsertSession({
+      id: 'claude-null-pid-session',
+      repositoryId: 'repo-1',
+      type: 'claude-code',
+      pid: null,
+      status: 'idle',
+      startedAt: now,
+      endedAt: null,
+      lastActivityAt: now,
+      summary: null,
+      expiresAt: null,
+      model: null,
+    });
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const allSessions = getSessions({}) as Array<{ id: string; status: string }>;
+    const session = allSessions.find(s => s.id === 'claude-null-pid-session');
     expect(session?.status).toBe('ended');
   });
 });
