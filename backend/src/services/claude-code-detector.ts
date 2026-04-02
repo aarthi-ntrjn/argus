@@ -5,6 +5,7 @@ import psList from 'ps-list';
 import chokidar, { type FSWatcher } from 'chokidar';
 import { getSession, upsertSession, getRepositories, getRepositoryByPath, getSessions } from '../db/database.js';
 import { OutputStore } from './output-store.js';
+import { broadcast } from '../api/ws/event-dispatcher.js';
 import { parseClaudeJsonlLine, parseModel } from './claude-code-jsonl-parser.js';
 import type { Session } from '../models/index.js';
 
@@ -249,7 +250,11 @@ export class ClaudeCodeDetector {
           const model = parseModel(line);
           if (model) {
             const existing = getSession(sessionId);
-            if (existing) upsertSession({ ...existing, model });
+            if (existing) {
+              const updated = { ...existing, model };
+              upsertSession(updated);
+              broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
+            }
             needsModel = false;
           }
         }
