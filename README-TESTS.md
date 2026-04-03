@@ -78,6 +78,8 @@ npm run test:e2e:ui       # interactive Playwright UI (pick tests, see trace)
 
 > **Note**: For `--ui` mode, start the dev server first in a separate terminal (`npm run dev`), then run the UI command. If no server is running Playwright may fail to open the window.
 
+> **Why `--ui-host` / `--ui-port`?** The `test:e2e:ui` script passes `--ui-host=localhost --ui-port=9323` so the Playwright UI opens in your browser at `http://localhost:9323` instead of launching an Electron window. The Electron-based UI does not render on this machine.
+
 **Config**: `playwright.config.ts`  
 **Tests**: `frontend/tests/e2e/sc-001-*.spec.ts`, `sc-002-*.spec.ts`, `sc-004-*.spec.ts`
 
