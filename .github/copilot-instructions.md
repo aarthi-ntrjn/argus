@@ -88,3 +88,9 @@ checklists/      # Domain-specific checklists (requirements.md, etc.)
 - **`.specify/init-options.json`**: `ai: "claude"`, `speckit_version: "0.4.3"`, `branch_numbering: "sequential"`, `script: "ps"` (PowerShell).
 - **`.vscode/settings.json`**: Auto-approves `.specify/scripts/powershell/` and `.specify/scripts/bash/` for Claude's tool execution.
 - **`.gitignore`**: Excludes `.claude/` and `.github/copilot/` credential folders from source control.
+
+## Git Workflow
+
+- After every commit, always run `git push`.
+- After creating a local branch, always publish it to the remote (`git push --set-upstream origin <branch>`).
+- During implementation, commit after completing each task (use the task ID in the commit message).

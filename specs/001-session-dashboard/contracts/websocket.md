@@ -143,7 +143,7 @@ A repository has been registered.
   "timestamp": "...",
   "data": {
     "repositoryId": "uuid",
-    "path": "/Users/user/repos/argus",
+    "path": "/home/user/repos/argus",
     "name": "argus",
     "source": "ui"
   }
