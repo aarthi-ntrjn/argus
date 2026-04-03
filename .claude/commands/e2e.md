@@ -29,25 +29,30 @@ You are a senior QA engineer writing Playwright e2e tests for **Argus** — a fr
 
 ---
 
-## Step 2 — Choose the Test Tier
+## Step 2 — Always Write Both Tiers
 
-There are **two tiers** of tests in this project:
+**Every feature must have tests in both tiers.** Do not write only one.
 
-### Tier 1 — Mock-based (default)
+### Tier 1 — Mock-based
 - File location: `frontend/tests/e2e/sc-###-<slug>.spec.ts`
 - Covered by `playwright.config.ts` (run with `npm run test:e2e`)
 - Use `page.route('**/api/v1/...')` to intercept HTTP calls
 - Never start a real server; never call the real backend
 - Fast, deterministic, run in CI
+- **Covers**: happy path, all status/state variants, edge cases, interaction flows, error states
 
 ### Tier 2 — Real-server
 - File location: `frontend/tests/e2e/real-server/sc-###-real-<slug>.spec.ts`
 - Covered by `playwright.real.config.ts` (run with `npm run test:e2e:real`)
 - Use `request.newContext()` in `beforeAll` to seed real data; clean up in `afterAll`
 - Use `test-config.ts` constants (`BASE_URL`, `TEST_REPO_A`, `TEST_REPO_B`) — never hardcode paths
-- Required when the SC verifies persistence, WebSocket behavior, or cross-process state
+- **Covers**: API contract shape, persistence across real reload, empty-state against real backend, 404/error responses, anything requiring real process state (WebSocket, etc.)
 
-**Default to Tier 1** unless the SC explicitly requires real server behavior.
+**What to test in the real-server tier when sessions can't be seeded** (sessions are discovered from OS processes, not via API):
+- Empty state UI (repos with no sessions → "No sessions" message)
+- API contract: verify endpoints return correct shape and status codes (200/404/400/501)
+- Settings persistence across real `page.reload()`
+- Corruption/fallback behavior against real backend data
 
 ---
 
