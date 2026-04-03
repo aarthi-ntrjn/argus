@@ -127,6 +127,35 @@ Argus is a single-user localhost tool (`127.0.0.1` only). The following hardenin
 | **Filesystem routes** | Browse, scan, and scan-folder endpoints resolve and validate all user-supplied paths against `homedir()` and registered repository paths. Paths outside this boundary return 403. Recursive directory scans skip symlinks to prevent traversal loops. |
 | **HTTP headers** | All responses include `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY`. No server version or runtime information is exposed. |
 
+## CI & Supply Chain
+
+Two GitHub Actions workflows protect the repository against supply chain attacks:
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | Every push and PR | Build, test, audit |
+| `supply-chain.yml` | PRs to `master` only | Dependency advisory check |
+
+### What the CI pipeline enforces
+
+| Protection | Mechanism |
+|------------|-----------|
+| **Lockfile integrity** | `npm ci` fails if `package-lock.json` is absent or any package hash doesn't match. The lockfile is never regenerated in CI. |
+| **No lifecycle scripts** | `npm ci --ignore-scripts` suppresses all `postinstall`/`prepare` scripts. Only packages on the allowlist (`.github/supply-chain/lifecycle-allowlist.yml`) are rebuilt via `npm rebuild`. |
+| **Action SHA pinning** | Every `uses:` directive in every workflow file must reference a 40-character commit SHA. A validation script runs on every CI build and fails if any reference is unpinned. |
+| **Dependency advisory check** | PRs that add a dependency with a critical advisory or malicious flag are blocked before merge. |
+| **Critical CVE audit** | `npm audit --audit-level=critical` runs on every build against the committed lockfile. |
+
+### Responding to CI failures
+
+**Lockfile mismatch**: Run `npm install` locally to regenerate the lockfile, commit the updated `package-lock.json`, and push.
+
+**Unpinned action**: Use `git ls-remote https://github.com/<owner>/<repo> "refs/tags/<tag>.*" | tail -1` to find the SHA. Add it as `uses: owner/repo@<sha> # vX.Y.Z`. See `.github/supply-chain/action-shas.md` for the current pinned SHAs.
+
+**Lifecycle script blocked**: Add the package to `.github/supply-chain/lifecycle-allowlist.yml` with a non-empty `reason` and `environments` field. Requires PR review.
+
+**Dependency advisory blocked**: Remove the flagged package, find an alternative, or — if the advisory is a false positive — open a PR with a maintainer override justification.
+
 ## Tech stack
 
 Fastify + Node.js backend · React + Vite frontend · SQLite (better-sqlite3) · WebSockets for live updates

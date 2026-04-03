@@ -15,7 +15,7 @@
 
 **Purpose**: Create the directory structure required by all subsequent phases. No existing `.github/workflows/`, `.github/scripts/`, or `.github/supply-chain/` directories exist — this is a greenfield CI setup.
 
-- [ ] T001 Create directories `.github/workflows/`, `.github/scripts/`, and `.github/supply-chain/` at the repository root
+- [x] T001 Create directories `.github/workflows/`, `.github/scripts/`, and `.github/supply-chain/` at the repository root
 
 ---
 
@@ -25,8 +25,8 @@
 
 **⚠️ CRITICAL**: US1 (T004–T005) cannot begin until T002 is complete; US3 (T008) cannot begin until T003 is complete.
 
-- [ ] T002 [P] Resolve immutable commit SHAs for the three pinned actions by running `git ls-remote https://github.com/actions/checkout refs/tags/v4`, `git ls-remote https://github.com/actions/setup-node refs/tags/v4`, and `git ls-remote https://github.com/github/dependency-review-action refs/tags/v4`; for each, follow the tag object to its commit SHA using `git ls-remote --deref`; record all three SHAs as comments at the top of `.github/supply-chain/action-shas.md` (new file) in the format `actions/checkout@v4 = <40-char-sha>`
-- [ ] T003 [P] Create `.github/supply-chain/lifecycle-allowlist.yml` (new file) with the schema comment header and a single entry for `better-sqlite3` (`reason: "Compiles native SQLite bindings via node-gyp. Required for the backend database layer."`, `environments: [ci, local]`) per the schema defined in `data-model.md`
+- [x] T002 [P] Resolve immutable commit SHAs for the three pinned actions by running `git ls-remote https://github.com/actions/checkout refs/tags/v4`, `git ls-remote https://github.com/actions/setup-node refs/tags/v4`, and `git ls-remote https://github.com/github/dependency-review-action refs/tags/v4`; for each, follow the tag object to its commit SHA using `git ls-remote --deref`; record all three SHAs as comments at the top of `.github/supply-chain/action-shas.md` (new file) in the format `actions/checkout@v4 = <40-char-sha>`
+- [x] T003 [P] Create `.github/supply-chain/lifecycle-allowlist.yml` (new file) with the schema comment header and a single entry for `better-sqlite3` (`reason: "Compiles native SQLite bindings via node-gyp. Required for the backend database layer."`, `environments: [ci, local]`) per the schema defined in `data-model.md`
 
 **Checkpoint**: Confirm `.github/supply-chain/action-shas.md` contains three 40-char SHAs and `.github/supply-chain/lifecycle-allowlist.yml` is valid YAML before proceeding.
 
@@ -38,8 +38,8 @@
 
 **Independent Test**: Push a commit that deletes `package-lock.json` → CI must fail at the install step with a lockfile-absent error. Revert → CI must pass through install, tests, and build.
 
-- [ ] T004 [US1] Create `.github/workflows/ci.yml` (new file) with: `on: [push, pull_request]` triggers targeting all branches for push and `master` for PRs; a single job `build-and-test` on `ubuntu-latest`; a checkout step pinned to the SHA recorded for `actions/checkout@v4` in `action-shas.md` (with `# v4` inline comment); a setup-node step pinned to the SHA recorded for `actions/setup-node@v4` (with `node-version: '22'` and `# v4` inline comment); and an `npm ci --ignore-scripts` step (with a comment explaining lockfile enforcement and script suppression)
-- [ ] T005 [US1] Add three further steps to `.github/workflows/ci.yml` after the install step: (1) `npm test --workspace=backend` to run Vitest; (2) `npm run build --workspace=frontend` to run the TypeScript + Vite build; (3) `npm audit --audit-level=critical` to fail on critical CVEs in the lockfile
+- [x] T004 [US1] Create `.github/workflows/ci.yml` (new file) with: `on: [push, pull_request]` triggers targeting all branches for push and `master` for PRs; a single job `build-and-test` on `ubuntu-latest`; a checkout step pinned to the SHA recorded for `actions/checkout@v4` in `action-shas.md` (with `# v4` inline comment); a setup-node step pinned to the SHA recorded for `actions/setup-node@v4` (with `node-version: '22'` and `# v4` inline comment); and an `npm ci --ignore-scripts` step (with a comment explaining lockfile enforcement and script suppression)
+- [x] T005 [US1] Add three further steps to `.github/workflows/ci.yml` after the install step: (1) `npm test --workspace=backend` to run Vitest; (2) `npm run build --workspace=frontend` to run the TypeScript + Vite build; (3) `npm audit --audit-level=critical` to fail on critical CVEs in the lockfile
 
 **Checkpoint**: Push the workflow and verify the Actions tab shows a green `build-and-test` run that installs deps, runs 164 backend tests, builds the frontend, and passes audit.
 
@@ -51,8 +51,8 @@
 
 **Independent Test**: Add a workflow step with `uses: actions/cache@v3` (no SHA) → the validation step must fail and print the offending file and line. Replace with `uses: actions/cache@<sha> # v3` → validation must pass.
 
-- [ ] T006 [P] [US2] Create `.github/scripts/validate-action-pins.sh` (new file, executable) — a POSIX shell script that: iterates every `.yml` file under `.github/workflows/`; for each line matching `uses:`, extracts the value after `uses:`; skips values starting with `./` (local actions exempt); checks the remaining values for the pattern `@[0-9a-f]{40}` using `grep -P`; prints `UNPINNED: <file>:<lineno>  <uses-value>` for each violation and increments an error counter; exits with the error count (0 = all pinned, >0 = violations found)
-- [ ] T007 [US2] Insert a `validate-action-pins.sh` execution step into `.github/workflows/ci.yml` immediately after the checkout step (before the setup-node and install steps) with `run: bash .github/scripts/validate-action-pins.sh` and a `name: Validate action SHA pins` label — positioning it first ensures pin violations are caught before any tool is downloaded
+- [x] T006 [P] [US2] Create `.github/scripts/validate-action-pins.sh` (new file, executable) — a POSIX shell script that: iterates every `.yml` file under `.github/workflows/`; for each line matching `uses:`, extracts the value after `uses:`; skips values starting with `./` (local actions exempt); checks the remaining values for the pattern `@[0-9a-f]{40}` using `grep -P`; prints `UNPINNED: <file>:<lineno>  <uses-value>` for each violation and increments an error counter; exits with the error count (0 = all pinned, >0 = violations found)
+- [x] T007 [US2] Insert a `validate-action-pins.sh` execution step into `.github/workflows/ci.yml` immediately after the checkout step (before the setup-node and install steps) with `run: bash .github/scripts/validate-action-pins.sh` and a `name: Validate action SHA pins` label — positioning it first ensures pin violations are caught before any tool is downloaded
 
 **Same-file sequential constraint**: T007 must follow T004 (ci.yml must exist) and T006 (script must exist).
 
@@ -64,7 +64,7 @@
 
 **Independent Test**: Inspect the CI run logs for the `npm ci --ignore-scripts` step — confirm `better-sqlite3` postinstall is not listed there. Confirm a subsequent `npm rebuild better-sqlite3` step appears and succeeds. Run the backend tests — confirm they pass (proving the SQLite native module loaded correctly from the rebuild).
 
-- [ ] T008 [US3] Add a `Rebuild allowlisted packages` step to `.github/workflows/ci.yml` immediately after the `npm ci --ignore-scripts` step (and before the pin validation step): the step reads `.github/supply-chain/lifecycle-allowlist.yml` using a shell `yq` or Python one-liner to extract package names where `environments` includes `ci`, then runs `npm rebuild <package>` for each; add a `name: Rebuild allowlisted lifecycle packages` label and a comment explaining why this step exists
+- [x] T008 [US3] Add a `Rebuild allowlisted packages` step to `.github/workflows/ci.yml` immediately after the `npm ci --ignore-scripts` step (and before the pin validation step): the step reads `.github/supply-chain/lifecycle-allowlist.yml` using a shell `yq` or Python one-liner to extract package names where `environments` includes `ci`, then runs `npm rebuild <package>` for each; add a `name: Rebuild allowlisted lifecycle packages` label and a comment explaining why this step exists
 
 **Note**: If `yq` is not available on the ubuntu-latest runner, use a Python one-liner: `python3 -c "import yaml,sys; [print(e['package']) for e in yaml.safe_load(sys.stdin)['allowed'] if 'ci' in e['environments']]" < .github/supply-chain/lifecycle-allowlist.yml`
 
@@ -76,13 +76,13 @@
 
 **Independent Test**: Open a PR that adds a package with no advisories → dependency-review step passes and produces no blocking output. Simulate a critical-advisory dependency by temporarily configuring `fail-on-severity: low` → the step fails on any advisory present; revert to `critical`.
 
-- [ ] T009 [US4] Create `.github/workflows/supply-chain.yml` (new file) with: `on: pull_request` trigger targeting `master` only; a single job `dependency-review` on `ubuntu-latest`; `permissions: contents: read, pull-requests: write`; a checkout step pinned to the SHA recorded for `actions/checkout@v4`; and a `github/dependency-review-action` step pinned to the SHA recorded for `github/dependency-review-action@v4` (with `# v4` inline comment) configured with `fail-on-severity: critical`
+- [x] T009 [US4] Create `.github/workflows/supply-chain.yml` (new file) with: `on: pull_request` trigger targeting `master` only; a single job `dependency-review` on `ubuntu-latest`; `permissions: contents: read, pull-requests: write`; a checkout step pinned to the SHA recorded for `actions/checkout@v4`; and a `github/dependency-review-action` step pinned to the SHA recorded for `github/dependency-review-action@v4` (with `# v4` inline comment) configured with `fail-on-severity: critical`
 
 ---
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T010 Update `README.md` to add a `## CI & Supply Chain` section (after the existing `## Security Model` section) documenting: (1) the two workflow files and what triggers each; (2) the lockfile enforcement policy and what to do when CI fails on a lockfile mismatch; (3) the action SHA pinning policy and how to pin a new action (using `git ls-remote --deref`); (4) the lifecycle script allowlist location and how to add an exception; (5) the dependency review check and what to do if a PR is blocked by an advisory
+- [x] T010 Update `README.md` to add a `## CI & Supply Chain` section (after the existing `## Security Model` section) documenting: (1) the two workflow files and what triggers each; (2) the lockfile enforcement policy and what to do when CI fails on a lockfile mismatch; (3) the action SHA pinning policy and how to pin a new action (using `git ls-remote --deref`); (4) the lifecycle script allowlist location and how to add an exception; (5) the dependency review check and what to do if a PR is blocked by an advisory
 
 ---
 
