@@ -179,3 +179,16 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: The T091 fix was written to prevent null-PID sessions from being prematurely ended at startup. The guard `!claudeRunning` was correct for the single-session case but broke down when multiple Claude Code sessions existed simultaneously.
 **How to prevent**: When cleaning up sessions per-session state, use per-session signals (e.g., the session's own JSONL file freshness) rather than global process-presence signals. Global signals (is any Claude running?) cannot distinguish between the session you're checking and an unrelated session.
 **Fix summary**: `session-monitor.ts` — null-PID branch now stats the session's JSONL file (`~/.claude/projects/{projectDir}/{sessionId}.jsonl`); if the file is missing or older than `ACTIVE_JSONL_THRESHOLD_MS` (30 min), the session is ended. `claude-code-detector.ts` — exported `ACTIVE_JSONL_THRESHOLD_MS` and made `claudeProjectDirName` a public static method for reuse.
+
+---
+
+## T095 — Branch badge does not update until window refocus
+
+**Date**: 2026-04-04
+**Symptom**: After switching git branches in the terminal, the Argus dashboard continued to show the old branch name. The badge only updated when the user switched away from the browser and back (triggering window focus).
+**Root cause**: Both `useQuery` calls in `DashboardPage.tsx` (for `repositories` and `sessions`) had no `refetchInterval`. React Query's default behaviour is to refetch on mount and on window focus only — it does not poll automatically unless `refetchInterval` is set. The backend correctly refreshes branch data in the DB every 5 seconds via `SessionMonitor.refreshRepositoryBranches()`, but the frontend never pulled the updated data.
+**Why it was missed**: The backend refresh was tested and confirmed working. The frontend polling gap was not considered — it was assumed `staleTime: 5000` in the global `QueryClient` config caused automatic polling, but `staleTime` only marks data as stale; it does not trigger background refetches.
+**How to prevent**:
+- `staleTime` ≠ `refetchInterval`. Always explicitly set `refetchInterval` on queries that need to stay live with the server.
+- When wiring up a backend polling loop, check end-to-end: does the frontend also have a matching poll? Trace the full data path from server update → DB → API → React Query → UI.
+**Fix summary**: Added `refetchInterval: 5000` to both `useQuery` calls (repositories and sessions) in `DashboardPage.tsx`. Also updated the `repository-scanner.js` vitest mock to properly export `getCurrentBranch`, fixing a silent mock gap where `refreshRepositoryBranches()` errors were being swallowed by the catch block.
