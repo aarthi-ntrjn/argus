@@ -11,12 +11,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T001 Add `TodoItem` TypeScript interface to `backend/src/models/index.ts`
-- [ ] T002 Add `todos` table + index to `backend/src/db/schema.ts` (`SCHEMA_SQL`)
-- [ ] T003 Create migration reference file `backend/src/db/migrations/002-todos.sql`
-- [ ] T004 Add todo CRUD functions to `backend/src/db/database.ts`: `getTodos`, `insertTodo`, `updateTodo`, `deleteTodo`
-- [ ] T005 Create `backend/src/api/routes/todos.ts` with Fastify plugin (empty route stubs)
-- [ ] T006 Register todos route plugin in `backend/src/server.ts`
+- [x] T001 Add `TodoItem` TypeScript interface to `backend/src/models/index.ts`
+- [x] T002 Add `todos` table + index to `backend/src/db/schema.ts` (`SCHEMA_SQL`)
+- [x] T003 Create migration reference file `backend/src/db/migrations/002-todos.sql`
+- [x] T004 Add todo CRUD functions to `backend/src/db/database.ts`: `getTodos`, `insertTodo`, `updateTodo`, `deleteTodo`
+- [x] T005 Create `backend/src/api/routes/todos.ts` with Fastify plugin (empty route stubs)
+- [x] T006 Register todos route plugin in `backend/src/server.ts`
 
 **Checkpoint**: Backend compiles and server starts with `/api/todos` registered (returns 501).
 
@@ -30,20 +30,20 @@
 
 ### Tests for US1 & US2 ⚠️ Write FIRST — ensure FAIL before implementation
 
-- [ ] T010 Write contract tests for `GET /api/todos` (TC-001, TC-002) in `backend/tests/contract/todos.test.ts`
-- [ ] T011 Write contract tests for `POST /api/todos` (TC-003, TC-004, TC-005, TC-006) in `backend/tests/contract/todos.test.ts`
-- [ ] T012 Write contract tests for `PATCH /api/todos/:id` (TC-007, TC-008, TC-009, TC-010) in `backend/tests/contract/todos.test.ts`
-- [ ] T013 [P] Write component tests for `TodoPanel` add + list in `frontend/src/components/TodoPanel/TodoPanel.test.tsx`
+- [x] T010 Write contract tests for `GET /api/todos` (TC-001, TC-002) in `backend/tests/contract/todos.test.ts`
+- [x] T011 Write contract tests for `POST /api/todos` (TC-003, TC-004, TC-005, TC-006) in `backend/tests/contract/todos.test.ts`
+- [x] T012 Write contract tests for `PATCH /api/todos/:id` (TC-007, TC-008, TC-009, TC-010) in `backend/tests/contract/todos.test.ts`
+- [x] T013 [P] Write component tests for `TodoPanel` add + list in `frontend/src/components/TodoPanel/TodoPanel.test.tsx`
 
 ### Implementation for US1 & US2
 
-- [ ] T014 Implement `GET /api/todos` handler in `backend/src/api/routes/todos.ts` (returns all todos, ordered by `created_at` ASC, filtered by `user_id='default'`)
-- [ ] T015 Implement `POST /api/todos` handler in `backend/src/api/routes/todos.ts` (validate text, reject empty/whitespace/>500chars, structured error on fail, pino log on success)
-- [ ] T016 Implement `PATCH /api/todos/:id` handler in `backend/src/api/routes/todos.ts` (toggle done, 404 on missing, pino log on success)
-- [ ] T017 Add todo API functions to `frontend/src/services/api.ts`: `getTodos`, `createTodo`, `toggleTodo`
-- [ ] T018 Create `frontend/src/hooks/useTodos.ts` with React Query hooks: `useTodos`, `useCreateTodo`, `useToggleTodo`
-- [ ] T019 Create `frontend/src/components/TodoPanel/TodoPanel.tsx` — fixed sidebar panel with: item list (done items visually distinct), add form (input + submit), empty state, loading state, error state
-- [ ] T020 Integrate `TodoPanel` into `frontend/src/pages/DashboardPage.tsx` as a fixed right sidebar (always visible)
+- [x] T014 Implement `GET /api/todos` handler in `backend/src/api/routes/todos.ts` (returns all todos, ordered by `created_at` ASC, filtered by `user_id='default'`)
+- [x] T015 Implement `POST /api/todos` handler in `backend/src/api/routes/todos.ts` (validate text, reject empty/whitespace/>500chars, structured error on fail, pino log on success)
+- [x] T016 Implement `PATCH /api/todos/:id` handler in `backend/src/api/routes/todos.ts` (toggle done, 404 on missing, pino log on success)
+- [x] T017 Add todo API functions to `frontend/src/services/api.ts`: `getTodos`, `createTodo`, `toggleTodo`
+- [x] T018 Create `frontend/src/hooks/useTodos.ts` with React Query hooks: `useTodos`, `useCreateTodo`, `useToggleTodo`
+- [x] T019 Create `frontend/src/components/TodoPanel/TodoPanel.tsx` — fixed sidebar panel with: item list (done items visually distinct), add form (input + submit), empty state, loading state, error state
+- [x] T020 Integrate `TodoPanel` into `frontend/src/pages/DashboardPage.tsx` as a fixed right sidebar (always visible)
 
 **Checkpoint**: Dashboard shows todo sidebar. Add an item → it appears. Check it off → strikethrough applied. Refreshing page preserves items.
 
@@ -57,15 +57,15 @@
 
 ### Tests for US3 ⚠️ Write FIRST — ensure FAIL before implementation
 
-- [ ] T021 Write contract tests for `DELETE /api/todos/:id` (TC-011, TC-012) in `backend/tests/contract/todos.test.ts`
-- [ ] T022 [P] Write component tests for `TodoPanel` delete in `frontend/src/components/TodoPanel/TodoPanel.test.tsx`
+- [x] T021 Write contract tests for `DELETE /api/todos/:id` (TC-011, TC-012) in `backend/tests/contract/todos.test.ts`
+- [x] T022 [P] Write component tests for `TodoPanel` delete in `frontend/src/components/TodoPanel/TodoPanel.test.tsx`
 
 ### Implementation for US3
 
-- [ ] T023 Implement `DELETE /api/todos/:id` handler in `backend/src/api/routes/todos.ts` (204 on success, 404 on missing, pino log)
-- [ ] T024 Add `deleteTodo` API function to `frontend/src/services/api.ts`
-- [ ] T025 Add `useDeleteTodo` React Query mutation to `frontend/src/hooks/useTodos.ts`
-- [ ] T026 Add delete button to each todo item in `frontend/src/components/TodoPanel/TodoPanel.tsx`
+- [x] T023 Implement `DELETE /api/todos/:id` handler in `backend/src/api/routes/todos.ts` (204 on success, 404 on missing, pino log)
+- [x] T024 Add `deleteTodo` API function to `frontend/src/services/api.ts`
+- [x] T025 Add `useDeleteTodo` React Query mutation to `frontend/src/hooks/useTodos.ts`
+- [x] T026 Add delete button to each todo item in `frontend/src/components/TodoPanel/TodoPanel.tsx`
 
 **Checkpoint**: Delete button visible on each item. Click → item removed immediately. Last item deleted → empty state shown.
 
@@ -75,15 +75,15 @@
 
 **Purpose**: End-to-end validation of critical user flows + documentation.
 
-- [ ] T030 Write Playwright E2E tests in `frontend/tests/e2e/todo-panel.spec.ts`:
+- [x] T030 Write Playwright E2E tests in `frontend/tests/e2e/todo-panel.spec.ts`:
   - Add a todo item and verify it appears
   - Check off an item and verify visual state
   - Delete an item and verify it disappears
   - Empty state shown when list is empty
   - Items persist after page reload
-- [ ] T031 [P] Update `README.md` to document the todo list feature (§XI)
-- [ ] T032 [P] Run full test suite: `npm run test --workspace=backend` — all pass
-- [ ] T033 [P] Run build: `npm run build --workspace=backend` — no errors
+- [x] T031 [P] Update `README.md` to document the todo list feature (§XI)
+- [x] T032 [P] Run full test suite: `npm run test --workspace=backend` — all pass
+- [x] T033 [P] Run build: `npm run build --workspace=backend` — no errors
 
 ---
 

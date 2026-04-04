@@ -65,3 +65,12 @@ export interface ControlAction {
   completedAt: string | null;
   result: string | null;
 }
+
+export interface TodoItem {
+  id: string;
+  userId: string;
+  text: string;
+  done: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

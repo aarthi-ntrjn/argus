@@ -6,6 +6,7 @@ import { useSettings } from '../hooks/useSettings';
 import { SettingsPanel } from '../components/SettingsPanel';
 import SessionCard from '../components/SessionCard/SessionCard';
 import OutputPane from '../components/OutputPane/OutputPane';
+import TodoPanel from '../components/TodoPanel/TodoPanel';
 import { isInactive } from '../utils/sessionUtils';
 
 interface RepoWithSessions extends Repository {
@@ -139,7 +140,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
-      <div className={`mx-auto ${selectedSessionId ? 'max-w-7xl' : 'max-w-4xl'}`}>
+      <div className="mx-auto max-w-screen-xl">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-semibold text-gray-900">Argus Dashboard</h1>
           <div className="flex items-center gap-2">
@@ -188,23 +189,30 @@ export default function DashboardPage() {
         )}
 
         {reposWithSessions.length === 0 ? (
-          <div className="text-center py-16 text-gray-500">
-            {repos.length === 0 ? (
-              <>
-                <p className="text-xl">No repositories registered.</p>
-                <p className="mt-2">Click "Add Repository" to get started.</p>
-              </>
-            ) : (
-              <>
-                <p className="text-xl">No repositories to show.</p>
-                <p className="mt-2">All repositories are hidden by your current settings.</p>
-              </>
-            )}
+          <div className="flex gap-6 items-start">
+            <div className="flex-1">
+              <div className="text-center py-16 text-gray-500">
+                {repos.length === 0 ? (
+                  <>
+                    <p className="text-xl">No repositories registered.</p>
+                    <p className="mt-2">Click "Add Repository" to get started.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xl">No repositories to show.</p>
+                    <p className="mt-2">All repositories are hidden by your current settings.</p>
+                  </>
+                )}
+              </div>
+            </div>
+            <TodoPanel />
           </div>
         ) : (
-          <div className={`flex gap-6 ${selectedSessionId ? 'items-start' : ''}`}>
-            {/* Repo/session list */}
-            <div className={`space-y-6 ${selectedSessionId ? 'flex-1 min-w-0' : 'w-full'}`}>
+          <div className="flex gap-6 items-start">
+            {/* Main content: repo/session list + output pane */}
+            <div className={`flex gap-6 flex-1 min-w-0 ${selectedSessionId ? 'items-start' : ''}`}>
+              {/* Repo/session list */}
+              <div className={`space-y-6 ${selectedSessionId ? 'flex-1 min-w-0' : 'w-full'}`}>
               {reposWithSessions.map((repo) => (
                 <div key={repo.id} className="bg-white rounded-lg shadow p-6">
                   <div className="flex justify-between items-start mb-4">
@@ -271,6 +279,10 @@ export default function DashboardPage() {
                 </div>
               ) : null;
             })()}
+            </div>
+
+            {/* Todo sidebar */}
+            <TodoPanel />
           </div>
         )}
       </div>
