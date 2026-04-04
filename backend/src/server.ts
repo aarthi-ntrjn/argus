@@ -133,4 +133,3 @@ if (isMain) {
     process.exit(1);
   });
 }
-const x: number = 'this is a type error';
