@@ -84,7 +84,7 @@ test.describe('Session Detail Page', () => {
   test('shows "waiting" status badge', async ({ page }) => {
     await mockSession(page, { status: 'waiting' });
     await page.goto(`/sessions/${SESSION_ID}`);
-    await expect(page.getByText('waiting')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('waiting', { exact: true })).toBeVisible({ timeout: 5000 });
   });
 
   test('shows "error" status badge', async ({ page }) => {
@@ -305,6 +305,53 @@ test.describe('Session Detail Page', () => {
     await expect(page.getByText('npm test')).toBeVisible();
     await expect(page.getByText('All tests passed')).toBeVisible();
     await expect(page.getByText('Done, all green')).toBeVisible();
+  });
+
+  test('shows tool name in brackets for tool_result items (not just tool_use)', async ({ page }) => {
+    await mockSession(page, {}, [makeOutput({ type: 'tool_result', role: null, content: 'exit code 0', toolName: 'bash' })]);
+    await page.goto(`/sessions/${SESSION_ID}`);
+    await expect(page.getByText('RESULT', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('[bash]')).toBeVisible();
+  });
+
+  test('shows formatted timestamp for each output item', async ({ page }) => {
+    await mockSession(page, {}, [makeOutput({ type: 'message', role: 'assistant', content: 'Check the time' })]);
+    await page.goto(`/sessions/${SESSION_ID}`);
+    await expect(page.getByText('AI', { exact: true })).toBeVisible({ timeout: 5000 });
+    // Timestamps are formatted as HH:MM:SS by formatTime()
+    await expect(page.getByText(/\d{1,2}:\d{2}:\d{2}/)).toBeVisible();
+  });
+
+  // ─── Prompt bar on detail page ───────────────────────────────────────────────
+
+  test('prompt bar is visible on the detail page', async ({ page }) => {
+    await mockSession(page);
+    await page.goto(`/sessions/${SESSION_ID}`);
+    await expect(page.getByPlaceholder('Send a prompt…')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('prompt bar Send button is disabled when input is empty', async ({ page }) => {
+    await mockSession(page);
+    await page.goto(`/sessions/${SESSION_ID}`);
+    await expect(page.getByRole('button', { name: 'Send' })).toBeDisabled({ timeout: 5000 });
+  });
+
+  test('prompt bar sends prompt on the detail page and clears input', async ({ page }) => {
+    await mockSession(page);
+    let sendCalled = false;
+    await page.route(`**/api/v1/sessions/${SESSION_ID}/send`, route => {
+      sendCalled = true;
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'act-dp-1', sessionId: SESSION_ID, type: 'send_prompt', payload: null, status: 'completed' }),
+      });
+    });
+    await page.goto(`/sessions/${SESSION_ID}`);
+    const input = page.getByPlaceholder('Send a prompt…');
+    await input.fill('detail page prompt');
+    await page.getByRole('button', { name: 'Send' }).click();
+    await expect(input).toHaveValue('', { timeout: 3000 });
+    expect(sendCalled).toBe(true);
   });
 
 });
