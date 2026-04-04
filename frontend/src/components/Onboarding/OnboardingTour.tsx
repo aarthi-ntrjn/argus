@@ -129,7 +129,7 @@ export function OnboardingTour({ run, steps, onComplete, onSkip }: OnboardingTou
         next: 'Next',
         open: 'Open the dialog',
         skip: 'Skip tour',
-        nextWithProgress: 'Next ({step}/{steps})',
+        nextWithProgress: 'Next ({current}/{total})',
       }}
     />
   );
