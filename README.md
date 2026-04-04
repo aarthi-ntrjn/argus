@@ -151,6 +151,7 @@ Two GitHub Actions workflows protect the repository against supply chain attacks
 | **Lockfile integrity** | `npm ci` fails if `package-lock.json` is absent or any package hash doesn't match. The lockfile is never regenerated in CI. |
 | **No lifecycle scripts** | `npm ci --ignore-scripts` suppresses all `postinstall`/`prepare` scripts. Only packages on the allowlist (`.github/supply-chain/lifecycle-allowlist.yml`) are rebuilt via `npm rebuild`. |
 | **Action SHA pinning** | Every `uses:` directive in every workflow file must reference a 40-character commit SHA. A validation script runs on every CI build and fails if any reference is unpinned. |
+| **Exact dependency versions** | All entries in `backend/package.json` and `frontend/package.json` use exact versions (no `^` or `~`). Combined with lockfile enforcement, this eliminates version drift from local `npm install` runs. |
 | **Dependency advisory check** | PRs that add a dependency with a critical advisory or malicious flag are blocked before merge. |
 | **Critical CVE audit** | `npm audit --audit-level=critical` runs on every build against the committed lockfile. |
 
