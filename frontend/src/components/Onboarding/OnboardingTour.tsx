@@ -49,7 +49,9 @@ const tourStyles = {
     padding: '6px 14px',
     fontFamily: FONT_FAMILY,
     color: '#ffffff',
-    border: 'none',
+    border: 0,
+    outline: 'none',
+    cursor: 'pointer',
   },
   buttonBack: {
     color: '#6b7280',
