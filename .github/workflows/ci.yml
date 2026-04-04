@@ -53,6 +53,9 @@ jobs:
                   result = subprocess.run(['npm', 'rebuild', entry['package']], check=True)
           "
 
+      - name: Build backend
+        run: npm run build --workspace=backend
+
       - name: Run backend tests
         run: npm test --workspace=backend
 
