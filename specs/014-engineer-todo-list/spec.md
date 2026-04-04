@@ -2,7 +2,7 @@
 
 **Feature Branch**: `014-engineer-todo-list`  
 **Created**: 2026-04-04  
-**Status**: Draft  
+**Status**: Clarified  
 **Input**: User description: "create a todolist on the main dashboard. This is a checklist of things for the engineer to do. its just a reminder space for them to work on."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -81,10 +81,10 @@ An engineer closes and reopens the dashboard. Their todo items are still there, 
 - **FR-002**: Users MUST be able to view all their todo items on the main dashboard.
 - **FR-003**: Users MUST be able to mark a todo item as complete or incomplete (toggle).
 - **FR-004**: Users MUST be able to delete a todo item.
-- **FR-005**: The todo list MUST persist across page refreshes and session restarts.
+- **FR-005**: The todo list MUST persist across page refreshes and session restarts via backend API and database storage.
 - **FR-006**: The system MUST reject empty todo item submissions and display a clear message.
-- **FR-007**: The todo list MUST be scoped per engineer (each engineer sees only their own list).
-- **FR-008**: The todo list panel MUST be displayed on the main dashboard alongside existing dashboard content.
+- **FR-007**: Todo items MUST include a `user_id` field in the data model from the start. For the current single-user/single-machine deployment, this field is defaulted (all items belong to the one implicit user). When multi-user support is introduced in future, this field will be used for per-user scoping without a data migration.
+- **FR-008**: The todo list panel MUST be displayed as a fixed sidebar panel on the main dashboard alongside existing dashboard content.
 
 ### Key Entities
 
@@ -102,8 +102,9 @@ An engineer closes and reopens the dashboard. Their todo items are still there, 
 
 ## Assumptions
 
-- The dashboard already exists and the todo list will be added as a new panel/widget within it.
-- Todo items are personal to each engineer and are not shared with others.
+- The dashboard already exists and the todo list will be added as a **fixed sidebar panel** within it.
+- Todo items are personal to each engineer and are not shared with others. For the current single-user/single-machine deployment, no login is required and there is one implicit user. The data model includes a `user_id` field for future multi-user support.
+- Todo items are **stored via backend API and database** — not in browser storage — so they survive browser resets and are ready for cross-machine support in future.
 - There is no requirement for ordering, prioritising, or categorising todo items in this version.
 - Editing a todo item's text after creation is out of scope for this version.
 - There is no limit enforced on the number of todo items, but the UI handles long lists gracefully via scrolling.
