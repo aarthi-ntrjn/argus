@@ -56,14 +56,14 @@ jobs:
       - name: Build backend
         run: npm run build --workspace=backend
 
+      - name: Build frontend
+        run: npm run build --workspace=frontend
+
       - name: Run backend tests
         run: npm test --workspace=backend
 
       - name: Run frontend unit tests
         run: npm test --workspace=frontend
-
-      - name: Build frontend
-        run: npm run build --workspace=frontend
 
       - name: Audit for critical CVEs
         # Fail if any package in the lockfile has a critical vulnerability.
