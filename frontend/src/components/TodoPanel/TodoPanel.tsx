@@ -174,7 +174,7 @@ export default function TodoPanel() {
               }
 
               return (
-                <li key={id} className="flex items-center gap-2 px-4 py-2">
+                <li key={id} className="group flex items-center gap-2 px-4 py-2">
                   <input
                     type="checkbox"
                     checked={done}
@@ -193,6 +193,15 @@ export default function TodoPanel() {
                     aria-label={isDraftRow ? 'New task' : `Edit task: ${todo?.text ?? ''}`}
                     className={`flex-1 min-w-0 text-sm bg-transparent border-none outline-none focus:ring-0 placeholder-gray-300 ${done ? 'line-through text-gray-400' : 'text-gray-700'}`}
                   />
+                  <button
+                    onClick={() => isDraft(id) ? removeDraftState(id, setDraftIds, setDraftPositions) : deleteTodo.mutate(id)}
+                    aria-label={`Delete "${todo?.text ?? 'task'}"`}
+                    className="opacity-0 group-hover:opacity-100 shrink-0 text-gray-300 hover:text-red-500 transition-opacity p-0.5 rounded"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </li>
               );
             })}
