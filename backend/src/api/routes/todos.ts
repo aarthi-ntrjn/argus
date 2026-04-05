@@ -33,17 +33,50 @@ const todosRoutes: FastifyPluginAsync = async (app) => {
     return reply.status(201).send(todo);
   });
 
-  app.patch<{ Params: { id: string }; Body: { done?: unknown } }>('/api/v1/todos/:id', async (req, reply) => {
+  app.patch<{ Params: { id: string }; Body: { done?: unknown; text?: unknown } }>('/api/v1/todos/:id', async (req, reply) => {
     const { id } = req.params;
-    const { done } = req.body ?? {};
-    if (typeof done !== 'boolean') {
+    const { done, text } = req.body ?? {};
+
+    const patch: { done?: boolean; text?: string } = {};
+
+    if (done !== undefined) {
+      if (typeof done !== 'boolean') {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: "Field 'done' must be a boolean.",
+          requestId: req.id,
+        });
+      }
+      patch.done = done;
+    }
+
+    if (text !== undefined) {
+      if (typeof text !== 'string' || text.trim().length === 0) {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: "Field 'text' must be a non-empty string.",
+          requestId: req.id,
+        });
+      }
+      if (text.trim().length > 500) {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: 'Todo text must not exceed 500 characters.',
+          requestId: req.id,
+        });
+      }
+      patch.text = text.trim();
+    }
+
+    if (Object.keys(patch).length === 0) {
       return reply.status(400).send({
         error: 'VALIDATION_ERROR',
-        message: "Field 'done' is required and must be a boolean.",
+        message: "At least one of 'done' or 'text' must be provided.",
         requestId: req.id,
       });
     }
-    const updated = updateTodo(id, done, new Date().toISOString());
+
+    const updated = updateTodo(id, patch, new Date().toISOString());
     if (!updated) {
       return reply.status(404).send({
         error: 'NOT_FOUND',
@@ -51,7 +84,7 @@ const todosRoutes: FastifyPluginAsync = async (app) => {
         requestId: req.id,
       });
     }
-    req.log.info({ action: 'todo_toggled', todoId: id, done, userId: DEFAULT_USER }, 'Todo item toggled');
+    req.log.info({ action: 'todo_updated', todoId: id, patch, userId: DEFAULT_USER }, 'Todo item updated');
     return reply.send(updated);
   });
 

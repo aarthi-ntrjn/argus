@@ -130,4 +130,23 @@ describe('Todos API', () => {
       expect(res.body.error).toBe('NOT_FOUND');
     });
   });
+
+  // TC-013 to TC-014: PATCH text update
+  describe('PATCH /api/v1/todos/:id — text update', () => {
+    it('TC-013: updates text and returns 200 with done unchanged', async () => {
+      const created = (await request.post('/api/v1/todos').send({ text: 'Original text' })).body;
+      const res = await request.patch(`/api/v1/todos/${created.id}`).send({ text: 'Updated text' });
+      expect(res.status).toBe(200);
+      expect(res.body.text).toBe('Updated text');
+      expect(res.body.done).toBe(false);
+      expect(res.body.updatedAt).not.toBe(created.updatedAt);
+    });
+
+    it('TC-014: returns 400 for empty text string', async () => {
+      const created = (await request.post('/api/v1/todos').send({ text: 'Some task' })).body;
+      const res = await request.patch(`/api/v1/todos/${created.id}`).send({ text: '' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('VALIDATION_ERROR');
+    });
+  });
 });

@@ -99,6 +99,10 @@ export async function toggleTodo(id: string, done: boolean): Promise<TodoItem> {
   return apiFetch<TodoItem>(`/todos/${id}`, { method: 'PATCH', body: JSON.stringify({ done }) });
 }
 
+export async function updateTodoText(id: string, text: string): Promise<TodoItem> {
+  return apiFetch<TodoItem>(`/todos/${id}`, { method: 'PATCH', body: JSON.stringify({ text }) });
+}
+
 export async function deleteTodo(id: string): Promise<void> {
   await apiFetch<void>(`/todos/${id}`, { method: 'DELETE' });
 }

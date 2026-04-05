@@ -150,8 +150,15 @@ export function insertTodo(todo: TodoItem): void {
   ).run(todo.id, todo.userId, todo.text, todo.done ? 1 : 0, todo.createdAt, todo.updatedAt);
 }
 
-export function updateTodo(id: string, done: boolean, updatedAt: string): TodoItem | undefined {
-  getDb().prepare('UPDATE todos SET done = ?, updated_at = ? WHERE id = ?').run(done ? 1 : 0, updatedAt, id);
+export function updateTodo(id: string, patch: { done?: boolean; text?: string }, updatedAt: string): TodoItem | undefined {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  if (patch.done !== undefined) { sets.push('done = ?'); params.push(patch.done ? 1 : 0); }
+  if (patch.text !== undefined) { sets.push('text = ?'); params.push(patch.text); }
+  if (sets.length === 0) return undefined;
+  sets.push('updated_at = ?');
+  params.push(updatedAt, id);
+  getDb().prepare(`UPDATE todos SET ${sets.join(', ')} WHERE id = ?`).run(...params);
   return getTodos().find(t => t.id === id);
 }
 
