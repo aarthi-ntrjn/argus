@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TodoPanel from './TodoPanel';
 
-// Mock all hooks used by TodoPanel
 vi.mock('../../hooks/useTodos', () => ({
   useTodos: vi.fn(),
   useCreateTodo: vi.fn(),
@@ -35,8 +34,8 @@ function renderPanel() {
 }
 
 const baseTodos = [
-  { id: '1', userId: 'default', text: 'First task', done: false, createdAt: '', updatedAt: '' },
-  { id: '2', userId: 'default', text: 'Done task', done: true, createdAt: '', updatedAt: '' },
+  { id: '1', userId: 'default', text: 'First task', done: false, createdAt: new Date().toISOString(), updatedAt: '' },
+  { id: '2', userId: 'default', text: 'Done task', done: true, createdAt: new Date().toISOString(), updatedAt: '' },
 ];
 
 beforeEach(() => {
@@ -48,28 +47,51 @@ beforeEach(() => {
 
 describe('TodoPanel', () => {
   describe('header', () => {
-    it('shows "My To-Do" as the panel title', () => {
+    it('shows "To Tackle" as the panel title', () => {
       mockUseTodos.mockReturnValue({ data: [], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
       renderPanel();
-      expect(screen.getByText(/my to-do/i)).toBeInTheDocument();
+      expect(screen.getByText(/to tackle/i)).toBeInTheDocument();
+    });
+
+    it('shows timestamps toggle button', () => {
+      mockUseTodos.mockReturnValue({ data: [], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+      renderPanel();
+      expect(screen.getByTitle(/timestamps/i)).toBeInTheDocument();
+    });
+
+    it('shows completed items toggle button', () => {
+      mockUseTodos.mockReturnValue({ data: [], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+      renderPanel();
+      expect(screen.getByTitle(/completed/i)).toBeInTheDocument();
+    });
+
+    it('shows wrap text toggle button', () => {
+      mockUseTodos.mockReturnValue({ data: [], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+      renderPanel();
+      expect(screen.getByTitle(/wrap text|single line/i)).toBeInTheDocument();
     });
   });
 
-  describe('empty state', () => {
-    it('shows a draft input row when no todos exist', async () => {
-      mockUseTodos.mockReturnValue({ data: [], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+  describe('add row', () => {
+    it('always shows the add-task input regardless of loading state', () => {
+      mockUseTodos.mockReturnValue({ data: undefined, isLoading: true, isError: false } as unknown as ReturnType<typeof useTodos>);
       renderPanel();
-      // Should show a blank editable input so user can start typing
-      await expect(screen.findByRole('textbox', { name: /new task/i })).resolves.toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /new task/i })).toBeInTheDocument();
     });
 
-    it('shows loading state', () => {
+    it('always shows the add-task input when todos exist', () => {
+      mockUseTodos.mockReturnValue({ data: baseTodos, isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+      renderPanel();
+      expect(screen.getByRole('textbox', { name: /new task/i })).toBeInTheDocument();
+    });
+
+    it('shows loading indicator when loading', () => {
       mockUseTodos.mockReturnValue({ data: undefined, isLoading: true, isError: false } as unknown as ReturnType<typeof useTodos>);
       renderPanel();
       expect(screen.getByText(/loading/i)).toBeInTheDocument();
     });
 
-    it('shows error state', () => {
+    it('shows error state when fetch fails', () => {
       mockUseTodos.mockReturnValue({ data: undefined, isLoading: false, isError: true } as unknown as ReturnType<typeof useTodos>);
       renderPanel();
       expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
@@ -81,31 +103,63 @@ describe('TodoPanel', () => {
       mockUseTodos.mockReturnValue({ data: baseTodos, isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
     });
 
-    it('renders all todo items as text inputs', () => {
+    it('renders all todo items as textareas', () => {
       renderPanel();
       expect(screen.getByRole('textbox', { name: /edit task: First task/i })).toBeInTheDocument();
       expect(screen.getByRole('textbox', { name: /edit task: Done task/i })).toBeInTheDocument();
     });
 
-    it('applies strikethrough style to done item input', () => {
+    it('applies strikethrough style to done item', () => {
       renderPanel();
       const doneInput = screen.getByRole('textbox', { name: /edit task: Done task/i });
       expect(doneInput.className).toContain('line-through');
     });
 
-    it('does not render an add button or form', () => {
+    it('renders newest todo first (reverse order)', () => {
       renderPanel();
-      expect(screen.queryByRole('button', { name: /add/i })).not.toBeInTheDocument();
+      const inputs = screen.getAllByRole('textbox');
+      // inputs[0] = add row, inputs[1] = Done task (id:2, added after id:1), inputs[2] = First task
+      const textboxLabels = inputs.map(i => i.getAttribute('aria-label'));
+      const doneIndex = textboxLabels.findIndex(l => l?.includes('Done task'));
+      const firstIndex = textboxLabels.findIndex(l => l?.includes('First task'));
+      expect(doneIndex).toBeLessThan(firstIndex);
+    });
+  });
+
+  describe('hide completed toggle', () => {
+    it('hides done items when toggle is clicked', async () => {
+      mockUseTodos.mockReturnValue({ data: baseTodos, isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+      renderPanel();
+      const toggle = screen.getByTitle(/hide completed|show completed/i);
+      await userEvent.click(toggle);
+      expect(screen.queryByRole('textbox', { name: /edit task: Done task/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /edit task: First task/i })).toBeInTheDocument();
     });
 
-    it('does not render X delete buttons', () => {
+    it('shows done items again when toggle is clicked twice', async () => {
+      mockUseTodos.mockReturnValue({ data: baseTodos, isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
       renderPanel();
-      expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+      const toggle = screen.getByTitle(/hide completed|show completed/i);
+      await userEvent.click(toggle);
+      await userEvent.click(toggle);
+      expect(screen.getByRole('textbox', { name: /edit task: Done task/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('wrap text toggle', () => {
+    it('changes textarea style when wrap toggle is clicked', async () => {
+      mockUseTodos.mockReturnValue({ data: [baseTodos[0]], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+      renderPanel();
+      const input = screen.getByRole('textbox', { name: /edit task: First task/i });
+      expect(input).toHaveStyle({ whiteSpace: 'nowrap' });
+      const toggle = screen.getByTitle(/wrap text|single line/i);
+      await userEvent.click(toggle);
+      expect(input).not.toHaveStyle({ whiteSpace: 'nowrap' });
     });
   });
 
   describe('checkbox toggle', () => {
-    it('calls toggleTodo when checkbox is clicked on a real todo', async () => {
+    it('calls toggleTodo when checkbox is clicked', async () => {
       mockUseTodos.mockReturnValue({ data: baseTodos, isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
       const mutate = vi.fn();
       mockUseToggleTodo.mockReturnValue(makeMutation({ mutate }) as unknown as ReturnType<typeof useToggleTodo>);
@@ -116,36 +170,48 @@ describe('TodoPanel', () => {
     });
   });
 
-  describe('Enter key', () => {
-    it('calls createTodo when Enter is pressed on a non-empty draft row', async () => {
+  describe('Enter key on add row', () => {
+    it('calls createTodo when Enter is pressed on non-empty add row', async () => {
       mockUseTodos.mockReturnValue({ data: [], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
       const mutate = vi.fn();
       mockUseCreateTodo.mockReturnValue(makeMutation({ mutate }));
       renderPanel();
-      const draft = await screen.findByRole('textbox', { name: /new task/i });
-      await userEvent.type(draft, 'New item{Enter}');
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, 'New item{Enter}');
       expect(mutate).toHaveBeenCalledWith('New item', expect.any(Object));
     });
 
-    it('inserts a new draft row when Enter is pressed on a real todo row', async () => {
-      mockUseTodos.mockReturnValue({ data: [baseTodos[0]], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+    it('does not call createTodo when Enter is pressed on empty add row', async () => {
+      mockUseTodos.mockReturnValue({ data: [], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+      const mutate = vi.fn();
+      mockUseCreateTodo.mockReturnValue(makeMutation({ mutate }));
       renderPanel();
-      const input = screen.getByRole('textbox', { name: /edit task: First task/i });
-      await userEvent.click(input);
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.click(addRow);
       await userEvent.keyboard('{Enter}');
-      // A new blank draft input should appear
-      await expect(screen.findByRole('textbox', { name: /new task/i })).resolves.toBeInTheDocument();
+      expect(mutate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('delete button', () => {
+    it('calls deleteTodo when trash button is clicked', async () => {
+      mockUseTodos.mockReturnValue({ data: [baseTodos[0]], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+      const mutate = vi.fn();
+      mockUseDeleteTodo.mockReturnValue(makeMutation({ mutate }) as unknown as ReturnType<typeof useDeleteTodo>);
+      renderPanel();
+      const deleteBtn = screen.getByRole('button', { name: /delete "First task"/i });
+      await userEvent.click(deleteBtn);
+      expect(mutate).toHaveBeenCalledWith('1');
     });
   });
 
   describe('Backspace on empty input', () => {
-    it('calls deleteTodo when Backspace is pressed on an empty real todo input', async () => {
+    it('calls deleteTodo when Backspace is pressed on empty real todo', async () => {
       mockUseTodos.mockReturnValue({ data: baseTodos, isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
       const mutate = vi.fn();
       mockUseDeleteTodo.mockReturnValue(makeMutation({ mutate }) as unknown as ReturnType<typeof useDeleteTodo>);
       renderPanel();
       const input = screen.getByRole('textbox', { name: /edit task: First task/i });
-      // Clear value then press Backspace
       await userEvent.clear(input);
       await userEvent.keyboard('{Backspace}');
       expect(mutate).toHaveBeenCalledWith('1');
@@ -174,6 +240,16 @@ describe('TodoPanel', () => {
       await userEvent.clear(input);
       act(() => { input.blur(); });
       expect(mutate).toHaveBeenCalledWith('1');
+    });
+
+    it('does not call updateTodoText on blur when text is unchanged', async () => {
+      mockUseTodos.mockReturnValue({ data: [baseTodos[0]], isLoading: false, isError: false } as unknown as ReturnType<typeof useTodos>);
+      const mutate = vi.fn();
+      mockUseUpdateTodoText.mockReturnValue(makeMutation({ mutate }) as unknown as ReturnType<typeof useUpdateTodoText>);
+      renderPanel();
+      const input = screen.getByRole('textbox', { name: /edit task: First task/i });
+      act(() => { input.blur(); });
+      expect(mutate).not.toHaveBeenCalled();
     });
   });
 });

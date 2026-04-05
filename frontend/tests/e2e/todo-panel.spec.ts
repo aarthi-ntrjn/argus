@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, BrowserContext } from '@playwright/test';
 
 type TodoItem = {
   id: string;
@@ -19,6 +19,17 @@ function makeTodo(overrides: Partial<TodoItem> = {}): TodoItem {
     updatedAt: new Date().toISOString(),
     ...overrides,
   };
+}
+
+/** Seeds localStorage to mark the onboarding tour as completed, preventing the overlay from blocking clicks. */
+async function skipOnboarding(context: BrowserContext) {
+  await context.addInitScript(() => {
+    window.localStorage.setItem('argus:onboarding', JSON.stringify({
+      schemaVersion: 1, userId: null,
+      dashboardTour: { status: 'completed', completedAt: new Date().toISOString(), skippedAt: null },
+      sessionHints: { dismissed: [] },
+    }));
+  });
 }
 
 /**
@@ -87,10 +98,13 @@ async function mockApis(
 }
 
 test.describe('Todo Panel', () => {
-  test('shows draft input row when todo list is empty', async ({ page }) => {
+  test.beforeEach(async ({ context }) => {
+    await skipOnboarding(context);
+  });
+
+  test('shows add-task input always (even when todo list is empty)', async ({ page }) => {
     await mockApis(page, []);
     await page.goto('/');
-    // A blank editable row should be present (the draft placeholder)
     await expect(page.getByRole('textbox', { name: /new task/i })).toBeVisible();
   });
 
@@ -114,33 +128,44 @@ test.describe('Todo Panel', () => {
     await expect(input).toHaveClass(/line-through/);
   });
 
-  test('typing into draft row and blurring saves the item', async ({ page }) => {
+  test('newest task appears at the top of the list', async ({ page }) => {
+    const todos = [
+      makeTodo({ id: 'old', text: 'Older task', createdAt: new Date(Date.now() - 10000).toISOString() }),
+      makeTodo({ id: 'new', text: 'Newer task', createdAt: new Date().toISOString() }),
+    ];
+    await mockApis(page, todos);
+    await page.goto('/');
+
+    const inputs = page.getByRole('textbox');
+    // inputs[0] = add row, inputs[1] = Newer task (last in array = first shown), inputs[2] = Older task
+    await expect(inputs.nth(1)).toHaveAttribute('aria-label', /edit task: Newer task/i);
+    await expect(inputs.nth(2)).toHaveAttribute('aria-label', /edit task: Older task/i);
+  });
+
+  test('typing into add row and blurring saves the item', async ({ page }) => {
     await mockApis(page, []);
     await page.goto('/');
 
-    const draft = page.getByRole('textbox', { name: /new task/i });
-    await draft.fill('My new task');
-    // Blur by pressing Tab
-    await draft.press('Tab');
+    const addRow = page.getByRole('textbox', { name: /new task/i });
+    await addRow.fill('My new task');
+    await addRow.press('Tab');
 
-    // After save + re-fetch, the item should appear as an editable input
     await expect(page.getByRole('textbox', { name: /edit task: My new task/i })).toBeVisible();
   });
 
-  test('pressing Enter on a row saves it and creates a new row below', async ({ page }) => {
+  test('pressing Enter on add row saves and refocuses add row', async ({ page }) => {
     await mockApis(page, []);
     await page.goto('/');
 
-    const draft = page.getByRole('textbox', { name: /new task/i });
-    await draft.fill('First task');
-    await draft.press('Enter');
+    const addRow = page.getByRole('textbox', { name: /new task/i });
+    await addRow.fill('First task');
+    await addRow.press('Enter');
 
-    // First task should be saved, a new draft should appear
     await expect(page.getByRole('textbox', { name: /edit task: First task/i })).toBeVisible();
-    // A new empty row should be focused (the newly inserted draft)
-    const inputs = page.getByRole('textbox');
-    // At least 2 inputs: the saved item and the new draft
-    await expect(inputs).toHaveCount(2);
+    // Add row input should still be visible and focused after save
+    await expect(page.getByRole('textbox', { name: /new task/i })).toBeVisible();
+    // Total: add row + saved item = 2 textboxes
+    await expect(page.getByRole('textbox')).toHaveCount(2);
   });
 
   test('editing an existing item and blurring updates its text', async ({ page }) => {
@@ -155,7 +180,7 @@ test.describe('Todo Panel', () => {
     await expect(page.getByRole('textbox', { name: /edit task: Updated text/i })).toBeVisible();
   });
 
-  test('pressing Backspace on empty row deletes it and focuses the previous row', async ({ page }) => {
+  test('pressing Backspace on empty row deletes it and keeps other item', async ({ page }) => {
     const todos = [
       makeTodo({ id: 'a', text: 'Keep me' }),
       makeTodo({ id: 'b', text: 'Delete me' }),
@@ -179,8 +204,102 @@ test.describe('Todo Panel', () => {
     const checkbox = page.getByRole('checkbox', { name: /mark "Toggle me"/i });
     await checkbox.click();
 
-    // After toggle, the input should gain the line-through class
     const input = page.getByRole('textbox', { name: /edit task: Toggle me/i });
     await expect(input).toHaveClass(/line-through/);
+  });
+
+  test.describe('header toggles', () => {
+    test('hide-completed toggle hides done items', async ({ page }) => {
+      const todos = [
+        makeTodo({ id: '1', text: 'Active task', done: false }),
+        makeTodo({ id: '2', text: 'Done task', done: true }),
+      ];
+      await mockApis(page, todos);
+      await page.goto('/');
+
+      // Both visible initially
+      await expect(page.getByRole('textbox', { name: /edit task: Active task/i })).toBeVisible();
+      await expect(page.getByRole('textbox', { name: /edit task: Done task/i })).toBeVisible();
+
+      // Click "Hide completed"
+      await page.getByTitle('Hide completed').click();
+
+      await expect(page.getByRole('textbox', { name: /edit task: Done task/i })).not.toBeVisible();
+      await expect(page.getByRole('textbox', { name: /edit task: Active task/i })).toBeVisible();
+    });
+
+    test('hide-completed toggle shows done items again when re-clicked', async ({ page }) => {
+      const todos = [makeTodo({ id: '1', text: 'Done task', done: true })];
+      await mockApis(page, todos);
+      await page.goto('/');
+
+      await page.getByTitle('Hide completed').click();
+      await expect(page.getByRole('textbox', { name: /edit task: Done task/i })).not.toBeVisible();
+
+      await page.getByTitle('Show completed').click();
+      await expect(page.getByRole('textbox', { name: /edit task: Done task/i })).toBeVisible();
+    });
+
+    test('timestamps toggle shows/hides relative timestamps', async ({ page }) => {
+      const todos = [makeTodo({ id: '1', text: 'Task with timestamp' })];
+      await mockApis(page, todos);
+      await page.goto('/');
+
+      // Timestamps shown by default (look for "just now" or similar)
+      await expect(page.locator('text=/just now|\\dm ago|\\dh ago|\\dd ago/')).toBeVisible();
+
+      // Click "Hide timestamps"
+      await page.getByTitle('Hide timestamps').click();
+
+      await expect(page.locator('text=/just now|\\dm ago|\\dh ago|\\dd ago/')).not.toBeVisible();
+    });
+
+    test('wrap-text toggle changes textarea overflow style', async ({ page }) => {
+      const todos = [makeTodo({ id: '1', text: 'Long task that might need wrapping' })];
+      await mockApis(page, todos);
+      await page.goto('/');
+
+      const textarea = page.getByRole('textbox', { name: /edit task/i });
+      await expect(textarea).toHaveCSS('white-space', 'nowrap');
+
+      // Click "Wrap text"
+      await page.getByTitle('Wrap text').click();
+
+      await expect(textarea).not.toHaveCSS('white-space', 'nowrap');
+    });
+  });
+
+  test.describe('trash icon delete', () => {
+    test('hovering a todo row reveals the trash button and clicking it deletes the item', async ({ page }) => {
+      const todos = [makeTodo({ id: 'del-1', text: 'Trash me' })];
+      await mockApis(page, todos);
+      await page.goto('/');
+
+      // Hover the textarea to trigger the group-hover on the parent li
+      const textarea = page.getByRole('textbox', { name: /edit task: Trash me/i });
+      await textarea.hover();
+
+      const trashBtn = page.getByRole('button', { name: /delete "Trash me"/i });
+      await expect(trashBtn).toBeVisible();
+      await trashBtn.click();
+
+      await expect(page.getByRole('textbox', { name: /edit task: Trash me/i })).not.toBeVisible();
+    });
+
+    test('deleting an item leaves remaining items intact', async ({ page }) => {
+      const todos = [
+        makeTodo({ id: 'keep', text: 'Keep this' }),
+        makeTodo({ id: 'del', text: 'Delete this' }),
+      ];
+      await mockApis(page, todos);
+      await page.goto('/');
+
+      const textarea = page.getByRole('textbox', { name: /edit task: Delete this/i });
+      await textarea.hover();
+      await page.getByRole('button', { name: /delete "Delete this"/i }).click();
+
+      await expect(page.getByRole('textbox', { name: /edit task: Delete this/i })).not.toBeVisible();
+      await expect(page.getByRole('textbox', { name: /edit task: Keep this/i })).toBeVisible();
+    });
   });
 });
