@@ -48,8 +48,8 @@ README.md
 README-ARCH.md
 README-TESTS.md
 CLAUDE.md
-BUG-LEARNINGS.md
-MANUAL-TESTS.md
+README-LEARNINGS.md
+README-MANUAL-TESTS.md
 
 # Spec artifacts (this branch)
 specs/015-docs-cleanup/
