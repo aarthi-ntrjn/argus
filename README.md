@@ -1,6 +1,6 @@
 ﻿﻿# Argus
 
-Local dashboard for monitoring and controlling your GitHub Copilot CLI and Claude Code sessions: real-time output, remote stop, all in a browser tab.
+Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every session live, send commands, and stop runaway agents, all from a single browser tab.
 
 ## Requirements
 
@@ -14,87 +14,85 @@ Local dashboard for monitoring and controlling your GitHub Copilot CLI and Claud
 npm install
 
 # 2. Build the frontend (once, or after frontend changes)
-cd frontend && npm run build && cd ..
+npm run build --workspace=frontend
 
 # 3. Start the server
 npm run dev
 ```
 
-Open **http://localhost:7411**
+Open **http://localhost:7411** and you're in.
 
 ## Monitor
 
-See everything happening across all your AI sessions without switching terminals.
+See everything happening across your AI sessions without switching terminals.
 
 ### Session Cards
 
-Each session card on the dashboard shows:
+Each card is a live snapshot of a session:
 
-- **Type badge** (copilot-cli / claude-code) and **status badge** (active / idle / ended / ...)
-- **Model**: the AI model name when known (e.g. `claude-opus-4-5`), displayed in small monospace text next to the type badge
+- **Type badge** (copilot-cli / claude-code) and **status badge** (running / idle / ended / resting / ...)
+- **Model** in small monospace text when known (e.g. `claude-opus-4-5`)
 - **PID** when known, or **session ID prefix** (e.g. `ID: abc12345`) for Claude Code sessions without a detected PID
-- **Elapsed time** and a **View details** link to the full session page
-- **Last output line**: most recent output truncated to one line
+- **Elapsed time** and a link to the full session detail page
+- **Last output preview**: up to 2 lines of the most recent tool result or message
 
 ### Session Output
 
-Click anywhere on a session card to open a **live output pane** on the right side of the dashboard. The card list stays visible on the left. Press **Escape** or click **X** to close the pane. Click a different card to switch the pane to that session.
+Click any card to open a **live output pane** on the right. The card list stays visible on the left. Press **Escape** or click the **X** icon to close it. Click another card to switch sessions.
 
-Output lines are labelled **YOU** / **AI** so conversations are easy to follow at a glance. For Claude Code sessions, Argus reads JSONL conversation files in real-time and streams all content including tool calls.
+Output lines carry type badges so you always know what's what: **YOU** (your input), **AI** (assistant reply), **TOOL** (tool call), **RESULT** (tool result), **STATUS** (status change), **ERR** (error). Claude Code sessions stream everything in real time, including tool calls.
 
 ### Session Detection
 
-Argus auto-detects sessions already running when it starts. For Claude Code, it only re-activates sessions whose JSONL file was modified in the last 30 minutes (prevents ghost sessions). New sessions are picked up every 5 seconds. The OS PID is captured for Claude Code sessions when possible.
+Argus sniffs out sessions already running when it starts. For Claude Code, it only re-activates sessions whose JSONL file was modified in the last 30 minutes, preventing ghost sessions from cluttering your view. New sessions are picked up every 5 seconds. The OS PID is captured for Claude Code sessions when possible.
 
 ## Control
 
-Act on any session directly from the dashboard without touching the terminal.
+Take charge of any session without touching the terminal.
 
-### Quick Commands
+### Prompt Bar
 
-Buttons appear on each active session card:
+Every session card has a prompt bar. Type a message and press **Enter** (or **Send**) to talk directly to a Claude Code session. Hit the **⋮** menu for quick commands:
 
-| Button | Action |
+| Command | Action |
 |--------|--------|
-| **Esc** | Send an interrupt signal (SIGINT / Ctrl+Break) to cancel the current operation |
-| **Exit** | Send `/exit` (requires confirmation) |
-| **Merge** *(claude-code only)* | Send `merge current branch with main` |
-| **Pull latest** *(claude-code only)* | Send `pull latest changes from main branch` |
+| **Esc** | Interrupt the current operation (SIGINT / Ctrl+Break) |
+| **Exit** | Send `/exit` to close the session (requires confirmation) |
+| **Merge** | Send `merge current branch with main` (Claude Code only; requires confirmation) |
+| **Pull latest** | Send `pull latest changes from main branch` (Claude Code only; requires confirmation) |
 
-### Inline Prompt
-
-Active Claude Code cards include a text input. Type a message and press **Enter** (or click **Send**) to send it directly to the session.
+> Prompt injection works with Claude Code sessions only. Copilot CLI support is not available in v1.
 
 ### Repository Management
 
-Click **Add Repository** and use the native folder picker to select a repo. If the selected folder is a git repo it is added immediately; if not, Argus scans all subdirectories and adds every git repo found in one go. Already-registered repos are skipped automatically.
+Click **Add Repository** and pick a folder. Argus will sniff out every git repo inside it and register them all in one go. Already-registered repos are skipped automatically.
 
 ## Dashboard Settings
 
-Click the **gear icon** in the top-right of the dashboard header to open the Settings panel.
+Click the **gear icon** (top-right) to open Settings.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Hide ended sessions | Off | When turned on, sessions with status `completed` or `ended` are hidden from all repository cards |
-| Hide repos with no active sessions | Off | When turned on, repository cards are hidden if they have no sessions with status `active`, `idle`, `waiting`, or `error` (including repos with zero sessions) |
-| Hide inactive sessions | Off | When turned on, sessions with no output in the last 20 minutes are hidden from all repository cards |
+| Hide ended sessions | Off | Hides sessions with status `completed` or `ended` |
+| Hide repos with no active sessions | Off | Hides repo cards that have no sessions with status `active`, `idle`, `waiting`, or `error` |
+| Hide inactive sessions | Off | Hides sessions with no output in the last 20 minutes |
 
-Settings are saved automatically in your browser (`localStorage`) and restored on every page load.
+Settings are saved in your browser (`localStorage`) and restored on every load.
 
 ## Onboarding
 
-First-time users are guided through the Dashboard with a 6-step interactive tour. The session detail page shows dismissible hint badges (`?`) on key controls.
+New to Argus? A 6-step interactive tour launches automatically on your first visit. Dismiss it any time and replay it later from Settings.
 
 | Feature | Behaviour |
 |---------|-----------|
 | **Welcome tour** | Auto-launches on first Dashboard load; advance, skip, or close any time |
-| **Restart Tour** | Available in the Settings panel: replays tour from step 1 |
-| **Reset Onboarding** | Available in the Settings panel: clears stored state so the welcome tour auto-launches again |
-| **Session hints** | Three dismissible `?` badges on the session detail page; hover/focus for tooltip; persisted globally |
+| **Restart Tour** | Settings panel: replays the tour from step 1 |
+| **Reset Onboarding** | Settings panel: clears stored state so the tour auto-launches again |
+| **Session hints** | Three dismissible `?` badges on the session detail page; hover for a tooltip; persisted globally |
 
 ## Storage
 
-Argus stores config and the session database in `~/.argus/`:
+Argus keeps its data in `~/.argus/`:
 
 | File | Purpose |
 |------|---------|
@@ -108,4 +106,4 @@ Default port: **7411**. Override in `~/.argus/config.json`:
 
 ## For Contributors
 
-See [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md) for API reference, security model, CI pipeline, and development guides.
+See [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md) for architecture, dev setup, API reference, security model, CI pipeline, and development guides.

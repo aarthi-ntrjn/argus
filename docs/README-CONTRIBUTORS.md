@@ -1,28 +1,116 @@
 # Argus: Contributor Guide
 
-This document covers internal implementation details for contributors and developers working on Argus.
+Argus is a local dashboard for monitoring and controlling Claude Code and GitHub Copilot CLI sessions. The backend watches AI tool files on disk, injects hooks, and stores everything in SQLite. The frontend connects over WebSockets and REST to display live session output and accept control commands.
 
 For the user-facing README, see [../README.md](../README.md).
 
 ## Contents
 
-- [Adding a Dashboard Setting](#adding-a-dashboard-setting)
-- [Onboarding Developer Notes](#onboarding-developer-notes)
+- [Architecture](#architecture)
+- [Dev Setup](#dev-setup)
+- [Project Structure](#project-structure)
+- [Key Patterns](#key-patterns)
+- [Testing](#testing)
+- [How-tos](#how-tos)
 - [API Reference](#api-reference)
 - [Security Model](#security-model)
 - [CI & Supply Chain](#ci--supply-chain)
-- [Tech Stack](#tech-stack)
 
-## Adding a Dashboard Setting
+## Architecture
+
+See [README-ARCH.md](README-ARCH.md) for the full architecture diagram and design decisions.
+
+**The short version:** The backend polls every 5 seconds for new sessions. Claude Code sessions are detected by watching `~/.claude/projects/**/*.jsonl` and via hooks injected into `~/.claude/settings.json`. Copilot CLI sessions are detected by reading `~/.copilot/session-state/` workspace files and lock files. All output is stored in SQLite and pushed to the browser over WebSockets. TanStack Query handles REST caching and cache invalidation on WS events.
+
+Key design choices:
+
+- **No AI APIs**: detection is purely file-system based
+- **SQLite**: full session history with configurable retention (`pruning-job.ts`)
+- **WebSocket push**: keeps the UI live without polling from the browser
+
+## Dev Setup
+
+```sh
+# Install all dependencies
+npm install
+
+# Terminal 1: backend with hot reload
+npm run dev
+
+# Terminal 2: frontend with hot reload (optional, Vite dev server on :5173)
+npm run dev --workspace=frontend
+```
+
+Open **http://localhost:7411** for the full app (backend serves the built frontend).
+Open **http://localhost:5173** when running the Vite dev server for frontend hot-reload.
+
+> Run `npm run build --workspace=frontend` once before using port 7411 if you haven't built yet.
+
+## Project Structure
+
+```
+backend/
+  src/
+    api/          # Fastify routes (REST + WebSocket)
+    config/       # Config loader (~/.argus/config.json)
+    db/           # SQLite schema and database helpers
+    models/       # Shared TypeScript types
+    services/     # Session detectors, session controller, output store, pruning
+  tests/
+    unit/         # Fast, no I/O
+    integration/  # Real SQLite, real file fixtures
+    contract/     # Real Fastify server, real HTTP calls
+
+frontend/
+  src/
+    components/   # React components
+    config/       # Tour steps, session hints
+    hooks/        # useSettings, useOnboarding
+    pages/        # DashboardPage, SessionPage
+    services/     # API + WebSocket client
+    utils/        # sessionUtils (isInactive, etc.)
+  tests/
+    e2e/          # Playwright (mocked and real-server suites)
+
+docs/             # Architecture, contributor guide, testing guide, learnings
+specs/            # Speckit feature specs (spec, plan, tasks per feature)
+```
+
+## Key Patterns
+
+**Session detection pipeline (both session types):**
+scan files on disk → upsert session in SQLite → start chokidar file watcher → parse new lines → write to OutputStore → broadcast over WebSocket
+
+**Adding a new route:** add a Fastify plugin under `backend/src/api/routes/`, register it in `server.ts`, and add it to the API reference table in this file.
+
+**WebSocket events:** `session.created`, `session.updated`, `session.ended`, `session.output`. Dispatched from `event-dispatcher.ts` via `broadcast()`. The frontend's `socket.ts` listens and calls `queryClient.invalidateQueries()` to refresh stale data.
+
+**Frontend data flow:** TanStack Query fetches from REST on mount and re-fetches on WS events. Components read from the query cache; they never call the API directly.
+
+## Testing
+
+See [README-TESTS.md](README-TESTS.md) for the full testing guide and command reference.
+
+Quick summary:
+
+| Command | What runs |
+|---------|-----------|
+| `npm test` | All backend tests (unit + integration + contract) |
+| `npm run test:e2e` | Mocked E2E suite (no server needed) |
+| `npm run test:e2e:real` | Real-server E2E suite (live backend, isolated DB) |
+
+## How-tos
+
+### Adding a Dashboard Setting
 
 1. Add a field with a default to `DashboardSettings` in `frontend/src/types.ts`
 2. Add the default value to `DEFAULT_SETTINGS` in the same file
 3. Add a toggle row in `frontend/src/components/SettingsPanel/SettingsPanel.tsx`
 4. Consume it in any component via `const [settings, updateSetting] = useSettings()`
 
-## Onboarding Developer Notes
+### Onboarding Developer Notes
 
-**Developer reset**: clear onboarding state in browser DevTools:
+Reset onboarding state in browser DevTools:
 ```js
 localStorage.removeItem('argus:onboarding')
 ```
@@ -40,7 +128,7 @@ Tour targets use stable `data-tour-id` attribute selectors (e.g. `[data-tour-id=
 | `GET` | `/api/v1/sessions/:id` | Get a single session by ID |
 | `GET` | `/api/v1/sessions/:id/output` | Get paginated output for a session (`?limit=&before=`) |
 | `POST` | `/api/v1/sessions/:id/stop` | Stop a running session (SIGTERM) |
-| `POST` | `/api/v1/sessions/:id/interrupt` | Interrupt the current operation in a session (SIGINT / Ctrl+Break). Returns 422 if PID not on record or process not running; 403 if PID does not belong to an AI tool. |
+| `POST` | `/api/v1/sessions/:id/interrupt` | Interrupt the current operation (SIGINT / Ctrl+Break). Returns 422 if PID not on record or process not running; 403 if PID does not belong to an AI tool. |
 | `POST` | `/api/v1/sessions/:id/send` | Send a prompt string to an active Claude Code session |
 | `GET` | `/api/v1/fs/browse` | List contents of a directory (path-sandboxed) |
 | `GET` | `/api/v1/fs/scan` | Scan a directory for git repos (path-sandboxed) |
@@ -90,8 +178,4 @@ Two GitHub Actions workflows protect the repository against supply chain attacks
 
 **Lifecycle script blocked**: Add the package to `.github/supply-chain/lifecycle-allowlist.yml` with a non-empty `reason` and `environments` field. Requires PR review.
 
-**Dependency advisory blocked**: Remove the flagged package, find an alternative, or: if the advisory is a false positive: open a PR with a maintainer override justification.
-
-## Tech Stack
-
-Fastify + Node.js backend · React + Vite frontend · SQLite (better-sqlite3) · WebSockets for live updates
+**Dependency advisory blocked**: Remove the flagged package, find an alternative, or open a PR with a maintainer override justification if the advisory is a false positive.
