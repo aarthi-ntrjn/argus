@@ -223,7 +223,7 @@ Continue polling until `status === "completed"`. Then report:
   ```
   Use `github-mcp-server-get_job_logs` with `run_id` and `failed_only: true` to retrieve the failed job logs, then print the last 50 lines of each failed job to help diagnose the failure.
 
-If the workflow is still `in_progress` after 3 minutes of polling, stop and output:
+If the workflow is still `in_progress` after 5 minutes of polling, stop and output:
 ```
-⏳ CI still running after 3 minutes. Check manually: <url>
+⏳ CI still running after 5 minutes. Check manually: <url>
 ```
