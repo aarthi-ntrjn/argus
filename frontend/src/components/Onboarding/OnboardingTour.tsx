@@ -123,6 +123,7 @@ export function OnboardingTour({ run, steps, onComplete, onSkip }: OnboardingTou
         overlayColor: 'rgba(0,0,0,0.45)',
         arrowColor: '#ffffff',
         zIndex: 10000,
+        skipBeacon: true,
       }}
       locale={{
         back: 'Back',
