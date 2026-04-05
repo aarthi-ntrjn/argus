@@ -35,6 +35,9 @@ export default function TodoPanel() {
   const [addRowId, setAddRowId] = useState(() => newDraftId());
   const resetAddRow = useCallback(() => setAddRowId(newDraftId()), []);
 
+  const [showDone, setShowDone] = useState(true);
+  const [showTimestamps, setShowTimestamps] = useState(true);
+
   // Track IDs submitted via Enter so handleBlur doesn't double-save.
   const savingIds = useRef<Set<string>>(new Set());
 
@@ -115,8 +118,28 @@ export default function TodoPanel() {
 
   return (
     <aside className="w-72 shrink-0 flex flex-col bg-white rounded-lg shadow h-fit sticky top-8">
-      <div className="px-4 py-3 border-b border-gray-100">
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700 tracking-wide">To Tackle</h2>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowTimestamps(v => !v)}
+            title={showTimestamps ? 'Hide timestamps' : 'Show timestamps'}
+            className={`p-1 rounded transition-colors ${showTimestamps ? 'text-blue-400 hover:text-blue-600' : 'text-gray-300 hover:text-gray-500'}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setShowDone(v => !v)}
+            title={showDone ? 'Hide completed' : 'Show completed'}
+            className={`p-1 rounded transition-colors ${showDone ? 'text-blue-400 hover:text-blue-600' : 'text-gray-300 hover:text-gray-500'}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto max-h-[calc(100vh-12rem)]">
@@ -147,7 +170,7 @@ export default function TodoPanel() {
         )}
         {!isLoading && !isError && todos.length > 0 && (
           <ul className="divide-y divide-gray-50 py-1">
-            {[...todos].reverse().map((todo, index) => {
+            {[...todos].reverse().filter(todo => showDone || !todo.done).map((todo, index) => {
               if (!todoRefs.current[index]) {
                 todoRefs.current[index] = { current: null };
               }
@@ -170,9 +193,11 @@ export default function TodoPanel() {
                     aria-label={`Edit task: ${todo.text}`}
                     className={`flex-1 min-w-0 text-sm bg-transparent border-none outline-none focus:ring-0 ${done ? 'line-through text-gray-400' : 'text-gray-700'}`}
                   />
-                  <span className="shrink-0 text-xs text-gray-300 whitespace-nowrap">
-                    {formatRelativeTime(todo.createdAt)}
-                  </span>
+                  {showTimestamps && (
+                    <span className="shrink-0 text-xs text-gray-300 whitespace-nowrap">
+                      {formatRelativeTime(todo.createdAt)}
+                    </span>
+                  )}
                   <button
                     onClick={() => deleteTodo.mutate(todo.id)}
                     aria-label={`Delete "${todo.text}"`}
