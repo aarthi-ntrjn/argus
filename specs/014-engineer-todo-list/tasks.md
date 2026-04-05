@@ -141,17 +141,17 @@
 
 ### Backend
 
-- [ ] T034 [P] Extend `backend/src/db/database.ts` `updateTodo(id, patch, updatedAt)`: change second param from `done: boolean` to `patch: { done?: boolean; text?: string }` and build the UPDATE query dynamically (only set columns that are present in `patch`); update all callers. Reject (return `undefined`) if `patch` is empty.
+- [x] T034 [P] Extend `backend/src/db/database.ts` `updateTodo(id, patch, updatedAt)`: change second param from `done: boolean` to `patch: { done?: boolean; text?: string }` and build the UPDATE query dynamically (only set columns that are present in `patch`); update all callers. Reject (return `undefined`) if `patch` is empty.
 
-- [ ] T035 [P] Add contract tests TC-013 and TC-014 to `backend/tests/contract/todos.test.ts`: **TC-013** — `PATCH /api/v1/todos/:id` with `{ text: "updated text" }` returns 200 with updated `text` and `done` unchanged; **TC-014** — `PATCH /api/v1/todos/:id` with `{ text: "" }` returns 400 `VALIDATION_ERROR`. These tests MUST fail before T036 is implemented.
+- [x] T035 [P] Add contract tests TC-013 and TC-014 to `backend/tests/contract/todos.test.ts`: **TC-013** — `PATCH /api/v1/todos/:id` with `{ text: "updated text" }` returns 200 with updated `text` and `done` unchanged; **TC-014** — `PATCH /api/v1/todos/:id` with `{ text: "" }` returns 400 `VALIDATION_ERROR`. These tests MUST fail before T036 is implemented.
 
-- [ ] T036 Extend `PATCH /api/v1/todos/:id` handler in `backend/src/api/routes/todos.ts` to accept an optional `text: string` field alongside the existing `done: boolean`. Accept a body containing `done` OR `text` OR both; reject with 400 if `text` is an empty/whitespace string; reject with 400 if neither field is provided; call the updated `updateTodo` with a `patch` object; return updated `TodoItem` on success with pino structured log including both changed fields.
+- [x] T036 Extend `PATCH /api/v1/todos/:id` handler in `backend/src/api/routes/todos.ts` to accept an optional `text: string` field alongside the existing `done: boolean`. Accept a body containing `done` OR `text` OR both; reject with 400 if `text` is an empty/whitespace string; reject with 400 if neither field is provided; call the updated `updateTodo` with a `patch` object; return updated `TodoItem` on success with pino structured log including both changed fields.
 
 ### Frontend
 
-- [ ] T037 [P] Add `updateTodoText(id: string, text: string): Promise<TodoItem>` to `frontend/src/services/api.ts` (PATCH with `{ text }`) and add `useUpdateTodoText` mutation hook to `frontend/src/hooks/useTodos.ts` (invalidates `['todos']` on success via `useQueryClient()`).
+- [x] T037 [P] Add `updateTodoText(id: string, text: string): Promise<TodoItem>` to `frontend/src/services/api.ts` (PATCH with `{ text }`) and add `useUpdateTodoText` mutation hook to `frontend/src/hooks/useTodos.ts` (invalidates `['todos']` on success via `useQueryClient()`).
 
-- [ ] T038 Redesign `frontend/src/components/TodoPanel/TodoPanel.tsx` for inline-edit UX:
+- [x] T038 Redesign `frontend/src/components/TodoPanel/TodoPanel.tsx` for inline-edit UX:
   1. **Rename** header from "My Reminders" to "My To-Do".
   2. **Remove** the top add-form (`<form>`) and all its state (`inputText`, `inputError`).
   3. **Remove** the X delete `<button>` from each row and the `group`/`group-hover` classes.
@@ -164,9 +164,10 @@
   10. **Focus management**: maintain `inputRefs: React.RefObject<HTMLInputElement>[]` keyed by rendered row index (re-created on list change).
   11. **Empty state**: when `todos.length === 0` and `draftIds.length === 0`, add one empty draft ID to `draftIds` (on first render / after all items deleted).
 
-- [ ] T039 [P] Update `frontend/tests/e2e/todo-panel.spec.ts`: replace tests that click the top "Add" button or the X delete button with new tests for the inline-edit UX — (a) type into the draft row + blur → item saved and appears; (b) type + press Enter → new row created below and focused; (c) edit existing item text + blur → text updated; (d) Backspace on empty row → item deleted; (e) empty-state draft row is present when list is empty. Update route mocks to also intercept `PATCH /api/v1/todos/*` for text updates.
+- [x] T039 [P] Update `frontend/tests/e2e/todo-panel.spec.ts`: replace tests that click the top "Add" button or the X delete button with new tests for the inline-edit UX — (a) type into the draft row + blur → item saved and appears; (b) type + press Enter → new row created below and focused; (c) edit existing item text + blur → text updated; (d) Backspace on empty row → item deleted; (e) empty-state draft row is present when list is empty. Update route mocks to also intercept `PATCH /api/v1/todos/*` for text updates.
 
-- [ ] T040 [P] Update `frontend/src/components/TodoPanel/TodoPanel.test.tsx` and `frontend/tests/unit/useTodos.test.ts`: remove tests for the old add-form and X button; add tests for (a) `useUpdateTodoText` invalidates `['todos']` query on the provider QueryClient; (b) pressing Enter on a row calls `createTodo.mutate`; (c) pressing Backspace on empty input calls `deleteTodo.mutate`; (d) blur with changed text calls `updateTodoText.mutate`; (e) draft row appears when todo list is empty.
+- [x] T040 [P] Update `frontend/src/components/TodoPanel/TodoPanel.test.tsx` and `frontend/tests/unit/useTodos.test.ts`: remove tests for the old add-form and X button; add tests for (a) `useUpdateTodoText` invalidates `['todos']` query on the provider QueryClient; (b) pressing Enter on a row calls `createTodo.mutate`; (c) pressing Backspace on empty input calls `deleteTodo.mutate`; (d) blur with changed text calls `updateTodoText.mutate`; (e) draft row appears when todo list is empty.
+
 
 ### Phase 5 Checkpoint
 
