@@ -2,7 +2,9 @@
 
 **Branch**: `015-docs-cleanup`  
 **Input**: Design documents from `/specs/015-docs-cleanup/`  
-**Scope**: Rename `BUG-LEARNINGS.md` → `README-LEARNINGS.md` and update all references.
+**Scope**:
+1. Rename `BUG-LEARNINGS.md` → `README-LEARNINGS.md` and update all references.
+2. Rename `MANUAL-TESTS.md` → `README-MANUAL-TESTS.md` and update all references.
 
 ## Format: `[ID] [P?] [Story?] Description`
 
@@ -35,11 +37,22 @@
 
 ---
 
-## Phase 4: Polish
+## Phase 5: User Story 1 — Rename MANUAL-TESTS.md and update all references
 
-- [ ] T006 Verify no remaining references: run `grep -ri "BUG-LEARNINGS" .` from repo root — expect zero results
-- [ ] T007 Commit all changes: `git add -A && git commit -m "docs(015): rename BUG-LEARNINGS.md to README-LEARNINGS.md and update all references"`
-- [ ] T008 Push branch: `git push`
+**Goal**: `MANUAL-TESTS.md` is gone; `README-MANUAL-TESTS.md` exists with identical content; no file in the repo refers to the old name.
+
+**Independent Test**: `git ls-files | grep -i MANUAL-TESTS` returns only `README-MANUAL-TESTS.md`; reference in `specs/015-docs-cleanup/plan.md` uses the new name.
+
+- [ ] T009 [US1] Rename `MANUAL-TESTS.md` → `README-MANUAL-TESTS.md` at repo root using `git mv MANUAL-TESTS.md README-MANUAL-TESTS.md`
+- [ ] T010 [US1] Update `specs/015-docs-cleanup/plan.md` — replace `MANUAL-TESTS.md` with `README-MANUAL-TESTS.md` in the project structure listing
+
+---
+
+## Phase 6: Polish
+
+- [ ] T011 Verify no remaining references to old names: run `grep -ri "BUG-LEARNINGS\|MANUAL-TESTS" .` from repo root — expect zero results
+- [ ] T012 Commit all changes: `git add -A && git commit -m "docs(015): rename MANUAL-TESTS.md to README-MANUAL-TESTS.md and update all references"`
+- [ ] T013 Push branch: `git push`
 
 ---
 
@@ -48,11 +61,14 @@
 ```
 T001 → T002 → T003 → T004 [P] ─┐
                       T005 [P] ─┴→ T006 → T007 → T008
+
+T009 → T010 → T011 → T012 → T013
 ```
 
-T004 and T005 are independent of each other (different files) and can run in parallel after T003.
+The two rename operations (T003–T008 and T009–T013) are independent and can be done in any order.
+T004 and T005 are parallel to each other. T010 is sequential (only one reference file).
 
 ## Implementation Strategy
 
-MVP = complete all tasks T001–T008 in one pass. No incremental delivery needed — this is a single atomic rename operation.
+Complete each rename as a self-contained atomic operation. T001–T008 first (BUG-LEARNINGS), then T009–T013 (MANUAL-TESTS), or interleave — both rename sets are independent.
 
