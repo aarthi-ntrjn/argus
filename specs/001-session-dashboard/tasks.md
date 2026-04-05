@@ -394,3 +394,7 @@ Each phase checkpoint delivers independently demonstrable value:
 ### Addendum: Bug — Branch badge does not update until window refocus
 
 - [X] T095 Fix `frontend/src/pages/DashboardPage.tsx`: Both `useQuery` calls (for `repositories` and `sessions`) have no `refetchInterval`, so React Query only re-fetches on window focus/mount. The backend already refreshes branch names in the DB every 5 seconds via `SessionMonitor.refreshRepositoryBranches()`, but the frontend never polls for the updated data — users see the stale branch until they switch away and back to the browser. Fix: add `refetchInterval: 5000` to both the `repositories` useQuery and the `sessions` useQuery in DashboardPage.tsx.
+
+### Addendum: Bug — Adding a reminder does not appear in the list
+
+- [ ] T109 Fix `frontend/src/hooks/useTodos.ts`: After `createTodo`, `toggleTodo`, and `deleteTodo` mutations succeed, `queryClient.invalidateQueries` is called on the `queryClient` exported from `services/api.ts` — a **different** QueryClient instance from the one provided by `<QueryClientProvider>` in `App.tsx`. React Query's `useQuery` in `useTodos` is subscribed to the provider's QueryClient, so the invalidation has no effect and the list never refreshes. Fix: replace the direct import of `queryClient` from `services/api.ts` with `useQueryClient()` from `@tanstack/react-query` inside each mutation hook (useCreateTodo, useToggleTodo, useDeleteTodo), so invalidation targets the correct QueryClient instance that the queries are subscribed to.
