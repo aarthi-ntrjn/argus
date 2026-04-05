@@ -45,11 +45,11 @@ A documentation-only cleanup branch. The engineer reviews and updates existing `
 ```text
 # Repository root docs
 README.md
-README-ARCH.md
-README-TESTS.md
+docs/README-ARCH.md
+docs/README-TESTS.md
 CLAUDE.md
-README-LEARNINGS.md
-README-MANUAL-TESTS.md
+docs/README-LEARNINGS.md
+docs/README-MANUAL-TESTS.md
 
 # Spec artifacts (this branch)
 specs/015-docs-cleanup/

@@ -16,13 +16,13 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm branch `015-docs-cleanup` is checked out (`git status`)
+- [x] T001 Confirm branch `015-docs-cleanup` is checked out (`git status`)
 
 ---
 
 ## Phase 2: Foundational
 
-- [ ] T002 Verify `BUG-LEARNINGS.md` exists at repo root `C:\source\github\artynuts\argus2\BUG-LEARNINGS.md`
+- [x] T002 Verify `BUG-LEARNINGS.md` exists at repo root `C:\source\github\artynuts\argus2\BUG-LEARNINGS.md`
 
 ---
 
@@ -32,9 +32,9 @@
 
 **Independent Test**: `git ls-files | grep -i BUG-LEARNINGS` returns nothing; `README-LEARNINGS.md` exists; all references in `.claude/commands/bug.md` and `specs/015-docs-cleanup/plan.md` use the new name.
 
-- [ ] T003 [US1] Rename `BUG-LEARNINGS.md` → `README-LEARNINGS.md` at repo root using `git mv BUG-LEARNINGS.md README-LEARNINGS.md`
-- [ ] T004 [P] [US1] Update `.claude/commands/bug.md` — replace all 4 occurrences of `BUG-LEARNINGS.md` with `README-LEARNINGS.md` (lines 100, 102, 117, 147)
-- [ ] T005 [P] [US1] Update `specs/015-docs-cleanup/plan.md` — replace `BUG-LEARNINGS.md` with `README-LEARNINGS.md` in the project structure listing
+- [x] T003 [US1] Rename `BUG-LEARNINGS.md` → `README-LEARNINGS.md` at repo root using `git mv BUG-LEARNINGS.md README-LEARNINGS.md`
+- [x] T004 [P] [US1] Update `.claude/commands/bug.md` — replace all 4 occurrences of `BUG-LEARNINGS.md` with `README-LEARNINGS.md` (lines 100, 102, 117, 147)
+- [x] T005 [P] [US1] Update `specs/015-docs-cleanup/plan.md` — replace `BUG-LEARNINGS.md` with `README-LEARNINGS.md` in the project structure listing
 
 ---
 
@@ -44,16 +44,16 @@
 
 **Independent Test**: `git ls-files | grep -i MANUAL-TESTS` returns only `README-MANUAL-TESTS.md`; reference in `specs/015-docs-cleanup/plan.md` uses the new name.
 
-- [ ] T009 [US1] Rename `MANUAL-TESTS.md` → `README-MANUAL-TESTS.md` at repo root using `git mv MANUAL-TESTS.md README-MANUAL-TESTS.md`
-- [ ] T010 [US1] Update `specs/015-docs-cleanup/plan.md` — replace `MANUAL-TESTS.md` with `README-MANUAL-TESTS.md` in the project structure listing
+- [x] T009 [US1] Rename `MANUAL-TESTS.md` → `README-MANUAL-TESTS.md` at repo root using `git mv MANUAL-TESTS.md README-MANUAL-TESTS.md`
+- [x] T010 [US1] Update `specs/015-docs-cleanup/plan.md` — replace `MANUAL-TESTS.md` with `README-MANUAL-TESTS.md` in the project structure listing
 
 ---
 
 ## Phase 6: Polish
 
-- [ ] T011 Verify no remaining references to old names: run `grep -ri "BUG-LEARNINGS\|MANUAL-TESTS" .` from repo root — expect zero results
-- [ ] T012 Commit rename changes: `git add -A && git commit -m "docs(015): rename MANUAL-TESTS.md to README-MANUAL-TESTS.md and update all references"`
-- [ ] T013 Push branch: `git push`
+- [x] T011 Verify no remaining references to old names: run `grep -ri "BUG-LEARNINGS\|MANUAL-TESTS" .` from repo root — expect zero results
+- [x] T012 Commit rename changes: `git add -A && git commit -m "docs(015): rename MANUAL-TESTS.md to README-MANUAL-TESTS.md and update all references"`
+- [x] T013 Push branch: `git push`
 
 ---
 
@@ -65,22 +65,22 @@
 
 **Independent Test**: `git ls-files | grep "^README-"` returns nothing (except `README.md`); `git ls-files docs/` lists all four files; `grep -ri "README-" . --include="*.md"` shows only `docs/` paths and `README.md` itself.
 
-- [ ] T014 [US2] Create `docs/` directory at repo root: `mkdir docs`
-- [ ] T015 [P] [US2] Move `README-ARCH.md` → `docs/README-ARCH.md` using `git mv README-ARCH.md docs/README-ARCH.md`
-- [ ] T016 [P] [US2] Move `README-TESTS.md` → `docs/README-TESTS.md` using `git mv README-TESTS.md docs/README-TESTS.md`
-- [ ] T017 [P] [US2] Move `README-LEARNINGS.md` → `docs/README-LEARNINGS.md` using `git mv README-LEARNINGS.md docs/README-LEARNINGS.md`
-- [ ] T018 [P] [US2] Move `README-MANUAL-TESTS.md` → `docs/README-MANUAL-TESTS.md` using `git mv README-MANUAL-TESTS.md docs/README-MANUAL-TESTS.md`
-- [ ] T019 [US2] Update `specs/015-docs-cleanup/plan.md` — prefix all four `README-*.md` entries in the project structure listing with `docs/` (e.g. `docs/README-ARCH.md`)
-- [ ] T020 [US2] Update `.claude/commands/bug.md` — replace all occurrences of `README-LEARNINGS.md` with `docs/README-LEARNINGS.md` (4 occurrences on lines updated by T004)
+- [x] T014 [US2] Create `docs/` directory at repo root: `mkdir docs`
+- [x] T015 [P] [US2] Move `README-ARCH.md` → `docs/README-ARCH.md` using `git mv README-ARCH.md docs/README-ARCH.md`
+- [x] T016 [P] [US2] Move `README-TESTS.md` → `docs/README-TESTS.md` using `git mv README-TESTS.md docs/README-TESTS.md`
+- [x] T017 [P] [US2] Move `README-LEARNINGS.md` → `docs/README-LEARNINGS.md` using `git mv README-LEARNINGS.md docs/README-LEARNINGS.md`
+- [x] T018 [P] [US2] Move `README-MANUAL-TESTS.md` → `docs/README-MANUAL-TESTS.md` using `git mv README-MANUAL-TESTS.md docs/README-MANUAL-TESTS.md`
+- [x] T019 [US2] Update `specs/015-docs-cleanup/plan.md` — prefix all four `README-*.md` entries in the project structure listing with `docs/` (e.g. `docs/README-ARCH.md`)
+- [x] T020 [US2] Update `.claude/commands/bug.md` — replace all occurrences of `README-LEARNINGS.md` with `docs/README-LEARNINGS.md` (4 occurrences on lines updated by T004)
 
 ---
 
 ## Phase 8: Polish
 
-- [ ] T021 Verify no root-level README-*.md files remain (except README.md): `git ls-files | grep "^README-" | grep -v "^README\.md"` — expect zero results
-- [ ] T022 Verify no stale references: `grep -ri "README-ARCH\|README-TESTS\|README-LEARNINGS\|README-MANUAL-TESTS" . --include="*.md"` — all matches should show `docs/` prefix
-- [ ] T023 Commit: `git add -A && git commit -m "docs(015): create docs/ folder and move all README-*.md files into it"`
-- [ ] T024 Push: `git push`
+- [x] T021 Verify no root-level README-*.md files remain (except README.md): `git ls-files | grep "^README-" | grep -v "^README\.md"` — expect zero results
+- [x] T022 Verify no stale references: `grep -ri "README-ARCH\|README-TESTS\|README-LEARNINGS\|README-MANUAL-TESTS" . --include="*.md"` — all matches should show `docs/` prefix
+- [x] T023 Commit: `git add -A && git commit -m "docs(015): create docs/ folder and move all README-*.md files into it"`
+- [x] T024 Push: `git push`
 
 ---
 
