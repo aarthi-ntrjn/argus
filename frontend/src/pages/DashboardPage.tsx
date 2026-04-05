@@ -294,7 +294,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Right column: output pane (60%) stacked above todo (40%) */}
-            <div className={`${selectedSessionId ? 'w-[640px]' : 'w-[400px]'} shrink-0 sticky top-8 flex flex-col gap-4`} style={{ height: 'calc(100vh - 8rem)' }}>
+            <div className={`${selectedSessionId ? 'w-[640px]' : 'w-[400px]'} shrink-0 sticky top-8 flex flex-col gap-4${selectedSessionId ? '' : ' h-auto'}`} style={selectedSessionId ? { height: 'calc(100vh - 8rem)' } : undefined}>
               {selectedSessionId && (() => {
                 const selectedSession = sessions.find(s => s.id === selectedSessionId);
                 return selectedSession ? (
@@ -306,7 +306,7 @@ export default function DashboardPage() {
                   </div>
                 ) : null;
               })()}
-              <div className={selectedSessionId ? 'flex-[2] min-h-0 overflow-y-auto' : ''}>
+              <div className={selectedSessionId ? 'flex-[2] min-h-0 overflow-y-auto' : 'flex-1'}>
                 <TodoPanel />
               </div>
             </div>
