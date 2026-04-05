@@ -67,6 +67,16 @@ Every session card has a prompt bar. Type a message and press **Enter** (or **Se
 
 Click **Add Repository** and pick a folder. Argus will sniff out every git repo inside it and register them all in one go. Already-registered repos are skipped automatically.
 
+## To Tackle
+
+The **To Tackle** panel lives on the right side of the dashboard. Use it to jot down tasks, reminders, or notes while your AI sessions run.
+
+- Add items with the input at the top, press **Enter** to save
+- Check off completed items; toggle visibility of done items with the button in the header
+- Delete items with the trash icon that appears on hover
+- Toggle timestamps on/off to see when each item was added
+- Items are stored in the local database and survive page refreshes
+
 ## Dashboard Settings
 
 Click the **gear icon** (top-right) to open Settings.

@@ -1,11 +1,22 @@
-﻿# Bug Learnings
+# Bug Learnings
 
 Retrospective entries for every bug fixed via the `/bug` skill.
 Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T073: Copilot CLI sessions not detected
+## T109 — Adding a reminder does not appear in the list
+
+**Date**: 2026-04-05
+**Symptom**: After typing a reminder and clicking Add, the list did not update — the new item was invisible until a full page reload.
+**Root cause**: `useTodos.ts` imported `queryClient` directly from `services/api.ts` and called `queryClient.invalidateQueries` on it after each mutation. But `<QueryClientProvider>` in `App.tsx` uses a *different* `QueryClient` instance created locally. React Query hooks (`useQuery`) subscribe to the provider's client, so invalidating the wrong instance had no effect — the todos query was never marked stale and never refetched.
+**Why it was missed**: Unit tests for `TodoPanel` mock the `useTodos` hooks entirely, bypassing the query client wiring. No test exercised the actual hook + `QueryClient` integration path.
+**How to prevent**: Always use `useQueryClient()` from `@tanstack/react-query` inside custom hooks instead of importing a module-level `QueryClient` instance. The module-level export in `api.ts` is for imperative callers (e.g., event handlers) but hooks must use the context hook.
+**Fix summary**: Replaced `import { queryClient } from '../services/api'` with `useQueryClient()` inside each of `useCreateTodo`, `useToggleTodo`, and `useDeleteTodo` in `frontend/src/hooks/useTodos.ts`.
+
+---
+
+## T073 — Copilot CLI sessions not detected
 
 **Date**: 2026-04-01
 **Symptom**: No Copilot CLI sessions ever appeared in the dashboard, even when sessions were actively running.
@@ -19,7 +30,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T074: Claude Code sessions marked ended on server restart
+## T074 — Claude Code sessions marked ended on server restart
 
 **Date**: 2026-04-01
 **Symptom**: After restarting the Argus server, all Claude Code sessions appeared as `ended` in the dashboard even though Claude was still actively running.
@@ -33,7 +44,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T075: Claude Code sessions not re-detected on Argus restart (scanExistingSessions broken on Windows)
+## T075 — Claude Code sessions not re-detected on Argus restart (scanExistingSessions broken on Windows)
 
 **Date**: 2026-04-01
 **Symptom**: After server restart, Claude Code sessions continued to show as `ended` even after the T074 fix, because the T074 fix only prevented future incorrect marking: already-ended sessions were never restored.
@@ -49,7 +60,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T082: Model information not shown for Claude Code sessions
+## T082 — Model information not shown for Claude Code sessions
 
 **Date**: 2026-04-02
 **Symptom**: Model name (e.g. `claude-opus-4-5`) never appeared on session cards or the session detail page for Claude Code sessions, even after conversations had run.
@@ -63,7 +74,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T084: Output stream timestamps hardcoded to PST instead of browser timezone
+## T084 — Output stream timestamps hardcoded to PST instead of browser timezone
 
 **Date**: 2026-04-02
 **Symptom**: All output stream timestamps showed in PST (UTC−8/−7) regardless of the user's local timezone. Non-PST users saw incorrect times.
@@ -74,7 +85,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T086: Copilot CLI sessions never show model name
+## T086 — Copilot CLI sessions never show model name
 
 **Date**: 2026-04-02
 **Symptom**: Model name was always absent on Copilot CLI session cards, even when the session had `assistant.message` events with a `model` field in `events.jsonl`.
@@ -85,7 +96,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T085: Copilot CLI tool events show raw JSON dump in output stream
+## T085 — Copilot CLI tool events show raw JSON dump in output stream
 
 **Date**: 2026-04-02
 **Symptom**: Tool invocation and tool result items in the Copilot CLI output stream displayed raw JSON strings like `{"type":"tool.execution_start","tool_name":"bash","timestamp":"...","path":"..."}` instead of readable content.
@@ -115,7 +126,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T090: Claude Code session transitions to ended after every AI response instead of only on exit
+## T090 — Claude Code session transitions to ended after every AI response instead of only on exit
 
 **Date**: 2026-04-02
 **Symptom**: After Claude Code responded to a request, the session card immediately showed "ended". Issuing another command would flip it back to active, then ended again on the next response.
@@ -126,7 +137,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T091: Claude Code sessions never marked ended when process exits while Argus is running
+## T091 — Claude Code sessions never marked ended when process exits while Argus is running
 
 **Date**: 2026-04-02
 **Symptom**: Killing a Claude Code process (via kill or `/exit`) left the session showing as active/idle in the dashboard indefinitely. It was only detected as ended after an Argus server restart.
@@ -137,7 +148,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T092: Claude Code `idle` status is wrong; Stop hook should keep session `active`
+## T092 — Claude Code `idle` status is wrong; Stop hook should keep session `active`
 
 **Date**: 2026-04-02
 **Symptom**: After each Claude Code AI response, the session showed a distinct `idle` status badge in the UI instead of staying "running" (active). This diverged from Copilot CLI which only uses `active`/`ended`.
@@ -171,7 +182,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T094: Stale null-PID Claude Code sessions never cleaned up when another Claude process is running
+## T094 — Stale null-PID Claude Code sessions never cleaned up when another Claude process is running
 
 **Date**: 2026-04-03
 **Symptom**: A Claude Code session ID (e.g., `8c20d263 | 26h 2m`) appeared in the dashboard with no corresponding real session, showing as active indefinitely even after the original Claude Code process had long since exited.
@@ -182,7 +193,7 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
-## T095: Branch badge does not update until window refocus
+## T095 — Branch badge does not update until window refocus
 
 **Date**: 2026-04-04
 **Symptom**: After switching git branches in the terminal, the Argus dashboard continued to show the old branch name. The badge only updated when the user switched away from the browser and back (triggering window focus).

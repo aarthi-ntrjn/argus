@@ -150,12 +150,7 @@ git push origin <MAIN_BRANCH>
 
 If the merge has conflicts, stop and report: list the conflicting files and ask the user to resolve them manually, then re-run `/merge`.
 
-Then delete the feature branch locally and remotely:
-
-```
-git branch -d <FEATURE_BRANCH>
-git push origin --delete <FEATURE_BRANCH>
-```
+**Do NOT delete the feature branch yet** — that happens in Step 8 after CI passes.
 
 ---
 
@@ -164,7 +159,76 @@ git push origin --delete <FEATURE_BRANCH>
 Output a final merge summary:
 
 - **Branch merged**: `<FEATURE_BRANCH>` → `<MAIN_BRANCH>`
-- **Branch deleted**: local and remote `<FEATURE_BRANCH>` removed
+- **Branch deletion**: pending CI result (see Step 8)
 - **Constitution gaps fixed**: list any items that were fixed (or "None")
 - **Warnings**: list any WARN items for follow-up
 - **Tests**: pass count
+
+---
+
+### Step 8 — Monitor CI workflow
+
+After pushing to the main branch, find the triggered GitHub Actions workflow run and monitor it to completion.
+
+#### 8a — Detect the remote
+
+Run `git remote -v` and extract the owner and repo name from the remote URL. For example:
+- `https://github.com/acme/myrepo.git` → owner=`acme`, repo=`myrepo`
+- `git@github.com:acme/myrepo.git` → owner=`acme`, repo=`myrepo`
+
+#### 8b — Wait briefly and fetch the workflow run
+
+Wait ~5 seconds for GitHub to register the push, then use the `github-mcp-server-actions_list` tool:
+```
+method: list_workflow_runs
+owner: <owner>
+repo: <repo>
+workflow_runs_filter: { branch: "<MAIN_BRANCH>" }
+per_page: 5
+```
+
+Find the most recent run whose `head_sha` matches the local merge commit SHA (from `git rev-parse HEAD`). If no exact match, use the most recent run by timestamp.
+
+#### 8c — Output the link
+
+Immediately output the workflow run URL in this format:
+```
+🔗 CI Workflow: https://github.com/<owner>/<repo>/actions/runs/<run_id>
+```
+
+#### 8d — Monitor to completion
+
+Poll every 10–15 seconds using `github-mcp-server-actions_get`:
+```
+method: get_workflow_run
+owner: <owner>
+repo: <repo>
+resource_id: <run_id>
+```
+
+Continue polling until `status === "completed"`. Then report:
+
+- If `conclusion === "success"`:
+  ```
+  ✅ CI passed — all checks green.
+  ```
+  Then delete the feature branch locally and remotely:
+  ```
+  git branch -d <FEATURE_BRANCH>
+  git push origin --delete <FEATURE_BRANCH>
+  ```
+  Output: `🗑️ Branch <FEATURE_BRANCH> deleted (local + remote).`
+
+- If `conclusion === "failure"` or `conclusion === "cancelled"`:
+  ```
+  ❌ CI <conclusion> — fetching failed job logs...
+  ```
+  Use `github-mcp-server-get_job_logs` with `run_id` and `failed_only: true` to retrieve the failed job logs, then print the last 50 lines of each failed job to help diagnose the failure.
+  **Do NOT delete the feature branch** — leave it so the user can investigate and fix.
+  Output: `⚠️ Branch <FEATURE_BRANCH> NOT deleted — CI failed. Fix the failure and re-run /merge.`
+
+If the workflow is still `in_progress` after 5 minutes of polling, stop and output:
+```
+⏳ CI still running after 5 minutes. Check manually: <url>
+Branch <FEATURE_BRANCH> NOT deleted — delete it manually once CI passes.
+```

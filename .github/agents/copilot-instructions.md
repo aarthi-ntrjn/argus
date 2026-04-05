@@ -4,26 +4,28 @@ Auto-generated from all feature plans. Last updated: 2026-04-06
 
 ## Active Technologies
 
-- Markdown (no programming language) + None — text editor / git only (015-docs-cleanup)
+- TypeScript 5.9 (frontend + backend) + Fastify 5.x (backend), React 18 + TailwindCSS 3 + React Query (frontend), better-sqlite3 (storage), pino (logging), vitest + Playwright (testing) (014-engineer-todo-list)
 
 ## Project Structure
 
 ```text
-src/
+backend/
+frontend/
 tests/
 ```
 
 ## Commands
 
-# Add commands for Markdown (no programming language)
+npm test; npm run lint
 
 ## Code Style
 
-Markdown (no programming language): Follow standard conventions
+TypeScript 5.9 (frontend + backend): Follow standard conventions
 
 ## Recent Changes
 
-- 015-docs-cleanup: Added Markdown (no programming language) + None — text editor / git only
+- 015-docs-cleanup: Added /pull command; improved README and contributor guide
+- 014-engineer-todo-list: Added TypeScript 5.9 (frontend + backend) + Fastify 5.x (backend), React 18 + TailwindCSS 3 + React Query (frontend), better-sqlite3 (storage), pino (logging), vitest + Playwright (testing)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
