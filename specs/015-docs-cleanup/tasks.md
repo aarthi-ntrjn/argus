@@ -93,18 +93,18 @@
 
 **Independent Test**: `README.md` contains `## Monitor` and `## Control` headings and no `## API`, `## Security Model`, `## CI & Supply Chain`, or `## Tech stack` sections; `docs/README-CONTRIBUTORS.md` exists and contains all removed content.
 
-- [ ] T025 [US2] Create `docs/README-CONTRIBUTORS.md` — extract contributor-facing content from `README.md`: API reference table, Security Model section, CI & Supply Chain section (both workflows + pipeline details + failure responses), Tech stack line, "Adding a new setting (developers)" subsection from Dashboard Settings, "Developer reset" code snippet and `data-tour-id` selector note from Onboarding. Preserve all original content exactly in the new file, with an introductory heading `# Argus: Contributor Guide`.
-- [ ] T026 [US2] Rewrite `README.md` to be user-focused in `README.md`: (1) Replace the flat `## What it does` bullet list with two new sections: `## Monitor` (covering session cards, two-pane output view, role-labelled output, model badge, last output preview, auto-detection) and `## Control` (covering quick commands, inline prompt, repository management); each section gets a one-line intro sentence before its subsections. (2) Remove the contributor-facing sections extracted to T025 (API, Security Model, CI & Supply Chain, Tech stack). (3) Trim "Adding a new setting" from Dashboard Settings; trim developer reset snippet and `data-tour-id` note from Onboarding. (4) Add a `## For Contributors` footer section: `See [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md) for API reference, security model, CI pipeline, and development guides.`
-- [ ] T027 [P] [US2] Update `specs/015-docs-cleanup/plan.md` — add `docs/README-CONTRIBUTORS.md` to the project structure listing.
+- [x] T025 [US2] Create `docs/README-CONTRIBUTORS.md` — extract contributor-facing content from `README.md`: API reference table, Security Model section, CI & Supply Chain section (both workflows + pipeline details + failure responses), Tech stack line, "Adding a new setting (developers)" subsection from Dashboard Settings, "Developer reset" code snippet and `data-tour-id` selector note from Onboarding. Preserve all original content exactly in the new file, with an introductory heading `# Argus: Contributor Guide`.
+- [x] T026 [US2] Rewrite `README.md` to be user-focused in `README.md`: (1) Replace the flat `## What it does` bullet list with two new sections: `## Monitor` (covering session cards, two-pane output view, role-labelled output, model badge, last output preview, auto-detection) and `## Control` (covering quick commands, inline prompt, repository management); each section gets a one-line intro sentence before its subsections. (2) Remove the contributor-facing sections extracted to T025 (API, Security Model, CI & Supply Chain, Tech stack). (3) Trim "Adding a new setting" from Dashboard Settings; trim developer reset snippet and `data-tour-id` note from Onboarding. (4) Add a `## For Contributors` footer section: `See [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md) for API reference, security model, CI pipeline, and development guides.`
+- [x] T027 [P] [US2] Update `specs/015-docs-cleanup/plan.md` — add `docs/README-CONTRIBUTORS.md` to the project structure listing.
 
 ---
 
 ## Phase 10: Polish
 
-- [ ] T028 Verify `README.md` contains `## Monitor` and `## Control` headings and does NOT contain `## API`, `## Security Model`, `## CI & Supply Chain`, or `## Tech stack` headings
-- [ ] T029 Verify `docs/README-CONTRIBUTORS.md` exists and contains the API table, Security Model table, and CI & Supply Chain section
-- [ ] T030 Commit: `git add -A && git commit -m "docs(015): restructure README.md for users; move contributor content to README-CONTRIBUTORS.md"`
-- [ ] T031 Push: `git push`
+- [x] T028 Verify `README.md` contains `## Monitor` and `## Control` headings and does NOT contain `## API`, `## Security Model`, `## CI & Supply Chain`, or `## Tech stack` headings
+- [x] T029 Verify `docs/README-CONTRIBUTORS.md` exists and contains the API table, Security Model table, and CI & Supply Chain section
+- [x] T030 Commit: `git add -A && git commit -m "docs(015): restructure README.md for users; move contributor content to README-CONTRIBUTORS.md"`
+- [x] T031 Push: `git push`
 
 ---
 

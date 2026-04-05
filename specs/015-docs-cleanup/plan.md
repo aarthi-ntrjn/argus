@@ -47,6 +47,7 @@ A documentation-only cleanup branch. The engineer reviews and updates existing `
 README.md
 docs/README-ARCH.md
 docs/README-TESTS.md
+docs/README-CONTRIBUTORS.md
 CLAUDE.md
 docs/README-LEARNINGS.md
 docs/README-MANUAL-TESTS.md
