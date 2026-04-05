@@ -193,20 +193,24 @@ export default function TodoPanel() {
                     aria-label={`Edit task: ${todo.text}`}
                     className={`flex-1 min-w-0 text-sm bg-transparent border-none outline-none focus:ring-0 ${done ? 'line-through text-gray-400' : 'text-gray-700'}`}
                   />
-                  {showTimestamps && (
-                    <span className="shrink-0 text-xs text-gray-300 whitespace-nowrap">
-                      {formatRelativeTime(todo.createdAt)}
-                    </span>
-                  )}
-                  <button
-                    onClick={() => deleteTodo.mutate(todo.id)}
-                    aria-label={`Delete "${todo.text}"`}
-                    className="opacity-0 group-hover:opacity-100 shrink-0 text-gray-300 hover:text-red-500 transition-opacity p-0.5 rounded"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                  <div className="relative shrink-0">
+                    {showTimestamps ? (
+                      <span className="block text-xs text-gray-300 whitespace-nowrap group-hover:opacity-0 transition-opacity">
+                        {formatRelativeTime(todo.createdAt)}
+                      </span>
+                    ) : (
+                      <span className="block w-3.5 h-3.5 opacity-0" />
+                    )}
+                    <button
+                      onClick={() => deleteTodo.mutate(todo.id)}
+                      aria-label={`Delete "${todo.text}"`}
+                      className="absolute inset-0 flex items-center justify-end opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </li>
               );
             })}
