@@ -99,6 +99,89 @@ This reflects a mature working relationship with AI tools: comfort delegating re
 
 ---
 
+### How security was added in
+
+Security on Argus was not an afterthought bolted on before launch. It was done in a deliberate two-phase sequence, both phases going through the full Speckit pipeline, and both completed before the product had any users.
+
+**Why it happened when it did**
+
+The trigger was straightforward: by day 3, Argus could stop AI processes, inject hooks into Claude's settings file, read all session output, and execute filesystem operations based on user-supplied paths. These are significant capabilities. Running with no security model would have meant building on a foundation that needed to be torn up later. Scoping security work as a named feature (009) on day 3 was a deliberate choice to treat it as first-class work rather than a cleanup item.
+
+**Feature 009 — Application security hardening (Day 3, merged Day 4)**
+
+Spec written, planned, and tasked on day 3. Implemented and merged on day 4. 21 tasks across five areas:
+
+- **Process control:** Stop and interrupt routes now validate PID ownership in two stages. First, the session must have a PID on record. Second, the OS process at that PID must match the AI tool allowlist (Claude/Copilot executables). Requests that fail either check are rejected with 422 or 403. This prevents the stop/interrupt endpoints from being used as a general-purpose process killer.
+- **Shell injection:** All `taskkill` calls on Windows replaced with `spawnSync` using an explicit args array. No shell string interpolation anywhere in process control.
+- **Hook endpoint hardening:** `POST /hooks/claude` now enforces a 64 KB body limit, validates `session_id` as UUID v4, rejects `cwd` values not in the registered repository list, and returns 409 if a payload tries to overwrite an active session's PID.
+- **Filesystem sandboxing:** Browse, scan, and scan-folder endpoints resolve all user-supplied paths and validate them against `homedir()` and registered repository paths. Anything outside that boundary returns 403. Recursive scans skip symlinks to prevent traversal loops.
+- **HTTP headers:** `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY` added to all responses.
+
+The implementation produced 164 passing tests across 18 test files, including new contract tests for the security headers, hook endpoint validation, path sandboxing, PID validation, and session controller.
+
+**Feature 010 — Supply chain hardening (Day 4)**
+
+Immediately after the application security feature merged, supply chain protection was scoped as a separate feature. This addresses a different threat model: not "what can a user do to the system" but "what can a malicious dependency do during install or CI."
+
+- `npm ci --ignore-scripts` in CI: suppresses all `postinstall`/`prepare` scripts. Only packages on an explicit allowlist (`.github/supply-chain/lifecycle-allowlist.yml`) are rebuilt via `npm rebuild`.
+- Action SHA pinning: every `uses:` directive in every workflow file must reference a 40-character commit SHA. A validation script (`validate-action-pins.sh`) runs on every CI build and fails if any reference is unpinned.
+- Exact dependency versions: all entries in `package.json` use exact versions (no `^` or `~`). Combined with lockfile enforcement, this eliminates version drift.
+- Dependency advisory check (`supply-chain.yml`): PRs to master that add a dependency with a critical advisory or malicious flag are blocked before merge.
+- Critical CVE audit: `npm audit --audit-level=critical` runs on every build.
+
+**Feature 011 — Dependency CVE patches (Day 4)**
+
+Ran immediately after 010. Patched 7 known CVEs in existing dependencies and pinned exact versions across the board. Merged the same day.
+
+---
+
+### How GitHub Actions and CI evolved
+
+The CI pipeline grew incrementally, each addition driven by a specific gap that was discovered in practice.
+
+**Before CI existed (Days 1–2)**
+
+There was no CI. Tests ran locally before merge via the `/merge` skill's gate check. This was sufficient while the project was one person on one machine, but it meant the test suite was only ever run on Windows. Linux-specific failures and cross-platform path handling bugs would only surface if someone else tried to run the project — or if CI ran on a Linux runner.
+
+**Day 4: First CI pipeline (`ci.yml`)**
+
+The first GitHub Actions workflow was created as part of supply chain hardening (feature 010). It ran on every push and PR:
+
+- `npm ci --ignore-scripts` (lockfile enforcement + no lifecycle scripts)
+- Selective `npm rebuild better-sqlite3` (native module, allowlisted)
+- Backend Vitest tests
+- Frontend Vite build
+- `npm audit --audit-level=critical`
+- Action SHA pin validation script
+
+The second workflow (`supply-chain.yml`) ran only on PRs to master and used `actions/dependency-review-action` to check new dependencies for known advisories.
+
+The same day, frontend unit tests were added to the pipeline in a separate commit — they had been missing from the initial CI setup because the frontend test infrastructure was added mid-feature.
+
+**Day 4: First cross-platform failure discovered**
+
+Running on GitHub's Linux runners immediately exposed path-handling bugs that had not appeared on Windows. The filesystem sandbox tests used Windows-style backslash paths in their fixtures, which failed on Linux. Fixed the same day with a cross-platform path normalisation pass.
+
+**Day 5: Pipeline hardening**
+
+Three additions:
+
+- Backend build step: TypeScript compilation now runs in CI before tests. Previously, a type error that only appeared after `tsc` (not caught by Vitest's ts-node transform) could pass CI. Adding `tsc --noEmit` as a CI gate caught this class of failure.
+- Playwright mock E2E suite: the mocked E2E tier (which runs against a Vite-served frontend with MSW mocks, no live backend) was added to CI. The real-server E2E tier still runs locally only, as it requires a live database and session fixtures.
+- Scope narrowing: CI was restricted to master pushes and PRs targeting master. Feature branch pushes no longer trigger the full pipeline, reducing noise and runner cost.
+
+**Day 5: Intentional CI failure to verify the pipeline**
+
+A deliberate type error was committed (`test: intentional type error to trigger CI failure`) to verify that the new TypeScript build step actually blocked merges. It did. The commit was immediately reverted. This is the correct way to validate a new CI gate — trust but verify.
+
+**Day 6: CI monitoring integrated into /merge**
+
+The `/merge` skill was updated to watch the GitHub Actions run after pushing the merge commit. Previously, "pushed to remote" was treated as "done." With the update, the skill polls the CI run status and only declares the merge complete when the workflow passes. Branch deletion was also moved to after CI passes — preventing a state where the branch is gone but the master build is red.
+
+The poll timeout was extended from 3 to 5 minutes after it clipped the longer-running E2E and TypeScript build steps on a slow runner.
+
+---
+
 ### How the skills evolved
 
 Skills are reusable instructions committed to the repository that tell the AI how to handle a class of work. The first ones were created because doing the same thing twice by hand, with the AI, produces inconsistent results. Each skill encodes the lessons of previous sessions so they do not have to be re-learned.
