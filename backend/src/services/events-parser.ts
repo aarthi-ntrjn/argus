@@ -90,12 +90,10 @@ export function parseJsonlLine(line: string, sessionId: string, sequenceNumber: 
     const event = JSON.parse(line) as JsonlEvent;
     const outputType: OutputType = EVENT_TYPE_MAP[event.type] ?? 'message';
     const role: OutputRole | null = event.type in EVENT_ROLE_MAP ? EVENT_ROLE_MAP[event.type] : null;
-    let content = extractContent(event);
-    // For unrecognised event types (type: message, role: null) with no extracted content,
-    // serialize event.data so the MSG row is never blank.
-    if (outputType === 'message' && role === null && !content && event.data != null) {
-      content = JSON.stringify(event.data);
-    }
+    // Suppress unrecognised event types entirely (e.g. turn.start, interaction bookkeeping).
+    // These have role: null and no human-readable content — showing them as MSG rows is noise.
+    if (outputType === 'message' && role === null) return null;
+    const content = extractContent(event);
     return {
       id: randomUUID(),
       sessionId,

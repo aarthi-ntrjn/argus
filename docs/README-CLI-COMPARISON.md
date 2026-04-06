@@ -249,9 +249,9 @@ Both parsers produce `SessionOutput` records with the same fields. The badge sho
 | `tool.execution_start` | `tool_use` | TOOL | `data.arguments` (stringified if object) |
 | `tool.execution_complete` | `tool_result` | RESULT | `data.result.content` or `data.result.detailedContent` |
 | `session.start` | `status_change` | STATUS | (no content body) |
-| *(any other type)* | `message` (no role) | MSG | `event.data` serialized as JSON |
+| *(any other type)* | Discarded | (none) | — |
 
-`data.content` may be either a plain string or an array of typed content blocks (`{type: "text", text: "..."}` etc.). When it is an array, only `text`-typed blocks are joined (with `\n`); non-text blocks are skipped. If an event type is not recognised, `event.data` is serialized as JSON so MSG rows are never blank.
+`data.content` may be either a plain string or an array of typed content blocks (`{type: "text", text: "..."}` etc.). When it is an array, only `text`-typed blocks are joined (with `\n`); non-text blocks are skipped. Unrecognised event types (e.g. `turn.start`, interaction bookkeeping) are silently discarded — they carry only ID metadata and no human-readable content.
 
 ### Model extraction
 

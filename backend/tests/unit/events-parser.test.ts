@@ -46,21 +46,17 @@ describe('EventsParser 019 US2 — content-block array edge cases', () => {
 
 // T001/T002/T003 — 019 regression tests: blank MSG rows for unknown event types and array content
 describe('EventsParser 019 — blank MSG row fix', () => {
-  it('T001: should not produce blank content for unrecognised copilot event types', () => {
+  it('T001: should suppress unrecognised copilot event types (e.g. turn/interaction bookkeeping)', () => {
     const line = JSON.stringify({
-      type: 'thinking',
+      type: 'turn.start',
       id: 'evt-x',
       parentId: null,
       timestamp: '2024-01-01T00:00:00.000Z',
-      data: { text: 'Analysing your codebase...', step: 3 },
+      data: { turnId: '10', interactionId: 'f82b5d1a-6bf0-4380-a957-a3ab00cb3715' },
     });
     const result = parseJsonlLine(line, 'session-1', 1);
-    expect(result).not.toBeNull();
-    expect(result?.type).toBe('message');
-    expect(result?.role).toBeNull();
-    // Content must NOT be blank — should serialize event.data
-    expect(result?.content).not.toBe('');
-    expect(result?.content).toContain('Analysing your codebase');
+    // Lifecycle/bookkeeping events with no human-readable content must be suppressed
+    expect(result).toBeNull();
   });
 
   it('T002: should extract text from assistant.message with data.content as content-block array', () => {
@@ -161,14 +157,14 @@ describe('EventsParser', () => {
     expect(result?.role).toBe('user');
   });
 
-  it('maps unknown types to message', () => {
+  it('suppresses unknown event types', () => {
     const line = JSON.stringify({
       type: 'unknown.event',
       timestamp: '2024-01-01T00:00:00.000Z',
       content: 'Unknown content',
     });
     const result = parseJsonlLine(line, 'session-1', 6);
-    expect(result?.type).toBe('message');
+    expect(result).toBeNull();
   });
 
   it('returns null for invalid JSON', () => {
@@ -408,14 +404,14 @@ describe('EventsParser', () => {
     expect(result?.role).toBe('user');
   });
 
-  it('maps unknown types to message', () => {
+  it('suppresses unknown event types', () => {
     const line = JSON.stringify({
       type: 'unknown.event',
       timestamp: '2024-01-01T00:00:00.000Z',
       content: 'Unknown content',
     });
     const result = parseJsonlLine(line, 'session-1', 6);
-    expect(result?.type).toBe('message');
+    expect(result).toBeNull();
   });
 
   it('returns null for invalid JSON', () => {
