@@ -22,10 +22,10 @@
 
 **Purpose**: Understand and reproduce the bug through failing tests before touching implementation.
 
-- [ ] T001 Write failing unit test for unrecognised copilot event type producing blank MSG content in `backend/tests/unit/events-parser.test.ts`
-- [ ] T002 [P] Write failing unit test for `assistant.message` with `data.content` as a text content-block array in `backend/tests/unit/events-parser.test.ts`
-- [ ] T003 [P] Write failing unit test for `user.message` with `data.content` as a text content-block array in `backend/tests/unit/events-parser.test.ts`
-- [ ] T004 Run `npm run test --workspace=backend` and confirm T001-T003 test cases fail (red)
+- [x] T001 Write failing unit test for unrecognised copilot event type producing blank MSG content in `backend/tests/unit/events-parser.test.ts`
+- [x] T002 [P] Write failing unit test for `assistant.message` with `data.content` as a text content-block array in `backend/tests/unit/events-parser.test.ts`
+- [x] T003 [P] Write failing unit test for `user.message` with `data.content` as a text content-block array in `backend/tests/unit/events-parser.test.ts`
+- [x] T004 Run `npm run test --workspace=backend` and confirm T001-T003 test cases fail (red)
 
 **Checkpoint**: Three failing tests confirm the two bug paths are reproduced.
 
@@ -39,9 +39,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] In `extractContent` in `backend/src/services/events-parser.ts`, add an `Array.isArray(data.content)` branch after the string check that joins `{type: "text", text: "..."}` blocks with `"\n"` (fixes Path B — content-block arrays returning blank)
-- [ ] T006 [US1] In `parseJsonlLine` in `backend/src/services/events-parser.ts`, after `content` is resolved, add a fallback: if `outputType === 'message' && role === null && !content`, set `content = JSON.stringify(event.data ?? {})` (fixes Path A — unrecognised event types returning blank MSG rows)
-- [ ] T007 [US1] Run `npm run test --workspace=backend` and confirm all tests pass (green), including T001-T003 and all T085/T088/T086 regressions
+- [x] T005 [US1] In `extractContent` in `backend/src/services/events-parser.ts`, add an `Array.isArray(data.content)` branch after the string check that joins `{type: "text", text: "..."}` blocks with `"\n"` (fixes Path B — content-block arrays returning blank)
+- [x] T006 [US1] In `parseJsonlLine` in `backend/src/services/events-parser.ts`, after `content` is resolved, add a fallback: if `outputType === 'message' && role === null && !content`, set `content = JSON.stringify(event.data ?? {})` (fixes Path A — unrecognised event types returning blank MSG rows)
+- [x] T007 [US1] Run `npm run test --workspace=backend` and confirm all tests pass (green), including T001-T003 and all T085/T088/T086 regressions
 
 **Checkpoint**: All unit tests green. US1 is complete and independently verifiable.
 

@@ -1,6 +1,62 @@
 import { describe, it, expect } from 'vitest';
 import { parseJsonlLine, parseModelFromEvent } from '../../src/services/events-parser.js';
 
+// T001/T002/T003 — 019 regression tests: blank MSG rows for unknown event types and array content
+describe('EventsParser 019 — blank MSG row fix', () => {
+  it('T001: should not produce blank content for unrecognised copilot event types', () => {
+    const line = JSON.stringify({
+      type: 'thinking',
+      id: 'evt-x',
+      parentId: null,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      data: { text: 'Analysing your codebase...', step: 3 },
+    });
+    const result = parseJsonlLine(line, 'session-1', 1);
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe('message');
+    expect(result?.role).toBeNull();
+    // Content must NOT be blank — should serialize event.data
+    expect(result?.content).not.toBe('');
+    expect(result?.content).toContain('Analysing your codebase');
+  });
+
+  it('T002: should extract text from assistant.message with data.content as content-block array', () => {
+    const line = JSON.stringify({
+      type: 'assistant.message',
+      id: 'evt-a',
+      parentId: null,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      data: {
+        messageId: 'msg-1',
+        content: [{ type: 'text', text: 'Here is my answer.' }],
+        toolRequests: [],
+      },
+    });
+    const result = parseJsonlLine(line, 'session-1', 2);
+    expect(result).not.toBeNull();
+    expect(result?.role).toBe('assistant');
+    expect(result?.content).toBe('Here is my answer.');
+  });
+
+  it('T003: should extract text from user.message with data.content as content-block array', () => {
+    const line = JSON.stringify({
+      type: 'user.message',
+      id: 'evt-b',
+      parentId: null,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      data: {
+        content: [{ type: 'text', text: 'Fix the bug.' }],
+        transformedContent: '',
+        attachments: [],
+      },
+    });
+    const result = parseJsonlLine(line, 'session-1', 3);
+    expect(result).not.toBeNull();
+    expect(result?.role).toBe('user');
+    expect(result?.content).toBe('Fix the bug.');
+  });
+});
+
 describe('EventsParser', () => {
   it('maps assistant.message to message type', () => {
     const line = JSON.stringify({

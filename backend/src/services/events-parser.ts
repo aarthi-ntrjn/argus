@@ -30,6 +30,16 @@ function extractContent(event: JsonlEvent): string {
     // Messages: plain string content
     if (typeof data.content === 'string' && data.content) return data.content;
 
+    // Messages: content-block array (e.g. [{type:"text",text:"..."},...])
+    if (Array.isArray(data.content)) {
+      const blocks = data.content as Array<Record<string, unknown>>;
+      const text = blocks
+        .filter((b) => b.type === 'text' && typeof b.text === 'string')
+        .map((b) => b.text as string)
+        .join('\n');
+      if (text) return text;
+    }
+
     // Tool execution start: show arguments
     if (event.type === 'tool.execution_start' && data.arguments != null) {
       if (typeof data.arguments === 'string') return data.arguments;
@@ -80,12 +90,18 @@ export function parseJsonlLine(line: string, sessionId: string, sequenceNumber: 
     const event = JSON.parse(line) as JsonlEvent;
     const outputType: OutputType = EVENT_TYPE_MAP[event.type] ?? 'message';
     const role: OutputRole | null = event.type in EVENT_ROLE_MAP ? EVENT_ROLE_MAP[event.type] : null;
+    let content = extractContent(event);
+    // For unrecognised event types (type: message, role: null) with no extracted content,
+    // serialize event.data so the MSG row is never blank.
+    if (outputType === 'message' && role === null && !content && event.data != null) {
+      content = JSON.stringify(event.data);
+    }
     return {
       id: randomUUID(),
       sessionId,
       timestamp: event.timestamp ?? new Date().toISOString(),
       type: outputType,
-      content: extractContent(event),
+      content,
       toolName: typeof event.tool_name === 'string' ? event.tool_name
               : typeof event.data?.toolName === 'string' ? event.data.toolName
               : null,
