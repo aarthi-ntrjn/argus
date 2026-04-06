@@ -232,15 +232,15 @@ export default function TodoPanel() {
                       aria-checked={done}
                       aria-label={`Mark "${todo.text}" as ${done ? 'incomplete' : 'complete'}`}
                       onClick={() => toggleTodo.mutate({ id: todo.id, done: !done })}
-                      className={`h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
+                      className={`h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-1 ${
                         done
-                          ? 'bg-blue-500 border-blue-500 text-white'
-                          : 'border-gray-300 bg-white hover:border-blue-400'
+                          ? 'bg-white border-green-500 text-green-500'
+                          : 'border-gray-300 bg-white hover:border-green-400'
                       }`}
                     >
                       {done && (
                         <svg aria-hidden="true" viewBox="0 0 10 10" fill="none" className="h-2.5 w-2.5">
-                          <path d="M2 5l2.5 2.5 3.5-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M1.5 5.5l2.5 2.5 4.5-5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                     </button>
