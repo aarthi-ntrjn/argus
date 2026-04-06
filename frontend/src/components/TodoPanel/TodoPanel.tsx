@@ -47,6 +47,7 @@ export default function TodoPanel() {
     }
   }, [addRowId]);
 
+  const [collapsed, setCollapsed] = useState(false);
   const [showDone, setShowDone] = useState(true);
   const [showTimestamps, setShowTimestamps] = useState(true);
   const [wrapText, setWrapText] = useState(false);
@@ -132,47 +133,68 @@ export default function TodoPanel() {
   }, [todos, createTodo, updateTodoText, deleteTodo, resetAddRow, focusAddRow, focusRow]);
 
   return (
-    <aside className="w-full flex flex-col bg-white rounded-lg shadow h-full">
+    <aside className="w-full flex flex-col bg-white rounded-lg shadow">
       <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-700 tracking-wide">To Tackle</h2>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setWrapText(v => !v)}
-            aria-label={wrapText ? 'Single line' : 'Wrap text'}
-            aria-pressed={wrapText}
-            title={wrapText ? 'Single line' : 'Wrap text'}
-            className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${wrapText ? 'text-blue-600 hover:text-blue-800' : 'text-gray-500 hover:text-gray-700'}`}
+        <button
+          onClick={() => setCollapsed(v => !v)}
+          aria-expanded={!collapsed}
+          aria-controls="tackle-panel-body"
+          className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 tracking-wide hover:text-gray-900 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+            className={`h-3.5 w-3.5 transition-transform duration-150 ${collapsed ? '-rotate-90' : ''}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10a3 3 0 010 6h-3m3-6l2 2-2 2" />
-            </svg>
-          </button>
-          <button
-            onClick={() => setShowTimestamps(v => !v)}
-            aria-label={showTimestamps ? 'Hide timestamps' : 'Show timestamps'}
-            aria-pressed={showTimestamps}
-            title={showTimestamps ? 'Hide timestamps' : 'Show timestamps'}
-            className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${showTimestamps ? 'text-blue-600 hover:text-blue-800' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </button>
-          <button
-            onClick={() => setShowDone(v => !v)}
-            aria-label={showDone ? 'Hide completed' : 'Show completed'}
-            aria-pressed={showDone}
-            title={showDone ? 'Hide completed' : 'Show completed'}
-            className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${showDone ? 'text-blue-600 hover:text-blue-800' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </button>
-        </div>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+          To Tackle
+          {collapsed && todos.length > 0 && (
+            <span className="ml-1 text-xs font-normal text-gray-400">({todos.length})</span>
+          )}
+        </button>
+        {!collapsed && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setWrapText(v => !v)}
+              aria-label={wrapText ? 'Single line' : 'Wrap text'}
+              aria-pressed={wrapText}
+              title={wrapText ? 'Single line' : 'Wrap text'}
+              className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${wrapText ? 'text-blue-600 hover:text-blue-800' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10a3 3 0 010 6h-3m3-6l2 2-2 2" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setShowTimestamps(v => !v)}
+              aria-label={showTimestamps ? 'Hide timestamps' : 'Show timestamps'}
+              aria-pressed={showTimestamps}
+              title={showTimestamps ? 'Hide timestamps' : 'Show timestamps'}
+              className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${showTimestamps ? 'text-blue-600 hover:text-blue-800' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setShowDone(v => !v)}
+              aria-label={showDone ? 'Hide completed' : 'Show completed'}
+              aria-pressed={showDone}
+              title={showDone ? 'Hide completed' : 'Show completed'}
+              className={`p-1 rounded transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 ${showDone ? 'text-blue-600 hover:text-blue-800' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {!collapsed && (
+        <div id="tackle-panel-body" className="flex-1 overflow-y-auto">
         {/* Add row always visible regardless of loading state */}
         <div
           className="flex items-center gap-2 px-4 py-1 border-b border-gray-50 cursor-text"
@@ -260,6 +282,7 @@ export default function TodoPanel() {
           </ul>
         )}
       </div>
+      )}
     </aside>
   );
 }
