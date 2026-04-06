@@ -1,14 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { promises as fsPromises, existsSync } from 'fs';
-import { join, dirname, normalize, basename } from 'path';
-import { homedir } from 'os';
-import { spawnSync } from 'child_process';
-import { getRepositories } from '../../db/database.js';
-import { isPathWithinBoundary } from '../../utils/path-sandbox.js';
-
-function getAllowedBoundaries(): string[] {
-  return [homedir(), ...getRepositories().map(r => r.path)];
-}
+import { join, normalize, basename } from 'path';
 
 export async function findGitRepos(dirPath: string, results: Array<{ path: string; name: string }> = []): Promise<Array<{ path: string; name: string }>> {
   // If this dir is itself a git repo, add it and don't recurse into it
@@ -39,80 +31,11 @@ export async function findGitRepos(dirPath: string, results: Array<{ path: strin
 }
 
 export async function fsRoutes(app: FastifyInstance) {
-  app.get('/api/v1/fs/browse', async (request, reply) => {
-    const query = request.query as { path?: string };
-    const dirPath = normalize(query.path ?? homedir());
-
-    // FR-008/FR-009: reject paths outside safe boundaries
-    if (!isPathWithinBoundary(dirPath, getAllowedBoundaries())) {
-      return reply.status(403).send({
-        error: 'PATH_OUTSIDE_BOUNDARY',
-        message: 'Path is outside the allowed directory boundary',
-        requestId: request.id,
-      });
-    }
-
-    if (!existsSync(dirPath)) {
-      return reply.status(404).send({ error: 'Path not found' });
-    }
-    try {
-      const dirEntries = await fsPromises.readdir(dirPath, { withFileTypes: true });
-      const entries = dirEntries
-        .filter(e => e.isDirectory())
-        .map(e => {
-          const fullPath = join(dirPath, e.name);
-          const isGitRepo = existsSync(join(fullPath, '.git'));
-          return { name: e.name, path: fullPath, isGitRepo };
-        });
-      const parent = dirname(dirPath) !== dirPath ? dirname(dirPath) : null;
-      return { current: dirPath, parent, entries };
-    } catch {
-      return reply.status(403).send({ error: 'Cannot read directory' });
-    }
-  });
-
-  app.get('/api/v1/fs/scan', async (request, reply) => {
-    const query = request.query as { path?: string };
-    const dirPath = normalize(query.path ?? homedir());
-
-    // FR-008/FR-009: reject paths outside safe boundaries
-    if (!isPathWithinBoundary(dirPath, getAllowedBoundaries())) {
-      return reply.status(403).send({
-        error: 'PATH_OUTSIDE_BOUNDARY',
-        message: 'Path is outside the allowed directory boundary',
-        requestId: request.id,
-      });
-    }
-
-    if (!existsSync(dirPath)) {
-      return reply.status(404).send({ error: 'Path not found' });
-    }
-    try {
-      const scanEntries = await fsPromises.readdir(dirPath, { withFileTypes: true });
-      const repos = scanEntries
-        .filter(e => e.isDirectory())
-        .filter(e => existsSync(join(dirPath, e.name, '.git')))
-        .map(e => ({ name: e.name, path: join(dirPath, e.name) }));
-      return { scannedPath: dirPath, repos };
-    } catch {
-      return reply.status(403).send({ error: 'Cannot read directory' });
-    }
-  });
-
   app.post('/api/v1/fs/scan-folder', async (request, reply) => {
     const body = request.body as { path?: string };
     const scanPath = body?.path ? normalize(body.path) : null;
     if (!scanPath) {
       return reply.status(400).send({ error: 'MISSING_PATH', message: 'path is required', requestId: request.id });
-    }
-
-    // FR-008/FR-009: reject paths outside safe boundaries
-    if (!isPathWithinBoundary(scanPath, getAllowedBoundaries())) {
-      return reply.status(403).send({
-        error: 'PATH_OUTSIDE_BOUNDARY',
-        message: 'Path is outside the allowed directory boundary',
-        requestId: request.id,
-      });
     }
 
     if (!existsSync(scanPath)) {
@@ -127,48 +50,5 @@ export async function fsRoutes(app: FastifyInstance) {
       app.log.error({ scanPath, err }, 'Scan failed');
       return reply.status(500).send({ error: 'SCAN_FAILED', message: 'Failed to scan folder.', requestId: request.id, repos: [] });
     }
-  });
-
-  app.post('/api/v1/fs/pick-folder', async (_request, reply) => {
-    const platform = process.platform;
-    let selectedPath: string | null = null;
-
-    try {
-      if (platform === 'win32') {
-        const ps = [
-          'Add-Type -AssemblyName System.Windows.Forms;',
-          '$d = New-Object System.Windows.Forms.FolderBrowserDialog;',
-          '$d.ShowNewFolderButton = $true;',
-          'if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $d.SelectedPath }',
-        ].join(' ');
-        const result = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], {
-          encoding: 'utf-8',
-          timeout: 120000,
-        });
-        if (result.status === 0 && result.stdout?.trim()) {
-          selectedPath = result.stdout.trim();
-        }
-      } else if (platform === 'darwin') {
-        const result = spawnSync('osascript', ['-e', 'POSIX path of (choose folder)'], {
-          encoding: 'utf-8',
-          timeout: 120000,
-        });
-        if (result.status === 0 && result.stdout?.trim()) {
-          selectedPath = result.stdout.trim().replace(/\/$/, '');
-        }
-      } else {
-        const result = spawnSync('zenity', ['--file-selection', '--directory'], {
-          encoding: 'utf-8',
-          timeout: 120000,
-        });
-        if (result.status === 0 && result.stdout?.trim()) {
-          selectedPath = result.stdout.trim();
-        }
-      }
-    } catch {
-      return reply.send({ path: null, error: 'not_supported' });
-    }
-
-    return reply.send({ path: selectedPath });
   });
 }

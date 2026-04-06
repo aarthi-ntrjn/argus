@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState, useEffect, useMemo } from 'react';
 import { getSessions, getRepositories } from '../services/api';
-import type { Session } from '../types';
+import type { Repository, Session } from '../types';
 import { useSettings } from '../hooks/useSettings';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { useRepositoryManagement } from '../hooks/useRepositoryManagement';
@@ -13,7 +13,6 @@ import TodoPanel from '../components/TodoPanel/TodoPanel';
 import { isInactive } from '../utils/sessionUtils';
 import { OnboardingTour } from '../components/Onboarding';
 import { DASHBOARD_TOUR_STEPS } from '../config/dashboardTourSteps';
-import type { Repository } from '../types';
 
 interface RepoWithSessions extends Repository {
   sessions: Session[];
@@ -32,9 +31,10 @@ export default function DashboardPage() {
   const [tourRun, setTourRun] = useState(false);
 
   const {
-    addError, addInfo, adding, removeConfirmId, removing, skipConfirm,
-    setRemoveConfirmId, setSkipConfirm,
-    handleAddRepo, handleRemoveRepoById, handleRemoveRepo,
+    addError, addInfo, adding, showFolderInput, folderInputPath,
+    removeConfirmId, removing, skipConfirm,
+    setFolderInputPath, setRemoveConfirmId, setSkipConfirm,
+    handleAddRepo, handleFolderSubmit, handleRemoveRepoById, handleRemoveRepo,
     clearAddError, clearAddInfo,
   } = useRepositoryManagement();
 
@@ -144,7 +144,7 @@ export default function DashboardPage() {
             </div>
             <button
               data-tour-id="dashboard-add-repo"
-              onClick={() => handleAddRepo(repos)}
+              onClick={handleAddRepo}
               disabled={adding}
               className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded hover:bg-blue-700 disabled:opacity-40 transition-colors"
             >
@@ -265,6 +265,34 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {showFolderInput && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-1">Add Repositories</h2>
+            <p className="text-gray-500 text-sm mb-4">Enter a root folder path to scan for git repositories.</p>
+            <input
+              autoFocus
+              type="text"
+              value={folderInputPath}
+              onChange={e => setFolderInputPath(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleFolderSubmit(repos); }}
+              placeholder="e.g. C:\source or /home/user/projects"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setFolderInputPath('')} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+              <button
+                onClick={() => handleFolderSubmit(repos)}
+                disabled={!folderInputPath.trim()}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-40"
+              >
+                Scan &amp; Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {removeConfirmId && (
         <RemoveConfirmDialog

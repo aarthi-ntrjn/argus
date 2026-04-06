@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { addRepository, removeRepository, pickFolder, scanFolder, queryClient } from '../services/api';
+import { addRepository, removeRepository, scanFolder, queryClient } from '../services/api';
 import type { Repository } from '../types';
 
 const SKIP_REMOVE_CONFIRM_KEY = 'argus:skipRemoveConfirm';
@@ -8,12 +8,16 @@ export interface RepositoryManagement {
   addError: string | null;
   addInfo: string | null;
   adding: boolean;
+  showFolderInput: boolean;
+  folderInputPath: string;
   removeConfirmId: string | null;
   removing: boolean;
   skipConfirm: boolean;
+  setFolderInputPath: (path: string) => void;
   setRemoveConfirmId: (id: string | null) => void;
   setSkipConfirm: (val: boolean) => void;
-  handleAddRepo: (repos: Repository[]) => Promise<void>;
+  handleAddRepo: () => void;
+  handleFolderSubmit: (repos: Repository[]) => Promise<void>;
   handleRemoveRepoById: (id: string) => Promise<void>;
   handleRemoveRepo: () => Promise<void>;
   clearAddError: () => void;
@@ -24,6 +28,8 @@ export function useRepositoryManagement(): RepositoryManagement {
   const [addError, setAddError] = useState<string | null>(null);
   const [addInfo, setAddInfo] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [showFolderInput, setShowFolderInput] = useState(false);
+  const [folderInputPath, setFolderInputPath] = useState('');
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
   const [skipConfirm, setSkipConfirmRaw] = useState(() => localStorage.getItem(SKIP_REMOVE_CONFIRM_KEY) === 'true');
@@ -33,18 +39,26 @@ export function useRepositoryManagement(): RepositoryManagement {
     setTimeout(() => setAddInfo(null), 5000);
   };
 
-  const handleAddRepo = async (repos: Repository[]) => {
+  const handleAddRepo = () => {
+    setAddError(null);
+    setAddInfo(null);
+    setFolderInputPath('');
+    setShowFolderInput(true);
+  };
+
+  const handleFolderSubmit = async (repos: Repository[]) => {
+    const folderPath = folderInputPath.trim();
+    if (!folderPath) return;
+    setShowFolderInput(false);
     setAddError(null);
     setAddInfo(null);
     setAdding(true);
     try {
-      const folderPath = await pickFolder();
-      if (!folderPath) return;
       const found = await scanFolder(folderPath);
       const registeredPaths = new Set(repos.map(r => r.path));
       const newRepos = found.filter(r => !registeredPaths.has(r.path));
       if (newRepos.length === 0) {
-        showInfo('No new git repositories found in the selected folder.');
+        showInfo('No new git repositories found in the specified folder.');
         return;
       }
       let added = 0;
@@ -92,12 +106,16 @@ export function useRepositoryManagement(): RepositoryManagement {
     addError,
     addInfo,
     adding,
+    showFolderInput,
+    folderInputPath,
     removeConfirmId,
     removing,
     skipConfirm,
+    setFolderInputPath,
     setRemoveConfirmId,
     setSkipConfirm,
     handleAddRepo,
+    handleFolderSubmit,
     handleRemoveRepoById,
     handleRemoveRepo: () => handleRemoveRepoById(removeConfirmId!),
     clearAddError: () => setAddError(null),
