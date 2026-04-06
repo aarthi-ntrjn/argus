@@ -193,37 +193,37 @@ export default function DashboardPage() {
             <div className="flex-1 min-w-0 space-y-6">
               {reposWithSessions.map((repo) => (
                 <div key={repo.id} data-tour-id="dashboard-repo-card" className="bg-white rounded-lg shadow p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center">
                       <h2 className="text-xl font-semibold text-gray-900">{repo.name}</h2>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <p className="text-xs text-gray-500 font-mono">{repo.path}</p>
-                        {repo.branch && (
-                          <span className="inline-flex items-center gap-1 text-xs font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">⎇ {repo.branch}</span>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                          {repo.sessions.length} session{repo.sessions.length !== 1 ? 's' : ''}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (skipConfirm) {
+                              setRemoveConfirmId(repo.id);
+                              handleRemoveRepoById(repo.id);
+                            } else {
+                              setRemoveConfirmId(repo.id);
+                            }
+                          }}
+                          aria-label={`Remove repository ${repo.name}`}
+                          title="Remove repository"
+                          className="text-gray-500 hover:text-red-500 transition-colors p-1 rounded focus-visible:ring-2 focus-visible:ring-red-500"
+                        >
+                          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                        {repo.sessions.length} session{repo.sessions.length !== 1 ? 's' : ''}
-                      </span>
-                      <button
-                        onClick={() => {
-                          if (skipConfirm) {
-                            setRemoveConfirmId(repo.id);
-                            handleRemoveRepoById(repo.id);
-                          } else {
-                            setRemoveConfirmId(repo.id);
-                          }
-                        }}
-                        aria-label={`Remove repository ${repo.name}`}
-                        title="Remove repository"
-                        className="text-gray-500 hover:text-red-500 transition-colors p-1 rounded focus-visible:ring-2 focus-visible:ring-red-500"
-                      >
-                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <p className="text-xs text-gray-500 font-mono">{repo.path}</p>
+                      {repo.branch && (
+                        <span className="inline-flex items-center gap-1 text-xs font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">⎇ {repo.branch}</span>
+                      )}
                     </div>
                   </div>
                   {repo.sessions.length === 0 ? (
