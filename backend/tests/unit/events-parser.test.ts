@@ -46,6 +46,30 @@ describe('EventsParser 019 US2 — content-block array edge cases', () => {
 
 // T001/T002/T003 — 019 regression tests: blank MSG rows for unknown event types and array content
 describe('EventsParser 019 — blank MSG row fix', () => {
+  it('T001b: should suppress assistant.message with null data.content (tool-call-only turn)', () => {
+    const line = JSON.stringify({
+      type: 'assistant.message',
+      id: 'evt-y',
+      parentId: null,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      data: { messageId: 'msg-x', content: null, toolRequests: [{ toolCallId: 'tc-1', toolName: 'bash' }] },
+    });
+    const result = parseJsonlLine(line, 'session-1', 1);
+    expect(result).toBeNull();
+  });
+
+  it('T001c: should suppress assistant.message with empty string data.content', () => {
+    const line = JSON.stringify({
+      type: 'assistant.message',
+      id: 'evt-z',
+      parentId: null,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      data: { messageId: 'msg-y', content: '', toolRequests: [] },
+    });
+    const result = parseJsonlLine(line, 'session-1', 2);
+    expect(result).toBeNull();
+  });
+
   it('T001: should suppress unrecognised copilot event types (e.g. turn/interaction bookkeeping)', () => {
     const line = JSON.stringify({
       type: 'turn.start',

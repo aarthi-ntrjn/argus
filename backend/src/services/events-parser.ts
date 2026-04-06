@@ -94,6 +94,9 @@ export function parseJsonlLine(line: string, sessionId: string, sequenceNumber: 
     // These have role: null and no human-readable content — showing them as MSG rows is noise.
     if (outputType === 'message' && role === null) return null;
     const content = extractContent(event);
+    // Suppress message rows with no extractable content (e.g. tool-call-only assistant turns
+    // where data.content is null/empty — the tool calls appear as separate TOOL rows).
+    if (outputType === 'message' && !content) return null;
     return {
       id: randomUUID(),
       sessionId,
