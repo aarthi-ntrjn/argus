@@ -232,7 +232,7 @@ export default function TodoPanel() {
                       aria-checked={done}
                       aria-label={`Mark "${todo.text}" as ${done ? 'incomplete' : 'complete'}`}
                       onClick={() => toggleTodo.mutate({ id: todo.id, done: !done })}
-                      className={`h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-1 ${
+                      className={`h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:border-green-500 ${
                         done
                           ? 'bg-white border-green-500 text-green-500'
                           : 'border-gray-300 bg-white hover:border-green-400'
@@ -269,9 +269,9 @@ export default function TodoPanel() {
                       className={`flex-1 min-w-0 text-sm bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-400 rounded resize-none leading-snug ${done ? 'line-through text-gray-500' : 'text-gray-700'}`}
                       style={wrapText ? { overflow: 'hidden' } : { height: '1.25rem', overflow: 'hidden', whiteSpace: 'nowrap' }}
                     />
-                    <div className="relative shrink-0">
+                    <div className="relative shrink-0 group/del">
                       {showTimestamps ? (
-                        <span className="block text-xs text-gray-500 whitespace-nowrap group-hover:opacity-0 transition-opacity">
+                        <span className="block text-xs text-gray-500 whitespace-nowrap group-hover:opacity-0 group-focus-within/del:opacity-0 transition-opacity">
                           {formatRelativeTime(todo.createdAt)}
                         </span>
                       ) : (
