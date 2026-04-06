@@ -43,11 +43,6 @@ export async function removeRepository(id: string): Promise<void> {
   await apiFetch<void>(`/repositories/${id}`, { method: 'DELETE' });
 }
 
-export async function pickFolder(): Promise<string | null> {
-  const result = await apiFetch<{ path: string | null; error?: string }>('/fs/pick-folder', { method: 'POST' });
-  return result.path;
-}
-
 export async function scanFolder(path: string): Promise<Array<{ path: string; name: string }>> {
   const result = await apiFetch<{ repos: Array<{ path: string; name: string }>; error?: string }>(
     '/fs/scan-folder',
