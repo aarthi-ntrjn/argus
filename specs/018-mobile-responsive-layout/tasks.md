@@ -39,8 +39,8 @@ Goal: DashboardPage shows single-column sessions on mobile, with MobileNav, and 
 
 Goal: SessionPage renders comfortably on narrow screens.
 
-- [ ] T010 [P4] [US3] Write failing test for SessionPage mobile layout — at 390px viewport, output stream and prompt bar render without horizontal overflow (`frontend/src/__tests__/SessionPage.mobile.test.tsx`)
-- [ ] T011 [P4] [US3] Add responsive padding to SessionPage: `p-4 md:p-8`; increase back button touch target to `py-2`; ensure `max-w-4xl` container is full-width on mobile (`frontend/src/pages/SessionPage.tsx`)
+- [x] T010 [P4] [US3] Write failing test for SessionPage mobile layout — at 390px viewport, output stream and prompt bar render without horizontal overflow (`frontend/src/__tests__/SessionPage.mobile.test.tsx`)
+- [x] T011 [P4] [US3] Add responsive padding to SessionPage: `p-4 md:p-8`; increase back button touch target to `py-2`; ensure `max-w-4xl` container is full-width on mobile (`frontend/src/pages/SessionPage.tsx`)
 
 ---
 
