@@ -55,14 +55,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T008 [P] [US2] Write unit test for mixed content-block array (text + non-text blocks skipped) in `backend/tests/unit/events-parser.test.ts`
-- [ ] T009 [P] [US2] Write unit test for `data.content` array with two text blocks (joined with `"\n"`) in `backend/tests/unit/events-parser.test.ts`
-- [ ] T010 [US2] Run tests and confirm T008-T009 fail (red)
+- [x] T008 [P] [US2] Write unit test for mixed content-block array (text + non-text blocks skipped) in `backend/tests/unit/events-parser.test.ts`
+- [x] T009 [P] [US2] Write unit test for `data.content` array with two text blocks (joined with `"\n"`) in `backend/tests/unit/events-parser.test.ts`
+- [x] T010 [US2] Run tests and confirm T008-T009 fail (red)
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Verify `extractContent` array branch (added in T005) correctly skips non-text blocks and joins multiple text blocks — adjust if needed in `backend/src/services/events-parser.ts`
-- [ ] T012 [US2] Run `npm run test --workspace=backend` and confirm T008-T009 now pass (green)
+- [x] T011 [US2] Verify `extractContent` array branch (added in T005) correctly skips non-text blocks and joins multiple text blocks — adjust if needed in `backend/src/services/events-parser.ts`
+- [x] T012 [US2] Run `npm run test --workspace=backend` and confirm T008-T009 now pass (green)
 
 **Checkpoint**: All tests green. US1 and US2 both independently verifiable.
 
@@ -70,9 +70,9 @@
 
 ## Phase 5: Polish & Cross-Cutting Concerns
 
-- [ ] T013 [P] Update `docs/README-CLI-COMPARISON.md` — add note in the Copilot CLI event mapping table that `data.content` may be a content-block array and that unrecognised event types serialize `data` as their content
-- [ ] T014 [P] Run full test suite `npm run test --workspace=backend` to confirm no regressions
-- [ ] T015 Run `npm run build --workspace=frontend` to confirm frontend still builds cleanly (no changes expected)
+- [x] T013 [P] Update `docs/README-CLI-COMPARISON.md` — add note in the Copilot CLI event mapping table that `data.content` may be a content-block array and that unrecognised event types serialize `data` as their content
+- [x] T014 [P] Run full test suite `npm run test --workspace=backend` to confirm no regressions
+- [x] T015 Run `npm run build --workspace=frontend` to confirm frontend still builds cleanly (no changes expected)
 
 ---
 

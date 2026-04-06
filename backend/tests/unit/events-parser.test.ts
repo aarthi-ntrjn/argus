@@ -1,6 +1,49 @@
 import { describe, it, expect } from 'vitest';
 import { parseJsonlLine, parseModelFromEvent } from '../../src/services/events-parser.js';
 
+// T008/T009 — 019 US2: mixed content-block array and multi-text-block joining
+describe('EventsParser 019 US2 — content-block array edge cases', () => {
+  it('T008: should skip non-text blocks in a mixed content-block array', () => {
+    const line = JSON.stringify({
+      type: 'assistant.message',
+      id: 'evt-c',
+      parentId: null,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      data: {
+        messageId: 'msg-2',
+        content: [
+          { type: 'text', text: 'Let me check.' },
+          { type: 'tool_use', id: 'tc-1', name: 'bash', input: { command: 'ls' } },
+        ],
+        toolRequests: [],
+      },
+    });
+    const result = parseJsonlLine(line, 'session-1', 1);
+    expect(result?.content).toBe('Let me check.');
+    expect(result?.content).not.toContain('tool_use');
+    expect(result?.content).not.toContain('bash');
+  });
+
+  it('T009: should join multiple text blocks with newline', () => {
+    const line = JSON.stringify({
+      type: 'assistant.message',
+      id: 'evt-d',
+      parentId: null,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      data: {
+        messageId: 'msg-3',
+        content: [
+          { type: 'text', text: 'Part 1.' },
+          { type: 'text', text: 'Part 2.' },
+        ],
+        toolRequests: [],
+      },
+    });
+    const result = parseJsonlLine(line, 'session-1', 2);
+    expect(result?.content).toBe('Part 1.\nPart 2.');
+  });
+});
+
 // T001/T002/T003 — 019 regression tests: blank MSG rows for unknown event types and array content
 describe('EventsParser 019 — blank MSG row fix', () => {
   it('T001: should not produce blank content for unrecognised copilot event types', () => {
