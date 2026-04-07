@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ExternalLink, Moon, Play, X } from 'lucide-react';
+import { ExternalLink, Moon, Play, Trash2 } from 'lucide-react';
 import type { Session } from '../../types';
 import { getSessionOutput, stopSession } from '../../services/api';
 import { isInactive } from '../../utils/sessionUtils';
@@ -121,7 +121,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
               aria-label="Kill session"
               className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-40"
             >
-              <X size={14} />
+              <Trash2 size={14} />
             </button>
           )}
           <Link
