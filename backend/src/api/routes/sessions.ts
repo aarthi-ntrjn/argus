@@ -75,8 +75,8 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
 
   // Dismiss a session: mark it as ended without killing the process.
   // Used for read-only sessions or sessions whose process is already gone.
-  app.delete<{ Params: { id: string } }>(
-    '/api/v1/sessions/:id',
+  app.post<{ Params: { id: string } }>(
+    '/api/v1/sessions/:id/dismiss',
     async (req, reply) => {
       const session = getSession(req.params.id);
       if (!session) return reply.status(404).send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
