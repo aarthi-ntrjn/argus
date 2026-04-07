@@ -1,18 +1,7 @@
 # Bug Learnings
 
-Retrospective entries for every bug fixed via the `/bug` skill, plus design retrospectives for architectural decisions that turned out to be more complex than necessary.
+Retrospective entries for every bug fixed via the `/bug` skill.
 Each entry explains what went wrong, why it was missed, and how to prevent it.
-
----
-
-## Feature 020 — PTY prompt delivery was over-engineered
-
-**Date**: 2026-04-07
-**Context**: Feature 020 added prompt delivery to Claude Code and Copilot CLI sessions. The requirement was: user types a prompt in the Argus dashboard, it reaches the running AI tool process.
-**What was built**: A full PTY launcher (`argus launch`) — a separate CLI process the user runs instead of `claude` or `gh copilot`. It spawns the tool in a PTY via node-pty, holds the PTY master, connects back to the Argus backend over a `/launcher` WebSocket, and writes prompts to PTY stdin on demand. Significant surface area: PtyRegistry, ArgusLaunchClient, launcher WebSocket route, DB migration, launchMode field, frontend badge changes, 7 new test files.
-**The simpler solution that was missed**: The backend could call `start powershell -NoExit -Command "argus launch claude"` (Windows) or the Mac equivalent to open a new OS terminal window running the launcher. The terminal window is the PTY host — the user sees the full interactive Claude Code UI in their own terminal emulator. The launcher connects back via the existing `/launcher` WebSocket exactly as today. No change to the launch flow, no new complexity, just a `POST /api/v1/sessions/launch` endpoint that spawns a terminal window process. The frontend shows a "Launch" button; the rest is identical. Even simpler: a "Copy launch command" button that writes the command to the clipboard — zero backend work, works everywhere.
-**Why it was missed**: The clarification phase focused on the delivery mechanism (how does text reach the process stdin) rather than the session startup flow (how does the session start). The PTY infrastructure question was solved correctly; the spawn-a-terminal-window shortcut was never considered because the framing was "Argus must own the PTY" rather than "Argus must initiate the session."
-**How to prevent**: When a feature requires controlling an interactive subprocess, ask first: can the OS terminal emulator do the heavy lifting? Spawning a visible terminal window with a command is almost always simpler than building a headless PTY proxy. Only build the proxy if you need to render the terminal output yourself (e.g., in-browser xterm.js). If the user just needs to see the output in their own terminal, open their terminal.
 
 ---
 
@@ -214,29 +203,3 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 - `staleTime` ≠ `refetchInterval`. Always explicitly set `refetchInterval` on queries that need to stay live with the server.
 - When wiring up a backend polling loop, check end-to-end: does the frontend also have a matching poll? Trace the full data path from server update → DB → API → React Query → UI.
 **Fix summary**: Added `refetchInterval: 5000` to both `useQuery` calls (repositories and sessions) in `DashboardPage.tsx`. Also updated the `repository-scanner.js` vitest mock to properly export `getCurrentBranch`, fixing a silent mock gap where `refreshRepositoryBranches()` errors were being swallowed by the catch block.
-
-## T028 — Space key in prompt input toggles session card selection
-
-**Date**: 2026-04-07
-**Symptom**: Typing a space into the prompt input on a session card caused the card to toggle its selected state instead of inserting a space into the input.
-**Root cause**: `SessionCard` has `role="button"` with `onKeyDown` that intercepts Space and Enter to activate the card. The prompt bar wrapper used `onClick={e => e.stopPropagation()}` to prevent click events bubbling, but keyboard events from the input still bubbled up to the card's `onKeyDown` handler.
-**Why it was missed**: The `onClick` stop-propagation was added when the prompt bar was introduced, but the equivalent `onKeyDown` guard was not — it was not obvious that `role="button"` + Space would fire a handler that sat above a focused `<input>`.
-**How to prevent**: Whenever interactive content (inputs, buttons) is nested inside a `role="button"` element, always stop both `onClick` AND `onKeyDown` propagation on the inner container. Treat click and keyboard as a pair.
-**Fix summary**: Added `onKeyDown={e => e.stopPropagation()}` alongside the existing `onClick` on the prompt bar wrapper div in `SessionCard.tsx`.
-
-## T029 — PTY launch creates duplicate read-only detected session (pending/claim redesign)
-
-**Date**: 2026-04-07
-**Symptom**: After launching a claude session via `argus launch`, sending a prompt caused a second read-only session to appear. The PTY session was created with a random UUID (the powershell process), not Claude's real session ID. All hook events created a separate detected session (launchMode=null) using Claude's ID.
-**Root cause**: The original design registered a DB session immediately when the launcher WebSocket connected, using a temp UUID as the session ID. When Claude fired its first hook, `handleHookPayload` saw no DB session matching Claude's real session ID and created a new one, producing two sessions: the UUID session (with prompt injection) and the Claude-ID session (read-only).
-**Why it was missed**: The PTY launcher and JSONL detector were designed as independent subsystems. The UUID used by `launch.ts` was never meant to be a Claude session ID, but the initial implementation stored it in the DB as one. The join point between launcher registration and Claude's first hook event had no deduplication.
-**How to prevent**: Never create a DB session until you know the real session ID. If a launcher connects before the session ID is known (which is always the case for Claude Code), hold the WebSocket connection as "pending" and only materialise the DB session once the canonical ID arrives (via the first hook). The invariant: one DB session per real Claude session, always identified by Claude's own session ID.
-**Fix summary**: Redesigned `PtyRegistry` to a pending/claim model. `registerPending()` holds the WebSocket without creating any DB record. When Claude fires its first hook, `claimForSession(claudeId, repoPath)` promotes the pending connection to live and returns the pid. `handleHookPayload` calls claim first, and creates ONE session with `launchMode='pty'` and Claude's real ID. The temp UUID is only used internally for close-handler lookup via `getClaimedId()`. Files changed: `pty-registry.ts`, `launcher.ts`, `claude-code-detector.ts` and their tests.
-
-## T029 (first attempt) — Wrong fix: deduplication at hook time instead of eliminating the fake session
-
-**Date**: 2026-04-07
-**What I did**: My first fix for the duplicate session bug added `activePtySessionForRepo()` to `ClaudeCodeDetector`. On every hook event, it queried for an active PTY session on the same repo and, if found, rerouted the JSONL output to that session's ID instead of creating a new one. `watchJsonlFile` was extended with an optional `storeAsId` parameter so the file keyed on Claude's session ID could store output under the PTY session's UUID.
-**Why it was wrong**: The fix treated the symptom (two sessions visible) rather than the cause (a fake session being created at launcher connect time). It also introduced a hidden invariant — "one active PTY session per repo at a time" — that was never stated or enforced anywhere. The user immediately asked "does this mean we can only have one Claude session per repo?" which exposed the constraint. The powershell UUID session was always an artifact; it should never have existed in the DB at all.
-**What the correct mental model is**: The launcher WebSocket connects before Claude has started. At that point we have a PID and a repo path but no Claude session ID. The right answer is to not commit to a DB record until we have the real ID. Hold the connection as pending state in memory (the registry), not as a row in the DB. When the real ID arrives via the first hook, materialise exactly one record using that ID.
-**Rule for future**: If you are about to create a placeholder record because the real identifier is not yet known, stop. Hold the resource as in-memory pending state instead. A DB row is a commitment; make it only when you have the information needed to make it correctly. Deduplication logic that compensates for premature commits is a code smell — remove the premature commit instead.
