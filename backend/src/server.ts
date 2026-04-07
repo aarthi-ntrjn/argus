@@ -16,6 +16,7 @@ import metricsRoutes from './api/routes/metrics.js';
 import { fsRoutes } from './api/routes/fs.js';
 import todosRoutes from './api/routes/todos.js';
 import launcherRoutes from './api/routes/launcher.js';
+import toolsRoutes from './api/routes/tools.js';
 import { SessionMonitor } from './services/session-monitor.js';
 import { startPruningJob } from './services/pruning-job.js';
 import type { Session, Repository } from './models/index.js';
@@ -87,6 +88,7 @@ export async function buildServer() {
   await app.register(fsRoutes);
   await app.register(todosRoutes);
   await app.register(launcherRoutes);
+  await app.register(toolsRoutes);
 
   app.register(async (fastify) => {
     fastify.get('/ws', { websocket: true }, (socket) => {

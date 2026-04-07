@@ -101,3 +101,14 @@ export async function updateTodoText(id: string, text: string): Promise<TodoItem
 export async function deleteTodo(id: string): Promise<void> {
   await apiFetch<void>(`/todos/${id}`, { method: 'DELETE' });
 }
+
+export async function getAvailableTools(): Promise<{ claude: boolean; copilot: boolean }> {
+  return apiFetch<{ claude: boolean; copilot: boolean }>('/tools');
+}
+
+export async function launchInTerminal(tool: 'claude' | 'copilot', repoPath?: string): Promise<void> {
+  await apiFetch<void>('/sessions/launch-terminal', {
+    method: 'POST',
+    body: JSON.stringify({ tool, repoPath }),
+  });
+}
