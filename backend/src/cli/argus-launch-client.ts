@@ -41,6 +41,10 @@ export class ArgusLaunchClient {
     this.send({ type: 'prompt_failed', actionId, error });
   }
 
+  updatePid(pid: number): void {
+    this.send({ type: 'update_pid', pid });
+  }
+
   notifySessionEnded(sessionId: string, exitCode: number | null): void {
     this.send({ type: 'session_ended', sessionId, exitCode });
     this.ws.close();

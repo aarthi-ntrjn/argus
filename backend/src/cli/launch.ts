@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from 'node-pty';
+import { execSync } from 'child_process';
 import { randomUUID } from 'crypto';
 import { platform } from 'os';
 import { resolveLaunchCommand } from './launch-command-resolver.js';
@@ -80,6 +81,46 @@ client.onSendPrompt((actionId: string, prompt: string) => {
     client.ackFailed(actionId, err instanceof Error ? err.message : 'PTY write failed');
   }
 });
+
+// On Windows, pty.pid is the powershell.exe wrapper. Walk the process tree
+// to find the real tool process (claude.exe, node.exe, etc.) and update Argus.
+if (isWin) {
+  let pidAttempts = 0;
+  const pidInterval = setInterval(() => {
+    pidAttempts++;
+    if (pidAttempts > 20) { clearInterval(pidInterval); return; } // give up after ~10s
+    try {
+      // Walk the process tree from pty.pid downward to find the deepest descendant.
+      // powershell.exe -> cmd.exe / conhost.exe -> claude.exe / node.exe
+      let currentPid = pty.pid;
+      for (let depth = 0; depth < 5; depth++) {
+        const out = execSync(
+          `wmic process where (ParentProcessId=${currentPid}) get ProcessId /value`,
+          { encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] }
+        );
+        const childPids = [...out.matchAll(/ProcessId=(\d+)/g)].map(m => parseInt(m[1], 10));
+        if (childPids.length === 0) break;
+        // Prefer a child that isn't conhost.exe
+        let chosen = childPids[0];
+        for (const cpid of childPids) {
+          try {
+            const nameOut = execSync(
+              `wmic process where (ProcessId=${cpid}) get Name /value`,
+              { encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] }
+            );
+            const name = nameOut.match(/Name=(.+)/)?.[1]?.trim().toLowerCase() ?? '';
+            if (name !== 'conhost.exe') { chosen = cpid; break; }
+          } catch { /* use first child */ }
+        }
+        currentPid = chosen;
+      }
+      if (currentPid !== pty.pid) {
+        client.updatePid(currentPid);
+        clearInterval(pidInterval);
+      }
+    } catch { /* retry next tick */ }
+  }, 500);
+}
 
 // When the tool exits, clean up
 pty.onExit(({ exitCode }: { exitCode: number }) => {

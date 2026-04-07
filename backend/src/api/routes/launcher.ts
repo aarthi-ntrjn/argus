@@ -5,6 +5,7 @@ import type { WebSocket } from 'ws';
 import { ptyRegistry } from '../../services/pty-registry.js';
 import {
   getSession,
+  upsertSession,
   updateSessionStatus,
   getRepositoryByPath,
   insertRepository,
@@ -32,6 +33,11 @@ interface PromptFailedMessage {
   error: string;
 }
 
+interface UpdatePidMessage {
+  type: 'update_pid';
+  pid: number;
+}
+
 interface SessionEndedMessage {
   type: 'session_ended';
   sessionId: string;
@@ -42,6 +48,7 @@ type LauncherMessage =
   | RegisterMessage
   | PromptDeliveredMessage
   | PromptFailedMessage
+  | UpdatePidMessage
   | SessionEndedMessage;
 
 function ensureRepository(cwd: string): Repository {
@@ -92,6 +99,26 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (msg.type === 'prompt_failed') {
         ptyRegistry.handleAck(msg.actionId, false, msg.error);
+        return;
+      }
+
+      if (msg.type === 'update_pid') {
+        // The launcher resolved the real tool PID (e.g. claude.exe) from the
+        // powershell.exe wrapper process tree. Update the pending registry entry
+        // and, if already claimed, update the DB session.
+        if (repoPath) {
+          ptyRegistry.updatePendingPid(repoPath, msg.pid);
+        }
+        const claudeSessionId = tempId ? ptyRegistry.getClaimedId(tempId) : null;
+        if (claudeSessionId) {
+          const session = getSession(claudeSessionId);
+          if (session) {
+            const updated = { ...session, pid: msg.pid };
+            upsertSession(updated);
+            broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
+            fastify.log.info({ claudeSessionId, pid: msg.pid }, 'Updated session with resolved tool PID');
+          }
+        }
         return;
       }
 

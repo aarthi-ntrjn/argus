@@ -31,6 +31,12 @@ export class PtyRegistry {
     this.pendingByRepoPath.set(repoPath, { tempId, ws, pid });
   }
 
+  // Update the PID for a pending connection (before claim).
+  updatePendingPid(repoPath: string, pid: number): void {
+    const pending = this.pendingByRepoPath.get(repoPath);
+    if (pending) pending.pid = pid;
+  }
+
   // Called by ClaudeCodeDetector when a hook fires for a session in repoPath.
   // Promotes the pending connection to a claimed connection keyed by claudeSessionId.
   // Returns the launcher pid so the detector can store it on the session, or null
