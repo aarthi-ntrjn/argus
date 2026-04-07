@@ -107,10 +107,10 @@
 
 **Purpose**: Documentation, build verification, full test run.
 
-- [ ] T027 Update `README.md`: document the new `idle` session status, the 60-minute default threshold, and the `idleSessionThresholdMinutes` config field
-- [ ] T028 Run full test suite: `npm run test --workspace=backend` and `npm run test --workspace=frontend` — all tests must pass
-- [ ] T029 Run frontend build: `npm run build --workspace=frontend` — must succeed with no errors
-- [ ] T030 Remove or correct the stale comment `// T092: idle status no longer exists for Claude Code` in `backend/tests/unit/session-monitor.test.ts`
+- [x] T027 Update `README.md`: document the new `idle` session status, the 60-minute default threshold, and the `idleSessionThresholdMinutes` config field
+- [x] T028 Run full test suite: `npm run test --workspace=backend` and `npm run test --workspace=frontend` — all tests must pass (195 + 132 passing)
+- [x] T029 Run frontend build: `npm run build --workspace=frontend` — must succeed with no errors
+- [x] T030 Remove or correct the stale comment `// T092: idle status no longer exists for Claude Code` in `backend/tests/unit/session-monitor.test.ts`
 
 ---
 

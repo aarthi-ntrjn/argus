@@ -3,10 +3,14 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import type { ArgusConfig } from '../models/index.js';
 
-const CONFIG_DIR = process.env.ARGUS_CONFIG_PATH
-  ? dirname(process.env.ARGUS_CONFIG_PATH)
-  : join(homedir(), '.argus');
-const CONFIG_PATH = process.env.ARGUS_CONFIG_PATH ?? join(CONFIG_DIR, 'config.json');
+function getConfigPath(): string {
+  return process.env.ARGUS_CONFIG_PATH ?? join(homedir(), '.argus', 'config.json');
+}
+
+function getConfigDir(): string {
+  const path = getConfigPath();
+  return process.env.ARGUS_CONFIG_PATH ? dirname(path) : join(homedir(), '.argus');
+}
 
 const DEFAULTS: ArgusConfig = {
   port: 7411,
@@ -18,13 +22,15 @@ const DEFAULTS: ArgusConfig = {
 };
 
 export function loadConfig(): ArgusConfig {
+  const configPath = getConfigPath();
+  const configDir = getConfigDir();
   let fileConfig: Partial<ArgusConfig> = {};
-  if (!existsSync(CONFIG_PATH)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
-    writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULTS, null, 2), 'utf-8');
+  if (!existsSync(configPath)) {
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(configPath, JSON.stringify(DEFAULTS, null, 2), 'utf-8');
   } else {
     try {
-      fileConfig = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
+      fileConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
     } catch {
       // fall through to defaults
     }
@@ -35,6 +41,8 @@ export function loadConfig(): ArgusConfig {
 }
 
 export function saveConfig(config: ArgusConfig): void {
-  mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+  const configPath = getConfigPath();
+  const configDir = getConfigDir();
+  mkdirSync(configDir, { recursive: true });
+  writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
 }

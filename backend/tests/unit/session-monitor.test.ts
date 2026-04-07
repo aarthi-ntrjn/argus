@@ -158,8 +158,7 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
     expect(session?.status).toBe('ended');
   });
 
-  // T092: idle status no longer exists for Claude Code — remove this test scenario.
-  // Active Claude Code sessions with a dead PID are ended by reconcileClaudeCodeSessions().
+  // T092: active Claude Code sessions with a dead PID are ended by reconcileClaudeCodeSessions().
   it('T092: should mark an active Claude Code session with a dead PID as ended via periodic check', async () => {
     const now = new Date().toISOString();
     upsertSession({

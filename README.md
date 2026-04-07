@@ -45,7 +45,7 @@ Output lines carry type badges so you always know what's what: **YOU** (your inp
 
 ### Session Detection
 
-Argus sniffs out sessions already running when it starts. For Claude Code, it only re-activates sessions whose JSONL file was modified in the last 30 minutes, preventing ghost sessions from cluttering your view. New sessions are picked up every 5 seconds. The OS PID is captured for Claude Code sessions when possible.
+Argus sniffs out sessions already running when it starts. For Claude Code, sessions are tracked by monitoring their JSONL file. If a JSONL file has not been updated for longer than the idle threshold (default: 60 minutes), Argus checks the session's process ID. If the process is still running, the session moves to **idle** status and stays visible. If the process has exited, the session is marked **ended**. An idle session automatically returns to **active** status when new output appears. New sessions are picked up every 5 seconds. The OS PID is captured for Claude Code sessions when possible.
 
 ## Control
 
@@ -97,8 +97,9 @@ Click the **gear icon** (top-right) to open Settings.
 | Hide ended sessions | Off | Hides sessions with status `completed` or `ended` |
 | Hide repos with no active sessions | Off | Hides repo cards that have no sessions with status `active`, `idle`, `waiting`, or `error` |
 | Hide inactive sessions | Off | Hides sessions with no output in the last 20 minutes |
+| Idle threshold (min) | 60 | Minutes of JSONL inactivity before a session is classified as `idle` (vs `ended`). Saved to `~/.argus/config.json` via `PATCH /api/v1/settings`. Takes effect within 5 seconds. |
 
-Settings are saved in your browser (`localStorage`) and restored on every load.
+The first three settings are saved in your browser (`localStorage`) and restored on every load. The idle threshold is persisted server-side in `~/.argus/config.json`.
 
 ## Onboarding
 
@@ -122,8 +123,14 @@ Argus keeps its data in `~/.argus/`:
 
 Default port: **7411**. Override in `~/.argus/config.json`:
 ```json
-{ "port": 7411, "sessionRetentionHours": 24 }
+{
+  "port": 7411,
+  "sessionRetentionHours": 24,
+  "idleSessionThresholdMinutes": 60
+}
 ```
+
+The `idleSessionThresholdMinutes` setting controls how long a Claude Code session can be quiet (no JSONL writes) before Argus checks whether the process is still running. Increase it for workflows with long pauses; decrease it for faster cleanup of dead sessions. Alternatively, change it live via the **Idle threshold** field in the Dashboard Settings panel, which calls `PATCH /api/v1/settings` without requiring a restart.
 
 ## For Contributors
 
