@@ -68,16 +68,16 @@
 
 ### Tests (write first, confirm failing before implementation)
 
-- [ ] T017 [P] [US3] Add contract test in `backend/tests/contract/settings.test.ts`: `GET /api/v1/settings` returns 200 with `idleSessionThresholdMinutes: 60`
-- [ ] T018 [P] [US3] Add contract test in `backend/tests/contract/settings.test.ts`: `PATCH /api/v1/settings` with `{ idleSessionThresholdMinutes: 45 }` returns 200 with updated value
-- [ ] T019 [P] [US3] Add contract test in `backend/tests/contract/settings.test.ts`: `PATCH` with `idleSessionThresholdMinutes: 0` returns 400 `INVALID_CONFIG`
-- [ ] T020 [P] [US3] Add contract test in `backend/tests/contract/settings.test.ts`: `PATCH` with `idleSessionThresholdMinutes: -5` returns 400 `INVALID_CONFIG`
-- [ ] T021 [P] [US3] Add contract test in `backend/tests/contract/settings.test.ts`: `PATCH` with unknown field returns 200 and unknown field is not persisted
+- [x] T017 [P] [US3] Add contract test in `backend/tests/contract/settings.test.ts`: `GET /api/v1/settings` returns 200 with `idleSessionThresholdMinutes: 60`
+- [x] T018 [P] [US3] Add contract test in `backend/tests/contract/settings.test.ts`: `PATCH /api/v1/settings` with `{ idleSessionThresholdMinutes: 45 }` returns 200 with updated value
+- [x] T019 [P] [US3] Add contract test in `backend/tests/contract/settings.test.ts`: `PATCH` with `idleSessionThresholdMinutes: 0` returns 400 `INVALID_CONFIG`
+- [x] T020 [P] [US3] Add contract test in `backend/tests/contract/settings.test.ts`: `PATCH` with `idleSessionThresholdMinutes: -5` returns 400 `INVALID_CONFIG`
+- [x] T021 [P] [US3] Add contract test in `backend/tests/contract/settings.test.ts`: `PATCH` with unknown field returns 200 and unknown field is not persisted
 
 ### Implementation
 
-- [ ] T022 [US3] Create `backend/src/api/routes/settings.ts` with `GET /api/v1/settings` (calls `loadConfig()`) and `PATCH /api/v1/settings` (validates, merges, calls `saveConfig()`)
-- [ ] T023 [US3] Register settings route in `backend/src/api/server.ts`
+- [x] T022 [US3] Create `backend/src/api/routes/settings.ts` with `GET /api/v1/settings` (calls `loadConfig()`) and `PATCH /api/v1/settings` (validates, merges, calls `saveConfig()`)
+- [x] T023 [US3] Register settings route in `backend/src/api/server.ts`
 
 **Checkpoint**: All T017–T021 tests pass. `GET /api/v1/settings` and `PATCH /api/v1/settings` work correctly.
 

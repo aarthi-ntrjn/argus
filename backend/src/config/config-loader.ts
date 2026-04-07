@@ -1,10 +1,12 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { homedir } from 'os';
 import type { ArgusConfig } from '../models/index.js';
 
-const CONFIG_DIR = join(homedir(), '.argus');
-const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
+const CONFIG_DIR = process.env.ARGUS_CONFIG_PATH
+  ? dirname(process.env.ARGUS_CONFIG_PATH)
+  : join(homedir(), '.argus');
+const CONFIG_PATH = process.env.ARGUS_CONFIG_PATH ?? join(CONFIG_DIR, 'config.json');
 
 const DEFAULTS: ArgusConfig = {
   port: 7411,
