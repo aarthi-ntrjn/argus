@@ -13,20 +13,15 @@ const __dirname = path.dirname(__filename);
 const ARGUS_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 
 // Base command (no --cwd): safe to copy and run manually from any directory.
-function buildLaunchCmdBase(tool: 'claude' | 'copilot', copilotVariant?: 'standalone' | 'gh-extension'): string {
-  let toolArg: string;
-  if (tool === 'copilot') {
-    toolArg = copilotVariant === 'gh-extension' ? 'gh copilot suggest' : 'copilot';
-  } else {
-    toolArg = 'claude';
-  }
+function buildLaunchCmdBase(tool: 'claude' | 'copilot'): string {
+  const toolArg = tool === 'copilot' ? 'copilot' : 'claude';
   return `npm --prefix "${ARGUS_ROOT}" run launch --workspace=backend -- ${toolArg}`;
 }
 
 // Full command with --cwd baked in: used when the backend spawns the terminal.
 // npm --workspace changes cwd to the workspace root, so we must pass --cwd explicitly.
-function buildLaunchCmdWithCwd(tool: 'claude' | 'copilot', repoPath: string, copilotVariant?: 'standalone' | 'gh-extension'): string {
-  return `${buildLaunchCmdBase(tool, copilotVariant)} --cwd "${repoPath}"`;
+function buildLaunchCmdWithCwd(tool: 'claude' | 'copilot', repoPath: string): string {
+  return `${buildLaunchCmdBase(tool)} --cwd "${repoPath}"`;
 }
 
 function isInstalled(cmd: string): boolean {
@@ -35,19 +30,8 @@ function isInstalled(cmd: string): boolean {
   return result.status === 0;
 }
 
-// Prefer the standalone `copilot` CLI (GitHub Copilot CLI npm package).
-// Fall back to the `gh copilot` extension if the standalone isn't found.
-function detectCopilot(): 'standalone' | 'gh-extension' | null {
-  if (isInstalled('copilot')) return 'standalone';
-  // gh copilot is a gh extension — gh being on PATH is not enough.
-  // `gh copilot --help` exits 0 only when the extension is installed.
-  if (isInstalled('gh')) {
-    const result = spawnSync('gh', ['copilot', '--help'], {
-      encoding: 'utf-8', timeout: 5000,
-    });
-    if (result.status === 0) return 'gh-extension';
-  }
-  return null;
+function isCopilotInstalled(): boolean {
+  return isInstalled('copilot');
 }
 
 function openTerminalWithCommand(cmd: string): void {
@@ -76,13 +60,12 @@ function openTerminalWithCommand(cmd: string): void {
 const toolsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/v1/tools', async (_req, reply) => {
     const hasClaude = isInstalled('claude');
-    const copilotVariant = detectCopilot();
+    const hasCopilot = isCopilotInstalled();
     return reply.send({
       claude: hasClaude,
-      copilot: copilotVariant !== null,
-      // Base commands (no --cwd): the user appends --cwd <their-repo> when copying.
+      copilot: hasCopilot,
       claudeCmd: hasClaude ? buildLaunchCmdBase('claude') : undefined,
-      copilotCmd: copilotVariant ? buildLaunchCmdBase('copilot', copilotVariant) : undefined,
+      copilotCmd: hasCopilot ? buildLaunchCmdBase('copilot') : undefined,
     });
   });
 
@@ -102,10 +85,9 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
     },
     async (req, reply) => {
       const { tool, repoPath } = req.body;
-      const copilotVariant = tool === 'copilot' ? detectCopilot() ?? undefined : undefined;
       const cmd = repoPath
-        ? buildLaunchCmdWithCwd(tool, repoPath, copilotVariant)
-        : buildLaunchCmdBase(tool, copilotVariant);
+        ? buildLaunchCmdWithCwd(tool, repoPath)
+        : buildLaunchCmdBase(tool);
       openTerminalWithCommand(cmd);
       return reply.status(202).send({ status: 'launched' });
     }

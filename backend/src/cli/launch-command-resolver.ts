@@ -17,13 +17,8 @@ export function resolveLaunchCommand(args: string[]): LaunchCommand {
     return { sessionType: 'claude-code', cmd, cmdArgs };
   }
 
-  // Standalone GitHub Copilot CLI (npm install -g @githubnext/github-copilot-cli)
+  // GitHub Copilot CLI (standalone)
   if (cmd === 'copilot') {
-    return { sessionType: 'copilot-cli', cmd, cmdArgs };
-  }
-
-  // gh copilot extension (gh extension install github/gh-copilot)
-  if (cmd === 'gh' && cmdArgs[0] === 'copilot') {
     return { sessionType: 'copilot-cli', cmd, cmdArgs };
   }
 

@@ -16,18 +16,14 @@ describe('resolveLaunchCommand', () => {
     });
   });
 
-  it('resolves "gh copilot" to copilot-cli session type', () => {
-    const result = resolveLaunchCommand(['gh', 'copilot', 'suggest']);
-    expect(result).toEqual({
-      sessionType: 'copilot-cli',
-      cmd: 'gh',
-      cmdArgs: ['copilot', 'suggest'],
-    });
+  it('resolves "copilot" (standalone CLI) to copilot-cli session type', () => {
+    const result = resolveLaunchCommand(['copilot']);
+    expect(result).toEqual({ sessionType: 'copilot-cli', cmd: 'copilot', cmdArgs: [] });
   });
 
-  it('resolves "gh copilot" without subcommand', () => {
-    const result = resolveLaunchCommand(['gh', 'copilot']);
-    expect(result).toEqual({ sessionType: 'copilot-cli', cmd: 'gh', cmdArgs: ['copilot'] });
+  it('resolves "copilot" with extra args', () => {
+    const result = resolveLaunchCommand(['copilot', '--some-flag']);
+    expect(result).toEqual({ sessionType: 'copilot-cli', cmd: 'copilot', cmdArgs: ['--some-flag'] });
   });
 
   it('defaults to claude-code for unknown commands', () => {
