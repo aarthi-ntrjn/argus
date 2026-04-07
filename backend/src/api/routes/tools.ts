@@ -31,6 +31,14 @@ function isInstalled(cmd: string): boolean {
   return result.status === 0;
 }
 
+// gh copilot is a gh extension — gh being on PATH is not enough.
+// Run `gh copilot --version` and treat exit 0 as "extension installed".
+function isCopilotExtensionInstalled(): boolean {
+  if (!isInstalled('gh')) return false;
+  const result = spawnSync('gh', ['copilot', '--version'], { encoding: 'utf-8', timeout: 5000 });
+  return result.status === 0;
+}
+
 function openTerminalWithCommand(cmd: string): void {
   if (platform() === 'win32') {
     // Prefer Windows Terminal; fall back to a plain PowerShell window.
@@ -57,7 +65,7 @@ function openTerminalWithCommand(cmd: string): void {
 const toolsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/v1/tools', async (_req, reply) => {
     const hasClaude = isInstalled('claude');
-    const hasCopilot = isInstalled('gh');
+    const hasCopilot = isCopilotExtensionInstalled();
     return reply.send({
       claude: hasClaude,
       copilot: hasCopilot,
