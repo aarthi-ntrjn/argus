@@ -136,6 +136,9 @@ pty.onExit(({ exitCode }: { exitCode: number }) => {
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(false);
   }
-  client.notifySessionEnded(sessionId, exitCode);
-  process.exit(exitCode ?? 0);
+  // Await the WebSocket flush so the backend receives the session_ended
+  // message before this process exits.
+  client.notifySessionEnded(sessionId, exitCode).then(() => {
+    process.exit(exitCode ?? 0);
+  });
 });
