@@ -12,6 +12,7 @@ import { SettingsPanel } from '../components/SettingsPanel';
 import { RemoveConfirmDialog } from '../components/RemoveConfirmDialog';
 import SessionCard from '../components/SessionCard/SessionCard';
 import OutputPane from '../components/OutputPane/OutputPane';
+import ArgusLogo from '../components/ArgusLogo';
 import TodoPanel from '../components/TodoPanel/TodoPanel';
 import MobileNav from '../components/MobileNav/MobileNav';
 import { isInactive } from '../utils/sessionUtils';
@@ -216,7 +217,10 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-screen-xl">
         {/* Header */}
         <div className="flex justify-between items-center mb-6 md:mb-8">
-          <h1 data-tour-id="dashboard-header" className="text-2xl md:text-3xl font-semibold text-gray-900">Argus</h1>
+          <h1 data-tour-id="dashboard-header" className="flex items-center gap-2 text-2xl md:text-3xl font-semibold text-gray-900">
+            <ArgusLogo size={36} />
+            Argus
+          </h1>
           <div className="flex items-center gap-2">
             <div className="relative" ref={settingsRef}>
               <button

@@ -1,0 +1,31 @@
+<svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Clip everything to the vertical eye outline -->
+    <clipPath id="eye-clip">
+      <path d="M40 6 C82 6 82 114 40 114 C-2 114 -2 6 40 6"/>
+    </clipPath>
+  </defs>
+
+  <!-- Eye white background -->
+  <path d="M40 6 C82 6 82 114 40 114 C-2 114 -2 6 40 6" fill="#f8fafc"/>
+
+  <!-- Eyeball — clipped so only the portion inside the eye is visible -->
+  <g clip-path="url(#eye-clip)">
+    <!-- Sclera -->
+    <circle cx="60" cy="60" r="30" fill="#e2e8f0"/>
+    <!-- Iris ring (outer) -->
+    <circle cx="60" cy="60" r="22" fill="#1d4ed8"/>
+    <!-- Iris ring (inner detail) -->
+    <circle cx="60" cy="60" r="18" fill="#1e40af"/>
+    <!-- Pupil -->
+    <circle cx="60" cy="60" r="12" fill="#0f172a"/>
+    <!-- Primary highlight -->
+    <circle cx="52" cy="52" r="6" fill="white" opacity="0.85"/>
+    <!-- Secondary highlight -->
+    <circle cx="65" cy="68" r="3" fill="white" opacity="0.35"/>
+  </g>
+
+  <!-- Eye outline drawn on top -->
+  <path d="M40 6 C82 6 82 114 40 114 C-2 114 -2 6 40 6"
+        fill="none" stroke="#0f172a" stroke-width="5" stroke-linejoin="round"/>
+</svg>
