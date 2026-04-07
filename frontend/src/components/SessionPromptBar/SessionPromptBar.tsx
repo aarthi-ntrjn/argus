@@ -59,6 +59,7 @@ function ConfirmModal({ message, onCancel, onConfirm }: { message: string; onCan
 }
 
 export default function SessionPromptBar({ session }: Props) {
+  const isReadOnly = session.launchMode !== 'pty';
   const [prompt, setPrompt] = useState('');
   const [sending, setSending] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -145,7 +146,10 @@ export default function SessionPromptBar({ session }: Props) {
 
   return (
     <div className="mt-2">
-      <div className="flex gap-1 items-center">
+      <div
+        className="flex gap-1 items-center"
+        title={isReadOnly ? 'Start this session with argus launch to enable prompt injection' : undefined}
+      >
         {/* Prompt input */}
         <input
           ref={inputRef}
@@ -155,14 +159,14 @@ export default function SessionPromptBar({ session }: Props) {
           onKeyDown={handleKeyDown}
           aria-label="Send a prompt to this session"
           placeholder="Send a prompt…"
-          disabled={sending}
+          disabled={sending || isReadOnly}
           className="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
         />
 
         {/* Enter button */}
         <button
           onClick={handleSend}
-          disabled={sending || !prompt.trim()}
+          disabled={sending || !prompt.trim() || isReadOnly}
           className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 transition-colors"
         >
           {sending ? '…' : '↵'}

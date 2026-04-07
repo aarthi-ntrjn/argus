@@ -18,6 +18,7 @@ const SESSION: Session = {
   id: 'session-abc-123',
   repositoryId: 'repo-1',
   type: 'claude-code',
+  launchMode: 'pty',
   pid: null,
   status: 'active',
   startedAt: new Date().toISOString(),
@@ -27,6 +28,8 @@ const SESSION: Session = {
   expiresAt: null,
   model: null,
 };
+
+const READ_ONLY_SESSION: Session = { ...SESSION, launchMode: 'detected' };
 
 describe('SessionPromptBar — input and send', () => {
   beforeEach(() => {
@@ -175,5 +178,34 @@ describe('SessionPromptBar — actions menu', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Pull latest' }));
     await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(mockSendPrompt).toHaveBeenCalledWith(SESSION.id, 'pull latest changes from main branch'));
+  });
+});
+
+describe('SessionPromptBar — read-only mode', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSendPrompt.mockResolvedValue({} as any);
+  });
+
+  it('disables the input when session is not PTY-launched', () => {
+    render(<SessionPromptBar session={READ_ONLY_SESSION} />);
+    expect(screen.getByPlaceholderText('Send a prompt…')).toBeDisabled();
+  });
+
+  it('disables the enter button when session is not PTY-launched', () => {
+    render(<SessionPromptBar session={READ_ONLY_SESSION} />);
+    expect(screen.getByRole('button', { name: '↵' })).toBeDisabled();
+  });
+
+  it('shows a tooltip explaining how to enable prompts', () => {
+    render(<SessionPromptBar session={READ_ONLY_SESSION} />);
+    expect(screen.getByTitle(/argus launch/i)).toBeInTheDocument();
+  });
+
+  it('does not call sendPrompt when Enter is pressed in read-only mode', async () => {
+    render(<SessionPromptBar session={READ_ONLY_SESSION} />);
+    const input = screen.getByPlaceholderText('Send a prompt…');
+    await userEvent.type(input, 'hello{Enter}');
+    expect(mockSendPrompt).not.toHaveBeenCalled();
   });
 });
