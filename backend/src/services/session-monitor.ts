@@ -64,10 +64,7 @@ export class SessionMonitor extends EventEmitter {
 
   private async reconcileClaudeCodeSessions(): Promise<void> {
     try {
-      const liveSessions = [
-        ...getSessions({ status: 'active', type: 'claude-code' }),
-        ...getSessions({ status: 'idle', type: 'claude-code' }),
-      ];
+      const liveSessions = getSessions({ status: 'active', type: 'claude-code' });
       if (liveSessions.length === 0) return;
 
       const config = loadConfig();
@@ -105,27 +102,17 @@ export class SessionMonitor extends EventEmitter {
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
-        } else if (jsonlAgeMs <= thresholdMs) {
-          // JSONL is fresh — session is active
-          if (session.status === 'idle') {
-            updateSessionStatus(session.id, 'active', null);
-            this.emit('session.updated', { ...session, status: 'active' });
-          }
-          // else already active: no change needed
-        } else {
-          // JSONL is stale — use PID as tiebreaker
+        } else if (jsonlAgeMs > thresholdMs) {
+          // JSONL is stale — check PID to decide if session is still alive
           const pidAlive = session.pid != null && runningPids.has(session.pid);
-          if (pidAlive) {
-            if (session.status !== 'idle') {
-              updateSessionStatus(session.id, 'idle', null);
-              this.emit('session.updated', { ...session, status: 'idle' });
-            }
-          } else {
+          if (!pidAlive) {
             updateSessionStatus(session.id, 'ended', now);
             this.claudeDetector.closeSessionWatcher(session.id);
             this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
           }
+          // else: PID alive, JSONL stale → stay active (frontend will show "resting")
         }
+        // else: JSONL is fresh → stay active, no change
       }
     } catch { /* ignore — liveness check is best-effort */ }
   }

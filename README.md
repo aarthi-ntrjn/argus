@@ -30,7 +30,7 @@ See everything happening across your AI sessions without switching terminals.
 
 Each card is a live snapshot of a session:
 
-- **Type badge** (copilot-cli / claude-code) and **status badge** (running / idle / ended / resting / ...)
+- **Type badge** (copilot-cli / claude-code) and **status badge** (running / resting / ended / ...)
 - **Model** in small monospace text when known (e.g. `claude-opus-4-5`)
 - **PID** when known, or **session ID prefix** (e.g. `ID: abc12345`) for Claude Code sessions without a detected PID
 - **Elapsed time** and a link to the full session detail page
@@ -45,7 +45,7 @@ Output lines carry type badges so you always know what's what: **YOU** (your inp
 
 ### Session Detection
 
-Argus sniffs out sessions already running when it starts. For Claude Code, sessions are tracked by monitoring their JSONL file. If a JSONL file has not been updated for longer than the idle threshold (default: 60 minutes), Argus checks the session's process ID. If the process is still running, the session moves to **idle** status and stays visible. If the process has exited, the session is marked **ended**. An idle session automatically returns to **active** status when new output appears. New sessions are picked up every 5 seconds. The OS PID is captured for Claude Code sessions when possible.
+Argus sniffs out sessions already running when it starts. For Claude Code, sessions are tracked by monitoring their JSONL file. If a JSONL file has not been updated for longer than the idle threshold (default: 60 minutes), Argus checks the session's process ID. If the process is still running, the session stays **active** and the frontend shows a **resting** badge. If the process has exited, the session is marked **ended**. New sessions are picked up every 5 seconds. The OS PID is captured for Claude Code sessions when possible. Copilot CLI sessions follow the same pattern: the PID is checked on every scan cycle and the frontend shows **resting** when there has been no output for 20 minutes.
 
 ## Control
 
@@ -95,9 +95,9 @@ Click the **gear icon** (top-right) to open Settings.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Hide ended sessions | Off | Hides sessions with status `completed` or `ended` |
-| Hide repos with no active sessions | Off | Hides repo cards that have no sessions with status `active`, `idle`, `waiting`, or `error` |
+| Hide repos with no active sessions | Off | Hides repo cards that have no sessions with status `active`, `waiting`, or `error` |
 | Hide inactive sessions | Off | Hides sessions with no output in the last 20 minutes |
-| Idle threshold (min) | 60 | Minutes of JSONL inactivity before a session is classified as `idle` (vs `ended`). Saved to `~/.argus/config.json` via `PATCH /api/v1/settings`. Takes effect within 5 seconds. |
+| Idle threshold (min) | 60 | Minutes of JSONL inactivity before Argus checks the process. If the process is still running the session stays active (shows **resting**); if it has exited the session is marked `ended`. Saved to `~/.argus/config.json` via `PATCH /api/v1/settings`. Takes effect within 5 seconds. |
 
 The first three settings are saved in your browser (`localStorage`) and restored on every load. The idle threshold is persisted server-side in `~/.argus/config.json`.
 

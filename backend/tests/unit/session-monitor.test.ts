@@ -360,8 +360,8 @@ describe('SessionMonitor.reconcileClaudeCodeSessions — idle vs ended logic', (
     vi.resetModules();
   });
 
-  // T005: stale JSONL + alive PID → idle
-  it('T005: should classify as idle when JSONL is stale and PID is alive', async () => {
+  // T005: stale JSONL + alive PID → stays active (frontend shows "resting")
+  it('T005: should stay active when JSONL is stale and PID is alive', async () => {
     const id = `t005-${randomUUID()}`;
     createJsonlWithAge(id, 65); // 65 min old, threshold = 60 min
     mockPsListResult = [{ pid: 9999, name: 'other' }, { pid: 12345, name: 'node', cmd: 'claude' }];
@@ -372,7 +372,7 @@ describe('SessionMonitor.reconcileClaudeCodeSessions — idle vs ended logic', (
     monitor.stop();
 
     const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
-    expect(result?.status).toBe('idle');
+    expect(result?.status).toBe('active');
   });
 
   // T006: stale JSONL + dead PID → ended
@@ -435,21 +435,6 @@ describe('SessionMonitor.reconcileClaudeCodeSessions — idle vs ended logic', (
     expect(result?.status).toBe('ended');
   });
 
-  // T010: idle session + fresh JSONL → restored to active
-  it('T010: should restore idle session to active when JSONL becomes fresh again', async () => {
-    const id = `t010-${randomUUID()}`;
-    createJsonlWithAge(id, 5); // fresh JSONL
-    mockPsListResult = [{ pid: 9999, name: 'other' }, { pid: 55555, name: 'node' }];
-    upsertSession(baseSession(id, 'idle', 55555));
-
-    const monitor = new SessionMonitor();
-    await monitor.start();
-    monitor.stop();
-
-    const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
-    expect(result?.status).toBe('active');
-  });
-
   // T011: startup reconcileStaleSessions — idle session + dead PID → ended
   it('T011: startup sweep should end idle session whose PID has died', async () => {
     const id = `t011-${randomUUID()}`;
@@ -478,26 +463,6 @@ describe('SessionMonitor.reconcileClaudeCodeSessions — idle vs ended logic', (
 
     const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
     expect(result?.status).toBe('idle');
-  });
-
-  // T013: active → idle transition emits session.updated, not session.ended
-  it('T013: active → idle transition should emit session.updated (not session.ended)', async () => {
-    const id = `t013-${randomUUID()}`;
-    createJsonlWithAge(id, 65);
-    mockPsListResult = [{ pid: 9999, name: 'other' }, { pid: 88888, name: 'node' }];
-    upsertSession(baseSession(id, 'active', 88888));
-
-    const updated: string[] = [];
-    const ended: string[] = [];
-
-    const monitor = new SessionMonitor();
-    monitor.on('session.updated', (s: unknown) => updated.push((s as { id: string }).id));
-    monitor.on('session.ended', (s: unknown) => ended.push((s as { id: string }).id));
-    await monitor.start();
-    monitor.stop();
-
-    expect(ended).not.toContain(id);
-    expect(updated).toContain(id);
   });
 
   // T014: threshold read from config (60 min), not hardcoded constant (30 min)
