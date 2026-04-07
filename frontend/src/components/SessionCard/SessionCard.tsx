@@ -120,7 +120,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
       )}
 
       {session.launchMode === 'pty' && (
-        <div onClick={e => e.stopPropagation()}>
+        <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
           <SessionPromptBar session={session} />
         </div>
       )}

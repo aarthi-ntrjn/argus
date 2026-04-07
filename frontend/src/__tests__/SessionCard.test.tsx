@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import type { Session } from '../types';
 
 // SessionCard uses react-router Link and TanStack Query — mock both
@@ -36,6 +36,16 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     ...overrides,
   };
 }
+
+describe('SessionCard — prompt bar keyboard isolation', () => {
+  it('space key inside prompt input does not bubble up and toggle card selection', () => {
+    const onSelect = vi.fn();
+    render(<SessionCard session={makeSession({ launchMode: 'pty' })} onSelect={onSelect} />);
+    const input = screen.getByPlaceholderText('Send a prompt…');
+    fireEvent.keyDown(input, { key: ' ', code: 'Space', bubbles: true });
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+});
 
 describe('SessionCard — launchMode badge', () => {
   beforeEach(() => { vi.clearAllMocks(); });

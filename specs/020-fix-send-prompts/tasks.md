@@ -66,4 +66,4 @@
 
 ### Addendum: Bug — space key toggles card selection instead of typing
 
-- [ ] T028 Spacebar in prompt input bubbles up to SessionCard role=button handler: `SessionCard.tsx` line 123 wraps `<SessionPromptBar>` with `onClick={e => e.stopPropagation()}` but not `onKeyDown`. The card's own `onKeyDown` (line 70) intercepts Space and Enter to toggle selection. Fix: add `onKeyDown={e => e.stopPropagation()}` to the prompt bar wrapper div so keyboard events from the input cannot bubble to the card.
+- [x] T028 Spacebar in prompt input bubbles up to SessionCard role=button handler: `SessionCard.tsx` line 123 wraps `<SessionPromptBar>` with `onClick={e => e.stopPropagation()}` but not `onKeyDown`. The card's own `onKeyDown` (line 70) intercepts Space and Enter to toggle selection. Fix: add `onKeyDown={e => e.stopPropagation()}` to the prompt bar wrapper div so keyboard events from the input cannot bubble to the card.
