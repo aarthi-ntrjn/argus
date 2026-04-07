@@ -6,13 +6,11 @@ import type { Session } from '../types';
 
 vi.mock('../services/api', () => ({
   sendPrompt: vi.fn(),
-  interruptSession: vi.fn(),
 }));
 
-import { sendPrompt, interruptSession } from '../services/api';
+import { sendPrompt } from '../services/api';
 
 const mockSendPrompt = vi.mocked(sendPrompt);
-const mockInterrupt = vi.mocked(interruptSession);
 
 const SESSION: Session = {
   id: 'session-abc-123',
@@ -35,7 +33,6 @@ describe('SessionPromptBar — input and send', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSendPrompt.mockResolvedValue({} as any);
-    mockInterrupt.mockResolvedValue({} as any);
   });
 
   it('renders an empty text input with the correct placeholder', () => {
@@ -90,94 +87,10 @@ describe('SessionPromptBar — input and send', () => {
     await userEvent.click(screen.getByRole('button', { name: '↵' }));
     await waitFor(() => expect(screen.getByText('Network error')).toBeInTheDocument());
   });
-});
 
-describe('SessionPromptBar — actions menu', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSendPrompt.mockResolvedValue({} as any);
-    mockInterrupt.mockResolvedValue({} as any);
-  });
-
-  it('opens the dropdown when the ⋮ button is clicked', async () => {
+  it('does not render a dropdown actions menu', () => {
     render(<SessionPromptBar session={SESSION} />);
-    await userEvent.click(screen.getByRole('button', { name: /session actions menu/i }));
-    expect(screen.getByRole('button', { name: 'Esc' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Exit' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Merge' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Pull latest' })).toBeVisible();
-  });
-
-  it('closes the dropdown when Escape is pressed', async () => {
-    render(<SessionPromptBar session={SESSION} />);
-    await userEvent.click(screen.getByRole('button', { name: /session actions menu/i }));
-    expect(screen.getByRole('button', { name: 'Esc' })).toBeVisible();
-    await userEvent.keyboard('{Escape}');
-    expect(screen.queryByRole('button', { name: 'Esc' })).not.toBeInTheDocument();
-  });
-
-  it('runs interrupt immediately without showing a confirmation modal', async () => {
-    render(<SessionPromptBar session={SESSION} />);
-    await userEvent.click(screen.getByRole('button', { name: /session actions menu/i }));
-    await userEvent.click(screen.getByRole('button', { name: 'Esc' }));
-    expect(mockInterrupt).toHaveBeenCalledWith(SESSION.id);
-    expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
-  });
-
-  it('shows a confirmation modal when Exit is clicked', async () => {
-    render(<SessionPromptBar session={SESSION} />);
-    await userEvent.click(screen.getByRole('button', { name: /session actions menu/i }));
-    await userEvent.click(screen.getByRole('button', { name: 'Exit' }));
-    expect(screen.getByText(/send \/exit/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-  });
-
-  it('shows a confirmation modal when Merge is clicked', async () => {
-    render(<SessionPromptBar session={SESSION} />);
-    await userEvent.click(screen.getByRole('button', { name: /session actions menu/i }));
-    await userEvent.click(screen.getByRole('button', { name: 'Merge' }));
-    expect(screen.getByText(/merge current branch/i)).toBeInTheDocument();
-  });
-
-  it('shows a confirmation modal when Pull latest is clicked', async () => {
-    render(<SessionPromptBar session={SESSION} />);
-    await userEvent.click(screen.getByRole('button', { name: /session actions menu/i }));
-    await userEvent.click(screen.getByRole('button', { name: 'Pull latest' }));
-    expect(screen.getByText(/pull latest/i)).toBeInTheDocument();
-  });
-
-  it('dismisses the confirmation modal when Cancel is clicked without sending', async () => {
-    render(<SessionPromptBar session={SESSION} />);
-    await userEvent.click(screen.getByRole('button', { name: /session actions menu/i }));
-    await userEvent.click(screen.getByRole('button', { name: 'Exit' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
-    expect(mockSendPrompt).not.toHaveBeenCalled();
-  });
-
-  it('executes the Exit command when Confirm is clicked in the modal', async () => {
-    render(<SessionPromptBar session={SESSION} />);
-    await userEvent.click(screen.getByRole('button', { name: /session actions menu/i }));
-    await userEvent.click(screen.getByRole('button', { name: 'Exit' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(mockSendPrompt).toHaveBeenCalledWith(SESSION.id, '/exit'));
-  });
-
-  it('executes the Merge command with the correct prompt text', async () => {
-    render(<SessionPromptBar session={SESSION} />);
-    await userEvent.click(screen.getByRole('button', { name: /session actions menu/i }));
-    await userEvent.click(screen.getByRole('button', { name: 'Merge' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(mockSendPrompt).toHaveBeenCalledWith(SESSION.id, 'merge current branch with main'));
-  });
-
-  it('executes the Pull command with the correct prompt text', async () => {
-    render(<SessionPromptBar session={SESSION} />);
-    await userEvent.click(screen.getByRole('button', { name: /session actions menu/i }));
-    await userEvent.click(screen.getByRole('button', { name: 'Pull latest' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(mockSendPrompt).toHaveBeenCalledWith(SESSION.id, 'pull latest changes from main branch'));
+    expect(screen.queryByRole('button', { name: /session actions menu/i })).not.toBeInTheDocument();
   });
 });
 
@@ -195,11 +108,6 @@ describe('SessionPromptBar — read-only mode', () => {
   it('hides the enter button when session is not PTY-launched', () => {
     render(<SessionPromptBar session={READ_ONLY_SESSION} />);
     expect(screen.queryByRole('button', { name: '↵' })).not.toBeInTheDocument();
-  });
-
-  it('hides the actions menu when session is not PTY-launched', () => {
-    render(<SessionPromptBar session={READ_ONLY_SESSION} />);
-    expect(screen.queryByRole('button', { name: /session actions menu/i })).not.toBeInTheDocument();
   });
 
   it('shows a read-only message with a tooltip explaining how to enable prompts', () => {

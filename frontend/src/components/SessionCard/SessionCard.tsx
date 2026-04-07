@@ -1,9 +1,9 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ExternalLink, Moon, Play } from 'lucide-react';
+import { ExternalLink, Moon, Play, X } from 'lucide-react';
 import type { Session } from '../../types';
-import { getSessionOutput } from '../../services/api';
+import { getSessionOutput, stopSession } from '../../services/api';
 import { isInactive } from '../../utils/sessionUtils';
 import SessionPromptBar from '../SessionPromptBar/SessionPromptBar';
 import SessionTypeIcon from '../SessionTypeIcon/SessionTypeIcon';
@@ -45,6 +45,19 @@ function claudeShortId(id: string): string {
 }
 
 function SessionCard({ session, selected, onSelect }: Props) {
+  const [killing, setKilling] = useState(false);
+  const isAlive = session.status !== 'ended' && session.status !== 'completed';
+
+  const handleKill = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Kill this session?')) return;
+    setKilling(true);
+    try {
+      await stopSession(session.id);
+    } catch { /* ignore — session may already be gone */ }
+    setKilling(false);
+  };
+
   const { data: lastOutput } = useQuery({
     queryKey: ['session-output-last', session.id],
     queryFn: () => getSessionOutput(session.id, { limit: 10 }),
@@ -99,6 +112,17 @@ function SessionCard({ session, selected, onSelect }: Props) {
             <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded font-medium bg-emerald-100 text-emerald-700" title="Started via argus launch — prompt injection enabled">live</span>
           ) : (
             <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded font-medium bg-gray-100 text-gray-500" title="Detected session — start with argus launch to enable prompts">read-only</span>
+          )}
+          {isAlive && (
+            <button
+              onClick={handleKill}
+              disabled={killing}
+              title="Kill session"
+              aria-label="Kill session"
+              className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-40"
+            >
+              <X size={14} />
+            </button>
           )}
           <Link
             to={`/sessions/${session.id}`}
