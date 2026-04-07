@@ -159,13 +159,13 @@ export default function SessionPromptBar({ session }: Props) {
           className="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
         />
 
-        {/* Send button */}
+        {/* Enter button */}
         <button
           onClick={handleSend}
           disabled={sending || !prompt.trim()}
           className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 transition-colors"
         >
-          {sending ? '…' : 'Send'}
+          {sending ? '…' : '↵'}
         </button>
 
         {/* ⋮ Actions dropdown */}
