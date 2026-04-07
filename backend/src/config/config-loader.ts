@@ -12,6 +12,7 @@ const DEFAULTS: ArgusConfig = {
   sessionRetentionHours: 24,
   outputRetentionMbPerSession: 10,
   autoRegisterRepos: false,
+  idleSessionThresholdMinutes: 60,
 };
 
 export function loadConfig(): ArgusConfig {

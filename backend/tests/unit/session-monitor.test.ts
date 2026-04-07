@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { mkdirSync } from 'fs';
+import { mkdirSync, writeFileSync, utimesSync } from 'fs';
 import { randomUUID } from 'crypto';
 
 // Mutable so individual tests can control which processes are "running"
@@ -11,6 +11,14 @@ let mockPsListResult: Array<{ pid: number; name: string; cmd?: string }> = [
 
 // Mutable so individual tests can control what branch getCurrentBranch returns
 let mockGetCurrentBranchResult: string | null = null;
+
+// Mutable so tests can control the homedir for JSONL path resolution without touching real ~/.claude
+let mockHomedir: string = tmpdir();
+
+vi.mock('os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('os')>();
+  return { ...actual, homedir: () => mockHomedir };
+});
 
 // Mock ps-list to control which PIDs are "running"
 vi.mock('ps-list', () => ({
@@ -25,6 +33,7 @@ vi.mock('../../src/config/config-loader.js', () => ({
     sessionRetentionHours: 24,
     outputRetentionMbPerSession: 10,
     autoRegisterRepos: false,
+    idleSessionThresholdMinutes: 60,
   }),
 }));
 
@@ -50,6 +59,7 @@ vi.mock('../../src/services/claude-code-detector.js', () => ({
       injectHooks: vi.fn(),
       scanExistingSessions: vi.fn(async () => {}),
       stopWatchers: vi.fn(),
+      closeSessionWatcher: vi.fn(),
     })),
     { projectDirName: (p: string) => p.replace(/[:\\/]/g, '-') }
   ),
@@ -277,5 +287,233 @@ describe('SessionMonitor.refreshRepositoryBranches', () => {
     const repos = getRepositories() as Array<{ id: string; branch: string | null }>;
     const repo = repos.find(r => r.id === 'repo-stable-branch');
     expect(repo?.branch).toBe('main');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tests T005–T014: reconcileClaudeCodeSessions idle vs ended logic
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('SessionMonitor.reconcileClaudeCodeSessions — idle vs ended logic', () => {
+  let closeDb: () => void;
+  let upsertSession: (s: unknown) => void;
+  let getSessions: (f: unknown) => unknown[];
+  let insertRepository: (r: unknown) => void;
+  let SessionMonitor: new () => {
+    start(): Promise<void>;
+    stop(): void;
+    on(event: string, cb: (s: unknown) => void): void;
+  };
+
+  function projectDir(): string {
+    // Mirrors the mock: projectDirName('/stub/repo') = '-stub-repo'
+    return join(mockHomedir, '.claude', 'projects', '-stub-repo');
+  }
+
+  function jsonlPath(sessionId: string): string {
+    return join(projectDir(), `${sessionId}.jsonl`);
+  }
+
+  function createJsonlWithAge(sessionId: string, ageMinutes: number): void {
+    mkdirSync(projectDir(), { recursive: true });
+    const filePath = jsonlPath(sessionId);
+    writeFileSync(filePath, '{}');
+    const mtime = new Date(Date.now() - ageMinutes * 60 * 1000);
+    utimesSync(filePath, mtime, mtime);
+  }
+
+  const baseSession = (id: string, status: string, pid: number | null) => ({
+    id,
+    repositoryId: 'repo-1',
+    type: 'claude-code',
+    pid,
+    status,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    lastActivityAt: new Date().toISOString(),
+    summary: null,
+    expiresAt: null,
+    model: null,
+  });
+
+  beforeEach(async () => {
+    mockHomedir = join(tmpdir(), `argus-ccr-${randomUUID()}`);
+    process.env.ARGUS_DB_PATH = join(tmpdir(), `argus-ccr-db-${randomUUID()}.db`);
+    vi.resetModules();
+    mockPsListResult = [{ pid: 9999, name: 'some-process', cmd: 'some-process' }];
+    mockGetCurrentBranchResult = null;
+
+    const db = await import('../../src/db/database.js');
+    closeDb = db.closeDb;
+    upsertSession = db.upsertSession;
+    getSessions = db.getSessions as (f: unknown) => unknown[];
+    insertRepository = db.insertRepository as (r: unknown) => void;
+    insertRepository({
+      id: 'repo-1', path: '/stub/repo', name: 'stub', source: 'ui',
+      addedAt: new Date().toISOString(), lastScannedAt: null,
+    });
+    const mod = await import('../../src/services/session-monitor.js');
+    SessionMonitor = mod.SessionMonitor as unknown as typeof SessionMonitor;
+  });
+
+  afterEach(() => {
+    closeDb();
+    vi.resetModules();
+  });
+
+  // T005: stale JSONL + alive PID → idle
+  it('T005: should classify as idle when JSONL is stale and PID is alive', async () => {
+    const id = `t005-${randomUUID()}`;
+    createJsonlWithAge(id, 65); // 65 min old, threshold = 60 min
+    mockPsListResult = [{ pid: 9999, name: 'other' }, { pid: 12345, name: 'node', cmd: 'claude' }];
+    upsertSession(baseSession(id, 'active', 12345));
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
+    expect(result?.status).toBe('idle');
+  });
+
+  // T006: stale JSONL + dead PID → ended
+  it('T006: should classify as ended when JSONL is stale and PID is dead', async () => {
+    const id = `t006-${randomUUID()}`;
+    createJsonlWithAge(id, 65);
+    // PID 22222 not in mockPsListResult
+
+    upsertSession(baseSession(id, 'active', 22222));
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
+    expect(result?.status).toBe('ended');
+  });
+
+  // T007: stale JSONL + null PID → ended
+  it('T007: should classify as ended when JSONL is stale and PID is null', async () => {
+    const id = `t007-${randomUUID()}`;
+    createJsonlWithAge(id, 65);
+    upsertSession(baseSession(id, 'active', null));
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
+    expect(result?.status).toBe('ended');
+  });
+
+  // T008: fresh JSONL + alive PID → active (no change)
+  it('T008: should leave active session unchanged when JSONL is fresh and PID is alive', async () => {
+    const id = `t008-${randomUUID()}`;
+    createJsonlWithAge(id, 5); // 5 min old, well within 60-min threshold
+    mockPsListResult = [{ pid: 9999, name: 'other' }, { pid: 33333, name: 'node' }];
+    upsertSession(baseSession(id, 'active', 33333));
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
+    expect(result?.status).toBe('active');
+  });
+
+  // T009: missing JSONL + alive PID → ended (file gone = session over)
+  it('T009: should classify as ended when JSONL file is missing, even if PID is alive', async () => {
+    const id = `t009-${randomUUID()}`;
+    // No JSONL file created
+    mockPsListResult = [{ pid: 9999, name: 'other' }, { pid: 44444, name: 'node' }];
+    upsertSession(baseSession(id, 'active', 44444));
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
+    expect(result?.status).toBe('ended');
+  });
+
+  // T010: idle session + fresh JSONL → restored to active
+  it('T010: should restore idle session to active when JSONL becomes fresh again', async () => {
+    const id = `t010-${randomUUID()}`;
+    createJsonlWithAge(id, 5); // fresh JSONL
+    mockPsListResult = [{ pid: 9999, name: 'other' }, { pid: 55555, name: 'node' }];
+    upsertSession(baseSession(id, 'idle', 55555));
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
+    expect(result?.status).toBe('active');
+  });
+
+  // T011: startup reconcileStaleSessions — idle session + dead PID → ended
+  it('T011: startup sweep should end idle session whose PID has died', async () => {
+    const id = `t011-${randomUUID()}`;
+    // PID 66666 not in mockPsListResult
+
+    upsertSession(baseSession(id, 'idle', 66666));
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
+    expect(result?.status).toBe('ended');
+  });
+
+  // T012: startup reconcileStaleSessions — idle session + alive PID → unchanged
+  it('T012: startup sweep should leave idle session unchanged when PID is still alive', async () => {
+    const id = `t012-${randomUUID()}`;
+    createJsonlWithAge(id, 65); // stale, but PID alive
+    mockPsListResult = [{ pid: 9999, name: 'other' }, { pid: 77777, name: 'node' }];
+    upsertSession(baseSession(id, 'idle', 77777));
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
+    expect(result?.status).toBe('idle');
+  });
+
+  // T013: active → idle transition emits session.updated, not session.ended
+  it('T013: active → idle transition should emit session.updated (not session.ended)', async () => {
+    const id = `t013-${randomUUID()}`;
+    createJsonlWithAge(id, 65);
+    mockPsListResult = [{ pid: 9999, name: 'other' }, { pid: 88888, name: 'node' }];
+    upsertSession(baseSession(id, 'active', 88888));
+
+    const updated: string[] = [];
+    const ended: string[] = [];
+
+    const monitor = new SessionMonitor();
+    monitor.on('session.updated', (s: unknown) => updated.push((s as { id: string }).id));
+    monitor.on('session.ended', (s: unknown) => ended.push((s as { id: string }).id));
+    await monitor.start();
+    monitor.stop();
+
+    expect(ended).not.toContain(id);
+    expect(updated).toContain(id);
+  });
+
+  // T014: threshold read from config (60 min), not hardcoded constant (30 min)
+  it('T014: should use config threshold (60 min) — 31-min-old null-PID session stays active', async () => {
+    const id = `t014-${randomUUID()}`;
+    createJsonlWithAge(id, 31); // 31 min old: beyond 30-min constant but within 60-min config threshold
+    upsertSession(baseSession(id, 'active', null));
+
+    const monitor = new SessionMonitor();
+    await monitor.start();
+    monitor.stop();
+
+    const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
+    // New code reads 60-min config → 31 < 60 → fresh → active (no change)
+    // Old code used 30-min constant → 31 > 30 → stale → ended
+    expect(result?.status).toBe('active');
   });
 });

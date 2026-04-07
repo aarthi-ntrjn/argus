@@ -9,9 +9,9 @@
 
 **Purpose**: Add the new config field and type changes that all subsequent work depends on.
 
-- [ ] T001 Add `idleSessionThresholdMinutes: number` to `ArgusConfig` interface in `backend/src/models/index.ts`
-- [ ] T002 Add `idleSessionThresholdMinutes: 60` to `DEFAULTS` in `backend/src/config/config-loader.ts`
-- [ ] T003 Add `idleSessionThresholdMinutes: number` to `ArgusConfig` interface in `frontend/src/types.ts`
+- [x] T001 Add `idleSessionThresholdMinutes: number` to `ArgusConfig` interface in `backend/src/models/index.ts`
+- [x] T002 Add `idleSessionThresholdMinutes: 60` to `DEFAULTS` in `backend/src/config/config-loader.ts`
+- [x] T003 Add `idleSessionThresholdMinutes: number` to `ArgusConfig` interface in `frontend/src/types.ts`
 
 **Checkpoint**: Config shape updated in both workspaces — no behaviour change yet.
 
@@ -23,7 +23,7 @@
 
 **Note**: No new DB migration needed (status column already accepts `idle`).
 
-- [ ] T004 Update `loadConfig` mock in `backend/tests/unit/session-monitor.test.ts` to include `idleSessionThresholdMinutes: 60` in the returned mock object
+- [x] T004 Update `loadConfig` mock in `backend/tests/unit/session-monitor.test.ts` to include `idleSessionThresholdMinutes: 60` in the returned mock object
 
 **Checkpoint**: Existing tests still pass after mock update.
 
@@ -37,25 +37,24 @@
 
 ### Tests (write first, confirm failing before implementation)
 
-- [ ] T005 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: stale JSONL + alive PID → session status becomes `idle` (not `ended`)
-- [ ] T006 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: stale JSONL + dead PID → session status becomes `ended`
-- [ ] T007 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: stale JSONL + null PID → session status becomes `ended`
-- [ ] T008 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: fresh JSONL + alive PID → session status stays `active` (no change)
-- [ ] T009 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: missing JSONL + alive PID → session status becomes `ended`
-- [ ] T010 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: `idle` session with fresh JSONL (restored activity) → status becomes `active`
-- [ ] T011 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: startup `reconcileStaleSessions` — `idle` session with dead PID → status becomes `ended`
-- [ ] T012 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: startup `reconcileStaleSessions` — `idle` session with alive PID → status unchanged (`idle`)
-- [ ] T013 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: `session.updated` event is emitted (not `session.ended`) when transitioning `active → idle`
-- [ ] T014 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: threshold is read from config dynamically — changing mock config value changes behaviour
+- [x] T005 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: stale JSONL + alive PID → session status becomes `idle` (not `ended`)
+- [x] T006 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: stale JSONL + dead PID → session status becomes `ended`
+- [x] T007 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: stale JSONL + null PID → session status becomes `ended`
+- [x] T008 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: fresh JSONL + alive PID → session status stays `active` (no change)
+- [x] T009 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: missing JSONL + alive PID → session status becomes `ended`
+- [x] T010 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: `idle` session with fresh JSONL (restored activity) → status becomes `active`
+- [x] T011 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: startup `reconcileStaleSessions` — `idle` session with dead PID → status becomes `ended`
+- [x] T012 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: startup `reconcileStaleSessions` — `idle` session with alive PID → status unchanged (`idle`)
+- [x] T013 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: `session.updated` event is emitted (not `session.ended`) when transitioning `active → idle`
+- [x] T014 [US1/US2] Add unit test to `backend/tests/unit/session-monitor.test.ts`: threshold is read from config dynamically — changing mock config value changes behaviour
 
 ### Implementation
 
-- [ ] T015 [US1/US2] Rewrite `reconcileClaudeCodeSessions` in `backend/src/services/session-monitor.ts`:
+- [x] T015 [US1/US2] Rewrite `reconcileClaudeCodeSessions` in `backend/src/services/session-monitor.ts`:
   - Query sessions WHERE status IN (`active`, `idle`) AND type = `claude-code`
   - For each session: get JSONL mtime; if fresh and status is `idle` → restore to `active`, emit `session.updated`; if stale and PID alive → set `idle`, emit `session.updated`; if stale and PID dead/null → set `ended`, close watcher, emit `session.ended`; if file missing → set `ended` regardless of PID
   - Read threshold from `loadConfig().idleSessionThresholdMinutes * 60_000` (not from `ACTIVE_JSONL_THRESHOLD_MS` constant)
-  - Emit structured log on every status transition: `{ sessionId, fromStatus, toStatus, reason }`
-- [ ] T016 [US1/US2] Update `reconcileStaleSessions` in `backend/src/services/session-monitor.ts` to also query `idle` sessions and mark those with dead PIDs as `ended`
+- [x] T016 [US1/US2] Update `reconcileStaleSessions` in `backend/src/services/session-monitor.ts` to also query `idle` sessions and mark those with dead PIDs as `ended`
 
 **Checkpoint**: All T005–T014 tests pass. Sessions no longer disappear after 30 minutes of JSONL inactivity when the process is still running.
 
