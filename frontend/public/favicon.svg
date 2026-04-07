@@ -1,32 +1,28 @@
-<svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Clip everything to the vertical eye outline -->
-    <clipPath id="eye-clip">
-      <!-- 4-segment bezier: tangents angle inward at top/bottom for sharp points -->
-      <path d="M40 6 C60 20,78 38,78 60 S60 100,40 114 C20 100,2 82,2 60 S20 20,40 6 Z"/>
+    <clipPath id="diamond-clip">
+      <polygon points="90,8 172,90 90,172 8,90"/>
     </clipPath>
   </defs>
 
-  <!-- Eye white background -->
-  <path d="M40 6 C60 20,78 38,78 60 S60 100,40 114 C20 100,2 82,2 60 S20 20,40 6 Z" fill="#f8fafc"/>
+  <!-- Light blue diamond (sclera) -->
+  <polygon points="90,8 172,90 90,172 8,90" fill="#88C5EA"/>
 
-  <!-- Eyeball — clipped so only ~3/4 is visible inside the eye -->
-  <g clip-path="url(#eye-clip)">
-    <!-- Sclera -->
-    <circle cx="64" cy="60" r="30" fill="#e2e8f0"/>
-    <!-- Iris ring (outer) -->
-    <circle cx="64" cy="60" r="22" fill="#1d4ed8"/>
-    <!-- Iris ring (inner detail) -->
-    <circle cx="64" cy="60" r="18" fill="#1e40af"/>
-    <!-- Pupil -->
-    <circle cx="64" cy="60" r="12" fill="#0f172a"/>
-    <!-- Primary highlight -->
-    <circle cx="56" cy="52" r="6" fill="white" opacity="0.85"/>
-    <!-- Secondary highlight -->
-    <circle cx="69" cy="68" r="3" fill="white" opacity="0.35"/>
+  <!-- Dark blue eyeball clipped to diamond shape -->
+  <g clip-path="url(#diamond-clip)">
+    <circle cx="100" cy="90" r="74" fill="#1A5DBF"/>
+    <!-- Iris (slightly darker inner ring) -->
+    <circle cx="100" cy="90" r="54" fill="#1248A0"/>
+    <!-- Green iris highlight -->
+    <circle cx="91"  cy="97" r="8"  fill="#2E9E52"/>
   </g>
 
-  <!-- Eye outline drawn on top -->
-  <path d="M40 6 C60 20,78 38,78 60 S60 100,40 114 C20 100,2 82,2 60 S20 20,40 6 Z"
-        fill="none" stroke="#0f172a" stroke-width="5" stroke-linejoin="round"/>
+  <!-- Eyeball circle outline, clipped to diamond -->
+  <g clip-path="url(#diamond-clip)">
+    <circle cx="100" cy="90" r="74" fill="none" stroke="#0a0a1a" stroke-width="5"/>
+  </g>
+
+  <!-- Diamond outline -->
+  <polygon points="90,8 172,90 90,172 8,90"
+           fill="none" stroke="#0a0a1a" stroke-width="5" stroke-linejoin="miter"/>
 </svg>

@@ -5,48 +5,49 @@ interface ArgusLogoProps {
 }
 
 /**
- * Argus vertical eye logo.
- * The outer shape is a vertical almond (vesica piscis rotated 90°).
- * The eyeball is clipped to the eye outline with ~3/4 visible, nestled to the right.
+ * Argus diamond eye logo — matches the reference design:
+ * a light-blue diamond with a dark-blue eyeball clipped inside,
+ * slightly off-centre to the right, with a small green iris detail.
  */
 export default function ArgusLogo({ size = 32, className = '' }: ArgusLogoProps) {
-  const width = Math.round((size * 80) / 120);
   return (
     <svg
-      width={width}
+      width={size}
       height={size}
-      viewBox="0 0 80 120"
+      viewBox="0 0 180 180"
       xmlns="http://www.w3.org/2000/svg"
       aria-label="Argus logo"
       role="img"
       className={className}
     >
       <defs>
-        <clipPath id="argus-eye-clip">
-          <path d="M40 6 C60 20,78 38,78 60 S60 100,40 114 C20 100,2 82,2 60 S20 20,40 6 Z" />
+        <clipPath id="argus-diamond-clip">
+          <polygon points="90,8 172,90 90,172 8,90" />
         </clipPath>
       </defs>
 
-      {/* Eye background */}
-      <path d="M40 6 C60 20,78 38,78 60 S60 100,40 114 C20 100,2 82,2 60 S20 20,40 6 Z" fill="#f8fafc" />
+      {/* Light blue diamond (sclera) */}
+      <polygon points="90,8 172,90 90,172 8,90" fill="#88C5EA" />
 
-      {/* Eyeball clipped to eye outline — center nudged right so ~3/4 is visible */}
-      <g clipPath="url(#argus-eye-clip)">
-        <circle cx="64" cy="60" r="30" fill="#e2e8f0" />
-        <circle cx="64" cy="60" r="22" fill="#1d4ed8" />
-        <circle cx="64" cy="60" r="18" fill="#1e40af" />
-        <circle cx="64" cy="60" r="12" fill="#0f172a" />
-        <circle cx="56" cy="52" r="6"  fill="white" opacity={0.85} />
-        <circle cx="69" cy="68" r="3"  fill="white" opacity={0.35} />
+      {/* Dark blue eyeball clipped to diamond */}
+      <g clipPath="url(#argus-diamond-clip)">
+        <circle cx="100" cy="90" r="74" fill="#1A5DBF" />
+        <circle cx="100" cy="90" r="54" fill="#1248A0" />
+        <circle cx="91"  cy="97" r="8"  fill="#2E9E52" />
       </g>
 
-      {/* Outer eye outline */}
-      <path
-        d="M40 6 C60 20,78 38,78 60 S60 100,40 114 C20 100,2 82,2 60 S20 20,40 6 Z"
+      {/* Eyeball circle outline */}
+      <g clipPath="url(#argus-diamond-clip)">
+        <circle cx="100" cy="90" r="74" fill="none" stroke="#0a0a1a" strokeWidth={5} />
+      </g>
+
+      {/* Diamond outline */}
+      <polygon
+        points="90,8 172,90 90,172 8,90"
         fill="none"
-        stroke="#0f172a"
+        stroke="#0a0a1a"
         strokeWidth={5}
-        strokeLinejoin="round"
+        strokeLinejoin="miter"
       />
     </svg>
   );
