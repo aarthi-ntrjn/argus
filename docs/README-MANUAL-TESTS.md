@@ -63,13 +63,24 @@ Manual tests to run against a live Argus instance with at least one real local r
 | P1-10 | Leave a session idle for 21+ minutes | Badge changes to "resting" (amber moon icon); card opacity reduces |
 | P1-11 | Session with recent output | Last output line appears as a dark monospace preview at the bottom of the card |
 
-### Prompt bar
+### PTY launch and prompt delivery
+
+**Prerequisite for P1-12a through P1-13b:** Start a session via `npm run launch --workspace=backend -- claude` (or `gh copilot suggest`) in any terminal, so a PTY-launched (live) session is visible on the dashboard.
 
 | # | Steps | Expected |
 |---|-------|----------|
-| P1-12 | Click into the "Send a prompt…" input on any session card | Input is focused and accepts text |
-| P1-13 | Type a prompt and press Enter | Prompt is sent; input clears; no error shown |
-| P1-14 | Click Send with empty input | Send button is disabled (greyed out); nothing is sent |
+| P1-12a | View a session started via `argus launch` | Session card shows a green **live** badge |
+| P1-12b | View a session detected automatically (not via `argus launch`) | Session card shows a grey **read-only** badge |
+| P1-12c | Click into the "Send a prompt…" input on a **live** (PTY) session card | Input is enabled, focused, and accepts text |
+| P1-12d | Click into the "Send a prompt…" input on a **read-only** (detected) session card | Input is disabled; container shows tooltip "Start this session with argus launch to enable prompt injection" |
+| P1-13a | On a live session: type a prompt and press Enter | Prompt is sent to the process via PTY; input clears; no error shown |
+| P1-13b | On a live session: type a prompt and click ↵ | Same result as pressing Enter |
+| P1-14 | Click ↵ with empty input on a live session | ↵ button is disabled (greyed out); nothing is sent |
+
+### Prompt bar quick commands
+
+| # | Steps | Expected |
+|---|-------|----------|
 | P1-15 | Click ⋮ actions menu on a session card | Dropdown shows: Esc, Exit, Merge, Pull latest |
 | P1-16 | Click Esc in the actions menu | Interrupt is sent immediately; no confirmation dialog |
 | P1-17 | Click Exit in the actions menu | Confirmation modal shows "Send /exit to close the session?" |
@@ -141,5 +152,7 @@ Manual tests to run against a live Argus instance with at least one real local r
 | # | Steps | Expected |
 |---|-------|----------|
 | P2-16 | Send a prompt when the backend is offline (stop the server) | Inline error message appears below the prompt input |
-| P2-17 | Send a prompt to a copilot-cli session | Error message: prompt injection not supported for Copilot CLI |
+| P2-17 | Send a prompt to a detected (read-only) session via a direct API call | API returns 202 with `status: failed` and a message "Prompt delivery requires starting this session via argus launch"; UI shows read-only state so the prompt bar is disabled |
 | P2-18 | Attempt Stop on an already-ended session | Error or no-op with appropriate feedback; no crash |
+| P2-19 | Start a PTY session via `argus launch claude`, send a prompt from the dashboard, then kill the `argus launch` process mid-delivery | Prompt bar shows an error message; session card transitions to read-only (live badge disappears) on next poll |
+| P2-20 | Start a Copilot CLI session via `npm run launch --workspace=backend -- gh copilot suggest`, send a prompt from the dashboard | Prompt is delivered to the Copilot CLI process via PTY; input clears; no error |

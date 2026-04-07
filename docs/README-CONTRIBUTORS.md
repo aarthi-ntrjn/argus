@@ -57,6 +57,10 @@ backend/
     config/       # Config loader (~/.argus/config.json)
     db/           # SQLite schema and database helpers
     models/       # Shared TypeScript types
+    cli/          # PTY launcher entrypoint and supporting modules
+      launch.ts                   # PTY launcher entrypoint; spawns tool, proxies I/O, connects to backend
+      argus-launch-client.ts      # WebSocket client connecting to /launcher
+      launch-command-resolver.ts  # resolves argv to session type and command
     services/     # Session detectors, session controller, output store, pruning
   tests/
     unit/         # Fast, no I/O
@@ -88,6 +92,8 @@ scan files on disk → upsert session in SQLite → start chokidar file watcher 
 **WebSocket events:** `session.created`, `session.updated`, `session.ended`, `session.output`. Dispatched from `event-dispatcher.ts` via `broadcast()`. The frontend's `socket.ts` listens and calls `queryClient.invalidateQueries()` to refresh stale data.
 
 **Frontend data flow:** TanStack Query fetches from REST on mount and re-fetches on WS events. Components read from the query cache; they never call the API directly.
+
+**PTY prompt delivery:** `argus launch <tool>` spawns tool in PTY, connects to backend /launcher WebSocket, PtyRegistry maps sessionId to WebSocket, SessionController.sendPrompt() looks up registry and sends message, launcher writes to PTY stdin, then acks back.
 
 ## Testing
 
@@ -131,7 +137,8 @@ Tour targets use stable `data-tour-id` attribute selectors (e.g. `[data-tour-id=
 | `GET` | `/api/v1/sessions/:id/output` | Get paginated output for a session (`?limit=&before=`) |
 | `POST` | `/api/v1/sessions/:id/stop` | Stop a running session (SIGTERM) |
 | `POST` | `/api/v1/sessions/:id/interrupt` | Interrupt the current operation (SIGINT / Ctrl+Break). Returns 422 if PID not on record or process not running; 403 if PID does not belong to an AI tool. |
-| `POST` | `/api/v1/sessions/:id/send` | Send a prompt string to an active Claude Code session |
+| `POST` | `/api/v1/sessions/:id/send` | Send a prompt string to a PTY-launched session (launchMode=pty). Returns 202 with a ControlAction (status: pending, completed, or failed). Requires the session to have been started via argus launch. |
+| `WS` | `/launcher` | Bidirectional channel for the argus launch CLI. Handles: register (upsert session as pty), prompt_delivered/failed (ack), session_ended (mark ended). On disconnect: marks session ended and unregisters from PtyRegistry. |
 | `GET` | `/api/v1/fs/browse` | List contents of a directory (path-sandboxed) |
 | `GET` | `/api/v1/fs/scan` | Scan a directory for git repos (path-sandboxed) |
 | `POST` | `/api/v1/fs/pick-folder` | Open native OS folder picker, returns selected path |
@@ -150,6 +157,7 @@ Argus is a single-user localhost tool (`127.0.0.1` only). The following hardenin
 | **Shell injection** | All `taskkill` calls on Windows use `spawnSync` with an explicit args array: no shell string interpolation. |
 | **Hook endpoint** | `POST /hooks/claude` enforces a 64 KB body limit, validates `session_id` as UUID v4, and ignores `cwd` values not registered as known repositories. Payloads attempting to overwrite an active session's PID are rejected with 409. |
 | **Filesystem routes** | Browse, scan, and scan-folder endpoints resolve and validate all user-supplied paths against `homedir()` and registered repository paths. Paths outside this boundary return 403. Recursive directory scans skip symlinks to prevent traversal loops. |
+| **Launcher WebSocket** | The /launcher route only accepts connections from processes on 127.0.0.1. The `register` message validates that the `repositoryPath` resolves to an existing directory. Session IDs are validated as non-empty strings. |
 | **HTTP headers** | All responses include `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY`. No server version or runtime information is exposed. |
 
 ## CI & Supply Chain

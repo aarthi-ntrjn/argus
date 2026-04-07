@@ -32,9 +32,12 @@ Fast, no I/O. Each test module is isolated with mocks.
 | File | What it covers |
 |---|---|
 | `session-monitor.test.ts` | Session scan loop, stale-session reconciliation, null-PID skip logic |
-| `session-controller.test.ts` | Stop/send action dispatch |
+| `session-controller.test.ts` | Stop/send action dispatch; PTY vs detected session routing; launcher-not-connected error |
 | `events-parser.test.ts` | Claude Code `events.jsonl` parser |
 | `claude-code-detector-scan.test.ts` | `scanExistingSessions()` Windows path-matching and re-activation logic |
+| `pty-registry.test.ts` | PtyRegistry register/unregister, sendPrompt delivery, ack handling, 10-second timeout |
+| `argus-launch-client.test.ts` | ArgusLaunchClient WebSocket connect, register, ackDelivered, ackFailed, notifySessionEnded |
+| `launch-command-resolver.test.ts` | resolveLaunchCommand — maps `claude` and `gh copilot` argv to sessionType and command |
 
 **Integration**: `backend/tests/integration/`  
 Spin up real SQLite (temp DB via `ARGUS_DB_PATH`) and real file fixtures.
@@ -45,13 +48,14 @@ Spin up real SQLite (temp DB via `ARGUS_DB_PATH`) and real file fixtures.
 | `claude-code-detector.test.ts` | Hook POST payload → session record creation |
 | `output-store.test.ts` | Paginated reads, size-limit pruning |
 
-**Contract**: `backend/tests/contract/`  
-Start a real Fastify server and make actual HTTP calls.
+**Contract/WebSocket**: `backend/tests/contract/` and root `backend/tests/`  
+Start a real Fastify server and make actual HTTP calls or WebSocket connections.
 
 | File | What it covers |
 |---|---|
-| `repositories.test.ts` | `GET/POST/DELETE /api/v1/repositories`: status codes, shapes, error cases |
-| `sessions.test.ts` | `GET /api/v1/sessions`, `GET /api/v1/sessions/:id`, `POST .../stop` |
+| `contract/repositories.test.ts` | `GET/POST/DELETE /api/v1/repositories`: status codes, shapes, error cases |
+| `contract/sessions.test.ts` | `GET /api/v1/sessions`, `GET /api/v1/sessions/:id`, `POST .../stop` |
+| `launcher-ws.test.ts` | `/launcher` WebSocket route: register, prompt delivery ack, session_ended, disconnect cleanup |
 
 #### Additional backend commands
 
@@ -81,7 +85,7 @@ npm run test:e2e:ui       # interactive Playwright UI (pick tests, see trace)
 > **Why `--ui-host` / `--ui-port`?** The `test:e2e:ui` script passes `--ui-host=localhost --ui-port=9323` so the Playwright UI opens in your browser at `http://localhost:9323` instead of launching an Electron window. The Electron-based UI does not render on this machine.
 
 **Config**: `playwright.config.ts`  
-**Tests**: `frontend/tests/e2e/sc-001-*.spec.ts`, `sc-002-*.spec.ts`, `sc-004-*.spec.ts`
+**Tests**: `frontend/tests/e2e/` — covers SC-001, SC-002, SC-004, SC-005, SC-020 and more
 
 ---
 

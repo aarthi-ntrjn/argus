@@ -233,6 +233,33 @@ Created to chain the entire Speckit pipeline — specify, clarify, plan, tasks, 
 
 ---
 
+## Day 7 — April 7, 2026
+
+**PTY prompt delivery — send prompts actually work.**
+
+Feature 020 shipped. The core problem: the prompt bar had always accepted text and called `POST /sessions/:id/send`, but no mechanism existed to actually deliver the text to the running process. The `SessionController.sendPrompt()` created a ControlAction with `status: 'sent'` and stopped there.
+
+**Root cause investigation**
+Stdin injection was the first candidate and was ruled out fast. macOS removed `TIOCSTI` in 2022 (kernel security patch); it was never reliably available for non-spawned processes on Windows either. The file-based hook injection Claude Code uses only carries structured JSON payloads, not raw text. There was no channel from Argus to the running process's stdin.
+
+**PTY launcher solution**
+The solution: instead of detecting existing processes and trying to inject into them, Argus now optionally owns the process lifecycle. `argus launch claude` (or `gh copilot suggest`) spawns the tool inside a PTY using `node-pty` (the same library VS Code uses: Windows ConPTY on Windows, POSIX PTY on Mac/Linux). The Argus process holds the PTY master handle and can write to it at will.
+
+The launch process connects back to the backend over a WebSocket at `/launcher`. The backend registers the connection in a `PtyRegistry` singleton keyed by session ID. When `POST /sessions/:id/send` arrives, `SessionController` looks up the registry, sends a `send_prompt` message to the launcher, and waits (up to 10 seconds) for a `prompt_delivered` or `prompt_failed` ack. The ControlAction status is updated asynchronously.
+
+**Frontend changes**
+Sessions now carry a `launchMode` field (`'pty'` or `'detected'`). The session card shows a green "live" badge for PTY sessions and a grey "read-only" badge for detected ones. The prompt bar disables its input and button for read-only sessions, and the container tooltip explains how to enable injection.
+
+**Windows build issue**
+`node-pty` requires native compilation. The pre-built packages (`node-pty-prebuilt-multiarch`, `@homebridge/node-pty-prebuilt-multiarch`) had no Windows binaries. Building from source with `npm install node-pty --msvs_version=2022` succeeded once VS 2022 build tools were confirmed installed.
+
+**Tests**
+Backend: 7 new test files covering PtyRegistry, ArgusLaunchClient, launch-command-resolver, and the `/launcher` WebSocket route. Unit test mocking used `vi.hoisted()` for the WebSocket mock factory. Frontend: 7 new unit tests for SessionCard PTY badges and SessionPromptBar read-only state. E2E: full mocked suite (sc-020) and real-server suite (sc-020-real) added.
+
+**Key dynamic:** The shift from "detect what is running" to "own the process lifecycle when control is needed." Detection remains available for visibility; ownership is opt-in via `argus launch`. This keeps the monitoring experience unchanged while unlocking prompt delivery without platform-specific hacks.
+
+---
+
 ## Day 1 — March 31, 2026
 
 **Enlistment and full first feature shipped end-to-end.**
