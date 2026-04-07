@@ -4,19 +4,31 @@ import { randomUUID } from 'crypto';
 import { resolveLaunchCommand } from './launch-command-resolver.js';
 import { ArgusLaunchClient } from './argus-launch-client.js';
 
-const args = process.argv.slice(2);
+// Parse --cwd <path> out of argv before passing the rest to resolveLaunchCommand.
+// This is needed because npm --workspace changes cwd to the workspace root, so we
+// cannot rely on process.cwd() to know which repo the user wants to work in.
+const rawArgs = process.argv.slice(2);
+let cwd = process.cwd();
+const toolArgs: string[] = [];
+for (let i = 0; i < rawArgs.length; i++) {
+  if (rawArgs[i] === '--cwd' && rawArgs[i + 1]) {
+    cwd = rawArgs[++i];
+  } else {
+    toolArgs.push(rawArgs[i]);
+  }
+}
 
-if (args.length === 0) {
-  process.stderr.write('Usage: argus launch <command> [args...]\n');
+if (toolArgs.length === 0) {
+  process.stderr.write('Usage: argus launch <command> [args...] [--cwd <path>]\n');
   process.stderr.write('Examples:\n');
   process.stderr.write('  argus launch claude\n');
-  process.stderr.write('  argus launch gh copilot suggest\n');
+  process.stderr.write('  argus launch claude --cwd /path/to/repo\n');
+  process.stderr.write('  argus launch gh copilot suggest --cwd /path/to/repo\n');
   process.exit(1);
 }
 
-const { sessionType, cmd, cmdArgs } = resolveLaunchCommand(args);
+const { sessionType, cmd, cmdArgs } = resolveLaunchCommand(toolArgs);
 const sessionId = randomUUID();
-const cwd = process.cwd();
 
 // Spawn the tool in a PTY so it sees a real TTY on stdin and stdout
 const pty = spawn(cmd, cmdArgs, {

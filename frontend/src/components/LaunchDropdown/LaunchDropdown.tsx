@@ -38,7 +38,9 @@ export default function LaunchDropdown({ repoPath }: Props) {
   }, [open]);
 
   const handleCopy = (tool: 'claude' | 'copilot') => {
-    const cmd = tool === 'claude' ? tools?.claudeCmd : tools?.copilotCmd;
+    const base = tool === 'claude' ? tools?.claudeCmd : tools?.copilotCmd;
+    // Append --cwd so the command launches in this repo regardless of where it's pasted.
+    const cmd = base ? `${base} --cwd "${repoPath}"` : undefined;
     if (cmd) navigator.clipboard.writeText(cmd);
     setCopied(tool);
     setTimeout(() => setCopied(null), 1500);

@@ -12,11 +12,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ARGUS_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 
-function buildLaunchCmd(tool: 'claude' | 'copilot'): string {
+// Base command (no --cwd): safe to copy and run manually from any directory.
+// The user runs it from their repo and process.cwd() will be correct.
+function buildLaunchCmdBase(tool: 'claude' | 'copilot'): string {
   const toolArg = tool === 'copilot' ? 'gh copilot suggest' : 'claude';
-  // Use npm --prefix to force npm to resolve scripts from the argus root,
-  // regardless of which directory the terminal is opened in.
   return `npm --prefix "${ARGUS_ROOT}" run launch --workspace=backend -- ${toolArg}`;
+}
+
+// Full command with --cwd baked in: used when the backend spawns the terminal.
+// npm --workspace changes cwd to the workspace root, so we must pass --cwd explicitly.
+function buildLaunchCmdWithCwd(tool: 'claude' | 'copilot', repoPath: string): string {
+  return `${buildLaunchCmdBase(tool)} --cwd "${repoPath}"`;
 }
 
 function isInstalled(cmd: string): boolean {
@@ -25,25 +31,25 @@ function isInstalled(cmd: string): boolean {
   return result.status === 0;
 }
 
-function openTerminalWithCommand(cmd: string, repoPath?: string): void {
-  const cdCmd = repoPath
-    ? (platform() === 'win32' ? `cd /d "${repoPath}" && ` : `cd '${repoPath}' && `)
-    : '';
-  const fullCmd = `${cdCmd}${cmd}`;
-
+function openTerminalWithCommand(cmd: string): void {
   if (platform() === 'win32') {
-    const wtResult = spawnSync('where', ['wt.exe'], { encoding: 'utf-8', timeout: 2000 });
-    if (wtResult.status === 0) {
-      spawn('wt.exe', ['new-tab', '--', 'powershell', '-NoExit', '-Command', fullCmd], {
+    // Prefer Windows Terminal; fall back to a plain PowerShell window.
+    const wtAvailable = spawnSync('where', ['wt.exe'], { encoding: 'utf-8', timeout: 2000 }).status === 0;
+    if (wtAvailable) {
+      // wt.exe new-tab opens a new tab running PowerShell with the launch command.
+      spawn('wt.exe', ['new-tab', '--', 'powershell', '-NoExit', '-Command', cmd], {
         detached: true, stdio: 'ignore',
       }).unref();
     } else {
-      spawn('cmd.exe', ['/c', 'start', 'powershell', '-NoExit', '-Command', fullCmd], {
+      spawn('cmd.exe', ['/c', 'start', 'powershell', '-NoExit', '-Command', cmd], {
         detached: true, stdio: 'ignore', shell: false,
       }).unref();
     }
   } else {
-    const script = `tell application "Terminal" to do script "${fullCmd.replace(/"/g, '\\"')}"`;
+    // macOS: open a new Terminal window running the command.
+    // Escape double-quotes inside the AppleScript string literal.
+    const escaped = cmd.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const script = `tell application "Terminal"\n  do script "${escaped}"\n  activate\nend tell`;
     spawn('osascript', ['-e', script], { detached: true, stdio: 'ignore' }).unref();
   }
 }
@@ -55,8 +61,9 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({
       claude: hasClaude,
       copilot: hasCopilot,
-      claudeCmd: hasClaude ? buildLaunchCmd('claude') : undefined,
-      copilotCmd: hasCopilot ? buildLaunchCmd('copilot') : undefined,
+      // Base commands (no --cwd): the user appends --cwd <their-repo> when copying.
+      claudeCmd: hasClaude ? buildLaunchCmdBase('claude') : undefined,
+      copilotCmd: hasCopilot ? buildLaunchCmdBase('copilot') : undefined,
     });
   });
 
@@ -76,7 +83,10 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
     },
     async (req, reply) => {
       const { tool, repoPath } = req.body;
-      openTerminalWithCommand(buildLaunchCmd(tool), repoPath);
+      const cmd = repoPath
+        ? buildLaunchCmdWithCwd(tool, repoPath)
+        : buildLaunchCmdBase(tool);
+      openTerminalWithCommand(cmd);
       return reply.status(202).send({ status: 'launched' });
     }
   );
