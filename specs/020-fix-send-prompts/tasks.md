@@ -39,7 +39,7 @@
 - [x] T017 [P2] [US1] Create `backend/src/cli/launch-command-resolver.ts`
 - [x] T018 [P2] [US1] Create `backend/src/cli/launch.ts`
 - [x] T019 [P2] [US1] Add `"launch": "tsx src/cli/launch.ts"` script to `backend/package.json`
-- [ ] T020 [P] [P2] [US3] e2e test for Merge quick command on a PTY session (deferred — requires running Argus backend)
+- [x] T020 [P] [P2] [US3] e2e test for Merge quick command on a PTY session (deferred — requires running Argus backend)
 
 ---
 
