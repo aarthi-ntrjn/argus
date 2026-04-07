@@ -7,7 +7,6 @@ import SessionPromptBar from '../components/SessionPromptBar/SessionPromptBar';
 import SessionTypeIcon from '../components/SessionTypeIcon/SessionTypeIcon';
 import { isInactive } from '../utils/sessionUtils';
 
-
 function getElapsed(startedAt: string, endedAt: string | null): string {
   const end = endedAt ? new Date(endedAt) : new Date();
   const ms = end.getTime() - new Date(startedAt).getTime();
@@ -75,13 +74,15 @@ export default function SessionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto w-full">
-        <button onClick={() => navigate('/')} className="text-blue-600 hover:text-blue-800 mb-6 py-2 flex items-center gap-1">
+    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col max-w-4xl mx-auto w-full px-4 md:px-8 py-4 md:py-6">
+
+        <button onClick={() => navigate('/')} className="text-blue-600 hover:text-blue-800 mb-4 py-2 flex items-center gap-1 shrink-0">
           ← Back to Dashboard
         </button>
 
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        {/* Session header */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4 shrink-0">
           <div className="flex flex-wrap gap-3 items-center mb-2">
             <span
               data-tour-id="session-status"
@@ -114,37 +115,35 @@ export default function SessionPage() {
             </span>
           </div>
           {session.summary && (
-            <p className="text-gray-600 text-sm mt-2">{session.summary}</p>
+            <p className="text-gray-600 text-sm mt-1">{session.summary}</p>
           )}
           <p className="text-xs text-gray-500 mt-1">ID: {session.id}</p>
         </div>
 
-        <div data-tour-id="session-output-stream" className="bg-white border border-gray-200 rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200">
+        {/* Output stream — fills remaining height */}
+        <div data-tour-id="session-output-stream" className="flex-1 min-h-0 flex flex-col bg-white border border-gray-200 rounded-lg shadow overflow-hidden">
+          <div className="p-4 border-b border-gray-200 shrink-0">
             <h2 className="text-lg font-semibold text-gray-900">Output Stream</h2>
           </div>
-          {outputLoading ? (
-            <div className="p-8 text-center text-gray-500">Loading output...</div>
-          ) : (
-            <div className="rounded-b-lg overflow-hidden bg-gray-900">
+          <div className="flex-1 min-h-0 overflow-y-auto bg-gray-900 rounded-b-lg">
+            {outputLoading ? (
+              <div className="p-8 text-center text-gray-400">Loading output...</div>
+            ) : (
               <SessionDetail
                 sessionId={session.id}
                 items={outputPage?.items ?? []}
                 dark
               />
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div data-tour-id="session-prompt-bar" className="bg-white rounded-lg shadow p-4 mt-6">
+        {/* Prompt bar — pinned below output */}
+        <div data-tour-id="session-prompt-bar" className="bg-white rounded-lg shadow p-4 mt-4 shrink-0">
           <SessionPromptBar session={session} />
         </div>
+
       </div>
     </div>
   );
 }
-
-
-
-
-

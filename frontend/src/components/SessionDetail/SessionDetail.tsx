@@ -75,7 +75,7 @@ export default function SessionDetail({ items, dark = false, className }: Props)
   }
 
   return (
-    <div className={`overflow-y-auto max-h-[600px] p-4 space-y-1 font-mono text-xs ${dark ? 'bg-gray-900' : ''} ${className ?? ''}`}>
+    <div className={`overflow-y-auto p-4 space-y-1 font-mono text-xs ${dark ? 'bg-gray-900' : ''} ${className ?? ''}`}>
       {items.map((item) => {
         const typeInfo = getBadge(item);
         const badgeColor = dark ? typeInfo.dark : typeInfo.light;
