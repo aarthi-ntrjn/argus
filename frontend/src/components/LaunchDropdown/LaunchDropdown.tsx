@@ -61,7 +61,7 @@ export default function LaunchDropdown({ repoPath }: Props) {
         title="Launch a new session with Argus"
         aria-label="Launch with Argus"
         aria-expanded={open}
-        className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-500 hover:border-emerald-400 hover:text-emerald-700 transition-colors"
+        className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-500 hover:border-blue-400 hover:text-blue-700 transition-colors"
       >
         <Terminal size={11} />
         Launch with Argus
