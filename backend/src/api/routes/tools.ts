@@ -13,16 +13,20 @@ const __dirname = path.dirname(__filename);
 const ARGUS_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 
 // Base command (no --cwd): safe to copy and run manually from any directory.
-// The user runs it from their repo and process.cwd() will be correct.
-function buildLaunchCmdBase(tool: 'claude' | 'copilot'): string {
-  const toolArg = tool === 'copilot' ? 'gh copilot suggest' : 'claude';
+function buildLaunchCmdBase(tool: 'claude' | 'copilot', copilotVariant?: 'standalone' | 'gh-extension'): string {
+  let toolArg: string;
+  if (tool === 'copilot') {
+    toolArg = copilotVariant === 'gh-extension' ? 'gh copilot suggest' : 'copilot';
+  } else {
+    toolArg = 'claude';
+  }
   return `npm --prefix "${ARGUS_ROOT}" run launch --workspace=backend -- ${toolArg}`;
 }
 
 // Full command with --cwd baked in: used when the backend spawns the terminal.
 // npm --workspace changes cwd to the workspace root, so we must pass --cwd explicitly.
-function buildLaunchCmdWithCwd(tool: 'claude' | 'copilot', repoPath: string): string {
-  return `${buildLaunchCmdBase(tool)} --cwd "${repoPath}"`;
+function buildLaunchCmdWithCwd(tool: 'claude' | 'copilot', repoPath: string, copilotVariant?: 'standalone' | 'gh-extension'): string {
+  return `${buildLaunchCmdBase(tool, copilotVariant)} --cwd "${repoPath}"`;
 }
 
 function isInstalled(cmd: string): boolean {
@@ -31,12 +35,19 @@ function isInstalled(cmd: string): boolean {
   return result.status === 0;
 }
 
-// gh copilot is a gh extension — gh being on PATH is not enough.
-// Run `gh copilot --version` and treat exit 0 as "extension installed".
-function isCopilotExtensionInstalled(): boolean {
-  if (!isInstalled('gh')) return false;
-  const result = spawnSync('gh', ['copilot', '--version'], { encoding: 'utf-8', timeout: 5000 });
-  return result.status === 0;
+// Prefer the standalone `copilot` CLI (GitHub Copilot CLI npm package).
+// Fall back to the `gh copilot` extension if the standalone isn't found.
+function detectCopilot(): 'standalone' | 'gh-extension' | null {
+  if (isInstalled('copilot')) return 'standalone';
+  // gh copilot is a gh extension — gh being on PATH is not enough.
+  // `gh copilot --help` exits 0 only when the extension is installed.
+  if (isInstalled('gh')) {
+    const result = spawnSync('gh', ['copilot', '--help'], {
+      encoding: 'utf-8', timeout: 5000,
+    });
+    if (result.status === 0) return 'gh-extension';
+  }
+  return null;
 }
 
 function openTerminalWithCommand(cmd: string): void {
@@ -65,13 +76,13 @@ function openTerminalWithCommand(cmd: string): void {
 const toolsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/v1/tools', async (_req, reply) => {
     const hasClaude = isInstalled('claude');
-    const hasCopilot = isCopilotExtensionInstalled();
+    const copilotVariant = detectCopilot();
     return reply.send({
       claude: hasClaude,
-      copilot: hasCopilot,
+      copilot: copilotVariant !== null,
       // Base commands (no --cwd): the user appends --cwd <their-repo> when copying.
       claudeCmd: hasClaude ? buildLaunchCmdBase('claude') : undefined,
-      copilotCmd: hasCopilot ? buildLaunchCmdBase('copilot') : undefined,
+      copilotCmd: copilotVariant ? buildLaunchCmdBase('copilot', copilotVariant) : undefined,
     });
   });
 
@@ -91,9 +102,10 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
     },
     async (req, reply) => {
       const { tool, repoPath } = req.body;
+      const copilotVariant = tool === 'copilot' ? detectCopilot() ?? undefined : undefined;
       const cmd = repoPath
-        ? buildLaunchCmdWithCwd(tool, repoPath)
-        : buildLaunchCmdBase(tool);
+        ? buildLaunchCmdWithCwd(tool, repoPath, copilotVariant)
+        : buildLaunchCmdBase(tool, copilotVariant);
       openTerminalWithCommand(cmd);
       return reply.status(202).send({ status: 'launched' });
     }
