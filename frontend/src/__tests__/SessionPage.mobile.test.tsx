@@ -19,12 +19,6 @@ vi.mock('../services/api', () => ({
   getSessionOutput: vi.fn().mockResolvedValue({ items: [] }),
 }));
 
-vi.mock('../hooks/useOnboarding', () => ({
-  useOnboarding: vi.fn().mockReturnValue({
-    dismissedHints: [],
-    dismissHint: vi.fn(),
-  }),
-}));
 
 function renderSessionPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
