@@ -10,6 +10,7 @@ export default function ArgusLogo({ size = 32, className = '' }: ArgusLogoProps)
       src="/argus.png"
       alt="Argus logo"
       height={size}
+      style={{ height: size, width: 'auto' }}
       className={className}
     />
   );
