@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState, useEffect, useMemo } from 'react';
+import { Terminal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getSessions, getRepositories } from '../services/api';
 import type { Repository, Session } from '../types';
@@ -146,6 +147,15 @@ export default function DashboardPage() {
                 <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
                   {repo.sessions.length} session{repo.sessions.length !== 1 ? 's' : ''}
                 </span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(`npm run launch --workspace=backend -- claude`)}
+                  title="Copy argus launch command to clipboard"
+                  aria-label="Launch with Argus"
+                  className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-500 hover:border-emerald-400 hover:text-emerald-700 transition-colors"
+                >
+                  <Terminal size={11} />
+                  Launch with Argus
+                </button>
                 <button
                   onClick={() => {
                     if (skipConfirm) {
