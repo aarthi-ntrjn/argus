@@ -2,7 +2,7 @@
 
 **Feature Branch**: `020-fix-send-prompts`
 **Created**: 2026-04-07
-**Status**: Draft
+**Status**: Clarified
 **Input**: User description: "investigate send prompts message not working"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -70,6 +70,9 @@ The actions menu quick commands (Merge, Pull latest) use the same send-prompt pa
 - **FR-004**: The system MUST NOT mark a `ControlAction` as `'sent'` until delivery to the Claude Code process has been confirmed or attempted.
 - **FR-005**: The system MUST handle sessions where the underlying process is no longer reachable and return an appropriate error.
 - **FR-006**: All quick-command prompts (merge, pull, exit) sent via the actions menu MUST follow the same delivery path as manually typed prompts.
+- **FR-007**: The system MUST provide an `argus launch <tool>` command that starts the AI tool inside a PTY session owned by Argus.
+- **FR-008**: PTY-launched sessions MUST be automatically registered in Argus and appear in the dashboard alongside hook-detected sessions.
+- **FR-009**: The session detail view MUST visually distinguish PTY-launched sessions (prompt-capable) from hook-detected sessions (read-only), so operators know whether prompt injection is available.
 
 ### Key Entities
 
@@ -88,8 +91,15 @@ The actions menu quick commands (Merge, Pull latest) use the same send-prompt pa
 
 ## Assumptions
 
-- Claude Code exposes a mechanism for receiving external prompts (such as the claude.ai remote trigger API or stdin injection) that Argus can call from the backend.
-- The backend has access to sufficient session metadata to address the correct Claude Code instance.
-- No authentication changes are required on the Claude Code side for the delivery mechanism.
-- The fix applies to `claude-code` session types only; `copilot-cli` remains unsupported in this release.
+- Users start their AI tool sessions via `argus launch <tool>` (e.g., `argus launch claude`, `argus launch gh copilot`). Sessions started outside Argus remain read-only (detected via hooks, no write channel).
+- The PTY launcher uses `node-pty` which supports Windows (ConPTY) and Mac/Linux (POSIX PTY) without platform-specific code paths in the application layer.
+- The fix applies to both `claude-code` and `copilot-cli` session types. Both tools accept prompt text via stdin.
 - The existing `ControlAction` database schema and broadcast infrastructure are reused without structural changes.
+- The Argus backend process stays running for the lifetime of any launched session; if the backend restarts, PTY handles are lost and those sessions become read-only.
+- `argus launch` works identically inside any terminal host (VS Code integrated terminal, Windows Terminal, iTerm2, etc.).
+
+## Clarifications
+
+### Session 2026-04-07
+
+- **Delivery mechanism**: PTY launcher using `node-pty`. Argus spawns the AI tool process inside a PTY it owns. The user runs `argus launch claude` or `argus launch gh copilot` instead of the tool directly. Argus holds the PTY master write handle and injects text on demand. Works cross-platform for both Claude Code and GitHub Copilot CLI. Stdin injection of already-running (hook-detected) sessions is not feasible; those sessions remain read-only.
