@@ -7,6 +7,7 @@ function session(overrides: Partial<Session> = {}): Session {
     id: 'test-id',
     repositoryId: 'repo-1',
     type: 'claude-code',
+    launchMode: null,
     pid: null,
     status: 'active',
     startedAt: new Date().toISOString(),

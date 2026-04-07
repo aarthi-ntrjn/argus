@@ -51,18 +51,34 @@ Argus sniffs out sessions already running when it starts. For Claude Code, it on
 
 Take charge of any session without touching the terminal.
 
+### Starting a Session with Prompt Control
+
+To send prompts to a session, start it through Argus using the `argus launch` command. This gives Argus a direct PTY write channel to the process.
+
+```sh
+# Claude Code
+npm run launch --workspace=backend -- claude
+
+# GitHub Copilot CLI
+npm run launch --workspace=backend -- gh copilot suggest
+```
+
+Run this in any terminal: VS Code integrated terminal, Windows Terminal, iTerm2, or any other terminal emulator. The session appears in the Argus dashboard with a **live** badge and the prompt bar is enabled.
+
+Sessions detected automatically (not started via `argus launch`) show a **read-only** badge. Their prompt bars are disabled. Interrupt (Esc) and Stop still work for any detected session since those use OS signals, not stdin.
+
 ### Prompt Bar
 
-Every session card has a prompt bar. Type a message and press **Enter** (or **Send**) to talk directly to a Claude Code session. Hit the **⋮** menu for quick commands:
+Every session card has a prompt bar. For **live** (PTY-launched) sessions, type a message and press **↵** to send it. Hit the **⋮** menu for quick commands:
 
 | Command | Action |
 |--------|--------|
-| **Esc** | Interrupt the current operation (SIGINT / Ctrl+Break) |
+| **Esc** | Interrupt the current operation (SIGINT / Ctrl+Break) — works for all sessions |
 | **Exit** | Send `/exit` to close the session (requires confirmation) |
-| **Merge** | Send `merge current branch with main` (Claude Code only; requires confirmation) |
-| **Pull latest** | Send `pull latest changes from main branch` (Claude Code only; requires confirmation) |
+| **Merge** | Send `merge current branch with main` (requires confirmation) |
+| **Pull latest** | Send `pull latest changes from main branch` (requires confirmation) |
 
-> Prompt injection works with Claude Code sessions only. Copilot CLI support is not available in v1.
+Prompt injection works for both Claude Code and Copilot CLI when started via `argus launch`.
 
 ### Repository Management
 
