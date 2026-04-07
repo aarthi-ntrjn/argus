@@ -91,13 +91,13 @@
 
 ### Tests (write first, confirm failing before implementation)
 
-- [ ] T024 [P] Add unit test verifying `isInactive({ status: 'idle', lastActivityAt: <old> })` returns `false` — find or create test file in `frontend/__tests__/`
+- [x] T024 [P] Add unit test verifying `isInactive({ status: 'idle', lastActivityAt: <old> })` returns `false` — find or create test file in `frontend/__tests__/`
 
 ### Implementation
 
-- [ ] T025 [P] Update `isInactive` in `frontend/src/utils/sessionUtils.ts`: add `|| session.status === 'idle'` to the early-return guard (alongside `completed` and `ended`)
-- [ ] T026 Locate the session status badge component (search for where `resting` or status badges are rendered in `frontend/src/`); add an "Idle" badge rendered when `session.status === 'idle'`
-- [ ] T026b [P] Locate the frontend settings panel (search for where `hideEndedSessions` is rendered in `frontend/src/`); add a numeric input field for `idleSessionThresholdMinutes` that reads from `GET /api/v1/settings` and saves via `PATCH /api/v1/settings` (FR-006, SC-003)
+- [x] T025 [P] Update `isInactive` in `frontend/src/utils/sessionUtils.ts`: add `|| session.status === 'idle'` to the early-return guard (alongside `completed` and `ended`)
+- [x] T026 Locate the session status badge component (search for where `resting` or status badges are rendered in `frontend/src/`); add an "Idle" badge rendered when `session.status === 'idle'` (covered by STATUS_COLORS map + T025 fix — badge shows 'idle' in yellow automatically)
+- [x] T026b [P] Locate the frontend settings panel (search for where `hideEndedSessions` is rendered in `frontend/src/`); add a numeric input field for `idleSessionThresholdMinutes` that reads from `GET /api/v1/settings` and saves via `PATCH /api/v1/settings` (FR-006, SC-003)
 
 **Checkpoint**: T024 passes. Idle sessions are visible and badged correctly. Threshold is configurable via the settings panel without API access.
 

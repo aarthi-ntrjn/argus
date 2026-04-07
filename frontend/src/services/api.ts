@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import type { Repository, Session, SessionOutput, ControlAction, TodoItem } from '../types';
+import type { Repository, Session, SessionOutput, ControlAction, TodoItem, ArgusConfig } from '../types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,4 +100,12 @@ export async function updateTodoText(id: string, text: string): Promise<TodoItem
 
 export async function deleteTodo(id: string): Promise<void> {
   await apiFetch<void>(`/todos/${id}`, { method: 'DELETE' });
+}
+
+export async function getArgusSettings(): Promise<ArgusConfig> {
+  return apiFetch<ArgusConfig>('/settings');
+}
+
+export async function patchArgusSettings(patch: Partial<ArgusConfig>): Promise<ArgusConfig> {
+  return apiFetch<ArgusConfig>('/settings', { method: 'PATCH', body: JSON.stringify(patch) });
 }

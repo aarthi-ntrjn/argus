@@ -44,8 +44,9 @@ describe('isInactive', () => {
     expect(isInactive(session({ lastActivityAt: atThreshold }))).toBe(false);
   });
 
-  it('returns true for idle status sessions that exceed the threshold', () => {
-    expect(isInactive(session({ status: 'idle', lastActivityAt: OLD }))).toBe(true);
+  // T024: idle sessions have explicit backend status — the time-based check should not override them
+  it('T024: returns false for idle status sessions even if lastActivityAt is very old', () => {
+    expect(isInactive(session({ status: 'idle', lastActivityAt: OLD }))).toBe(false);
   });
 
   it('returns true for waiting status sessions that exceed the threshold', () => {
