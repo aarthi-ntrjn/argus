@@ -128,10 +128,6 @@ export default function SessionPage() {
           />
         </div>
 
-        <div data-tour-id="session-prompt-bar" className="bg-white rounded-lg shadow p-4 mb-6">
-          <SessionPromptBar session={session} />
-        </div>
-
         <div data-tour-id="session-output-stream" className="bg-white border border-gray-200 rounded-lg shadow">
           <div className="p-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">Output Stream</h2>
@@ -147,6 +143,10 @@ export default function SessionPage() {
               />
             </div>
           )}
+        </div>
+
+        <div data-tour-id="session-prompt-bar" className="bg-white rounded-lg shadow p-4 mt-6">
+          <SessionPromptBar session={session} />
         </div>
       </div>
     </div>

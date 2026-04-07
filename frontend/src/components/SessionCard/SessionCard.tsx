@@ -114,15 +114,15 @@ function SessionCard({ session, selected, onSelect }: Props) {
       {/* Summary */}
       {session.summary && <p className="text-sm text-gray-600 mt-2 truncate">{session.summary}</p>}
 
+      {/* Last output preview */}
+      {previewContent && (
+        <p className="text-xs text-gray-300 bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono">{previewContent}</p>
+      )}
+
       {/* Prompt bar (send + ⋮ actions) */}
       <div onClick={e => e.stopPropagation()}>
         <SessionPromptBar session={session} />
       </div>
-
-      {/* Last output preview — below interactive controls so it never obscures the prompt */}
-      {previewContent && (
-        <p className="text-xs text-gray-300 bg-gray-900 mt-1 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono">{previewContent}</p>
-      )}
     </div>
   );
 }
