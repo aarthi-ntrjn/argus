@@ -46,7 +46,10 @@ export class SessionMonitor extends EventEmitter {
 
   private async reconcileStaleSessions(): Promise<void> {
     try {
-      const sessions = getSessions({ status: 'active' });
+      const sessions = [
+        ...getSessions({ status: 'active' }),
+        ...getSessions({ status: 'idle' }),
+      ];
       if (sessions.length === 0) return;
       const processes = await psList();
       const runningPids = new Set(processes.map((p) => p.pid));
@@ -64,41 +67,52 @@ export class SessionMonitor extends EventEmitter {
       const liveSessions = getSessions({ status: 'active', type: 'claude-code' });
       if (liveSessions.length === 0) return;
 
+      const config = loadConfig();
+      const thresholdMs = config.idleSessionThresholdMinutes * 60_000;
       const processes = await psList();
       const runningPids = new Set(processes.map((p) => p.pid));
       const repos = getRepositories();
       const now = new Date().toISOString();
 
       for (const session of liveSessions) {
-        let shouldEnd = false;
-        if (session.pid != null) {
-          shouldEnd = !runningPids.has(session.pid);
-        } else {
-          // For null-PID sessions, check JSONL file freshness rather than a global "is claude running"
-          // guard — that guard fails when another Claude session is active.
-          const repo = repos.find(r => r.id === session.repositoryId);
-          if (!repo) {
-            shouldEnd = true;
-          } else {
-            const jsonlPath = join(
-              homedir(), '.claude', 'projects',
-              ClaudeCodeDetector.projectDirName(repo.path),
-              `${session.id}.jsonl`
-            );
-            try {
-              const stat = await fsPromises.stat(jsonlPath);
-              shouldEnd = Date.now() - stat.mtime.getTime() > ACTIVE_JSONL_THRESHOLD_MS;
-            } catch {
-              shouldEnd = true; // file missing
-            }
-          }
-        }
-        if (shouldEnd) {
+        const repo = repos.find(r => r.id === session.repositoryId);
+        if (!repo) {
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
-          const endedSession: Session = { ...session, status: 'ended', endedAt: now };
-          this.emit('session.ended', endedSession);
+          this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
+          continue;
         }
+
+        const jsonlPath = join(
+          homedir(), '.claude', 'projects',
+          ClaudeCodeDetector.projectDirName(repo.path),
+          `${session.id}.jsonl`
+        );
+
+        let jsonlAgeMs: number | null = null;
+        try {
+          const stat = await fsPromises.stat(jsonlPath);
+          jsonlAgeMs = Date.now() - stat.mtime.getTime();
+        } catch {
+          // file missing — treat as ended regardless of PID
+        }
+
+        if (jsonlAgeMs === null) {
+          // JSONL file missing: session is over
+          updateSessionStatus(session.id, 'ended', now);
+          this.claudeDetector.closeSessionWatcher(session.id);
+          this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
+        } else if (jsonlAgeMs > thresholdMs) {
+          // JSONL is stale — check PID to decide if session is still alive
+          const pidAlive = session.pid != null && runningPids.has(session.pid);
+          if (!pidAlive) {
+            updateSessionStatus(session.id, 'ended', now);
+            this.claudeDetector.closeSessionWatcher(session.id);
+            this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
+          }
+          // else: PID alive, JSONL stale → stay active (frontend will show "resting")
+        }
+        // else: JSONL is fresh → stay active, no change
       }
     } catch { /* ignore — liveness check is best-effort */ }
   }

@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import type { Repository, Session, SessionOutput, ControlAction, TodoItem } from '../types';
+import type { Repository, Session, SessionOutput, ControlAction, TodoItem, ArgusConfig } from '../types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -122,4 +122,12 @@ export async function launchInTerminal(tool: 'claude' | 'copilot', repoPath?: st
     method: 'POST',
     body: JSON.stringify({ tool, repoPath }),
   });
+}
+
+export async function getArgusSettings(): Promise<ArgusConfig> {
+  return apiFetch<ArgusConfig>('/settings');
+}
+
+export async function patchArgusSettings(patch: Partial<ArgusConfig>): Promise<ArgusConfig> {
+  return apiFetch<ArgusConfig>('/settings', { method: 'PATCH', body: JSON.stringify(patch) });
 }

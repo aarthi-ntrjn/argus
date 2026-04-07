@@ -43,6 +43,15 @@ export interface SessionOutput {
   sequenceNumber: number;
 }
 
+export interface ArgusConfig {
+  port: number;
+  watchDirectories: string[];
+  sessionRetentionHours: number;
+  outputRetentionMbPerSession: number;
+  autoRegisterRepos: boolean;
+  idleSessionThresholdMinutes: number;
+}
+
 export interface DashboardSettings {
   hideEndedSessions: boolean;
   hideReposWithNoActiveSessions: boolean;

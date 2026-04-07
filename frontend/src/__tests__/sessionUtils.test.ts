@@ -45,7 +45,8 @@ describe('isInactive', () => {
     expect(isInactive(session({ lastActivityAt: atThreshold }))).toBe(false);
   });
 
-  it('returns true for idle status sessions that exceed the threshold', () => {
+  // T024: idle is not a terminal status — time-based "resting" check applies the same as active
+  it('T024: returns true for idle status sessions when lastActivityAt is very old', () => {
     expect(isInactive(session({ status: 'idle', lastActivityAt: OLD }))).toBe(true);
   });
 
