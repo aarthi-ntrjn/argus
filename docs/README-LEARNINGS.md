@@ -214,3 +214,12 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 - `staleTime` ≠ `refetchInterval`. Always explicitly set `refetchInterval` on queries that need to stay live with the server.
 - When wiring up a backend polling loop, check end-to-end: does the frontend also have a matching poll? Trace the full data path from server update → DB → API → React Query → UI.
 **Fix summary**: Added `refetchInterval: 5000` to both `useQuery` calls (repositories and sessions) in `DashboardPage.tsx`. Also updated the `repository-scanner.js` vitest mock to properly export `getCurrentBranch`, fixing a silent mock gap where `refreshRepositoryBranches()` errors were being swallowed by the catch block.
+
+## T028 — Space key in prompt input toggles session card selection
+
+**Date**: 2026-04-07
+**Symptom**: Typing a space into the prompt input on a session card caused the card to toggle its selected state instead of inserting a space into the input.
+**Root cause**: `SessionCard` has `role="button"` with `onKeyDown` that intercepts Space and Enter to activate the card. The prompt bar wrapper used `onClick={e => e.stopPropagation()}` to prevent click events bubbling, but keyboard events from the input still bubbled up to the card's `onKeyDown` handler.
+**Why it was missed**: The `onClick` stop-propagation was added when the prompt bar was introduced, but the equivalent `onKeyDown` guard was not — it was not obvious that `role="button"` + Space would fire a handler that sat above a focused `<input>`.
+**How to prevent**: Whenever interactive content (inputs, buttons) is nested inside a `role="button"` element, always stop both `onClick` AND `onKeyDown` propagation on the inner container. Treat click and keyboard as a pair.
+**Fix summary**: Added `onKeyDown={e => e.stopPropagation()}` alongside the existing `onClick` on the prompt bar wrapper div in `SessionCard.tsx`.
