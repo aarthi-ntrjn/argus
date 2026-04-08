@@ -16,9 +16,9 @@
 
 **Independent Test**: Unit tests mock the filesystem. Given a directory with two `{PID}.json` files, the scanner returns two entries with correct `pid`, `sessionId`, and `cwd`. Given an empty or missing directory, the scanner returns an empty array.
 
-- [ ] T006 Write unit tests for `ClaudeSessionRegistry` in `backend/tests/unit/claude-session-registry.test.ts`: read entries, handle missing dir, handle malformed JSON, handle empty dir
-- [ ] T007 Implement `ClaudeSessionRegistry` service in `backend/src/services/claude-session-registry.ts`: `scanEntries()` returns `ClaudeSessionRegistryEntry[]` by reading `~/.claude/sessions/*.json`
-- [ ] T008 Add `ClaudeSessionRegistryEntry` type to `backend/src/models/index.ts`
+- [x] T006 Write unit tests for `ClaudeSessionRegistry` in `backend/tests/unit/claude-session-registry.test.ts`: read entries, handle missing dir, handle malformed JSON, handle empty dir
+- [x] T007 Implement `ClaudeSessionRegistry` service in `backend/src/services/claude-session-registry.ts`: `scanEntries()` returns `ClaudeSessionRegistryEntry[]` by reading `~/.claude/sessions/*.json`
+- [x] T008 Add `ClaudeSessionRegistryEntry` type to `backend/src/models/index.ts`
 
 ## Phase 3: Integration into poll cycle (US1, US3)
 
