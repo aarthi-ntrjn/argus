@@ -24,16 +24,7 @@ Manual tests for the dashboard view mode: session cards, session detail page, se
 
 ## V1: Session detail page
 
-**Prerequisites:** At least one session exists.
-
-| # | Steps | Expected |
-|---|-------|----------|
-| V1-01 | Click the external link icon on a session card | The session detail page opens at `/sessions/:id` |
-| V1-02 | Check the session detail header | A back button, type badge with icon, model name, status badge, PID, short session ID, and elapsed time are visible |
-| V1-03 | Check the output stream area | Previous session output is displayed in chronological order with timestamps, role badges, and content |
-| V1-04 | Check a live session detail page | A prompt input bar is visible below the output stream |
-| V1-05 | Check a read-only session detail page | The prompt bar shows "read-only" text instead of an input |
-| V1-06 | Click the **Back** button | Returns to the dashboard |
+See [README-SESSIONDETAIL-TESTS.md](README-SESSIONDETAIL-TESTS.md).
 
 ---
 
