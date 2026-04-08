@@ -219,14 +219,14 @@ function SessionCard({ session, selected, onSelect }: Props) {
         session.summary && <p className="text-sm text-gray-600 mt-2 truncate">{session.summary}</p>
       )}
 
-      {/* Last output preview */}
+      {/* Last output preview — fixed 2-line height */}
       {session.launchMode === 'pty' ? (
-        <p className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono ${previewContent ? 'text-gray-300' : 'text-gray-500 italic'}`}>
+        <p className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono min-h-[2.5rem] ${previewContent ? 'text-gray-300' : 'text-gray-500 italic'}`}>
           {previewContent || 'Waiting for output...'}
         </p>
       ) : (
         previewContent && (
-          <p className="text-xs text-gray-300 bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono">{previewContent}</p>
+          <p className="text-xs text-gray-300 bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono min-h-[2.5rem]">{previewContent}</p>
         )
       )}
 
