@@ -26,7 +26,7 @@ export const DASHBOARD_TOUR_STEPS: TourStep[] = [
   {
     target: '[data-tour-id="dashboard-session-card"]',
     title: '🤖 AI Sessions',
-    content: "Each row is a Claude Code or Copilot CLI session. Sessions with a green \"live\" badge let you send prompts and control them. Grey \"read-only\" sessions are auto-detected and can only be monitored.",
+    content: "Green \"live\" sessions accept prompts and commands. Grey \"read-only\" ones are auto-detected and can only be monitored.",
     placement: 'right',
     disableBeacon: true,
     targetWaitTimeout: 5000,
