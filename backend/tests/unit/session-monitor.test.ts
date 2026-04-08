@@ -102,9 +102,9 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
     vi.resetModules();
   });
 
-  // T094: with the new JSONL-based staleness check, a null-PID session with no JSONL file is always ended
+  // T094: null-PID session older than 60s grace period with no JSONL file is ended
   it('should mark null-PID Claude Code session as ended when JSONL file is missing (even when Claude is running)', async () => {
-    const now = new Date().toISOString();
+    const twoMinAgo = new Date(Date.now() - 120_000).toISOString();
     mockPsListResult = [
       { pid: 9999, name: 'some-process', cmd: 'some-process' },
       { pid: 4242, name: 'claude', cmd: 'claude' },
@@ -113,11 +113,13 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
       id: 'claude-hook-session-1',
       repositoryId: 'repo-1',
       type: 'claude-code',
-      pid: null,           // <-- hook-created sessions have no PID
+      launchMode: null,
+      pid: null,
+      pidSource: null,
       status: 'active',
-      startedAt: now,
+      startedAt: twoMinAgo,
       endedAt: null,
-      lastActivityAt: now,
+      lastActivityAt: twoMinAgo,
       summary: null,
       expiresAt: null,
       model: null,
@@ -129,7 +131,6 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
 
     const sessions = getSessions({}) as Array<{ id: string; status: string }>;
     const session = sessions.find(s => s.id === 'claude-hook-session-1');
-    // JSONL file doesn't exist → session is stale → ended even though Claude is running
     expect(session?.status).toBe('ended');
   });
 
@@ -184,10 +185,9 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
     expect(session?.status).toBe('ended');
   });
 
-  // T094 regression: stale null-PID session should be ended even when another Claude process is running
+  // T094 regression: stale null-PID session older than grace period with no JSONL should be ended
   it('T094: should mark null-PID Claude Code session as ended when JSONL file is missing, even if Claude is running', async () => {
-    const now = new Date().toISOString();
-    // Another Claude process IS running — old code would have left this session alive
+    const twoMinAgo = new Date(Date.now() - 120_000).toISOString();
     mockPsListResult = [
       { pid: 9999, name: 'some-process', cmd: 'some-process' },
       { pid: 4242, name: 'claude', cmd: 'claude' },
@@ -196,11 +196,13 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
       id: 'stale-null-pid-session',
       repositoryId: 'repo-1',
       type: 'claude-code',
+      launchMode: null,
       pid: null,
+      pidSource: null,
       status: 'active',
-      startedAt: now,
+      startedAt: twoMinAgo,
       endedAt: null,
-      lastActivityAt: now,
+      lastActivityAt: twoMinAgo,
       summary: null,
       expiresAt: null,
       model: null,
@@ -212,7 +214,6 @@ describe('SessionMonitor.reconcileStaleSessions', () => {
 
     const allSessions = getSessions({}) as Array<{ id: string; status: string }>;
     const session = allSessions.find(s => s.id === 'stale-null-pid-session');
-    // JSONL file doesn't exist → session is stale → should be ended
     expect(session?.status).toBe('ended');
   });
 });
@@ -322,15 +323,17 @@ describe('SessionMonitor.reconcileClaudeCodeSessions — active/ended logic', ()
     utimesSync(filePath, mtime, mtime);
   }
 
-  const baseSession = (id: string, status: string, pid: number | null) => ({
+  const baseSession = (id: string, status: string, pid: number | null, ageMs = 0) => ({
     id,
     repositoryId: 'repo-1',
     type: 'claude-code',
+    launchMode: null,
     pid,
+    pidSource: pid != null ? ('session_registry' as const) : null,
     status,
-    startedAt: new Date().toISOString(),
+    startedAt: new Date(Date.now() - ageMs).toISOString(),
     endedAt: null,
-    lastActivityAt: new Date().toISOString(),
+    lastActivityAt: new Date(Date.now() - ageMs).toISOString(),
     summary: null,
     expiresAt: null,
     model: null,
@@ -392,11 +395,11 @@ describe('SessionMonitor.reconcileClaudeCodeSessions — active/ended logic', ()
     expect(result?.status).toBe('ended');
   });
 
-  // T007: stale JSONL + null PID → ended
+  // T007: stale JSONL + null PID + older than grace period → ended
   it('T007: should classify as ended when JSONL is stale and PID is null', async () => {
     const id = `t007-${randomUUID()}`;
     createJsonlWithAge(id, 65);
-    upsertSession(baseSession(id, 'active', null));
+    upsertSession(baseSession(id, 'active', null, 120_000));
 
     const monitor = new SessionMonitor();
     await monitor.start();
@@ -421,8 +424,8 @@ describe('SessionMonitor.reconcileClaudeCodeSessions — active/ended logic', ()
     expect(result?.status).toBe('active');
   });
 
-  // T009: missing JSONL + alive PID → ended (file gone = session over)
-  it('T009: should classify as ended when JSONL file is missing, even if PID is alive', async () => {
+  // T009: PID alive → session stays active (PID liveness is the primary signal now)
+  it('T009: should keep session active when PID is alive, even if JSONL file is missing', async () => {
     const id = `t009-${randomUUID()}`;
     // No JSONL file created
     mockPsListResult = [{ pid: 9999, name: 'other' }, { pid: 44444, name: 'node' }];
@@ -433,7 +436,8 @@ describe('SessionMonitor.reconcileClaudeCodeSessions — active/ended logic', ()
     monitor.stop();
 
     const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
-    expect(result?.status).toBe('ended');
+    // PID is alive → session stays active. PID is the source of truth now.
+    expect(result?.status).toBe('active');
   });
 
   // T011: startup reconcileStaleSessions — idle session + dead PID → ended

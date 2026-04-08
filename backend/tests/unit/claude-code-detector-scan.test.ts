@@ -160,7 +160,7 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     expect(session?.status).toBe('active');
   });
 
-  it('does nothing when no Claude process is running', async () => {
+  it('re-activates ended session when JSONL exists (PID handled by registry, not psList)', async () => {
     mockPsListResult = [{ pid: 1, name: 'other-process', cmd: 'other-process' }];
     const now = new Date().toISOString();
     const sessionId = 'hook-session-no-claude';
@@ -169,7 +169,9 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
       id: sessionId,
       repositoryId: 'repo-scan-test',
       type: 'claude-code',
+      launchMode: null,
       pid: null,
+      pidSource: null,
       status: 'ended',
       startedAt: now,
       endedAt: now,
@@ -183,7 +185,10 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     await new ClaudeCodeDetector().scanExistingSessions();
 
     const session = dbModule.getSession(sessionId);
-    expect(session?.status).toBe('ended');
+    // scanExistingSessions no longer checks psList — it activates JSONL sessions
+    // and leaves PID assignment to the session registry scanner
+    expect(session?.status).toBe('active');
+    expect(session?.pid).toBeNull();
   });
 
   // T089 regression: scanExistingSessions must use JSONL filename as session ID,

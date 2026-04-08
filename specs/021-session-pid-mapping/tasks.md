@@ -66,7 +66,7 @@
 
 **Goal**: README update, remove dead code, full test run.
 
-- [ ] T023 Update `README.md` to document PID detection mechanism (session registry for Claude Code, lock file for Copilot CLI)
-- [ ] T024 Remove dead `psList`-based PID matching code from `claude-code-detector.ts` (the code removed in T015/T016 may leave unused imports)
-- [ ] T025 Run full test suite (`npm test`) and fix any failures
-- [ ] T026 Run frontend build (`npm run build --workspace=frontend`) and verify no errors
+- [x] T023 Update `README.md` to document PID detection mechanism (session registry for Claude Code, lock file for Copilot CLI)
+- [x] T024 Remove dead `psList`-based PID matching code from `claude-code-detector.ts` (the code removed in T015/T016 may leave unused imports)
+- [x] T025 Run full test suite (`npm test`) and fix any failures
+- [x] T026 Run frontend build (`npm run build --workspace=frontend`) and verify no errors
