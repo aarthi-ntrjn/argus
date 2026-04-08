@@ -7,8 +7,10 @@ import psList from 'ps-list';
 import { RepositoryScanner } from './repository-scanner.js';
 import { CopilotCliDetector } from './copilot-cli-detector.js';
 import { ClaudeCodeDetector, ACTIVE_JSONL_THRESHOLD_MS } from './claude-code-detector.js';
+import { ClaudeSessionRegistry } from './claude-session-registry.js';
 import { loadConfig } from '../config/config-loader.js';
-import { getSessions, updateSessionStatus, getRepositories, updateRepositoryBranch } from '../db/database.js';
+import { getSessions, getSession, upsertSession, updateSessionStatus, getRepositories, getRepositoryByPath, updateRepositoryBranch } from '../db/database.js';
+import { broadcast } from '../api/ws/event-dispatcher.js';
 import { getCurrentBranch } from './repository-scanner.js';
 import type { Session, Repository } from '../models/index.js';
 
@@ -24,9 +26,12 @@ export class SessionMonitor extends EventEmitter {
   private scanner: RepositoryScanner;
   private cliDetector: CopilotCliDetector;
   private claudeDetector: ClaudeCodeDetector;
+  private sessionRegistry: ClaudeSessionRegistry;
   private scanInterval: ReturnType<typeof setInterval> | null = null;
   private knownSessionIds = new Set<string>();
   private activeSessionMap = new Map<string, Session>();
+  // Track registry PIDs seen on the previous cycle to detect disappearances
+  private previousRegistryPids = new Set<number>();
 
   constructor() {
     super();
@@ -34,6 +39,7 @@ export class SessionMonitor extends EventEmitter {
     this.scanner = new RepositoryScanner(config.watchDirectories);
     this.cliDetector = new CopilotCliDetector();
     this.claudeDetector = new ClaudeCodeDetector();
+    this.sessionRegistry = new ClaudeSessionRegistry();
   }
 
   async start(): Promise<void> {
@@ -147,10 +153,72 @@ export class SessionMonitor extends EventEmitter {
     } catch { /* ignore — branch refresh is best-effort */ }
   }
 
+  private reconcileClaudeSessionRegistry(): void {
+    const entries = this.sessionRegistry.scanEntries();
+    const currentPids = new Set<number>();
+    const now = new Date().toISOString();
+
+    for (const entry of entries) {
+      currentPids.add(entry.pid);
+
+      const existing = getSession(entry.sessionId);
+      if (existing) {
+        // Skip PID assignment if already claimed by PTY registry (PTY takes precedence)
+        if (existing.pidSource === 'pty_registry') continue;
+
+        // Assign PID if not yet set or if source was not session_registry
+        if (existing.pid !== entry.pid || existing.pidSource !== 'session_registry') {
+          const updated = { ...existing, pid: entry.pid, pidSource: 'session_registry' as const };
+          upsertSession(updated);
+          broadcast({ type: 'session.updated', timestamp: now, data: updated as unknown as Record<string, unknown> });
+        }
+      } else {
+        // Session not in DB yet. Check if cwd matches a registered repo.
+        const repo = getRepositoryByPath(entry.cwd);
+        if (!repo) continue; // Unregistered repo, ignore
+
+        const session: Session = {
+          id: entry.sessionId,
+          repositoryId: repo.id,
+          type: 'claude-code',
+          launchMode: null,
+          pid: entry.pid,
+          pidSource: 'session_registry',
+          status: 'active',
+          startedAt: new Date(entry.startedAt).toISOString(),
+          endedAt: null,
+          lastActivityAt: now,
+          summary: null,
+          expiresAt: null,
+          model: null,
+        };
+        upsertSession(session);
+        broadcast({ type: 'session.created', timestamp: now, data: session as unknown as Record<string, unknown> });
+      }
+    }
+
+    // Detect disappeared registry files: PIDs we saw last cycle but not this cycle
+    for (const oldPid of this.previousRegistryPids) {
+      if (currentPids.has(oldPid)) continue;
+      // Find sessions that had this PID via session_registry and are still active
+      const activeSessions = getSessions({ status: 'active', type: 'claude-code' });
+      for (const session of activeSessions) {
+        if (session.pid === oldPid && session.pidSource === 'session_registry') {
+          updateSessionStatus(session.id, 'ended', now);
+          this.claudeDetector.closeSessionWatcher(session.id);
+          this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
+        }
+      }
+    }
+
+    this.previousRegistryPids = currentPids;
+  }
+
   private async runScan(): Promise<void> {
     try {
       await this.scanner.scan();
       await this.refreshRepositoryBranches();
+      this.reconcileClaudeSessionRegistry();
       await this.claudeDetector.scanExistingSessions();
       await this.reconcileClaudeCodeSessions();
       const sessions = await this.cliDetector.scan();

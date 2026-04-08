@@ -26,11 +26,11 @@
 
 **Independent Test**: With a mock registry returning entries, after one poll cycle, sessions in the DB have the correct `pid` and `pidSource="session_registry"`. Sessions whose registry files disappear are marked ended.
 
-- [ ] T009 Write unit tests in `backend/tests/unit/session-monitor.test.ts`: registry scan assigns PID, registry file disappearance ends session, PTY PID not overwritten by registry, null-PID sessions retried
-- [ ] T010 Add `ClaudeSessionRegistry` instance to `SessionMonitor` constructor in `backend/src/services/session-monitor.ts`
-- [ ] T011 Add `reconcileClaudeSessionRegistry()` method to `SessionMonitor` that: reads registry entries, matches `sessionId` to DB sessions, assigns PID + pidSource for unmatched sessions, detects disappeared files and ends sessions
-- [ ] T012 Call `reconcileClaudeSessionRegistry()` in `SessionMonitor.runScan()` before `reconcileClaudeCodeSessions()`
-- [ ] T013 In `reconcileClaudeSessionRegistry()`, skip PID assignment for sessions that already have `pidSource="pty_registry"` (PTY takes precedence)
+- [x] T009 Write unit tests in `backend/tests/unit/session-monitor.test.ts`: registry scan assigns PID, registry file disappearance ends session, PTY PID not overwritten by registry, null-PID sessions retried
+- [x] T010 Add `ClaudeSessionRegistry` instance to `SessionMonitor` constructor in `backend/src/services/session-monitor.ts`
+- [x] T011 Add `reconcileClaudeSessionRegistry()` method to `SessionMonitor` that: reads registry entries, matches `sessionId` to DB sessions, assigns PID + pidSource for unmatched sessions, detects disappeared files and ends sessions
+- [x] T012 Call `reconcileClaudeSessionRegistry()` in `SessionMonitor.runScan()` before `reconcileClaudeCodeSessions()`
+- [x] T013 In `reconcileClaudeSessionRegistry()`, skip PID assignment for sessions that already have `pidSource="pty_registry"` (PTY takes precedence)
 
 ## Phase 4: Update detector to use registry (US1)
 
