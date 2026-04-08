@@ -345,7 +345,7 @@ export default function DashboardPage() {
               type="text"
               value={folderInputPath}
               onChange={e => setFolderInputPath(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleFolderSubmit(repos); }}
+              onKeyDown={e => { if (e.key === 'Enter') handleFolderSubmit(repos); if (e.key === 'Escape') cancelFolderInput(); }}
               placeholder="e.g. C:\source or /home/user/projects"
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
