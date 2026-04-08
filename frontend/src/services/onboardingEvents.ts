@@ -9,7 +9,3 @@ export const onTourCompleted = (): void => {};
 export const onTourSkipped = (_atStep: number, _reason: 'user_action' | 'navigation'): void => {};
 
 export const onStepAdvanced = (_fromStep: number, _toStep: number): void => {};
-
-export const onHintViewed = (_hintId: string): void => {};
-
-export const onHintDismissed = (_hintId: string): void => {};

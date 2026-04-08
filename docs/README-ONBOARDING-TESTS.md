@@ -26,16 +26,3 @@ Manual tests for the onboarding tour and first-visit experience. Run these again
 | O-10 | Press **Escape** during any tour step | The tour closes immediately |
 | O-11 | Click **Skip** on any step | The tour closes; it does not restart on refresh |
 
----
-
-## O1: Session detail contextual hints
-
-**Prerequisites:** Tour already completed. At least one live (command mode) session exists.
-
-| # | Steps | Expected |
-|---|-------|----------|
-| O2-01 | Navigate to the session detail page of a live session | Three hint badges are visible next to: the status badge, the prompt bar, and the output stream |
-| O2-02 | Hover over the prompt bar hint badge | A tooltip appears explaining that Enter sends a prompt, Escape interrupts, and that read-only (view mode) sessions cannot receive prompts |
-| O2-03 | Hover over the output stream hint badge | A tooltip appears explaining that output streams for both command mode and view mode sessions |
-| O2-04 | Click the dismiss button on a hint badge | The hint disappears |
-| O2-05 | Refresh the page | The dismissed hint stays gone; remaining hints are still visible |

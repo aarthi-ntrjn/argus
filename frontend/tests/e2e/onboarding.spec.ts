@@ -113,53 +113,6 @@ test.describe('US1: First-Time Dashboard Tour', () => {
   });
 });
 
-// ─── User Story 2: Session Detail Page Contextual Hints ─────────────────────
-
-test.describe('US2: Session Detail Contextual Hints', () => {
-  test.beforeEach(async ({ page }) => {
-    await mockApi(page);
-    // Pre-complete tour so it doesn't interfere
-    await page.goto('/');
-    await seedOnboardingCompleted(page);
-  });
-
-  test('first visit shows hint badges; dismiss persists globally', async ({ page }) => {
-    // Reset hint state
-    await page.evaluate(() => {
-      const state = JSON.parse(localStorage.getItem('argus:onboarding') ?? '{}');
-      state.sessionHints = { dismissed: [] };
-      localStorage.setItem('argus:onboarding', JSON.stringify(state));
-    });
-
-    await page.goto('/sessions/session-1');
-    await page.route('**/api/v1/sessions/session-1', route =>
-      route.fulfill({ contentType: 'application/json', body: JSON.stringify(SESSIONS_RESPONSE[0]) })
-    );
-    await page.route('**/api/v1/sessions/session-1/output**', route =>
-      route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items: [], total: 0 }) })
-    );
-    await page.reload();
-
-    // All 3 hint badges should be visible
-    await expect(page.locator('[data-hint-id="session-status"]')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('[data-hint-id="session-prompt-bar"]')).toBeVisible();
-    await expect(page.locator('[data-hint-id="session-output-stream"]')).toBeVisible();
-
-    // Hover a badge — tooltip appears
-    await page.locator('[data-hint-id="session-status"]').hover();
-    await expect(page.locator('[role="tooltip"]')).toBeVisible();
-
-    // Dismiss one hint
-    await page.locator('[data-hint-id="session-status"] [aria-label="Dismiss hint"]').click();
-    await expect(page.locator('[data-hint-id="session-status"]')).not.toBeVisible();
-
-    // Reload — dismissed hint stays gone
-    await page.reload();
-    await expect(page.locator('[data-hint-id="session-status"]')).not.toBeVisible({ timeout: 3000 });
-    await expect(page.locator('[data-hint-id="session-prompt-bar"]')).toBeVisible();
-  });
-});
-
 // ─── User Story 3: Replay Tour On Demand ────────────────────────────────────
 
 test.describe('US3: Restart Tour from Settings', () => {

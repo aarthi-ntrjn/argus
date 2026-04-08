@@ -23,7 +23,6 @@ describe('useOnboarding', () => {
   it('initialises with not_started tour status for new user', () => {
     const { result } = renderHook(() => useOnboarding());
     expect(result.current.tourStatus).toBe('not_started');
-    expect(result.current.dismissedHints).toEqual([]);
   });
 
   it('reads existing completed state from storage', () => {
@@ -63,23 +62,6 @@ describe('useOnboarding', () => {
     });
   });
 
-  describe('dismissHint', () => {
-    it('adds hint id to dismissedHints and persists', () => {
-      const { result } = renderHook(() => useOnboarding());
-      act(() => result.current.dismissHint('session-status'));
-      expect(result.current.dismissedHints).toContain('session-status');
-      const stored = JSON.parse(localStorage.getItem(ONBOARDING_STORAGE_KEY)!);
-      expect(stored.sessionHints.dismissed).toContain('session-status');
-    });
-
-    it('does not duplicate hint ids', () => {
-      const { result } = renderHook(() => useOnboarding());
-      act(() => result.current.dismissHint('session-status'));
-      act(() => result.current.dismissHint('session-status'));
-      expect(result.current.dismissedHints.filter(h => h === 'session-status')).toHaveLength(1);
-    });
-  });
-
   describe('resetOnboarding', () => {
     it('resets all state to defaults', () => {
       seedState({
@@ -89,7 +71,6 @@ describe('useOnboarding', () => {
       const { result } = renderHook(() => useOnboarding());
       act(() => result.current.resetOnboarding());
       expect(result.current.tourStatus).toBe('not_started');
-      expect(result.current.dismissedHints).toEqual([]);
     });
 
     it('persists reset state to localStorage', () => {

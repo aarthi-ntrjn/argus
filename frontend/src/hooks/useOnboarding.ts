@@ -8,21 +8,17 @@ import {
   onTourStarted,
   onTourCompleted,
   onTourSkipped,
-  onHintDismissed,
 } from '../services/onboardingEvents';
 import type { DashboardTourStatus } from '../types';
 
 export interface UseOnboardingReturn {
   tourStatus: DashboardTourStatus;
-  dismissedHints: string[];
   /** Call to programmatically run the tour (auto on first load, manual from settings) */
   startTour: (trigger: 'auto' | 'manual') => void;
   /** Call when user skips or navigates away mid-tour */
   skipTour: (reason: 'user_action' | 'navigation') => void;
   /** Call when user completes all tour steps */
   completeTour: () => void;
-  /** Call when user dismisses a contextual hint badge */
-  dismissHint: (hintId: string) => void;
   /** Call from Settings to clear all onboarding state */
   resetOnboarding: () => void;
 }
@@ -69,21 +65,6 @@ export function useOnboarding(): UseOnboardingReturn {
     });
   }, []);
 
-  const dismissHint = useCallback((hintId: string) => {
-    onHintDismissed(hintId);
-    setState(prev => {
-      if (prev.sessionHints.dismissed.includes(hintId)) return prev;
-      const updated = {
-        ...prev,
-        sessionHints: {
-          dismissed: [...prev.sessionHints.dismissed, hintId],
-        },
-      };
-      writeOnboardingState(updated);
-      return updated;
-    });
-  }, []);
-
   const resetOnboarding = useCallback(() => {
     const fresh = resetOnboardingState();
     setState(fresh);
@@ -91,11 +72,9 @@ export function useOnboarding(): UseOnboardingReturn {
 
   return {
     tourStatus: state.dashboardTour.status,
-    dismissedHints: state.sessionHints.dismissed,
     startTour,
     skipTour,
     completeTour,
-    dismissHint,
     resetOnboarding,
   };
 }
