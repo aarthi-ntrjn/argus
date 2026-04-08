@@ -57,6 +57,7 @@ export default function LaunchDropdown({ repoPath }: Props) {
   return (
     <div className="relative" ref={menuRef}>
       <button
+        data-tour-id="dashboard-launch"
         onClick={() => setOpen(o => !o)}
         title="Launch a new session with Argus"
         aria-label="Launch with Argus"

@@ -9,9 +9,16 @@ const REPOS_RESPONSE = [
 
 const SESSIONS_RESPONSE = [
   {
-    id: 'session-1', repositoryId: 'repo-1', type: 'claude-code', pid: null,
+    id: 'session-1', repositoryId: 'repo-1', type: 'claude-code', pid: 1234,
     status: 'active', startedAt: new Date().toISOString(), endedAt: null,
     lastActivityAt: new Date().toISOString(), summary: 'Writing tests', expiresAt: null, model: null,
+    launchMode: 'pty',
+  },
+  {
+    id: 'session-2', repositoryId: 'repo-1', type: 'claude-code', pid: 5678,
+    status: 'active', startedAt: new Date().toISOString(), endedAt: null,
+    lastActivityAt: new Date().toISOString(), summary: 'Reviewing code', expiresAt: null, model: null,
+    launchMode: 'detected',
   },
 ];
 
@@ -21,6 +28,9 @@ async function mockApi(page: import('@playwright/test').Page) {
   );
   await page.route('**/api/v1/sessions**', route =>
     route.fulfill({ contentType: 'application/json', body: JSON.stringify(SESSIONS_RESPONSE) })
+  );
+  await page.route('**/api/v1/tools**', route =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({ claude: true, copilot: false, claudeCmd: 'claude', copilotCmd: null }) })
   );
   await page.route('**/ws**', route => route.abort());
 }
@@ -52,8 +62,8 @@ test.describe('US1: First-Time Dashboard Tour', () => {
     await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Welcome Commander!')).toBeVisible();
 
-    // Advance through all 6 steps
-    for (let i = 0; i < 5; i++) {
+    // Advance through all 7 steps
+    for (let i = 0; i < 6; i++) {
       const nextBtn = page.getByRole('button', { name: /next/i });
       await expect(nextBtn).toBeVisible();
       await nextBtn.click();
