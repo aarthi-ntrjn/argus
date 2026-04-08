@@ -93,7 +93,12 @@ export class SessionMonitor extends EventEmitter {
           continue;
         }
 
-        // Null-PID sessions: use JSONL file freshness as the liveness signal
+        // Null-PID sessions: use JSONL file freshness as the liveness signal.
+        // Give new sessions a 60-second grace period before checking JSONL,
+        // because Claude may not have written the file yet.
+        const sessionAgeMs = Date.now() - new Date(session.startedAt).getTime();
+        if (sessionAgeMs < 60_000) continue;
+
         const jsonlPath = join(
           homedir(), '.claude', 'projects',
           ClaudeCodeDetector.projectDirName(repo.path),
