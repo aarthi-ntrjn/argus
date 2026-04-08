@@ -3,8 +3,8 @@ import type { TourStep } from '../types';
 export const DASHBOARD_TOUR_STEPS: TourStep[] = [
   {
     target: '[data-tour-id="dashboard-header"]',
-    title: '👋 Welcome Commander!',
-    content: "You're running an AI army of Claude Code and GitHub Copilot CLI sessions. Argus is your command center. Let's go!",
+    title: '👋 Welcome!',
+    content: "You're running a team of Claude Code and GitHub Copilot CLI sessions. Argus helps you keep track of them all. Let's go!",
     placement: 'bottom',
     disableBeacon: true,
   },
@@ -50,7 +50,7 @@ export const DASHBOARD_TOUR_STEPS: TourStep[] = [
     // Final step uses a centered modal - no element target needed
     target: 'body',
     title: "🎉 You're all set!",
-    content: "You're officially an Argus pro. Your AI army awaits. Go build something awesome!",
+    content: "You're officially an Argus pro. Your AI team awaits. Go build something awesome!",
     placement: 'center',
     disableBeacon: true,
   },
