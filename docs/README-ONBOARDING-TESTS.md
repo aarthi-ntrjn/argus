@@ -19,7 +19,7 @@ Manual tests for the onboarding tour and first-visit experience. Run these again
 | O-03 | Click **Next** | Step 3 highlights a repository card, explaining that each card shows a repo and its live sessions |
 | O-04 | Click **Next** | Step 4 highlights the session cards area, explaining that sessions launched outside Argus are read-only |
 | O-05 | Click **Next** | Step 5 highlights the "Launch with Argus" button, explaining you can control AI sessions when launched from Argus |
-| O-06 | Click **Next** | Step 6 highlights the settings gear, explaining filtering options |
+| O-06 | Click **Next** | Step 6 highlights the "To Do or Not To Do" panel with "Track your wild ideas here" |
 | O-07 | On the final step (step 7), click **Done** | The tour closes with a "You're all set!" message; the dashboard is fully interactive |
 | O-08 | Refresh the page | The tour does not restart (completion is persisted in localStorage) |
 | O-09 | Restart the tour: open Settings, click "Restart Tour" | The tour begins again from step 1 |
