@@ -66,3 +66,4 @@ See [README-ONBOARDING-TESTS.md](README-ONBOARDING-TESTS.md).
 | S4-04 | Click **Remove** | The repository card disappears from the dashboard |
 | S4-05 | Check the "Don't ask again" checkbox, then click **Remove** on another repo | The repo is removed immediately; no confirmation dialog appears for subsequent removals |
 | S4-06 | Refresh the page and remove another repo | The "Don't ask again" preference persists; repo is removed without confirmation |
+| S4-07 | Re-add a previously removed repository path | The repository card reappears on the dashboard; previous sessions and output are gone |
