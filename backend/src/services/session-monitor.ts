@@ -151,6 +151,7 @@ export class SessionMonitor extends EventEmitter {
     try {
       await this.scanner.scan();
       await this.refreshRepositoryBranches();
+      await this.claudeDetector.scanExistingSessions();
       await this.reconcileClaudeCodeSessions();
       const sessions = await this.cliDetector.scan();
       const currentScanIds = new Set<string>(sessions.map((s) => s.id));
