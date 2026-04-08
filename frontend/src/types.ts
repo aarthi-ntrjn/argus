@@ -92,6 +92,7 @@ export interface DashboardTourState {
   status: DashboardTourStatus;
   completedAt: string | null;
   skippedAt: string | null;
+  seenRepoSteps: boolean;
 }
 
 export interface SessionHintsState {

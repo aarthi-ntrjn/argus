@@ -13,12 +13,15 @@ import type { DashboardTourStatus } from '../types';
 
 export interface UseOnboardingReturn {
   tourStatus: DashboardTourStatus;
+  seenRepoSteps: boolean;
   /** Call to programmatically run the tour (auto on first load, manual from settings) */
   startTour: (trigger: 'auto' | 'manual') => void;
   /** Call when user skips or navigates away mid-tour */
   skipTour: (reason: 'user_action' | 'navigation') => void;
   /** Call when user completes all tour steps */
   completeTour: () => void;
+  /** Mark repo/session/launch steps as seen (called after catch-up tour) */
+  markRepoStepsSeen: () => void;
   /** Call from Settings to clear all onboarding state */
   resetOnboarding: () => void;
 }
@@ -65,6 +68,17 @@ export function useOnboarding(): UseOnboardingReturn {
     });
   }, []);
 
+  const markRepoStepsSeen = useCallback(() => {
+    setState(prev => {
+      const updated = {
+        ...prev,
+        dashboardTour: { ...prev.dashboardTour, seenRepoSteps: true },
+      };
+      writeOnboardingState(updated);
+      return updated;
+    });
+  }, []);
+
   const resetOnboarding = useCallback(() => {
     const fresh = resetOnboardingState();
     setState(fresh);
@@ -72,9 +86,11 @@ export function useOnboarding(): UseOnboardingReturn {
 
   return {
     tourStatus: state.dashboardTour.status,
+    seenRepoSteps: state.dashboardTour.seenRepoSteps,
     startTour,
     skipTour,
     completeTour,
+    markRepoStepsSeen,
     resetOnboarding,
   };
 }

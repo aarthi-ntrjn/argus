@@ -38,6 +38,20 @@ Manual tests for the onboarding tour and first-visit experience. Run these again
 
 ---
 
+## O0b: Catch-up tour (add repo after completing empty-state tour)
+
+**Prerequisites:** Complete the empty-state tour (O0) first. Then add a repository.
+
+| # | Steps | Expected |
+|---|-------|----------|
+| O-30 | After completing the empty-state tour, add a repository via the "Add Repository" button | A catch-up mini-tour automatically starts with 3 steps |
+| O-31 | Check step 1 of the catch-up tour | Highlights the repository card ("Your Repositories") |
+| O-32 | Click **Next** | Highlights the session cards area ("AI Sessions"), explaining read-only sessions |
+| O-33 | Click **Next** or **Done** | Highlights the "Launch with Argus" button, explaining you can control sessions launched from Argus |
+| O-34 | Complete the catch-up tour | Tour closes; the catch-up does not trigger again on refresh or adding more repos |
+
+---
+
 ## O1: Onboarding tour (populated state, with repositories and sessions)
 
 **Prerequisites:** Clear localStorage. At least one repository registered with both a live (command mode) and a detected (view mode) session.

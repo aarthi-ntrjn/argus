@@ -72,5 +72,8 @@ export function buildDashboardTourSteps(hasRepos: boolean): TourStep[] {
   ];
 }
 
+/** Catch-up mini-tour: only the repo/session/launch steps the user missed. */
+export const REPO_CATCH_UP_STEPS: TourStep[] = [...POPULATED_STEPS];
+
 /** Default steps with all sections (for backwards compat with tests). */
 export const DASHBOARD_TOUR_STEPS = buildDashboardTourSteps(true);

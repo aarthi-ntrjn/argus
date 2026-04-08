@@ -10,6 +10,7 @@ export const DEFAULT_ONBOARDING_STATE: OnboardingState = {
     status: 'not_started',
     completedAt: null,
     skippedAt: null,
+    seenRepoSteps: false,
   },
   sessionHints: {
     dismissed: [],

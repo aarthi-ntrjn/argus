@@ -17,7 +17,7 @@ import TodoPanel from '../components/TodoPanel/TodoPanel';
 import MobileNav from '../components/MobileNav/MobileNav';
 import { isInactive } from '../utils/sessionUtils';
 import { OnboardingTour } from '../components/Onboarding';
-import { buildDashboardTourSteps } from '../config/dashboardTourSteps';
+import { buildDashboardTourSteps, REPO_CATCH_UP_STEPS } from '../config/dashboardTourSteps';
 
 interface RepoWithSessions extends Repository {
   sessions: Session[];
@@ -38,8 +38,9 @@ export default function DashboardPage() {
   const settingsRef = useRef<HTMLDivElement>(null);
 
   const [settings, updateSetting] = useSettings();
-  const { tourStatus, startTour, skipTour, completeTour, resetOnboarding } = useOnboarding();
+  const { tourStatus, seenRepoSteps, startTour, skipTour, completeTour, markRepoStepsSeen, resetOnboarding } = useOnboarding();
   const [tourRun, setTourRun] = useState(false);
+  const [catchUpRun, setCatchUpRun] = useState(false);
 
   const {
     addError, addInfo, adding, showFolderInput, folderInputPath,
@@ -91,6 +92,13 @@ export default function DashboardPage() {
   }, [sessions]);
 
   const tourSteps = useMemo(() => buildDashboardTourSteps(repos.length > 0), [repos.length > 0]);
+
+  // Auto-trigger catch-up mini-tour when repos appear and user hasn't seen repo steps
+  useEffect(() => {
+    if (repos.length > 0 && !seenRepoSteps && tourStatus !== 'not_started' && !tourRun) {
+      setCatchUpRun(true);
+    }
+  }, [repos.length, seenRepoSteps, tourStatus, tourRun]);
 
   const reposWithSessions = useMemo<RepoWithSessions[]>(() => repos.map((repo) => {
     const repoSessions = sessionsByRepo.get(repo.id) ?? [];
@@ -372,9 +380,18 @@ export default function DashboardPage() {
       <OnboardingTour
         run={tourRun}
         steps={tourSteps}
-        onComplete={() => { completeTour(); setTourRun(false); }}
-        onSkip={(reason) => { skipTour(reason); setTourRun(false); }}
+        onComplete={() => { completeTour(); if (repos.length > 0) markRepoStepsSeen(); setTourRun(false); }}
+        onSkip={(reason) => { skipTour(reason); if (repos.length > 0) markRepoStepsSeen(); setTourRun(false); }}
       />
+
+      {catchUpRun && (
+        <OnboardingTour
+          run={catchUpRun}
+          steps={REPO_CATCH_UP_STEPS}
+          onComplete={() => { markRepoStepsSeen(); setCatchUpRun(false); }}
+          onSkip={() => { markRepoStepsSeen(); setCatchUpRun(false); }}
+        />
+      )}
     </div>
   );
 }
