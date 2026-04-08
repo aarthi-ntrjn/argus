@@ -16,10 +16,10 @@ Manual tests for adding and removing repositories. Run these against a live Argu
 | R-01 | Click the **Add Repository** button | A text input field appears prompting for a folder path |
 | R-02 | Enter a valid git repository path and press Enter | The repository card appears on the dashboard showing the repo name, full path, and current git branch |
 | R-03 | Enter the same path again | No duplicate is created; the existing repo remains unchanged |
-| R-04 | Enter an invalid or non-existent path | An error message is shown; no repo card is added |
-| R-05 | Enter a folder path that contains multiple git repositories | Argus scans the folder and adds all discovered repos; an info message reads "Added N repositories" |
-| R-06 | Enter the same folder path again | Info message reads "No new git repositories found in the specified folder." |
-| R-07 | Enter a folder path that contains no git repositories | Info message reads "No new git repositories found in the specified folder." |
+| R-04 | Enter a folder path that contains multiple git repositories | Argus scans the folder and adds all discovered repos; an info message reads "Added N repositories" |
+| R-05 | Enter the same folder path again | Info message reads "No new git repositories found in the specified folder." |
+| R-06 | Enter a folder path that contains no git repositories | Info message reads "No new git repositories found in the specified folder." |
+| R-07 | Enter an invalid or non-existent path | An error message is shown; no repo card is added |
 
 ---
 
