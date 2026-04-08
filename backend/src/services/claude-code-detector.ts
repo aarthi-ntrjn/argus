@@ -158,10 +158,12 @@ export class ClaudeCodeDetector {
 
   async handleHookPayload(payload: HookPayload): Promise<void> {
     const { hook_event_name, session_id, cwd } = payload;
+    console.log(`[hook] event="${hook_event_name}" session="${session_id}" cwd="${cwd}"`);
     if (!session_id) return;
 
     const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
     const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
+    console.log(`[hook] normalizedCwd="${normalizedCwd}" repo=${repo ? repo.path : 'NULL'}`);
     if (!repo) return;
 
     const existing = getSession(session_id);
@@ -208,6 +210,15 @@ export class ClaudeCodeDetector {
       expiresAt: null,
       model: null,
     };
+
+    if (hook_event_name === 'Stop') {
+      session.status = 'ended';
+      session.endedAt = now;
+      upsertSession(session);
+      this.closeSessionWatcher(session_id);
+      broadcast({ type: 'session.ended', timestamp: now, data: session as unknown as Record<string, unknown> });
+      return;
+    }
 
     session.status = 'active';
     session.lastActivityAt = now;
