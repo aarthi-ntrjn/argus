@@ -40,32 +40,12 @@ See [README-TODO-TESTS.md](README-TODO-TESTS.md).
 
 ---
 
-## V4: Inline output pane (desktop)
+## V4: Output stream and real-time updates
 
-**Prerequisites:** At least one session with output exists. Desktop viewport (>768px).
-
-| # | Steps | Expected |
-|---|-------|----------|
-| V4-01 | Click on a session card | An output pane slides in on the right side showing the session's output stream |
-| V4-02 | Click the same session card again | The output pane closes |
-| V4-03 | Click a different session card while the pane is open | The pane updates to show the newly selected session's output |
-| V4-04 | Press **Escape** while the output pane is open | The pane closes |
+See [README-OUTPUTSTREAM-TESTS.md](README-OUTPUTSTREAM-TESTS.md).
 
 ---
 
 ## V5: Mobile layout
 
 See [README-MOBILE-TESTS.md](README-MOBILE-TESTS.md).
-
----
-
-## V6: Real-time updates (WebSocket)
-
-**Prerequisites:** The dashboard is open and at least one session is active.
-
-| # | Steps | Expected |
-|---|-------|----------|
-| V6-01 | Open the dashboard with an active session | The session card's elapsed time updates in real time without refreshing |
-| V6-02 | From another terminal, trigger activity on an active session | The session card's last output preview and status update automatically |
-| V6-03 | End a session externally (e.g. type `/exit` in a Claude terminal) | The session card transitions to "ended" status within a few seconds without refreshing |
-| V6-04 | Open browser DevTools > Network > WS tab | A WebSocket connection to `/ws` is active; events like `session.updated` appear in the message log |
