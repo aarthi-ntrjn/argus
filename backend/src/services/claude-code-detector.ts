@@ -179,6 +179,7 @@ export class ClaudeCodeDetector {
           type: 'claude-code',
           launchMode: 'pty',
           pid: claimed.pid,
+          pidSource: 'pty_registry',
           status: 'active',
           startedAt: now,
           endedAt: null,
@@ -200,6 +201,7 @@ export class ClaudeCodeDetector {
       type: 'claude-code',
       launchMode: null,
       pid: null,
+      pidSource: null,
       status: 'active',
       startedAt: now,
       endedAt: null,
@@ -208,20 +210,6 @@ export class ClaudeCodeDetector {
       expiresAt: null,
       model: null,
     };
-
-    // For new read-only sessions, try to resolve the Claude PID so that
-    // reconcileStaleSessions can detect when the process exits.
-    if (!existing && session.pid === null) {
-      try {
-        const processes = await psList();
-        const claudeProcs = processes.filter(p =>
-          p.name.toLowerCase().includes('claude') || p.cmd?.toLowerCase().includes('claude')
-        );
-        if (claudeProcs.length === 1) {
-          session.pid = claudeProcs[0].pid;
-        }
-      } catch { /* best-effort */ }
-    }
 
     session.status = 'active';
     session.lastActivityAt = now;
@@ -250,6 +238,7 @@ export class ClaudeCodeDetector {
           type: 'claude-code',
           launchMode: 'pty',
           pid: claimed.pid,
+          pidSource: 'pty_registry',
           status: 'active',
           startedAt: now,
           endedAt: null,
@@ -277,6 +266,7 @@ export class ClaudeCodeDetector {
       type: 'claude-code',
       launchMode: null,
       pid: claudePid,
+      pidSource: null,
       status: 'active',
       startedAt: now,
       endedAt: null,

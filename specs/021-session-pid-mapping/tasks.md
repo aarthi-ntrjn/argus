@@ -4,11 +4,11 @@
 
 **Goal**: Database migration and type updates for `pidSource`.
 
-- [ ] T001 [P] Add `pid_source` column to sessions table schema in `backend/src/db/schema.ts`
-- [ ] T002 [P] Add migration logic in `backend/src/db/database.ts` to ALTER TABLE and backfill existing sessions
-- [ ] T003 [P] Add `PidSource` type and `pidSource` field to `Session` interface in `backend/src/models/index.ts`
-- [ ] T004 [P] Add `pidSource` to frontend `Session` type in `frontend/src/types.ts`
-- [ ] T005 Update all `upsertSession` and `getSession` SQL queries to include `pid_source` column in `backend/src/db/database.ts`
+- [x] T001 [P] Add `pid_source` column to sessions table schema in `backend/src/db/schema.ts`
+- [x] T002 [P] Add migration logic in `backend/src/db/database.ts` to ALTER TABLE and backfill existing sessions
+- [x] T003 [P] Add `PidSource` type and `pidSource` field to `Session` interface in `backend/src/models/index.ts`
+- [x] T004 [P] Add `pidSource` to frontend `Session` type in `frontend/src/types.ts`
+- [x] T005 Update all `upsertSession` and `getSession` SQL queries to include `pid_source` column in `backend/src/db/database.ts`
 
 ## Phase 2: Core scanner (US1)
 

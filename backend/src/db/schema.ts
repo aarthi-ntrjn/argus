@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS repositories (
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY, repository_id TEXT NOT NULL REFERENCES repositories(id),
   type TEXT NOT NULL CHECK(type IN ('copilot-cli','claude-code')),
-  pid INTEGER, status TEXT NOT NULL, started_at TEXT NOT NULL,
+  pid INTEGER, pid_source TEXT, status TEXT NOT NULL, started_at TEXT NOT NULL,
   ended_at TEXT, last_activity_at TEXT NOT NULL, summary TEXT, expires_at TEXT,
   model TEXT
 );

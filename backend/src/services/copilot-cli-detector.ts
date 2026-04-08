@@ -80,6 +80,7 @@ export class CopilotCliDetector {
       type: 'copilot-cli',
       launchMode: null,
       pid: pid,
+      pidSource: pid != null ? 'lockfile' : null,
       status,
       startedAt: toIso(workspace.created_at),
       endedAt: status === 'ended' ? toIso(workspace.updated_at) : null,
