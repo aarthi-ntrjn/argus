@@ -209,11 +209,29 @@ export class ClaudeCodeDetector {
       model: null,
     };
 
+    // For new read-only sessions, try to resolve the Claude PID so that
+    // reconcileStaleSessions can detect when the process exits.
+    if (!existing && session.pid === null) {
+      try {
+        const processes = await psList();
+        const claudeProcs = processes.filter(p =>
+          p.name.toLowerCase().includes('claude') || p.cmd?.toLowerCase().includes('claude')
+        );
+        if (claudeProcs.length === 1) {
+          session.pid = claudeProcs[0].pid;
+        }
+      } catch { /* best-effort */ }
+    }
+
     session.status = 'active';
     session.lastActivityAt = now;
 
     upsertSession(session);
-    broadcast({ type: 'session.updated', timestamp: now, data: session as unknown as Record<string, unknown> });
+    broadcast({
+      type: existing ? 'session.updated' : 'session.created',
+      timestamp: now,
+      data: session as unknown as Record<string, unknown>,
+    });
 
     await this.watchJsonlFile(session_id, repo.path);
   }
