@@ -41,6 +41,10 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
       branch: await getCurrentBranch(repoPath),
     };
     insertRepository(repo);
+
+    // Re-inject Claude hooks in case they were removed when the last repo was deleted
+    new ClaudeCodeDetector().injectHooks();
+
     broadcast({ type: 'repository.added', timestamp: new Date().toISOString(), data: repo as unknown as Record<string, unknown> });
     return reply.status(201).send(repo);
   });
