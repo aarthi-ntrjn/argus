@@ -30,16 +30,7 @@ See [README-SESSIONDETAIL-TESTS.md](README-SESSIONDETAIL-TESTS.md).
 
 ## V2: Settings panel
 
-| # | Steps | Expected |
-|---|-------|----------|
-| V2-01 | Click the gear icon in the header | A settings dropdown panel opens |
-| V2-02 | Check the available toggles | "Hide ended sessions", "Hide repos with no active sessions", and "Hide inactive sessions > 20 min" checkboxes are visible |
-| V2-03 | Check the idle threshold input | A number input for idle threshold in minutes is visible (default: 20, minimum: 1) |
-| V2-04 | Toggle **Hide ended sessions** ON | Ended session cards disappear from the dashboard |
-| V2-05 | Toggle **Hide ended sessions** OFF | Ended session cards reappear |
-| V2-06 | Toggle **Hide repos with no active sessions** ON | Repos that have only ended/completed sessions disappear |
-| V2-07 | Press **Escape** or click outside the panel | The settings panel closes |
-| V2-08 | Check the bottom of the settings panel | "Restart Tour" and "Reset Onboarding" links are visible |
+See [README-SETTINGS-TESTS.md](README-SETTINGS-TESTS.md).
 
 ---
 
