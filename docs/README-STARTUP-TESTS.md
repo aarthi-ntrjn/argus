@@ -1,6 +1,6 @@
-# Argus: Startup & Repository Manual Tests
+# Argus: Startup Manual Tests
 
-Manual tests for server startup, adding repositories, and the onboarding tour. Run these against a live Argus instance.
+Manual tests for server startup and the empty dashboard. Run these against a live Argus instance.
 
 **Prerequisites:**
 1. `npm run dev` running (backend on `http://localhost:7411`)
@@ -35,35 +35,3 @@ Manual tests for server startup, adding repositories, and the onboarding tour. R
 ## S2: Onboarding tour
 
 See [README-ONBOARDING-TESTS.md](README-ONBOARDING-TESTS.md).
-
----
-
-## S3: Adding a repository
-
-**Prerequisites:** At least one git repository exists on disk.
-
-| # | Steps | Expected |
-|---|-------|----------|
-| S3-01 | Click the **Add Repository** button | A text input field appears prompting for a folder path |
-| S3-02 | Enter a valid git repository path and press Enter | The repository card appears on the dashboard showing the repo name, full path, and current git branch |
-| S3-03 | Enter the same path again | No duplicate is created; the existing repo remains unchanged |
-| S3-04 | Enter an invalid or non-existent path | An error message is shown; no repo card is added |
-| S3-05 | Enter a folder path that contains multiple git repositories | Argus scans the folder and adds all discovered repos; an info message reads "Added N repositories" |
-| S3-06 | Enter the same folder path again | Info message reads "No new git repositories found in the specified folder." |
-| S3-07 | Enter a folder path that contains no git repositories | Info message reads "No new git repositories found in the specified folder." |
-
----
-
-## S4: Removing a repository
-
-**Prerequisites:** At least one repository registered.
-
-| # | Steps | Expected |
-|---|-------|----------|
-| S4-01 | Click the trash icon on a repository card | A confirmation dialog appears: "Remove **repo-name**? This will also delete all associated sessions and output history." |
-| S4-02 | Click **Cancel** | The dialog closes; the repository remains |
-| S4-03 | Press **Escape** while the dialog is open | The dialog closes; the repository remains |
-| S4-04 | Click **Remove** | The repository card disappears from the dashboard |
-| S4-05 | Check the "Don't ask again" checkbox, then click **Remove** on another repo | The repo is removed immediately; no confirmation dialog appears for subsequent removals |
-| S4-06 | Refresh the page and remove another repo | The "Don't ask again" preference persists; repo is removed without confirmation |
-| S4-07 | Re-add a previously removed repository path | The repository card reappears on the dashboard; previous sessions and output are gone |
