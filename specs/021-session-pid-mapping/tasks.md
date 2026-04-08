@@ -49,8 +49,8 @@
 
 **Independent Test**: Copilot session with lock file gets `pidSource="lockfile"`. Lock file disappearing marks session ended.
 
-- [ ] T018 Write unit test in `backend/tests/unit/copilot-cli-detector.test.ts` (or existing test file): lock file PID stored with pidSource="lockfile", missing lock file ends session
-- [ ] T019 Update `CopilotCliDetector` to set `pidSource="lockfile"` when assigning PID from lock file in `backend/src/services/copilot-cli-detector.ts`
+- [x] T018 Write unit test in `backend/tests/unit/copilot-cli-detector.test.ts` (or existing test file): lock file PID stored with pidSource="lockfile", missing lock file ends session
+- [x] T019 Update `CopilotCliDetector` to set `pidSource="lockfile"` when assigning PID from lock file in `backend/src/services/copilot-cli-detector.ts`
 
 ## Phase 6: API exposure (US4)
 
@@ -58,9 +58,9 @@
 
 **Independent Test**: `GET /api/v1/sessions` returns `pidSource` field for each session.
 
-- [ ] T020 Write contract test in `backend/tests/contract/sessions-api.test.ts`: response includes pidSource field
-- [ ] T021 Update session SQL queries in `backend/src/api/routes/sessions.ts` (if needed) to include `pid_source` column mapping
-- [ ] T022 [P] Update `backend/src/db/database.ts` getSessions/getSession to map `pid_source` as `pidSource` in the SELECT
+- [x] T020 Write contract test in `backend/tests/contract/sessions-api.test.ts`: response includes pidSource field
+- [x] T021 Update session SQL queries in `backend/src/api/routes/sessions.ts` (if needed) to include `pid_source` column mapping
+- [x] T022 [P] Update `backend/src/db/database.ts` getSessions/getSession to map `pid_source` as `pidSource` in the SELECT
 
 ## Phase 7: Polish & cross-cutting
 
