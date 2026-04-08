@@ -90,6 +90,8 @@ export default function DashboardPage() {
     return map;
   }, [sessions]);
 
+  const tourSteps = useMemo(() => buildDashboardTourSteps(repos.length > 0), [repos.length > 0]);
+
   const reposWithSessions = useMemo<RepoWithSessions[]>(() => repos.map((repo) => {
     const repoSessions = sessionsByRepo.get(repo.id) ?? [];
     const visibleSessions = repoSessions.filter(s => {
@@ -369,7 +371,7 @@ export default function DashboardPage() {
 
       <OnboardingTour
         run={tourRun}
-        steps={buildDashboardTourSteps(repos.length > 0)}
+        steps={tourSteps}
         onComplete={() => { completeTour(); setTourRun(false); }}
         onSkip={(reason) => { skipTour(reason); setTourRun(false); }}
       />

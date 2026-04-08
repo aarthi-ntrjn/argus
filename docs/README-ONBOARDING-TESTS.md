@@ -21,6 +21,23 @@ Manual tests for the onboarding tour and first-visit experience. Run these again
 
 ---
 
+## O0a: Onboarding tour (add repo mid-tour)
+
+**Prerequisites:** Fresh database and clear localStorage. Have a valid git repo path ready.
+
+| # | Steps | Expected |
+|---|-------|----------|
+| O-20 | Open the dashboard for the first time | Tour starts at step 1 ("Welcome!") |
+| O-21 | Click **Next** to reach step 2 ("Add Repository") | Step 2 highlights the "Add Repository" button |
+| O-22 | Without closing the tour, add a repository using the input | The repo card appears on the dashboard; the tour dynamically expands to include repo, session, and launch steps |
+| O-23 | Click **Next** | Step 3 now highlights the newly added repository card ("Your Repositories") |
+| O-24 | Click **Next** | Step 4 highlights the session cards area ("AI Sessions") |
+| O-25 | Click **Next** | Step 5 highlights the "Launch with Argus" button |
+| O-26 | Click **Next** | Step 6 highlights the "To Do or Not To Do" panel |
+| O-27 | Click **Done** | The tour closes with "You're all set!" |
+
+---
+
 ## O1: Onboarding tour (populated state, with repositories and sessions)
 
 **Prerequisites:** Clear localStorage. At least one repository registered with both a live (command mode) and a detected (view mode) session.
