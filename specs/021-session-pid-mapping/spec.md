@@ -2,7 +2,7 @@
 
 **Feature Branch**: `021-session-pid-mapping`
 **Created**: 2026-04-09
-**Status**: Draft
+**Status**: Clarified
 **Input**: User description: "The detection of Claude Code sessions is super buggy. There is no mapping between Claude Code JSONL files and process ID. Argus should do this mapping and maintain it internally, for both Claude Code and Copilot CLI."
 
 ## Discovery
@@ -140,6 +140,7 @@ As an Argus maintainer, I want each session to record where its PID came from (s
 - **PTY override**: For "Launch with Argus" sessions, the PTY registry provides the PID deterministically. The session registry file confirms but does not override.
 - **Hooks-off resilience**: If hooks are disabled, sessions are still discovered via the session registry scan and JSONL scan. Hooks provide faster initial detection but are not required.
 - **Audit table**: Not needed (dropped US3 from original spec). The `pidSource` column on the session record provides sufficient observability. Full audit trail can be added later if needed.
+- **Unregistered repos**: Session registry entries whose `cwd` does not match any registered repository are ignored. Argus is repo-centric; users add repos they want to monitor. The session is detected if the user later registers the repo.
 
 ## Assumptions
 
