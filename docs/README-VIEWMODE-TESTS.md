@@ -55,3 +55,20 @@ See [README-MOBILE-TESTS.md](README-MOBILE-TESTS.md).
 ## V6: Session lifecycle (start, end, idle, server up/down)
 
 See [README-LIFECYCLE-TESTS.md](README-LIFECYCLE-TESTS.md).
+
+---
+
+## V7: Layout and scrollbar bugs
+
+**Prerequisites:** Desktop viewport (>768px). Add enough todo items to fill the panel (10+).
+
+| # | Steps | Expected |
+|---|-------|----------|
+| V7-01 | With no output pane open, add todos until the list is longer than the viewport | The todo panel scrolls internally; no page-level scrollbar appears |
+| V7-02 | With no output pane open, check the bottom of the todo panel | There is visible breathing room between the bottom of the todo panel and the bottom of the viewport |
+| V7-03 | Click a session card to open the output pane, with many todos in the list | The todo panel shrinks to fit below the output pane; it scrolls internally; no page-level scrollbar appears |
+| V7-04 | With the output pane open, verify there is only one scrollbar on the todo panel | A single scrollbar appears inside the todo list area; there is no duplicate outer scrollbar |
+| V7-05 | With the output pane open, scroll the todo list | Scrolling works within the todo panel only; the page itself does not scroll |
+| V7-06 | Close the output pane (click X or press Escape) | The todo panel expands back to its standalone max height; no page-level scrollbar appears |
+| V7-07 | Collapse the todo panel (click the header chevron) while the output pane is open | The output pane expands to fill the available space; no layout overflow |
+| V7-08 | Resize the browser window vertically with the output pane and todo panel open | Both panels adjust to the new viewport height; no page-level scrollbar appears |
