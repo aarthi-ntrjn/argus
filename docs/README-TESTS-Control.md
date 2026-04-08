@@ -29,7 +29,19 @@ Manual tests for the `argus launch` command and PTY session lifecycle. Run these
 
 ---
 
-## L1: Launch from terminal
+## L1: Server restart with live session
+
+| # | Steps | Expected |
+|---|-------|----------|
+| L1-01 | Launch a Claude session via **Launch with Argus**; confirm the session card shows the green **live** badge | Session is live and prompt injection works |
+| L1-02 | Stop the Argus backend (Ctrl+C in the dev server terminal) | Dashboard becomes unreachable; the Claude terminal continues running |
+| L1-03 | Restart the backend (`npm run dev`) and open the dashboard | The previously launched session reappears with the green **live** badge |
+| L1-04 | From the dashboard, send a prompt to the session | Prompt is delivered to the Claude terminal; response appears in the session card output stream |
+| L1-05 | From the Claude terminal, type a question directly | The response appears in the session card output stream on the dashboard |
+
+---
+
+## L2: Launch from terminal
 
 **Prerequisites:** Claude Code and GitHub Copilot CLI are both installed and available on PATH.
 
@@ -46,34 +58,34 @@ Note: `npm run launch --workspace=backend` must always be run from the Argus rep
 
 ---
 
-## L2: Session end and cleanup
+## L3: Session end and cleanup
 
 | # | Steps | Expected |
 |---|-------|----------|
-| L2-01 | Exit Claude normally (type `/exit` or `quit`) inside a live terminal | Session status changes to "ended" or "completed" on the dashboard within 3 seconds |
-| L2-02 | Kill the `argus launch` process externally (Ctrl+C in the terminal; you may need to press Ctrl+C twice in succession) | Session status updates to "ended" within ~5 seconds; live badge disappears |
-| L2-03 | Kill the process before Claude fires its first hook (exit immediately) | No orphan session card is left on the dashboard |
-| L2-04 | After a session ends, check the dashboard with "Hide ended sessions" OFF | Ended session card remains visible with a grey "ended" status badge |
+| L3-01 | Exit Claude normally (type `/exit` or `quit`) inside a live terminal | Session status changes to "ended" or "completed" on the dashboard within 3 seconds |
+| L3-02 | Kill the `argus launch` process externally (Ctrl+C in the terminal; you may need to press Ctrl+C twice in succession) | Session status updates to "ended" within ~5 seconds; live badge disappears |
+| L3-03 | Kill the process before Claude fires its first hook (exit immediately) | No orphan session card is left on the dashboard |
+| L3-04 | After a session ends, check the dashboard with "Hide ended sessions" OFF | Ended session card remains visible with a grey "ended" status badge |
 
 ---
 
-## L3: Backend-offline and error handling
+## L4: Backend-offline and error handling
 
 | # | Steps | Expected |
 |---|-------|----------|
-| L3-01 | Stop the Argus backend, then run `npm run launch --workspace=backend -- claude --cwd <path-to-your-repo>` from the Argus repo root | Claude still starts in the terminal; stderr prints `[argus] Could not connect to Argus backend: ...`; no session card appears in the dashboard |
-| L3-02 | Send a prompt from the dashboard while the backend is offline (stop the server after launching) | Inline error message appears below the prompt input |
-| L3-03 | Send a prompt to a detected (read-only) session via a direct API call | API returns 202 with `status: failed` and message "Prompt delivery requires starting this session via argus launch"; UI prompt bar remains disabled |
-| L3-04 | Start a live session, send a prompt from the dashboard, then kill the `argus launch` process mid-delivery | Prompt bar shows an error; on the next poll the session card transitions to read-only (live badge disappears) |
+| L4-01 | Stop the Argus backend, then run `npm run launch --workspace=backend -- claude --cwd <path-to-your-repo>` from the Argus repo root | Claude still starts in the terminal; stderr prints `[argus] Could not connect to Argus backend: ...`; no session card appears in the dashboard |
+| L4-02 | Send a prompt from the dashboard while the backend is offline (stop the server after launching) | Inline error message appears below the prompt input |
+| L4-03 | Send a prompt to a detected (read-only) session via a direct API call | API returns 202 with `status: failed` and message "Prompt delivery requires starting this session via argus launch"; UI prompt bar remains disabled |
+| L4-04 | Start a live session, send a prompt from the dashboard, then kill the `argus launch` process mid-delivery | Prompt bar shows an error; on the next poll the session card transitions to read-only (live badge disappears) |
 
 ---
 
-## L4: Windows-specific PID resolution
+## L5: Windows-specific PID resolution
 
 *Skip on non-Windows.*
 
 | # | Steps | Expected |
 |---|-------|----------|
-| L4-01 | Launch `claude` on Windows; check the session card's PID meta after ~5 seconds | PID shown is the real `claude.exe` (or `node.exe`) process, not the `powershell.exe` wrapper PID |
-| L4-02 | Open Task Manager and look up the displayed PID | The process name is `claude.exe` or `node.exe`, confirming the wrapper PID was resolved correctly |
-| L4-03 | Launch `copilot` on Windows; check the session PID in the same way | PID is the innermost non-`conhost.exe` child process in the tree |
+| L5-01 | Launch `claude` on Windows; check the session card's PID meta after ~5 seconds | PID shown is the real `claude.exe` (or `node.exe`) process, not the `powershell.exe` wrapper PID |
+| L5-02 | Open Task Manager and look up the displayed PID | The process name is `claude.exe` or `node.exe`, confirming the wrapper PID was resolved correctly |
+| L5-03 | Launch `copilot` on Windows; check the session PID in the same way | PID is the innermost non-`conhost.exe` child process in the tree |

@@ -34,3 +34,12 @@ Manual tests for the session detail page. Run these against a live Argus instanc
 | D-10 | Type a prompt and press **Enter** | The prompt is sent to the CLI session; the response appears in the output stream; the input clears |
 | D-11 | Press **Escape** while focused on the prompt input | An interrupt signal is sent to the CLI session |
 | D-12 | Click the **Back** button | Returns to the dashboard |
+
+---
+
+## D2: Layout and visual regression
+
+| # | Steps | Expected |
+|---|-------|----------|
+| D-13 | Open a session detail page for a session with very little or no output content | The dark background fills the full height of the page; it is not cut short leaving a white gap below |
+| D-14 | Scroll to the bottom of a sparse session detail page | No white or unstyled area is visible below the output stream |

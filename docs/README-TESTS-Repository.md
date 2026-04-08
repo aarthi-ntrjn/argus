@@ -36,3 +36,6 @@ Manual tests for adding and removing repositories. Run these against a live Argu
 | R-12 | Check the "Don't ask again" checkbox, then click **Remove** on another repo | The repo is removed immediately; no confirmation dialog appears for subsequent removals |
 | R-13 | Refresh the page and remove another repo | The "Don't ask again" preference persists; repo is removed without confirmation |
 | R-14 | Re-add a previously removed repository path | The repository card reappears on the dashboard; previous sessions and output are gone |
+| R-15 | With at least 2 Claude Code and 2 GitHub Copilot CLI sessions already running on the re-added repository, refresh the page | All 4 sessions are detected and appear on the dashboard under the correct repository card; each session card shows the correct summary subject line and output preview |
+| R-15a | Refresh the page a second time | All session cards still show the correct summary subject line and output preview; nothing is lost or reset |
+| R-16 | Launch a new Claude session on the re-added repository via **Launch with Argus** | The new session card appears under the correct repository card within 5 seconds |

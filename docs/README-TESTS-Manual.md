@@ -70,7 +70,7 @@ Manual tests to run against a live Argus instance with at least one real local r
 | # | Steps | Expected |
 |---|-------|----------|
 | P1-12a | View a session started via `argus launch` | Session card shows a green **live** badge |
-| P1-12b | View a session detected automatically (not via `argus launch`) | Session card shows a grey **read-only** badge |
+| P1-12b | View a session detected automatically (not via `argus launch`) | Session card shows a grey **read-only** badge; a summary placeholder and output preview placeholder are visible even when the session has no output |
 | P1-12c | Click into the "Send a prompt…" input on a **live** (PTY) session card | Input is enabled, focused, and accepts text |
 | P1-12d | Click into the "Send a prompt…" input on a **read-only** (detected) session card | Input is disabled; container shows tooltip "Start this session with argus launch to enable prompt injection" |
 | P1-13a | On a live session: type a prompt and press Enter | Prompt is sent to the process via PTY; input clears; no error shown |
