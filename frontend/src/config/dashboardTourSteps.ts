@@ -41,7 +41,7 @@ export const DASHBOARD_TOUR_STEPS: TourStep[] = [
   },
   {
     target: '[data-tour-id="dashboard-settings"]',
-    title: '⚙️ Customise Your View',
+    title: '⚙️ Customize Your View',
     content: "Hide ended or inactive sessions, and replay this tour anytime. You're in control.",
     placement: 'bottom',
     disableBeacon: true,
