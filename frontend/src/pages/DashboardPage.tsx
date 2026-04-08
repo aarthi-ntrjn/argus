@@ -160,9 +160,9 @@ export default function DashboardPage() {
                 </span>
                 <LaunchDropdown repoPath={repo.path} />
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (skipConfirm) {
-                      setRemoveConfirmId(repo.id);
                       handleRemoveRepoById(repo.id);
                     } else {
                       setRemoveConfirmId(repo.id);
