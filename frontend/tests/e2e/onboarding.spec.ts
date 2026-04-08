@@ -140,16 +140,16 @@ test.describe('US3: Restart Tour from Settings', () => {
 // ─── User Story 4: Onboarding State Reset ────────────────────────────────────
 
 test.describe('US4: Reset Onboarding', () => {
-  test('reset onboarding restores first-time tour on next load', async ({ page }) => {
+  test('restart tour resets onboarding state and restores first-time tour on next load', async ({ page }) => {
     await page.goto('/');
     await mockApi(page);
     await seedOnboardingCompleted(page);
     await page.reload();
 
-    // Open settings and click Reset Onboarding
+    // Open settings and click Restart Tour
     await page.getByRole('button', { name: /settings/i }).click();
-    await expect(page.getByRole('button', { name: /reset onboarding/i })).toBeVisible();
-    await page.getByRole('button', { name: /reset onboarding/i }).click();
+    await expect(page.getByRole('button', { name: /restart tour/i })).toBeVisible();
+    await page.getByRole('button', { name: /restart tour/i }).click();
 
     // Reload — first-time tour auto-launches
     await page.reload();

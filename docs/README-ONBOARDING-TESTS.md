@@ -58,7 +58,7 @@ Manual tests for the onboarding tour and first-visit experience. Run these again
 
 | # | Steps | Expected |
 |---|-------|----------|
-| O-06 | Open the dashboard (or click "Reset Onboarding" in settings, then refresh) | The onboarding tour starts; step 1 highlights the header with a "Welcome!" message |
+| O-06 | Open the dashboard (or click "Restart Tour" in settings, then refresh) | The onboarding tour starts; step 1 highlights the header with a "Welcome!" message |
 | O-07 | Click **Next** | Step 2 highlights the "Add Repository" button |
 | O-08 | Click **Next** | Step 3 highlights a repository card, explaining that each card shows a repo and its live sessions |
 | O-09 | Click **Next** | Step 4 highlights the session cards area, explaining that sessions launched outside Argus are read-only. A live session shows a green "live" badge with a prompt bar; a detected session shows a grey "read-only" badge with no prompt bar |
@@ -74,5 +74,4 @@ Manual tests for the onboarding tour and first-visit experience. Run these again
 |---|-------|----------|
 | O-13 | Press **Escape** during any tour step | The tour closes immediately |
 | O-14 | Click **Skip** on any step | The tour closes; it does not restart on refresh |
-| O-15 | Restart the tour: open Settings, click "Restart Tour" | The tour begins again from step 1 |
-| O-16 | Click "Reset Onboarding" in Settings, then refresh | The tour auto-launches as if it were a first visit |
+| O-15 | Restart the tour: open Settings, click "Restart Tour" | The tour resets all onboarding state and begins again from step 1; on refresh the tour auto-launches as if it were a first visit |

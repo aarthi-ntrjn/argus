@@ -253,12 +253,8 @@ export default function DashboardPage() {
                   onToggle={(key, value) => updateSetting(key, value)}
                   onRestartTour={() => {
                     setSettingsOpen(false);
-                    startTour('manual');
-                    setTourRun(true);
-                  }}
-                  onResetOnboarding={() => {
-                    setSettingsOpen(false);
                     resetOnboarding();
+                    startTour('manual');
                     setTourRun(true);
                   }}
                 />

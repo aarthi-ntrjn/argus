@@ -7,10 +7,9 @@ interface SettingsPanelProps {
   settings: DashboardSettings;
   onToggle: (key: keyof DashboardSettings, value: boolean) => void;
   onRestartTour?: () => void;
-  onResetOnboarding?: () => void;
 }
 
-export function SettingsPanel({ settings, onToggle, onRestartTour, onResetOnboarding }: SettingsPanelProps) {
+export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPanelProps) {
   const qc = useQueryClient();
   const { data: argusSettings } = useQuery({
     queryKey: ['argus-settings'],
@@ -76,24 +75,14 @@ export function SettingsPanel({ settings, onToggle, onRestartTour, onResetOnboar
           className="w-16 text-sm border border-gray-300 rounded px-1.5 py-0.5 text-right focus:outline-none focus:ring-1 focus:ring-blue-400"
         />
       </div>
-      {(onRestartTour || onResetOnboarding) && (
+      {onRestartTour && (
         <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col gap-1">
-          {onRestartTour && (
-            <button
-              onClick={onRestartTour}
-              className="w-full text-left text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-sm px-2 py-1 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-400"
-            >
-              Restart Tour
-            </button>
-          )}
-          {onResetOnboarding && (
-            <button
-              onClick={onResetOnboarding}
-              className="w-full text-left text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-sm px-2 py-1 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-400"
-            >
-              Reset Onboarding
-            </button>
-          )}
+          <button
+            onClick={onRestartTour}
+            className="w-full text-left text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-sm px-2 py-1 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-400"
+          >
+            Restart Tour
+          </button>
         </div>
       )}
     </div>

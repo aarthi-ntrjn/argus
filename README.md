@@ -124,8 +124,7 @@ New to Argus? A 6-step interactive tour launches automatically on your first vis
 | Feature | Behaviour |
 |---------|-----------|
 | **Welcome tour** | Auto-launches on first Dashboard load; advance, skip, or close any time |
-| **Restart Tour** | Settings panel: replays the tour from step 1 |
-| **Reset Onboarding** | Settings panel: clears stored state so the tour auto-launches again |
+| **Restart Tour** | Settings panel: resets all onboarding state and replays the tour from step 1 |
 | **Session hints** | Three dismissible `?` badges on the session detail page; hover for a tooltip; persisted globally |
 
 ## Storage
