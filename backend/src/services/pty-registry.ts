@@ -1,9 +1,4 @@
-import { normalize } from 'path';
 import type { WebSocket } from 'ws';
-
-function normalizePath(p: string): string {
-  return normalize(p.trimEnd().replace(/[/\\]+$/, '')).toLowerCase();
-}
 
 interface PendingPrompt {
   resolve: () => void;
@@ -33,12 +28,12 @@ export class PtyRegistry {
   // We hold the connection here without creating a DB session — the DB session
   // is created once Claude fires its first hook and we learn the real session ID.
   registerPending(tempId: string, ws: WebSocket, repoPath: string, pid: number): void {
-    this.pendingByRepoPath.set(normalizePath(repoPath), { tempId, ws, pid });
+    this.pendingByRepoPath.set(repoPath, { tempId, ws, pid });
   }
 
   // Update the PID for a pending connection (before claim).
   updatePendingPid(repoPath: string, pid: number): void {
-    const pending = this.pendingByRepoPath.get(normalizePath(repoPath));
+    const pending = this.pendingByRepoPath.get(repoPath);
     if (pending) pending.pid = pid;
   }
 
@@ -47,12 +42,11 @@ export class PtyRegistry {
   // Returns the launcher pid so the detector can store it on the session, or null
   // if no launcher is waiting for this repo.
   claimForSession(claudeSessionId: string, repoPath: string): { pid: number } | null {
-    const key = normalizePath(repoPath);
-    const pending = this.pendingByRepoPath.get(key);
+    const pending = this.pendingByRepoPath.get(repoPath);
     if (!pending) return null;
     this.connections.set(claudeSessionId, pending.ws);
     this.tempToClaimedId.set(pending.tempId, claudeSessionId);
-    this.pendingByRepoPath.delete(key);
+    this.pendingByRepoPath.delete(repoPath);
     return { pid: pending.pid };
   }
 
@@ -64,7 +58,7 @@ export class PtyRegistry {
 
   // Clean up a pending connection that never got claimed (e.g. claude crashed before first hook).
   unregisterPending(repoPath: string, tempId: string): void {
-    this.pendingByRepoPath.delete(normalizePath(repoPath));
+    this.pendingByRepoPath.delete(repoPath);
     this.tempToClaimedId.delete(tempId);
   }
 
