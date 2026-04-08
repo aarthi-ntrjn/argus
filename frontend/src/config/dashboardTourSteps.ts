@@ -47,6 +47,14 @@ export const DASHBOARD_TOUR_STEPS: TourStep[] = [
     disableBeacon: true,
   },
   {
+    target: '[data-tour-id="dashboard-todo"]',
+    title: '📝 To Do or Not To Do',
+    content: "Keep track of your tasks right here. Add, edit, complete, or delete items as you go.",
+    placement: 'left',
+    disableBeacon: true,
+    targetWaitTimeout: 5000,
+  },
+  {
     // Final step uses a centered modal - no element target needed
     target: 'body',
     title: "🎉 You're all set!",
