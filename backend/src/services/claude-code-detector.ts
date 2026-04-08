@@ -147,9 +147,9 @@ export class ClaudeCodeDetector {
 
         if (jsonlEntries.length === 0) continue;
 
-        // Activate all JSONL sessions, not just the most recent. The reconciler
+        // Activate the 2 most recent JSONL sessions per repo. The reconciler
         // will end stale ones based on PID/JSONL freshness.
-        for (const entry of jsonlEntries) {
+        for (const entry of jsonlEntries.slice(0, 2)) {
           await this.activateFoundSession(entry.id, repo, claudePid);
         }
       }
