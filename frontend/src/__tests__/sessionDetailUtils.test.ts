@@ -151,21 +151,6 @@ describe('buildDisplayItems', () => {
     expect(result[1].kind).toBe('single');
   });
 
-  it('focused mode handles null toolCallId: pairs adjacent tool_use + tool_result positionally', () => {
-    const toolUse = output({ id: '1', type: 'tool_use', toolCallId: null });
-    const toolResult = output({ id: '2', type: 'tool_result', toolCallId: null });
-    const result = buildDisplayItems([toolUse, toolResult], true);
-    expect(result).toHaveLength(1);
-    expect(result[0].kind).toBe('tool_group');
-    if (result[0].kind === 'tool_group') {
-      const pairs = result[0].groupItems.filter(gi => gi.kind === 'tool_pair');
-      expect(pairs).toHaveLength(1);
-      if (pairs[0].kind === 'tool_pair') {
-        expect(pairs[0].toolUse.id).toBe('1');
-        expect(pairs[0].toolResult.id).toBe('2');
-      }
-    }
-  });
 
   it('focused mode groups consecutive tool_pairs into a tool_group', () => {
     const items = [

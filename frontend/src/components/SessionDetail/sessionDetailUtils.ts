@@ -63,12 +63,9 @@ export type DisplayItem =
   | { kind: 'tool_group'; groupItems: ToolGroupItem[] };
 
 /**
- * In focused mode, pairs tool_use and tool_result into a single display row.
- * Pairing strategy:
- *  1. ID-based: match tool_use.toolCallId with tool_result.toolCallId (deterministic, for new data)
- *  2. Positional fallback: for items with null toolCallId, pair adjacent tool_use + tool_result
- * Orphaned tool_results (no matching tool_use) are dropped.
- * tool_use items whose result has not yet arrived are shown as singles.
+ * In focused mode, pairs tool_use and tool_result into a single display row
+ * by matching toolCallId. Orphaned tool_results are dropped. tool_use items
+ * whose result has not yet arrived are shown as singles.
  * In verbose mode, returns all items as individual rows.
  */
 export function buildDisplayItems(items: SessionOutput[], focused: boolean): DisplayItem[] {
@@ -76,7 +73,6 @@ export function buildDisplayItems(items: SessionOutput[], focused: boolean): Dis
     return items.map(item => ({ kind: 'single', item }));
   }
 
-  // Pass 1: ID-based pairing for items that have toolCallId
   const toolUseById = new Map<string, SessionOutput>();
   for (const item of items) {
     if (item.type === 'tool_use' && item.toolCallId) {
@@ -84,53 +80,23 @@ export function buildDisplayItems(items: SessionOutput[], focused: boolean): Dis
     }
   }
 
-  const idPairedToolUseIds = new Set<string>();
-  const idPairs = new Map<string, SessionOutput>(); // toolCallId -> tool_result
-
+  const pairedResultIds = new Map<string, SessionOutput>(); // toolCallId -> tool_result
   for (const item of items) {
     if (item.type === 'tool_result' && item.toolCallId && toolUseById.has(item.toolCallId)) {
-      idPairs.set(item.toolCallId, item);
-      idPairedToolUseIds.add(item.toolCallId);
-    }
-  }
-
-  // Pass 2: positional fallback for null-ID items — mark which indices are positionally paired
-  const positionalPairs = new Map<number, number>(); // toolUse index -> toolResult index
-  const positionallyConsumed = new Set<number>();
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (item.type === 'tool_use' && !item.toolCallId && !idPairedToolUseIds.has(item.toolCallId ?? '')) {
-      // Look for the next tool_result with null toolCallId that hasn't been consumed
-      for (let j = i + 1; j < items.length; j++) {
-        if (positionallyConsumed.has(j)) continue;
-        const next = items[j];
-        if (next.type === 'tool_result' && !next.toolCallId) {
-          positionalPairs.set(i, j);
-          positionallyConsumed.add(j);
-          break;
-        }
-        // Stop looking past another tool_use or non-tool item
-        if (next.type !== 'tool_result') break;
-      }
+      pairedResultIds.set(item.toolCallId, item);
     }
   }
 
   const result: DisplayItem[] = [];
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
+  for (const item of items) {
     if (item.type === 'tool_use') {
-      if (item.toolCallId && idPairedToolUseIds.has(item.toolCallId)) {
-        result.push({ kind: 'tool_pair', toolUse: item, toolResult: idPairs.get(item.toolCallId)! });
-      } else if (positionalPairs.has(i)) {
-        result.push({ kind: 'tool_pair', toolUse: item, toolResult: items[positionalPairs.get(i)!] });
+      if (item.toolCallId && pairedResultIds.has(item.toolCallId)) {
+        result.push({ kind: 'tool_pair', toolUse: item, toolResult: pairedResultIds.get(item.toolCallId)! });
       } else {
         result.push({ kind: 'single', item });
       }
     } else if (item.type === 'tool_result') {
-      if (!positionallyConsumed.has(i) && !idPairs.has(item.toolCallId ?? '')) {
-        // Unpaired orphan — drop in focused mode
-      }
+      // Orphaned or already consumed — drop in focused mode
     } else {
       result.push({ kind: 'single', item });
     }
