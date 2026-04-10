@@ -28,6 +28,8 @@ export class SessionMonitor extends EventEmitter {
   private activeSessionMap = new Map<string, Session>();
   // Track registry PIDs seen on the previous cycle to detect disappearances
   private previousRegistryPids = new Set<number>();
+  // Track last-emitted state per session to suppress no-op session.updated events
+  private lastEmittedSessions = new Map<string, string>();
 
   constructor() {
     super();
@@ -150,6 +152,20 @@ export class SessionMonitor extends EventEmitter {
     } catch { /* ignore — liveness check is best-effort */ }
   }
 
+  private sessionSignature(session: Session): string {
+    return JSON.stringify({
+      status: session.status,
+      lastActivityAt: session.lastActivityAt,
+      summary: session.summary,
+      model: session.model,
+      pid: session.pid,
+      hostPid: session.hostPid,
+      pidSource: session.pidSource,
+      launchMode: session.launchMode,
+      endedAt: session.endedAt,
+    });
+  }
+
   stop(): void {
     if (this.scanInterval) {
       clearInterval(this.scanInterval);
@@ -255,15 +271,21 @@ export class SessionMonitor extends EventEmitter {
           const endedSession: Session = { ...session, status: 'ended', endedAt: now };
           this.emit('session.ended', endedSession);
           this.activeSessionMap.delete(id);
+          this.lastEmittedSessions.delete(id);
         }
       }
 
       for (const session of sessions) {
         if (!this.knownSessionIds.has(session.id)) {
           this.knownSessionIds.add(session.id);
+          this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
           this.emit('session.created', session);
         } else {
-          this.emit('session.updated', session);
+          const sig = this.sessionSignature(session);
+          if (this.lastEmittedSessions.get(session.id) !== sig) {
+            this.lastEmittedSessions.set(session.id, sig);
+            this.emit('session.updated', session);
+          }
         }
         if (session.status === 'ended') {
           this.emit('session.ended', session);

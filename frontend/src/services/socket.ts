@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
-import type { SessionOutput } from '../types';
+import type { Session, SessionOutput } from '../types';
 
 type EventHandler = (data: Record<string, unknown>) => void;
 
@@ -72,7 +72,13 @@ export function onEvent(type: string, handler: EventHandler): () => void {
 
 export function initSocketHandlers(qc: QueryClient): void {
   onEvent('session.created', () => { qc.invalidateQueries({ queryKey: ['sessions'] }); });
-  onEvent('session.updated', () => { qc.invalidateQueries({ queryKey: ['sessions'] }); });
+  onEvent('session.updated', (data) => {
+    const session = data as unknown as Session;
+    qc.setQueryData<Session[]>(['sessions'], (old) => {
+      if (!old) return old;
+      return old.map((s) => s.id === session.id ? { ...s, ...session } : s);
+    });
+  });
   onEvent('session.ended', () => { qc.invalidateQueries({ queryKey: ['sessions'] }); });
   onEvent('repository.added', () => {
     qc.invalidateQueries({ queryKey: ['repositories'] });
