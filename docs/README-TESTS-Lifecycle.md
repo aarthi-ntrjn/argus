@@ -15,6 +15,8 @@ Manual tests for session state transitions across different scenarios: terminal 
 |---|-------|----------|
 | L0-01 | With the dashboard open, start a new Claude Code session (`claude`) directly in a registered repo (not via argus launch) | A new session card appears under the correct repo within 5 seconds; status badge is green "running"; badge is grey "read-only" (detected mode) |
 | L0-02 | With the first session still running, start a second Claude Code session in the same repo | A second session card appears under the same repo; both cards are visible independently with their own badges |
+| L0-03 | Repeat L0-01 using Copilot (`copilot`) instead of Claude Code | Same behaviour: session card appears under the correct repo within 5 seconds with a grey "read-only" badge |
+| L0-04 | Repeat L0-02 with a second Copilot session in the same repo | A second Copilot session card appears; both Copilot cards are visible independently |
 
 ---
 
