@@ -20,6 +20,13 @@ vi.mock('../../src/db/database.js', () => ({
   upsertSession: vi.fn(),
 }));
 
+const mockClaimForSession = vi.hoisted(() => vi.fn().mockReturnValue(null));
+vi.mock('../../src/services/pty-registry.js', () => ({
+  ptyRegistry: {
+    claimForSession: mockClaimForSession,
+  },
+}));
+
 import { CopilotCliDetector } from '../../src/services/copilot-cli-detector.js';
 
 describe('CopilotCliDetector', () => {
@@ -63,5 +70,29 @@ updated_at: ${new Date().toISOString()}
     const session = sessions.find((s) => s.id === testSessionId);
     // PID 99999 should not be running, so status should be 'ended'
     expect(session?.status).toBe('ended');
+  });
+
+  it('sets launchMode=pty when ptyRegistry has a pending connection for the same cwd', async () => {
+    mockClaimForSession.mockReturnValueOnce({ pid: 12345 });
+
+    const detector = new CopilotCliDetector(testDir);
+    const sessions = await detector.scan();
+    const session = sessions.find((s) => s.id === testSessionId);
+
+    expect(session?.launchMode).toBe('pty');
+    expect(session?.pid).toBe(12345);
+    expect(session?.pidSource).toBe('pty_registry');
+    expect(mockClaimForSession).toHaveBeenCalledWith(testSessionId, testRepoCwd);
+  });
+
+  it('sets launchMode=null when no pending PTY connection exists', async () => {
+    mockClaimForSession.mockReturnValueOnce(null);
+
+    const detector = new CopilotCliDetector(testDir);
+    const sessions = await detector.scan();
+    const session = sessions.find((s) => s.id === testSessionId);
+
+    expect(session?.launchMode).toBeNull();
+    expect(session?.pidSource).toBe('lockfile');
   });
 });

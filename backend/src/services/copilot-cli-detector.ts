@@ -6,6 +6,7 @@ import psList from 'ps-list';
 import { randomUUID } from 'crypto';
 import chokidar, { type FSWatcher } from 'chokidar';
 import { upsertSession, getRepositoryByPath, deleteSessionOutput, getSession } from '../db/database.js';
+import { ptyRegistry } from './pty-registry.js';
 import { OutputStore } from './output-store.js';
 import { parseJsonlLine, parseModelFromEvent } from './events-parser.js';
 import type { Session } from '../models/index.js';
@@ -74,13 +75,36 @@ export class CopilotCliDetector {
     const toIso = (val: string | Date | undefined): string =>
       val ? (val instanceof Date ? val.toISOString() : val) : new Date().toISOString();
 
+    // Check if this session was already claimed as a PTY session on a previous scan
+    const existingSession = getSession(sessionId);
+    const alreadyClaimed = existingSession?.launchMode === 'pty';
+
+    let launchMode: 'pty' | null = null;
+    let resolvedPid = pid;
+    let resolvedPidSource: 'pty_registry' | 'lockfile' | null = pid != null ? 'lockfile' : null;
+
+    if (alreadyClaimed) {
+      // Preserve PTY state from the previous scan cycle — already linked to a live WS connection
+      launchMode = 'pty';
+      resolvedPid = existingSession.pid;
+      resolvedPidSource = existingSession.pidSource;
+    } else {
+      // Try to claim a pending launcher WS registered by `argus launch copilot` for this repo
+      const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
+      if (claimed) {
+        launchMode = 'pty';
+        resolvedPid = claimed.pid;
+        resolvedPidSource = 'pty_registry';
+      }
+    }
+
     const session: Session = {
       id: sessionId,
       repositoryId: repo.id,
       type: 'copilot-cli',
-      launchMode: null,
-      pid: pid,
-      pidSource: pid != null ? 'lockfile' : null,
+      launchMode,
+      pid: resolvedPid,
+      pidSource: resolvedPidSource,
       status,
       startedAt: toIso(workspace.created_at),
       endedAt: status === 'ended' ? toIso(workspace.updated_at) : null,
