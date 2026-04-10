@@ -118,8 +118,10 @@ export class CopilotCliDetector {
       console.log(`[CopilotDetector] ptyRegistry already has sessionId=${sessionId} — marking pty`);
       launchMode = 'pty';
       resolvedPidSource = 'pty_registry';
-    } else if (isRunning) {
+    } else if (isRunning && existingSession?.launchMode !== null) {
       // Fallback: try claiming via repoPath (workspace_id message not yet received).
+      // Only attempt if the session isn't already confirmed read-only (launchMode===null in DB
+      // means a previous scan already missed the claim — no PTY will ever arrive for it).
       // Non-running (ended) sessions must not steal a pending launcher WS that belongs
       // to the new active session for the same cwd.
       console.log(`[CopilotDetector] isRunning + not claimed — trying claimForSession sessionId=${sessionId} repoPath="${repo.path}"`);
@@ -133,8 +135,6 @@ export class CopilotCliDetector {
       } else {
         console.log(`[CopilotDetector] claimForSession MISS — no pending WS — sessionId=${sessionId} will be read-only`);
       }
-    } else {
-      console.log(`[CopilotDetector] not running + not claimed — sessionId=${sessionId} read-only`);
     }
 
     console.log(`[CopilotDetector] result sessionId=${sessionId} launchMode=${launchMode} status=${status} hostPid=${resolvedHostPid} pid=${resolvedPid}`);
