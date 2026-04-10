@@ -288,8 +288,13 @@ export class SessionMonitor extends EventEmitter {
           }
         }
         if (session.status === 'ended') {
-          this.emit('session.ended', session);
-          this.activeSessionMap.delete(session.id);
+          // Only emit session.ended once: when the session was previously tracked as active.
+          // Ended sessions remain on disk and would re-trigger this on every scan otherwise.
+          if (this.activeSessionMap.has(session.id)) {
+            this.emit('session.ended', session);
+            this.activeSessionMap.delete(session.id);
+            this.lastEmittedSessions.delete(session.id);
+          }
         } else if (session.status === 'active') {
           this.activeSessionMap.set(session.id, session);
         }
