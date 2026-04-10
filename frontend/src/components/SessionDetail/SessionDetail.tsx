@@ -200,7 +200,7 @@ export default function SessionDetail({ items, dark = false, className, displayM
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className={`break-words ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
-                    {isExpanded ? toolUse.content : summariseToolUse(toolUse)}
+                    {summariseToolUse(toolUse)}
                   </span>
                   <button
                     aria-label={isExpanded ? 'Hide result' : 'Show result'}

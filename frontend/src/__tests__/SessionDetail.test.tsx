@@ -194,18 +194,16 @@ describe('SessionDetail — focused mode (default)', () => {
     expect(screen.getByText('revealed content')).toBeInTheDocument();
   });
 
-  it('reveals full tool command when show result is clicked on a truncated tool_use', async () => {
+  it('keeps the tool summary visible after clicking show result', async () => {
     const user = userEvent.setup();
-    const fullCommand = 'a'.repeat(200);
     const items = [
-      output({ id: '1', type: 'tool_use', toolCallId: 'call-1', toolName: 'Bash', content: fullCommand, sequenceNumber: 1 }),
-      output({ id: '2', type: 'tool_result', toolCallId: 'call-1', content: 'ok', toolName: null, sequenceNumber: 2 }),
+      output({ id: '1', type: 'tool_use', toolCallId: 'call-1', toolName: 'Bash', content: 'npm run test', sequenceNumber: 1 }),
+      output({ id: '2', type: 'tool_result', toolCallId: 'call-1', content: 'all tests passed', toolName: null, sequenceNumber: 2 }),
     ];
     render(<SessionDetail sessionId="s1" items={items} />);
-    // Summary is truncated before click
-    expect(screen.queryByText(fullCommand)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /show result/i }));
-    expect(screen.getByText(fullCommand)).toBeInTheDocument();
+    expect(screen.getByText('Bash: npm run test')).toBeInTheDocument();
+    expect(screen.getByText('all tests passed')).toBeInTheDocument();
   });
 
   it('shows compact summary for tool_use rows — not raw JSON', () => {
