@@ -100,6 +100,32 @@ describe('PtyRegistry', () => {
     expect(() => registry.handleAck('unknown-action', true)).not.toThrow();
   });
 
+  it('claimByTempId returns pid and promotes to claimed connection', () => {
+    const ws = makeMockWs();
+    registry.registerPending('temp-abc', ws as any, '/repo', 7777);
+    const result = registry.claimByTempId('temp-abc', 'workspace-session-1');
+    expect(result).toEqual({ pid: 7777 });
+    expect(registry.has('workspace-session-1')).toBe(true);
+  });
+
+  it('claimByTempId returns null when tempId not found', () => {
+    expect(registry.claimByTempId('no-such-temp', 'any-session')).toBeNull();
+  });
+
+  it('claimByTempId sets getClaimedId mapping', () => {
+    const ws = makeMockWs();
+    registry.registerPending('temp-xyz', ws as any, '/repo2', 8888);
+    registry.claimByTempId('temp-xyz', 'workspace-session-2');
+    expect(registry.getClaimedId('temp-xyz')).toBe('workspace-session-2');
+  });
+
+  it('claimByTempId removes pending entry so subsequent claimForSession returns null', () => {
+    const ws = makeMockWs();
+    registry.registerPending('temp-def', ws as any, '/repo3', 9999);
+    registry.claimByTempId('temp-def', 'workspace-session-3');
+    expect(registry.claimForSession('other', '/repo3')).toBeNull();
+  });
+
   it('sendPrompt() rejects after timeout when no ack arrives', async () => {
     vi.useFakeTimers();
     registerAndClaim(registry, 'session-1', '/rp4', 4);

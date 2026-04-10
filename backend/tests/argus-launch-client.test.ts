@@ -152,6 +152,58 @@ describe('ArgusLaunchClient', () => {
     }
   });
 
+  it('sendWorkspaceId sends workspace_id message over the WebSocket', () => {
+    const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
+    const mockWs = (client as any).ws;
+    mockWs.readyState = 1;
+
+    client.sendWorkspaceId('copilot-session-uuid');
+    expect(mockWs.send).toHaveBeenCalledWith(
+      JSON.stringify({ type: 'workspace_id', sessionId: 'copilot-session-uuid' })
+    );
+  });
+
+  it('sendWorkspaceId re-sends workspace_id on WS reconnect via handleOpen', async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
+      const firstWs = MockWebSocket.mock.results[0].value;
+      firstWs.readyState = 1;
+
+      // Discover the workspace ID before reconnect
+      client.sendWorkspaceId('copilot-ws-id');
+
+      // Simulate unexpected WS close and reconnect
+      firstWs.emit('close');
+      vi.advanceTimersByTime(2100);
+
+      const secondWs = MockWebSocket.mock.results[1].value;
+      const openHandler = secondWs.on.mock.calls.find((c: string[]) => c[0] === 'open')?.[1];
+      expect(openHandler).toBeDefined();
+      openHandler();
+
+      // Should have sent both register and workspace_id
+      const sent = secondWs.send.mock.calls.map((c: string[]) => JSON.parse(c[0]));
+      expect(sent.some((m: { type: string }) => m.type === 'workspace_id' && (m as any).sessionId === 'copilot-ws-id')).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('handleOpen does not send workspace_id if sendWorkspaceId was never called', () => {
+    const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
+    const mockWs = (client as any).ws;
+
+    const registerInfo = { sessionId: 'abc', pid: 1, sessionType: 'copilot-cli' as const, cwd: '/tmp' };
+    client.setRegisterInfo(registerInfo);
+
+    const openHandler = mockWs.on.mock.calls.find((c: string[]) => c[0] === 'open')?.[1];
+    openHandler();
+
+    const sent = mockWs.send.mock.calls.map((c: string[]) => JSON.parse(c[0]));
+    expect(sent.every((m: { type: string }) => m.type !== 'workspace_id')).toBe(true);
+  });
+
   it('notifySessionEnded sets isClosing flag and prevents reconnect after intentional shutdown', async () => {
     vi.useFakeTimers();
     try {

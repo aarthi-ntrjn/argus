@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 import { spawn } from 'node-pty';
 import { execSync } from 'child_process';
+import { readdirSync, existsSync, readFileSync } from 'fs';
 import { randomUUID } from 'crypto';
-import { platform } from 'os';
+import { platform, homedir } from 'os';
+import { join, normalize } from 'path';
+import { load as yamlLoad } from 'js-yaml';
 import { resolveLaunchCommand } from './launch-command-resolver.js';
 import { ArgusLaunchClient } from './argus-launch-client.js';
 
@@ -81,6 +84,38 @@ process.stdout.on('resize', () => {
 const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
 client.setRegisterInfo({ sessionId, pid: pty.pid, sessionType, cwd });
 
+// For copilot-cli: watch the session-state dir for a workspace.yaml whose cwd
+// matches ours, then send its session ID to Argus for direct claim — no repoPath
+// matching required, which eliminates path-normalization failures.
+let workspaceWatcher: ReturnType<typeof setInterval> | null = null;
+if (sessionType === 'copilot-cli') {
+  const sessionStateDir = join(homedir(), '.copilot', 'session-state');
+  let watchAttempts = 0;
+  workspaceWatcher = setInterval(() => {
+    watchAttempts++;
+    if (watchAttempts > 60) { clearInterval(workspaceWatcher!); workspaceWatcher = null; return; }
+    try {
+      if (!existsSync(sessionStateDir)) return;
+      const entries = readdirSync(sessionStateDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const workspaceFile = join(sessionStateDir, entry.name, 'workspace.yaml');
+        if (!existsSync(workspaceFile)) continue;
+        try {
+          const content = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as { id?: string; cwd?: string };
+          if (content?.cwd && content.id &&
+              normalize(content.cwd).toLowerCase() === normalize(cwd).toLowerCase()) {
+            client.sendWorkspaceId(content.id);
+            clearInterval(workspaceWatcher!);
+            workspaceWatcher = null;
+            break;
+          }
+        } catch { /* ignore malformed yaml */ }
+      }
+    } catch { /* ignore fs errors */ }
+  }, 500);
+}
+
 // When Argus sends a prompt, write it to the PTY
 client.onSendPrompt((actionId: string, prompt: string) => {
   try {
@@ -133,6 +168,7 @@ if (isWin) {
 
 // When the tool exits, clean up
 pty.onExit(({ exitCode }: { exitCode: number }) => {
+  if (workspaceWatcher) { clearInterval(workspaceWatcher); workspaceWatcher = null; }
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(false);
   }

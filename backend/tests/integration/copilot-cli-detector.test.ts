@@ -175,6 +175,22 @@ updated_at: ${new Date().toISOString()}
     expect(mockClaimForSession).not.toHaveBeenCalled();
   });
 
+  it('sets launchMode=pty when ptyRegistry already has the session (workspace_id claimed before scan)', async () => {
+    // Simulate: workspace_id message arrived before this scan, session is in connections
+    mockPsList.mockResolvedValueOnce([{ pid: testPid, name: 'test', ppid: 1 }]);
+    mockHas.mockReturnValueOnce(true); // ptyRegistry.has(sessionId) = true
+    // getSession returns undefined (first scan) — session not in DB yet
+    mockGetSession.mockReturnValueOnce(undefined);
+
+    const detector = new CopilotCliDetector(testDir);
+    const sessions = await detector.scan();
+    const session = sessions.find((s) => s.id === testSessionId);
+
+    expect(session?.launchMode).toBe('pty');
+    expect(session?.pidSource).toBe('pty_registry');
+    expect(mockClaimForSession).not.toHaveBeenCalled();
+  });
+
   it('preserves launchMode=pty without re-claiming when alreadyClaimed=true and WS is still live', async () => {
     mockGetSession.mockReturnValueOnce({
       id: testSessionId,

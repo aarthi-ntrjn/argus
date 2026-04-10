@@ -16,6 +16,7 @@ export class ArgusLaunchClient {
   private registerInfo: RegisterInfo | null = null;
   private promptCallback: PromptCallback | null = null;
   private isClosing = false;
+  private workspaceSessionId: string | null = null;
 
   constructor(url: string) {
     this.url = url;
@@ -58,6 +59,11 @@ export class ArgusLaunchClient {
     this.send({ type: 'update_pid', pid });
   }
 
+  sendWorkspaceId(id: string): void {
+    this.workspaceSessionId = id;
+    this.send({ type: 'workspace_id', sessionId: id });
+  }
+
   notifySessionEnded(sessionId: string, exitCode: number | null): Promise<void> {
     this.isClosing = true;
     return new Promise<void>((resolve) => {
@@ -76,6 +82,10 @@ export class ArgusLaunchClient {
   private handleOpen(): void {
     if (this.registerInfo) {
       this.send({ type: 'register', ...this.registerInfo });
+    }
+    // Re-send workspace_id on reconnect so the backend can re-claim the session
+    if (this.workspaceSessionId) {
+      this.send({ type: 'workspace_id', sessionId: this.workspaceSessionId });
     }
   }
 

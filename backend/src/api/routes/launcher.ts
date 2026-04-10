@@ -44,12 +44,18 @@ interface SessionEndedMessage {
   exitCode: number | null;
 }
 
+interface WorkspaceIdMessage {
+  type: 'workspace_id';
+  sessionId: string;
+}
+
 type LauncherMessage =
   | RegisterMessage
   | PromptDeliveredMessage
   | PromptFailedMessage
   | UpdatePidMessage
-  | SessionEndedMessage;
+  | SessionEndedMessage
+  | WorkspaceIdMessage;
 
 function ensureRepository(cwd: string): Repository {
   const existing = getRepositoryByPath(cwd);
@@ -118,6 +124,24 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
             broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
             fastify.log.info({ claudeSessionId, pid: msg.pid }, 'Updated session with resolved tool PID');
           }
+        }
+        return;
+      }
+
+      if (msg.type === 'workspace_id') {
+        // launch.ts found the copilot workspace.yaml and is telling us the real session ID.
+        // Claim the pending connection by tempId directly — no repoPath matching needed.
+        if (!tempId) return;
+        const claimed = ptyRegistry.claimByTempId(tempId, msg.sessionId);
+        if (claimed) {
+          // Eagerly upgrade the DB session if a scan already created it with launchMode:null
+          const session = getSession(msg.sessionId);
+          if (session && session.launchMode !== 'pty') {
+            const updated = { ...session, launchMode: 'pty' as const, pid: claimed.pid, pidSource: 'pty_registry' as const };
+            upsertSession(updated);
+            broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
+          }
+          fastify.log.info({ claudeSessionId: msg.sessionId, pid: claimed.pid }, 'Copilot session claimed via workspace_id');
         }
         return;
       }

@@ -98,8 +98,12 @@ export class CopilotCliDetector {
           resolvedPidSource = 'pty_registry';
         }
       }
+    } else if (ptyRegistry.has(sessionId)) {
+      // workspace_id message already claimed this session before the scan ran
+      launchMode = 'pty';
+      resolvedPidSource = 'pty_registry';
     } else if (isRunning) {
-      // Not yet claimed — only attempt initial claim for a running session.
+      // Fallback: try claiming via repoPath (workspace_id message not yet received).
       // Non-running (ended) sessions must not steal a pending launcher WS that belongs
       // to the new active session for the same cwd.
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path);

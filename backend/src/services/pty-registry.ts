@@ -42,6 +42,21 @@ export class PtyRegistry {
     if (pending) pending.pid = pid;
   }
 
+  // Called by the launcher WS handler when launch.ts sends a workspace_id message
+  // after discovering the copilot workspace.yaml. Promotes the pending connection to
+  // a claimed connection keyed by sessionId, bypassing repoPath matching entirely.
+  claimByTempId(tempId: string, sessionId: string): { pid: number } | null {
+    for (const [key, pending] of this.pendingByRepoPath) {
+      if (pending.tempId === tempId) {
+        this.connections.set(sessionId, pending.ws);
+        this.tempToClaimedId.set(tempId, sessionId);
+        this.pendingByRepoPath.delete(key);
+        return { pid: pending.pid };
+      }
+    }
+    return null;
+  }
+
   // Called by ClaudeCodeDetector when a hook fires for a session in repoPath.
   // Promotes the pending connection to a claimed connection keyed by claudeSessionId.
   // Returns the launcher pid so the detector can store it on the session, or null
