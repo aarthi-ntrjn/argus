@@ -126,6 +126,7 @@ export class PtyRegistry {
     return new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pending.delete(actionId);
+        console.log(`[PtyRegistry.sendPrompt] TIMEOUT — no ack received within ${timeoutMs}ms actionId=${actionId} sessionId=${sessionId}`);
         reject(new Error(`Prompt delivery timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
@@ -138,6 +139,7 @@ export class PtyRegistry {
 
   handleAck(actionId: string, success: boolean, error?: string): void {
     const entry = this.pending.get(actionId);
+    console.log(`[PtyRegistry.handleAck] actionId=${actionId} success=${success} found=${!!entry} error=${error ?? ''}`);
     if (!entry) return;
 
     clearTimeout(entry.timeout);
