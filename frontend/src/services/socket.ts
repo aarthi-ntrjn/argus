@@ -71,7 +71,10 @@ export function onEvent(type: string, handler: EventHandler): () => void {
 }
 
 export function initSocketHandlers(qc: QueryClient): void {
-  onEvent('session.created', () => { qc.invalidateQueries({ queryKey: ['sessions'] }); });
+  onEvent('session.created', (data) => {
+    const session = data as unknown as Session;
+    qc.setQueryData<Session[]>(['sessions'], (old) => old ? [...old, session] : [session]);
+  });
   onEvent('session.updated', (data) => {
     const session = data as unknown as Session;
     qc.setQueryData<Session[]>(['sessions'], (old) => {
