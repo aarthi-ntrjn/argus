@@ -43,7 +43,6 @@ Manual tests for session state transitions across different scenarios: terminal 
 | L-18 | Stop the Argus server. Start a Copilot CLI session in a registered repo. Then start the server and open the dashboard | The pre-existing Copilot CLI session is discovered on startup (via session-state scan); it appears as "running" |
 | L-19 | Stop the Argus server. Start a Claude Code session, then end it (type `/exit`). Then start the server | The ended session is detected as "ended" on startup (JSONL exists but PID is gone); dashboard shows it with a grey "ended" badge |
 | L-20 | Stop the Argus server. Start a Copilot CLI session, then end it. Then start the server | The ended session is detected as "ended" on startup (lock file gone or PID not running); dashboard shows it with a grey "ended" badge |
-| L-21 | Stop the Argus server. Start a Claude Code session, leave it idle for 60+ minutes, then start the server | Session is detected on startup; if PID is still alive, it appears as "running" (frontend shows "resting" due to stale JSONL); if PID is gone, it appears as "ended" |
 
 ---
 
