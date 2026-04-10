@@ -145,14 +145,15 @@ describe('buildDisplayItems', () => {
     expect(result[1].kind).toBe('single');
   });
 
-  it('focused mode handles null toolCallId: tool_use emitted as single, tool_result dropped', () => {
-    const items = [
-      output({ id: '1', type: 'tool_use', toolCallId: null }),
-      output({ id: '2', type: 'tool_result', toolCallId: null }),
-    ];
-    const result = buildDisplayItems(items, true);
+  it('focused mode handles null toolCallId: pairs adjacent tool_use + tool_result positionally', () => {
+    const toolUse = output({ id: '1', type: 'tool_use', toolCallId: null });
+    const toolResult = output({ id: '2', type: 'tool_result', toolCallId: null });
+    const result = buildDisplayItems([toolUse, toolResult], true);
     expect(result).toHaveLength(1);
-    expect(result[0].kind).toBe('single');
-    if (result[0].kind === 'single') expect(result[0].item.id).toBe('1');
+    expect(result[0].kind).toBe('tool_pair');
+    if (result[0].kind === 'tool_pair') {
+      expect(result[0].toolUse.id).toBe('1');
+      expect(result[0].toolResult.id).toBe('2');
+    }
   });
 });
