@@ -189,12 +189,13 @@ export default function SessionDetail({ items, dark = false, className, displayM
     <div className={`overflow-y-auto p-4 space-y-1 font-mono text-xs min-h-full ${dark ? 'bg-gray-900' : ''} ${className ?? ''}`}>
       {displayItems.map((di) => {
         if (di.kind === 'tool_group') {
-          const groupId = di.pairs[0].toolUse.id;
+          const pairs = di.groupItems.filter(gi => gi.kind === 'tool_pair') as Array<{ kind: 'tool_pair'; toolUse: SessionOutput; toolResult: SessionOutput }>;
+          const groupId = pairs[0].toolUse.id;
           const isExpanded = expandedIds.has(groupId);
-          const toolNames = di.pairs.map(p => p.toolUse.toolName).filter(Boolean);
+          const toolNames = pairs.map(p => p.toolUse.toolName).filter(Boolean);
           const uniqueNames = [...new Set(toolNames)];
           const nameSummary = uniqueNames.slice(0, 3).join(', ') + (uniqueNames.length > 3 ? ', …' : '');
-          const summary = `${di.pairs.length} tool calls${nameSummary ? `: ${nameSummary}` : ''}`;
+          const summary = `${pairs.length} tool call${pairs.length === 1 ? '' : 's'}${nameSummary ? `: ${nameSummary}` : ''}`;
           return (
             <div key={groupId} className={`rounded border ${dark ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-gray-50'}`}>
               <button
@@ -207,7 +208,16 @@ export default function SessionDetail({ items, dark = false, className, displayM
               </button>
               {isExpanded && (
                 <div className={`border-t px-3 py-2 space-y-2 ${dark ? 'border-gray-700' : 'border-gray-200'}`}>
-                  {di.pairs.map(({ toolUse, toolResult }) => {
+                  {di.groupItems.map((gi) => {
+                    if (gi.kind === 'single') {
+                      return (
+                        <div key={gi.item.id} className="flex gap-3 items-start">
+                          {renderBadgeCol(gi.item)}
+                          <div className="min-w-0 flex-1">{renderContent(gi.item)}</div>
+                        </div>
+                      );
+                    }
+                    const { toolUse, toolResult } = gi;
                     const pairExpanded = expandedIds.has(`pair-${toolUse.id}`);
                     const typeInfo = getBadge(toolUse);
                     const badgeColor = dark ? typeInfo.dark : typeInfo.light;

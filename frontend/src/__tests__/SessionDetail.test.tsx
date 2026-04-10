@@ -174,12 +174,14 @@ describe('SessionDetail — focused mode (default)', () => {
     expect(screen.getByText('file contents here')).toBeInTheDocument();
   });
 
-  it('shows expand button for collapsed tool_result in focused mode', () => {
+  it('shows expand button for collapsed tool_result in focused mode', async () => {
+    const user = userEvent.setup();
     const items = [
       output({ id: '1', type: 'tool_use', toolCallId: 'call-1', toolName: 'bash', content: 'run()', sequenceNumber: 1 }),
       output({ id: '2', type: 'tool_result', toolCallId: 'call-1', content: 'hidden content', toolName: null, sequenceNumber: 2 }),
     ];
     render(<SessionDetail sessionId="s1" items={items} />);
+    await user.click(screen.getByRole('button', { name: /expand tool calls/i }));
     expect(screen.getByRole('button', { name: /show result/i })).toBeInTheDocument();
   });
 
@@ -190,6 +192,7 @@ describe('SessionDetail — focused mode (default)', () => {
       output({ id: '2', type: 'tool_result', toolCallId: 'call-1', content: 'revealed content', toolName: null, sequenceNumber: 2 }),
     ];
     render(<SessionDetail sessionId="s1" items={items} />);
+    await user.click(screen.getByRole('button', { name: /expand tool calls/i }));
     await user.click(screen.getByRole('button', { name: /show result/i }));
     expect(screen.getByText('revealed content')).toBeInTheDocument();
   });
@@ -201,6 +204,7 @@ describe('SessionDetail — focused mode (default)', () => {
       output({ id: '2', type: 'tool_result', toolCallId: 'call-1', content: 'all tests passed', toolName: null, sequenceNumber: 2 }),
     ];
     render(<SessionDetail sessionId="s1" items={items} />);
+    await user.click(screen.getByRole('button', { name: /expand tool calls/i }));
     await user.click(screen.getByRole('button', { name: /show result/i }));
     expect(screen.getByText('Bash: npm run test')).toBeInTheDocument();
     expect(screen.getByText('all tests passed')).toBeInTheDocument();
@@ -252,6 +256,16 @@ describe('SessionDetail — focused mode (default)', () => {
 });
 
 describe('SessionDetail — tool groups (focused mode)', () => {
+  it('shows a collapsed summary for a single tool pair', () => {
+    const items = [
+      output({ id: '1', type: 'tool_use', toolCallId: 'call-1', toolName: 'Bash', content: 'ls', sequenceNumber: 1 }),
+      output({ id: '2', type: 'tool_result', toolCallId: 'call-1', content: 'file.txt', toolName: null, sequenceNumber: 2 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} />);
+    expect(screen.getByText(/1 tool call/)).toBeInTheDocument();
+    expect(screen.queryByText('Bash: ls')).not.toBeInTheDocument();
+  });
+
   it('shows a collapsed summary for 2+ consecutive tool pairs', () => {
     const items = [
       output({ id: '1', type: 'tool_use', toolCallId: 'call-1', toolName: 'Bash', content: 'ls', sequenceNumber: 1 }),
@@ -275,6 +289,23 @@ describe('SessionDetail — tool groups (focused mode)', () => {
     render(<SessionDetail sessionId="s1" items={items} />);
     await user.click(screen.getByRole('button', { name: /expand tool calls/i }));
     expect(screen.getByText('Bash: ls')).toBeInTheDocument();
+    expect(screen.getByText('Read: file.txt')).toBeInTheDocument();
+  });
+
+  it('groups tool pairs separated by assistant messages (GHCP pattern)', async () => {
+    const user = userEvent.setup();
+    const items = [
+      output({ id: '1', type: 'tool_use', toolCallId: 'call-1', toolName: 'Bash', content: 'ls', sequenceNumber: 1 }),
+      output({ id: '2', type: 'tool_result', toolCallId: 'call-1', content: 'file.txt', toolName: null, sequenceNumber: 2 }),
+      output({ id: '3', type: 'message', role: 'assistant', content: 'Now reading...', toolName: null, sequenceNumber: 3 }),
+      output({ id: '4', type: 'tool_use', toolCallId: 'call-2', toolName: 'Read', content: 'file.txt', sequenceNumber: 4 }),
+      output({ id: '5', type: 'tool_result', toolCallId: 'call-2', content: 'content here', toolName: null, sequenceNumber: 5 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} />);
+    expect(screen.getByText(/2 tool calls/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /expand tool calls/i }));
+    expect(screen.getByText('Bash: ls')).toBeInTheDocument();
+    expect(screen.getByText('Now reading...')).toBeInTheDocument();
     expect(screen.getByText('Read: file.txt')).toBeInTheDocument();
   });
 });
