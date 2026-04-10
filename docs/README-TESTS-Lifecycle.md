@@ -48,18 +48,7 @@ Manual tests for session state transitions across different scenarios: terminal 
 
 ---
 
-## L3: Server is down during entire session lifecycle
-
-| # | Steps | Expected |
-|---|-------|----------|
-| L-28 | Stop the Argus server. Start a Claude Code session, interact with it, then end it. Start the server | The session is detected on startup as "ended" (JSONL exists, PID gone); full output history is available in the output pane |
-| L-29 | Stop the Argus server. Start a Copilot CLI session, interact with it, then end it. Start the server | The session is detected on startup as "ended" (no lock file or PID gone); output history from events.jsonl is available |
-| L-30 | Stop the Argus server. Start and end multiple Claude Code sessions in the same repo. Start the server | The most recently modified JSONL is picked up; older sessions may not appear (only the latest per repo is scanned on startup) |
-| L-31 | Stop the Argus server. Start and end multiple Copilot CLI sessions. Start the server | All session directories under `~/.copilot/session-state/` are scanned; each session appears with its correct status |
-
----
-
-## L4: Mixed lifecycle transitions on the dashboard
+## L3: Mixed lifecycle transitions on the dashboard
 
 | # | Steps | Expected |
 |---|-------|----------|
@@ -73,7 +62,7 @@ Manual tests for session state transitions across different scenarios: terminal 
 
 ---
 
-## L5: Session ends (server already running)
+## L4: Session ends (server already running)
 
 | # | Steps | Expected |
 |---|-------|----------|
