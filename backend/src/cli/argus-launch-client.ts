@@ -3,7 +3,8 @@ import type { SessionType } from '../models/index.js';
 
 interface RegisterInfo {
   sessionId: string;
-  pid: number;
+  hostPid: number;
+  pid: number | null;
   sessionType: SessionType;
   cwd: string;
 }

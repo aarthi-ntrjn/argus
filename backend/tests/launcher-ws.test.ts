@@ -29,7 +29,7 @@ describe('PtyRegistry — pending / claim flow', () => {
     registry.registerPending('temp-uuid', mockWs as any, '/repo/path', 8348);
 
     const claimed = registry.claimForSession('claude-session-id', '/repo/path');
-    expect(claimed).toEqual({ pid: 8348 });
+    expect(claimed).toEqual({ pid: null, hostPid: 8348 });
     expect(registry.has('claude-session-id')).toBe(true);
   });
 
@@ -95,7 +95,7 @@ describe('PtyRegistry — pending / claim flow', () => {
     const mockWs = { send: vi.fn(), readyState: 1 };
     registry.registerPending('temp-copilot', mockWs as any, '/repo/copilot', 4444);
     const result = registry.claimByTempId('temp-copilot', 'workspace-uuid-1');
-    expect(result).toEqual({ pid: 4444 });
+    expect(result).toEqual({ pid: null, hostPid: 4444 });
     expect(registry.has('workspace-uuid-1')).toBe(true);
   });
 

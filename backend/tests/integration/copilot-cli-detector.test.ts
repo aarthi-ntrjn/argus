@@ -91,14 +91,16 @@ updated_at: ${new Date().toISOString()}
   it('sets launchMode=pty when ptyRegistry has a pending connection for the same cwd', async () => {
     // Session must be running — only active sessions may claim a pending launcher WS
     mockPsList.mockResolvedValueOnce([{ pid: testPid, name: 'test', ppid: 1 }]);
-    mockClaimForSession.mockReturnValueOnce({ pid: 12345 });
+    // Simulate Windows: pid is null until update_pid resolves it; hostPid is the wrapper
+    mockClaimForSession.mockReturnValueOnce({ pid: null, hostPid: 12345 });
 
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
     const session = sessions.find((s) => s.id === testSessionId);
 
     expect(session?.launchMode).toBe('pty');
-    expect(session?.pid).toBe(12345);
+    expect(session?.pid).toBeNull();
+    expect(session?.hostPid).toBe(12345);
     expect(session?.pidSource).toBe('pty_registry');
     expect(mockClaimForSession).toHaveBeenCalledWith(testSessionId, testRepoCwd);
   });
@@ -138,11 +140,12 @@ updated_at: ${new Date().toISOString()}
       id: testSessionId,
       launchMode: 'pty',
       pid: 11111,
+      hostPid: 10000,
       pidSource: 'pty_registry' as const,
       status: 'active',
     });
     mockHas.mockReturnValueOnce(false);
-    mockClaimForSession.mockReturnValueOnce({ pid: 22222 });
+    mockClaimForSession.mockReturnValueOnce({ pid: 22222, hostPid: 20000 });
 
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
@@ -150,6 +153,7 @@ updated_at: ${new Date().toISOString()}
 
     expect(session?.launchMode).toBe('pty');
     expect(session?.pid).toBe(22222);
+    expect(session?.hostPid).toBe(20000);
     expect(session?.pidSource).toBe('pty_registry');
     expect(mockClaimForSession).toHaveBeenCalledWith(testSessionId, testRepoCwd);
   });
@@ -161,6 +165,7 @@ updated_at: ${new Date().toISOString()}
       id: testSessionId,
       launchMode: 'pty',
       pid: 11111,
+      hostPid: 10000,
       pidSource: 'pty_registry' as const,
       status: 'ended',
     });
@@ -172,6 +177,7 @@ updated_at: ${new Date().toISOString()}
 
     expect(session?.launchMode).toBe('pty');
     expect(session?.pid).toBe(11111); // preserved from existingSession
+    expect(session?.hostPid).toBe(10000); // preserved from existingSession
     expect(mockClaimForSession).not.toHaveBeenCalled();
   });
 
@@ -196,6 +202,7 @@ updated_at: ${new Date().toISOString()}
       id: testSessionId,
       launchMode: 'pty',
       pid: 33333,
+      hostPid: 30000,
       pidSource: 'pty_registry' as const,
       status: 'active',
     });

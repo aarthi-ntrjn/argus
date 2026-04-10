@@ -378,8 +378,8 @@ describe('ClaudeCodeDetector — PTY claim on first hook (T029 redesign)', () =>
     const claudeSessionId = 'claude-real-session-e4d9';
     const mockWs = { send: vi.fn(), readyState: 1 };
 
-    // Simulate: launcher registered but no DB session yet
-    ptyRegistryModule.ptyRegistry.registerPending('temp-uuid', mockWs as any, FAKE_REPO_PATH, 8348);
+    // Simulate: launcher registered (non-Windows: hostPid === pid = 8348)
+    ptyRegistryModule.ptyRegistry.registerPending('temp-uuid', mockWs as any, FAKE_REPO_PATH, 8348, 8348);
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
     await new ClaudeCodeDetector().handleHookPayload({
@@ -393,6 +393,7 @@ describe('ClaudeCodeDetector — PTY claim on first hook (T029 redesign)', () =>
     expect(session).toBeDefined();
     expect(session?.launchMode).toBe('pty');
     expect(session?.pid).toBe(8348);
+    expect(session?.hostPid).toBe(8348);
 
     // The PTY registry now routes to the claude session ID
     expect(ptyRegistryModule.ptyRegistry.has(claudeSessionId)).toBe(true);

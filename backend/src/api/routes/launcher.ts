@@ -17,7 +17,8 @@ import type { SessionType } from '../../models/index.js';
 interface RegisterMessage {
   type: 'register';
   sessionId: string;
-  pid: number;
+  hostPid: number;
+  pid: number | null;
   sessionType: SessionType;
   cwd: string;
 }
@@ -93,8 +94,8 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         // Hold the connection pending — we do NOT create a DB session here.
         // The session is created in ClaudeCodeDetector.handleHookPayload once
         // Claude fires its first hook and we learn the real session ID.
-        ptyRegistry.registerPending(msg.sessionId, socket, msg.cwd, msg.pid);
-        fastify.log.info({ tempId: msg.sessionId, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending — waiting for Claude hook');
+        ptyRegistry.registerPending(msg.sessionId, socket, msg.cwd, msg.hostPid, msg.pid);
+        fastify.log.info({ tempId: msg.sessionId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending — waiting for Claude hook');
         return;
       }
 
@@ -139,11 +140,11 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
           const session = getSession(msg.sessionId);
           if (session && session.launchMode !== 'pty') {
             fastify.log.info({ claudeSessionId: msg.sessionId }, 'Launcher: upgrading existing session to launchMode=pty');
-            const updated = { ...session, launchMode: 'pty' as const, pid: claimed.pid, pidSource: 'pty_registry' as const };
+            const updated = { ...session, launchMode: 'pty' as const, pid: claimed.pid, hostPid: claimed.hostPid, pidSource: 'pty_registry' as const };
             upsertSession(updated);
             broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
           }
-          fastify.log.info({ claudeSessionId: msg.sessionId, pid: claimed.pid }, 'Copilot session claimed via workspace_id');
+          fastify.log.info({ claudeSessionId: msg.sessionId, hostPid: claimed.hostPid, pid: claimed.pid }, 'Copilot session claimed via workspace_id');
         } else {
           fastify.log.warn({ tempId, workspaceSessionId: msg.sessionId }, 'Launcher: workspace_id claim failed — no pending entry for tempId');
         }

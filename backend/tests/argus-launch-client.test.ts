@@ -48,7 +48,7 @@ describe('ArgusLaunchClient', () => {
     const openHandler = mockWs.on.mock.calls.find((c: string[]) => c[0] === 'open')?.[1];
     expect(openHandler).toBeDefined();
 
-    const registerInfo = { sessionId: 'abc-123', pid: 5555, sessionType: 'claude-code' as const, cwd: '/tmp' };
+    const registerInfo = { sessionId: 'abc-123', hostPid: 5555, pid: null, sessionType: 'claude-code' as const, cwd: '/tmp' };
     client.setRegisterInfo(registerInfo);
     openHandler();
 
@@ -125,7 +125,7 @@ describe('ArgusLaunchClient', () => {
       const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
       expect(MockWebSocket).toHaveBeenCalledTimes(1);
 
-      const registerInfo = { sessionId: 'abc', pid: 1, sessionType: 'claude-code' as const, cwd: '/tmp' };
+      const registerInfo = { sessionId: 'abc', hostPid: 1, pid: 1, sessionType: 'claude-code' as const, cwd: '/tmp' };
       client.setRegisterInfo(registerInfo);
 
       // Trigger unexpected close on the first WS
@@ -194,7 +194,7 @@ describe('ArgusLaunchClient', () => {
     const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
     const mockWs = (client as any).ws;
 
-    const registerInfo = { sessionId: 'abc', pid: 1, sessionType: 'copilot-cli' as const, cwd: '/tmp' };
+    const registerInfo = { sessionId: 'abc', hostPid: 1, pid: 1, sessionType: 'copilot-cli' as const, cwd: '/tmp' };
     client.setRegisterInfo(registerInfo);
 
     const openHandler = mockWs.on.mock.calls.find((c: string[]) => c[0] === 'open')?.[1];

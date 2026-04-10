@@ -81,6 +81,7 @@ export class CopilotCliDetector {
 
     let launchMode: 'pty' | null = null;
     let resolvedPid = pid;
+    let resolvedHostPid: number | null = existingSession?.hostPid ?? null;
     let resolvedPidSource: PidSource | null = pid != null ? 'lockfile' : null;
 
     const registryHas = ptyRegistry.has(sessionId);
@@ -90,6 +91,7 @@ export class CopilotCliDetector {
       // Preserve launchMode:'pty' as a historical record — this session was launched via argus launch
       launchMode = 'pty';
       resolvedPid = existingSession.pid;
+      resolvedHostPid = existingSession.hostPid;
       resolvedPidSource = existingSession.pidSource;
       // If the WS is gone but the process is still running (e.g. Argus restarted), try to
       // re-link to a freshly reconnected launcher WS. If that also fails, keep the existing
@@ -99,8 +101,9 @@ export class CopilotCliDetector {
         const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
         if (claimed) {
           resolvedPid = claimed.pid;
+          resolvedHostPid = claimed.hostPid;
           resolvedPidSource = 'pty_registry';
-          console.log(`[CopilotDetector] re-link OK sessionId=${sessionId} pid=${claimed.pid}`);
+          console.log(`[CopilotDetector] re-link OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
         } else {
           console.log(`[CopilotDetector] re-link MISS — no pending WS yet for sessionId=${sessionId}`);
         }
@@ -119,8 +122,9 @@ export class CopilotCliDetector {
       if (claimed) {
         launchMode = 'pty';
         resolvedPid = claimed.pid;
+        resolvedHostPid = claimed.hostPid;
         resolvedPidSource = 'pty_registry';
-        console.log(`[CopilotDetector] claimForSession OK sessionId=${sessionId} pid=${claimed.pid}`);
+        console.log(`[CopilotDetector] claimForSession OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
       } else {
         console.log(`[CopilotDetector] claimForSession MISS — no pending WS — sessionId=${sessionId} will be read-only`);
       }
@@ -128,7 +132,7 @@ export class CopilotCliDetector {
       console.log(`[CopilotDetector] not running + not claimed — sessionId=${sessionId} read-only`);
     }
 
-    console.log(`[CopilotDetector] result sessionId=${sessionId} launchMode=${launchMode} status=${status} pid=${resolvedPid}`);
+    console.log(`[CopilotDetector] result sessionId=${sessionId} launchMode=${launchMode} status=${status} hostPid=${resolvedHostPid} pid=${resolvedPid}`);
 
     const session: Session = {
       id: sessionId,
@@ -136,6 +140,7 @@ export class CopilotCliDetector {
       type: 'copilot-cli',
       launchMode,
       pid: resolvedPid,
+      hostPid: resolvedHostPid,
       pidSource: resolvedPidSource,
       status,
       startedAt: toIso(workspace.created_at),

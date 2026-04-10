@@ -82,7 +82,9 @@ process.stdout.on('resize', () => {
 
 // Connect to Argus backend
 const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
-client.setRegisterInfo({ sessionId, pid: pty.pid, sessionType, cwd });
+// On Windows the real tool PID is unknown until the process tree walk resolves it.
+// On non-Windows pty.pid is already the tool directly (no shell wrapper).
+client.setRegisterInfo({ sessionId, hostPid: pty.pid, pid: isWin ? null : pty.pid, sessionType, cwd });
 
 // For copilot-cli: watch the session-state dir for a workspace.yaml whose cwd
 // matches ours, then send its session ID to Argus for direct claim — no repoPath

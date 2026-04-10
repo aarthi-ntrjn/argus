@@ -40,10 +40,10 @@ describe('PtyRegistry', () => {
     expect(registry.claimForSession('any', '/no/pending')).toBeNull();
   });
 
-  it('claimForSession returns pid when a pending launcher exists', () => {
+  it('claimForSession returns hostPid and null pid when a pending launcher exists', () => {
     const ws = makeMockWs();
     registry.registerPending('t', ws as any, '/repo', 9999);
-    expect(registry.claimForSession('s', '/repo')).toEqual({ pid: 9999 });
+    expect(registry.claimForSession('s', '/repo')).toEqual({ pid: null, hostPid: 9999 });
   });
 
   it('getClaimedId returns the claude session ID after claim', () => {
@@ -100,11 +100,11 @@ describe('PtyRegistry', () => {
     expect(() => registry.handleAck('unknown-action', true)).not.toThrow();
   });
 
-  it('claimByTempId returns pid and promotes to claimed connection', () => {
+  it('claimByTempId returns hostPid and null pid when pending entry found', () => {
     const ws = makeMockWs();
     registry.registerPending('temp-abc', ws as any, '/repo', 7777);
     const result = registry.claimByTempId('temp-abc', 'workspace-session-1');
-    expect(result).toEqual({ pid: 7777 });
+    expect(result).toEqual({ pid: null, hostPid: 7777 });
     expect(registry.has('workspace-session-1')).toBe(true);
   });
 

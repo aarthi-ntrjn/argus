@@ -204,6 +204,7 @@ export class SessionMonitor extends EventEmitter {
           type: 'claude-code',
           launchMode: null,
           pid: entry.pid,
+          hostPid: null,
           pidSource: 'session_registry',
           status: 'active',
           startedAt: new Date(entry.startedAt).toISOString(),

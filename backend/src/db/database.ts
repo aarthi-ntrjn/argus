@@ -37,6 +37,9 @@ export function getDb(): Database.Database {
     if (!sessionCols.includes('reconciled')) {
       db.exec('ALTER TABLE sessions ADD COLUMN reconciled INTEGER NOT NULL DEFAULT 1');
     }
+    if (!sessionCols.includes('host_pid')) {
+      db.exec('ALTER TABLE sessions ADD COLUMN host_pid INTEGER');
+    }
   }
   return db;
 }
@@ -87,7 +90,7 @@ export function deleteRepository(id: string): void {
 export interface SessionFilters { repositoryId?: string; status?: string; type?: string; limit?: number; }
 
 export function getSessions(filters: SessionFilters = {}): Session[] {
-  let sql = 'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled FROM sessions WHERE 1=1';
+  let sql = 'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, host_pid as hostPid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled FROM sessions WHERE 1=1';
   const params: unknown[] = [];
   if (filters.repositoryId) { sql += ' AND repository_id = ?'; params.push(filters.repositoryId); }
   if (filters.status) { sql += ' AND status = ?'; params.push(filters.status); }
@@ -101,7 +104,7 @@ export function getSessions(filters: SessionFilters = {}): Session[] {
 
 export function getSession(id: string): Session | undefined {
   const row = getDb().prepare(
-    'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled FROM sessions WHERE id = ?'
+    'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, host_pid as hostPid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled FROM sessions WHERE id = ?'
   ).get(id) as (Omit<Session, 'reconciled'> & { reconciled: number }) | undefined;
   if (!row) return undefined;
   return { ...row, reconciled: row.reconciled === 1 };
@@ -121,17 +124,18 @@ export function updateSessionStatus(id: string, status: string, endedAt: string 
 
 export function upsertSession(session: Session): void {
   getDb().prepare(`
-    INSERT INTO sessions (id, repository_id, type, launch_mode, pid, pid_source, status, started_at, ended_at, last_activity_at, summary, expires_at, model, reconciled)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO sessions (id, repository_id, type, launch_mode, pid, host_pid, pid_source, status, started_at, ended_at, last_activity_at, summary, expires_at, model, reconciled)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       launch_mode = COALESCE(excluded.launch_mode, launch_mode),
-      pid = excluded.pid, pid_source = COALESCE(excluded.pid_source, pid_source),
+      pid = excluded.pid, host_pid = COALESCE(excluded.host_pid, host_pid),
+      pid_source = COALESCE(excluded.pid_source, pid_source),
       status = excluded.status, ended_at = excluded.ended_at,
       last_activity_at = excluded.last_activity_at, summary = excluded.summary,
       expires_at = excluded.expires_at, model = COALESCE(excluded.model, model),
       reconciled = excluded.reconciled
   `).run(session.id, session.repositoryId, session.type, session.launchMode ?? null, session.pid,
-    session.pidSource ?? null, session.status, session.startedAt, session.endedAt,
+    session.hostPid ?? null, session.pidSource ?? null, session.status, session.startedAt, session.endedAt,
     session.lastActivityAt, session.summary, session.expiresAt, session.model ?? null,
     session.reconciled ? 1 : 0);
 }
