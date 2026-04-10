@@ -1,14 +1,16 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import type { Components } from 'react-markdown';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { SessionOutput } from '../../types';
+import type { SessionOutput, OutputDisplayMode } from '../../types';
+import { summariseToolUse, isAlwaysVisible } from './sessionDetailUtils';
 
 interface Props {
   sessionId: string;
   items: SessionOutput[];
   dark?: boolean;
   className?: string;
+  displayMode?: OutputDisplayMode;
 }
 
 type BadgeStyle = { label: string; light: string; dark: string };
@@ -40,8 +42,17 @@ function formatTime(timestamp: string): string {
   });
 }
 
-export default function SessionDetail({ items, dark = false, className }: Props) {
+export default function SessionDetail({ items, dark = false, className, displayMode = 'focused' }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  function toggleExpand(id: string) {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      return next;
+    });
+  }
 
   const markdownComponents = useMemo<Components>(() => ({
     p: ({ children }) => <p className="my-0 leading-snug whitespace-pre-wrap">{children}</p>,
@@ -77,8 +88,42 @@ export default function SessionDetail({ items, dark = false, className }: Props)
   return (
     <div className={`overflow-y-auto p-4 space-y-1 font-mono text-xs min-h-full ${dark ? 'bg-gray-900' : ''} ${className ?? ''}`}>
       {items.map((item) => {
+        const isFocused = displayMode === 'focused';
+        const isExpanded = expandedIds.has(item.id);
         const typeInfo = getBadge(item);
         const badgeColor = dark ? typeInfo.dark : typeInfo.light;
+
+        // In focused mode, collapse tool_result rows unless expanded
+        if (isFocused && item.type === 'tool_result' && !isExpanded) {
+          return (
+            <div key={item.id} className="flex gap-3 items-center">
+              <div className="flex flex-col gap-0.5 w-24 shrink-0">
+                <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}>
+                  {typeInfo.label}
+                </span>
+                {item.toolName && (
+                  <span className={`text-xs truncate ${dark ? 'text-purple-400' : 'text-purple-600'}`}>[{item.toolName}]</span>
+                )}
+                <span className={`text-[10px] whitespace-nowrap ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {formatTime(item.timestamp)}
+                </span>
+              </div>
+              <button
+                aria-label="Show result"
+                onClick={() => toggleExpand(item.id)}
+                className={`text-xs underline ${dark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                show result
+              </button>
+            </div>
+          );
+        }
+
+        // For tool_use, show compact summary with expand option
+        const isToolUse = item.type === 'tool_use';
+        const summary = isToolUse ? summariseToolUse(item) : null;
+        const showRawToolUse = isToolUse && isExpanded;
+
         return (
           <div key={item.id} className="flex gap-3 items-start">
             {/* Column 1: badge, toolname, timestamp */}
@@ -94,18 +139,42 @@ export default function SessionDetail({ items, dark = false, className }: Props)
               </span>
             </div>
             {/* Column 2: content */}
-            {item.type === 'message' ? (
-              <div className={`min-w-0 max-w-none break-words leading-snug ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={markdownComponents}
-                >
-                  {item.content}
-                </ReactMarkdown>
-              </div>
-            ) : (
-              <span className={`min-w-0 break-words whitespace-pre-wrap ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{item.content}</span>
-            )}
+            <div className="min-w-0 flex-1">
+              {item.type === 'message' ? (
+                <div className={`max-w-none break-words leading-snug ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={markdownComponents}
+                  >
+                    {item.content}
+                  </ReactMarkdown>
+                </div>
+              ) : isToolUse && !showRawToolUse ? (
+                <div className="flex items-center gap-2">
+                  <span className={`break-words ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{summary}</span>
+                  <button
+                    aria-label="Show details"
+                    onClick={() => toggleExpand(item.id)}
+                    className={`text-xs underline shrink-0 ${dark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+                  >
+                    show details
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <span className={`min-w-0 break-words whitespace-pre-wrap ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{item.content}</span>
+                  {(isToolUse || (isFocused && item.type === 'tool_result')) && isExpanded && (
+                    <button
+                      aria-label="Hide details"
+                      onClick={() => toggleExpand(item.id)}
+                      className={`block text-xs underline mt-1 ${dark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                      hide
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         );
       })}

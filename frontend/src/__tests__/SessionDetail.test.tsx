@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import SessionDetail from '../components/SessionDetail/SessionDetail';
 import type { SessionOutput } from '../types';
 
@@ -87,7 +88,7 @@ describe('SessionDetail — content rendering', () => {
   });
 
   it('renders non-message content as plain text without markdown processing', () => {
-    render(<SessionDetail sessionId="s1" items={[output({ type: 'tool_result', role: null, content: '**not bold**', toolName: null })]} />);
+    render(<SessionDetail sessionId="s1" items={[output({ type: 'tool_result', role: null, content: '**not bold**', toolName: null })]} displayMode="verbose" />);
     // The raw asterisks should be visible as-is
     expect(screen.getByText('**not bold**')).toBeInTheDocument();
   });
@@ -118,5 +119,85 @@ describe('SessionDetail — timestamps', () => {
     // Should show time in HH:MM:SS format
     const timePattern = /\d{1,2}:\d{2}:\d{2}/;
     expect(screen.getByText(timePattern)).toBeInTheDocument();
+  });
+});
+
+describe('SessionDetail — focused mode (default)', () => {
+  it('hides tool_result rows in focused mode by default', () => {
+    const items = [
+      output({ id: '1', type: 'tool_result', role: null, content: 'file contents here', toolName: null, sequenceNumber: 1 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} />);
+    expect(screen.queryByText('file contents here')).not.toBeInTheDocument();
+  });
+
+  it('shows tool_result rows in verbose mode', () => {
+    const items = [
+      output({ id: '1', type: 'tool_result', role: null, content: 'file contents here', toolName: null, sequenceNumber: 1 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} displayMode="verbose" />);
+    expect(screen.getByText('file contents here')).toBeInTheDocument();
+  });
+
+  it('shows expand button for collapsed tool_result in focused mode', () => {
+    const items = [
+      output({ id: '1', type: 'tool_result', role: null, content: 'hidden content', toolName: 'bash', sequenceNumber: 1 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} />);
+    expect(screen.getByRole('button', { name: /show result/i })).toBeInTheDocument();
+  });
+
+  it('reveals tool_result content after clicking expand button', async () => {
+    const user = userEvent.setup();
+    const items = [
+      output({ id: '1', type: 'tool_result', role: null, content: 'revealed content', toolName: 'bash', sequenceNumber: 1 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} />);
+    await user.click(screen.getByRole('button', { name: /show result/i }));
+    expect(screen.getByText('revealed content')).toBeInTheDocument();
+  });
+
+  it('shows compact summary for tool_use rows — not raw JSON', () => {
+    const jsonContent = JSON.stringify({ path: 'src/App.tsx', old_str: 'foo', new_str: 'bar' });
+    const items = [
+      output({ id: '1', type: 'tool_use', role: null, content: jsonContent, toolName: 'Edit', sequenceNumber: 1 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} />);
+    expect(screen.getByText('Edit: src/App.tsx')).toBeInTheDocument();
+    expect(screen.queryByText(jsonContent)).not.toBeInTheDocument();
+  });
+
+  it('shows expand button for tool_use rows to reveal full JSON', () => {
+    const items = [
+      output({ id: '1', type: 'tool_use', role: null, content: 'src/App.tsx', toolName: 'Read', sequenceNumber: 1 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} />);
+    expect(screen.getByRole('button', { name: /show details/i })).toBeInTheDocument();
+  });
+
+  it('reveals tool_use full content after clicking expand', async () => {
+    const user = userEvent.setup();
+    const items = [
+      output({ id: '1', type: 'tool_use', role: null, content: 'src/App.tsx', toolName: 'Read', sequenceNumber: 1 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} />);
+    await user.click(screen.getByRole('button', { name: /show details/i }));
+    expect(screen.getByText('src/App.tsx')).toBeInTheDocument();
+  });
+
+  it('always shows error rows regardless of display mode', () => {
+    const items = [
+      output({ id: '1', type: 'error', role: null, content: 'Fatal error occurred', toolName: null, sequenceNumber: 1 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} />);
+    expect(screen.getByText('Fatal error occurred')).toBeInTheDocument();
+  });
+
+  it('always shows status_change rows regardless of display mode', () => {
+    const items = [
+      output({ id: '1', type: 'status_change', role: null, content: 'Session started', toolName: null, sequenceNumber: 1 }),
+    ];
+    render(<SessionDetail sessionId="s1" items={items} />);
+    expect(screen.getByText('Session started')).toBeInTheDocument();
   });
 });
