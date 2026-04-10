@@ -5,6 +5,17 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
+## T113 — Sending a prompt to a GHCP PTY session fails after Argus backend restart
+
+**Date**: 2026-04-10
+**Symptom**: After restarting the Argus backend (while `argus launch copilot` was still running), the session continued to show as PTY-launched in the UI, but every `sendPrompt` call failed with "Session launcher is not connected to Argus".
+**Root cause**: Three cooperating issues: (1) `copilot-cli-detector.ts` checked `alreadyClaimed = existingSession?.launchMode === 'pty'` and when true, blindly preserved `launchMode: 'pty'` without checking `ptyRegistry.has(sessionId)`. After a backend restart, the in-memory `ptyRegistry.connections` is empty but the SQLite DB still has `launchMode: 'pty'`, so the detector skipped the `claimForSession` call that would have re-linked the new WS. (2) `ArgusLaunchClient` had no reconnect logic, so when the backend restarted and the WS closed, the launcher never re-registered. (3) `ptyRegistry.sendPrompt` had no `readyState` guard, meaning a stale closed WS in `connections` would throw an unhandled error instead of a clean rejection.
+**Why it was missed**: The T112 fix correctly handled the first-launch case (alreadyClaimed=false) but introduced an implicit assumption that the in-memory WS registry is always in sync with the DB's `launchMode`. No test exercised the backend-restart-mid-session scenario where the two diverge.
+**How to prevent**: Whenever DB state (persisted) and in-memory state (ephemeral) are used together for a feature, write at least one test that simulates the "DB has data but in-memory is empty" scenario. For any WS-backed feature, add a `readyState` guard before `ws.send()` and a reconnect handler on the client side.
+**Fix summary**: `copilot-cli-detector.ts` — added `ptyRegistry.has(sessionId)` to the `alreadyClaimed` guard so the code re-attempts `claimForSession` when the WS is gone. `argus-launch-client.ts` — added `close` event handler that calls `connect()` after 2s when `!isClosing`, plus `isClosing = true` in `notifySessionEnded`. `pty-registry.ts` — added `readyState !== OPEN` guard in `sendPrompt` that removes the stale entry and rejects cleanly.
+
+---
+
 ## T112 — GHCP launched via argus launch shows as read-only instead of live PTY session
 
 **Date**: 2026-04-10
