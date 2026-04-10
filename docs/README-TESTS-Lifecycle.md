@@ -20,20 +20,7 @@ Manual tests for session state transitions across different scenarios: terminal 
 
 ---
 
-## L1: Session ends (server already running)
-
-| # | Steps | Expected |
-|---|-------|----------|
-| L-07 | In a running Claude Code session, type `/exit` | Session card transitions from "running" (green) to "ended" (grey) within a few seconds |
-| L-08 | In a running Copilot CLI session, end the session normally | Session card transitions from "running" (green) to "ended" (grey) within a few seconds |
-| L-09 | Kill a Claude Code session process externally (`kill <PID>` or Task Manager) | Session card transitions to "ended" within the next poll cycle (~5 seconds) |
-| L-10 | Kill a Copilot CLI session process externally | Session card transitions to "ended" within the next poll cycle (~5 seconds) |
-| L-11 | End a live (PTY) Claude Code session via the dashboard "Stop Session" button | Session status changes to "ended"; the "live" badge disappears; prompt bar becomes disabled |
-| L-12 | End a live (PTY) Copilot CLI session via the dashboard "Stop Session" button | Session status changes to "ended"; the "live" badge disappears; prompt bar becomes disabled |
-
----
-
-## L2: Session goes idle / resting (server running)
+## L1: Session goes idle / resting (server running)
 
 **Note:** Claude Code uses a configurable idle threshold (default 60 min). Copilot CLI has no idle/resting state: it is either active or ended.
 
@@ -46,7 +33,7 @@ Manual tests for session state transitions across different scenarios: terminal 
 
 ---
 
-## L3: Server starts after sessions already exist
+## L2: Server starts after sessions already exist
 
 **Prerequisites:** Stop the Argus server. Start one or more Claude Code and Copilot CLI sessions while the server is down, then start the server.
 
@@ -60,7 +47,7 @@ Manual tests for session state transitions across different scenarios: terminal 
 
 ---
 
-## L4: Server restarts while sessions are running
+## L3: Server restarts while sessions are running
 
 **Prerequisites:** Have active sessions, then restart the Argus server.
 
@@ -75,7 +62,7 @@ Manual tests for session state transitions across different scenarios: terminal 
 
 ---
 
-## L5: Server is down during entire session lifecycle
+## L4: Server is down during entire session lifecycle
 
 | # | Steps | Expected |
 |---|-------|----------|
@@ -86,7 +73,7 @@ Manual tests for session state transitions across different scenarios: terminal 
 
 ---
 
-## L6: Mixed lifecycle transitions on the dashboard
+## L5: Mixed lifecycle transitions on the dashboard
 
 | # | Steps | Expected |
 |---|-------|----------|
@@ -97,3 +84,16 @@ Manual tests for session state transitions across different scenarios: terminal 
 | L-36 | With "Hide ended sessions" ON in settings, end a running session | The session card disappears from the dashboard as soon as it transitions to "ended" |
 | L-37 | With "Hide ended sessions" ON, start a new session | The new session card appears normally (it is "running", not ended) |
 | L-38 | With "Hide inactive sessions" ON, a Claude Code session goes idle past threshold | The session card disappears from the dashboard when it becomes "resting" |
+
+---
+
+## L6: Session ends (server already running)
+
+| # | Steps | Expected |
+|---|-------|----------|
+| L-07 | In a running Claude Code session, type `/exit` | Session card transitions from "running" (green) to "ended" (grey) within a few seconds |
+| L-08 | In a running Copilot CLI session, end the session normally | Session card transitions from "running" (green) to "ended" (grey) within a few seconds |
+| L-09 | Kill a Claude Code session process externally (`kill <PID>` or Task Manager) | Session card transitions to "ended" within the next poll cycle (~5 seconds) |
+| L-10 | Kill a Copilot CLI session process externally | Session card transitions to "ended" within the next poll cycle (~5 seconds) |
+| L-11 | End a live (PTY) Claude Code session via the dashboard "Stop Session" button | Session status changes to "ended"; the "live" badge disappears; prompt bar becomes disabled |
+| L-12 | End a live (PTY) Copilot CLI session via the dashboard "Stop Session" button | Session status changes to "ended"; the "live" badge disappears; prompt bar becomes disabled |
