@@ -18,6 +18,7 @@ Manual tests for session state transitions across different scenarios: terminal 
 | L0-03 | Repeat L0-01 using Copilot (`copilot`) instead of Claude Code | Same behaviour: session card appears under the correct repo within 5 seconds with a grey "read-only" badge |
 | L0-04 | Repeat L0-02 with a second Copilot session in the same repo | A second Copilot session card appears; both Copilot cards are visible independently |
 | L0-05 | With all sessions still running, restart the Argus server (`npm run dev`) and reload the dashboard | All previously running sessions reappear with their correct badges; no sessions are lost |
+| L0-06 | With an active CC and GHCP session, stop the server, wait 2 minutes (sessions continue generating output), then restart | Both sessions are rediscovered; output generated during the server downtime is picked up and appears in the stream |
 
 ---
 
