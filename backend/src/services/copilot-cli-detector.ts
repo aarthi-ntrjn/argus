@@ -98,8 +98,10 @@ export class CopilotCliDetector {
           resolvedPidSource = 'pty_registry';
         }
       }
-    } else {
-      // Not yet claimed — try initial claim from a pending launcher WS
+    } else if (isRunning) {
+      // Not yet claimed — only attempt initial claim for a running session.
+      // Non-running (ended) sessions must not steal a pending launcher WS that belongs
+      // to the new active session for the same cwd.
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
       if (claimed) {
         launchMode = 'pty';

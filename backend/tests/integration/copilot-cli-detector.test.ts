@@ -89,6 +89,8 @@ updated_at: ${new Date().toISOString()}
   });
 
   it('sets launchMode=pty when ptyRegistry has a pending connection for the same cwd', async () => {
+    // Session must be running — only active sessions may claim a pending launcher WS
+    mockPsList.mockResolvedValueOnce([{ pid: testPid, name: 'test', ppid: 1 }]);
     mockClaimForSession.mockReturnValueOnce({ pid: 12345 });
 
     const detector = new CopilotCliDetector(testDir);
@@ -101,7 +103,23 @@ updated_at: ${new Date().toISOString()}
     expect(mockClaimForSession).toHaveBeenCalledWith(testSessionId, testRepoCwd);
   });
 
-  it('sets launchMode=null when no pending PTY connection exists', async () => {
+  it('does not claim pending PTY connection for a non-running (ended) session', async () => {
+    // isRunning = false (default mockPsList returns [] — testPid not running)
+    // The pending WS should NOT be claimed by an ended session so a new active session
+    // in the same cwd can claim it instead. Do NOT set mockReturnValueOnce here —
+    // claimForSession must not be called at all.
+
+    const detector = new CopilotCliDetector(testDir);
+    const sessions = await detector.scan();
+    const session = sessions.find((s) => s.id === testSessionId);
+
+    expect(session?.launchMode).toBeNull();
+    expect(mockClaimForSession).not.toHaveBeenCalled();
+  });
+
+  it('sets launchMode=null when no pending PTY connection exists for a running session', async () => {
+    // isRunning = true so claimForSession IS called, but no pending WS is registered
+    mockPsList.mockResolvedValueOnce([{ pid: testPid, name: 'test', ppid: 1 }]);
     mockClaimForSession.mockReturnValueOnce(null);
 
     const detector = new CopilotCliDetector(testDir);
