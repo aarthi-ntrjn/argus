@@ -363,7 +363,3 @@ test.describe('SC-001: Session Card — Prompt Bar Send', () => {
   });
 
 });
-
-// ── SC-001: Actions Menu ────────────────────────────────────────────────────
-});
-
