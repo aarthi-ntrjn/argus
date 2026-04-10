@@ -1,5 +1,5 @@
 import { normalize } from 'path';
-import type { WebSocket } from 'ws';
+import WebSocket from 'ws';
 
 function normalizePath(p: string): string {
   return normalize(p.trimEnd().replace(/[/\\]+$/, '')).toLowerCase();
@@ -80,6 +80,12 @@ export class PtyRegistry {
   sendPrompt(sessionId: string, actionId: string, prompt: string, timeoutMs = 10_000): Promise<void> {
     const ws = this.connections.get(sessionId);
     if (!ws) {
+      return Promise.reject(new Error(`Session ${sessionId} launcher is not connected to Argus`));
+    }
+
+    if (ws.readyState !== WebSocket.OPEN) {
+      // Stale entry — WS closed between the has() check and now. Clean up and reject.
+      this.connections.delete(sessionId);
       return Promise.reject(new Error(`Session ${sessionId} launcher is not connected to Argus`));
     }
 

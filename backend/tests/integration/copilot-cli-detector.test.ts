@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -8,6 +8,8 @@ const testRepoId = randomUUID();
 const testRepoCwd = join(tmpdir(), `argus-repo-${randomUUID()}`);
 const testSessionId = randomUUID();
 
+const mockGetSession = vi.hoisted(() => vi.fn(() => undefined));
+
 // Mock the database module to avoid DB dependency in this unit-style integration test
 vi.mock('../../src/db/database.js', () => ({
   getRepositoryByPath: (path: string) => {
@@ -16,14 +18,16 @@ vi.mock('../../src/db/database.js', () => ({
     }
     return undefined;
   },
-  getSession: () => undefined,
+  getSession: mockGetSession,
   upsertSession: vi.fn(),
 }));
 
+const mockHas = vi.hoisted(() => vi.fn().mockReturnValue(false));
 const mockClaimForSession = vi.hoisted(() => vi.fn().mockReturnValue(null));
 vi.mock('../../src/services/pty-registry.js', () => ({
   ptyRegistry: {
     claimForSession: mockClaimForSession,
+    has: mockHas,
   },
 }));
 
@@ -53,6 +57,12 @@ updated_at: ${new Date().toISOString()}
 
   afterAll(() => {
     rmSync(testDir, { recursive: true, force: true });
+  });
+
+  beforeEach(() => {
+    mockClaimForSession.mockClear();
+    mockHas.mockClear();
+    mockGetSession.mockClear();
   });
 
   it('detects session directory with lock file', async () => {
@@ -94,5 +104,64 @@ updated_at: ${new Date().toISOString()}
 
     expect(session?.launchMode).toBeNull();
     expect(session?.pidSource).toBe('lockfile');
+  });
+
+  it('re-claims a new pending WS when alreadyClaimed=true but WS is disconnected (Argus restart scenario)', async () => {
+    // Simulate: DB has launchMode:'pty' but in-memory WS is gone (Argus restarted)
+    mockGetSession.mockReturnValueOnce({
+      id: testSessionId,
+      launchMode: 'pty',
+      pid: 11111,
+      pidSource: 'pty_registry' as const,
+      status: 'active',
+    });
+    mockHas.mockReturnValueOnce(false);
+    mockClaimForSession.mockReturnValueOnce({ pid: 22222 });
+
+    const detector = new CopilotCliDetector(testDir);
+    const sessions = await detector.scan();
+    const session = sessions.find((s) => s.id === testSessionId);
+
+    expect(session?.launchMode).toBe('pty');
+    expect(session?.pid).toBe(22222);
+    expect(session?.pidSource).toBe('pty_registry');
+    expect(mockClaimForSession).toHaveBeenCalledWith(testSessionId, testRepoCwd);
+  });
+
+  it('downgrades to launchMode=null when alreadyClaimed=true but WS gone and no pending reconnect', async () => {
+    mockGetSession.mockReturnValueOnce({
+      id: testSessionId,
+      launchMode: 'pty',
+      pid: 11111,
+      pidSource: 'pty_registry' as const,
+      status: 'active',
+    });
+    mockHas.mockReturnValueOnce(false);
+    mockClaimForSession.mockReturnValueOnce(null);
+
+    const detector = new CopilotCliDetector(testDir);
+    const sessions = await detector.scan();
+    const session = sessions.find((s) => s.id === testSessionId);
+
+    expect(session?.launchMode).toBeNull();
+  });
+
+  it('preserves launchMode=pty without re-claiming when alreadyClaimed=true and WS is still live', async () => {
+    mockGetSession.mockReturnValueOnce({
+      id: testSessionId,
+      launchMode: 'pty',
+      pid: 33333,
+      pidSource: 'pty_registry' as const,
+      status: 'active',
+    });
+    mockHas.mockReturnValueOnce(true);
+
+    const detector = new CopilotCliDetector(testDir);
+    const sessions = await detector.scan();
+    const session = sessions.find((s) => s.id === testSessionId);
+
+    expect(session?.launchMode).toBe('pty');
+    expect(session?.pid).toBe(33333);
+    expect(mockClaimForSession).not.toHaveBeenCalled();
   });
 });

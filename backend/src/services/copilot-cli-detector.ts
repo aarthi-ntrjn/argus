@@ -83,19 +83,21 @@ export class CopilotCliDetector {
     let resolvedPid = pid;
     let resolvedPidSource: 'pty_registry' | 'lockfile' | null = pid != null ? 'lockfile' : null;
 
-    if (alreadyClaimed) {
-      // Preserve PTY state from the previous scan cycle — already linked to a live WS connection
+    if (alreadyClaimed && ptyRegistry.has(sessionId)) {
+      // Preserve PTY state — the WS connection is still live from a previous scan cycle
       launchMode = 'pty';
       resolvedPid = existingSession.pid;
       resolvedPidSource = existingSession.pidSource;
     } else {
-      // Try to claim a pending launcher WS registered by `argus launch copilot` for this repo
+      // Either not yet claimed, or was claimed but the WS disconnected (e.g. Argus restarted).
+      // Try to claim or re-claim a pending launcher WS registered by `argus launch copilot`.
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
       if (claimed) {
         launchMode = 'pty';
         resolvedPid = claimed.pid;
         resolvedPidSource = 'pty_registry';
       }
+      // If re-claim also fails, launchMode stays null — session downgrades to detected-only.
     }
 
     const session: Session = {
