@@ -128,9 +128,11 @@ if (sessionType === 'copilot-cli') {
 // When Argus sends a prompt, write it to the PTY
 client.onSendPrompt((actionId: string, prompt: string) => {
   try {
+    process.stderr.write(`[launch] onSendPrompt actionId=${actionId} promptLen=${prompt.length} — writing to PTY\n`);
     pty.write(prompt + '\r');
     client.ackDelivered(actionId);
   } catch (err) {
+    process.stderr.write(`[launch] onSendPrompt PTY write failed: ${err}\n`);
     client.ackFailed(actionId, err instanceof Error ? err.message : 'PTY write failed');
   }
 });

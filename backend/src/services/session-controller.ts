@@ -60,6 +60,8 @@ export class SessionController {
       throw Object.assign(new Error('Session already ended'), { code: 'CONFLICT' });
     }
 
+    console.log(`[sendPrompt] sessionId=${sessionId} type=${session.type} launchMode=${session.launchMode} ptyRegistryHas=${ptyRegistry.has(sessionId)}`);
+
     // Only PTY-launched sessions have a delivery channel
     if (session.launchMode !== 'pty') {
       const action: ControlAction = {

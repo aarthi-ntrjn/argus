@@ -112,6 +112,7 @@ export class PtyRegistry {
   // timeoutMs exposed for testing; defaults to 10s in production
   sendPrompt(sessionId: string, actionId: string, prompt: string, timeoutMs = 10_000): Promise<void> {
     const ws = this.connections.get(sessionId);
+    console.log(`[PtyRegistry.sendPrompt] sessionId=${sessionId} wsFound=${!!ws} wsState=${ws?.readyState}`);
     if (!ws) {
       return Promise.reject(new Error(`Session ${sessionId} launcher is not connected to Argus`));
     }
@@ -129,7 +130,9 @@ export class PtyRegistry {
       }, timeoutMs);
 
       this.pending.set(actionId, { resolve, reject, timeout });
-      ws.send(JSON.stringify({ type: 'send_prompt', actionId, prompt }));
+      const msg = JSON.stringify({ type: 'send_prompt', actionId, prompt });
+      console.log(`[PtyRegistry.sendPrompt] sending WS message actionId=${actionId} promptLen=${prompt.length}`);
+      ws.send(msg);
     });
   }
 

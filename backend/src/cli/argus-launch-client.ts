@@ -99,6 +99,7 @@ export class ArgusLaunchClient {
     }
 
     if (msg.type === 'send_prompt' && msg.actionId && msg.prompt !== undefined) {
+      process.stderr.write(`[argus-launch-client] send_prompt received actionId=${msg.actionId} promptLen=${msg.prompt.length}\n`);
       this.promptCallback?.(msg.actionId, msg.prompt);
     }
   }
