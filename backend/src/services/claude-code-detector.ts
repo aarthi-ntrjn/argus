@@ -244,6 +244,7 @@ export class ClaudeCodeDetector {
       // Check whether argus launch is pending for this repo — claim it if so.
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
       if (claimed) {
+        console.log(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
         const session: Session = {
           id: sessionId,
           repositoryId: repo.id,
@@ -291,6 +292,7 @@ export class ClaudeCodeDetector {
       model: null,
       reconciled: true,
     };
+    console.log(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
     upsertSession({ ...base, status: 'active', endedAt: null, lastActivityAt: now, pid: claudePid });
     await this.watchJsonlFile(sessionId, repo.path);
   }
@@ -340,6 +342,7 @@ export class ClaudeCodeDetector {
           if (model) {
             const existing = getSession(sessionId);
             if (existing) {
+              console.log(`[ClaudeDetector] model detected sessionId=${sessionId} model=${model}`);
               const updated = { ...existing, model };
               upsertSession(updated);
               broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
@@ -361,6 +364,7 @@ export class ClaudeCodeDetector {
         if (existing) {
           const summary = lastUserMsg.content.slice(0, 120);
           if (existing.summary !== summary) {
+            console.log(`[ClaudeDetector] summary updated sessionId=${sessionId}`);
             const updated = { ...existing, summary };
             upsertSession(updated);
             broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });

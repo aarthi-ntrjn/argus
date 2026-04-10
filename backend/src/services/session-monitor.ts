@@ -136,6 +136,7 @@ export class SessionMonitor extends EventEmitter {
       for (const session of liveSessions) {
         const repo = repos.find(r => r.id === session.repositoryId);
         if (!repo) {
+          console.log(`[ClaudeReconcile] session ended — repo removed sessionId=${session.id}`);
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
@@ -144,6 +145,7 @@ export class SessionMonitor extends EventEmitter {
 
         // Check if the process is still running
         if (session.pid != null && !runningPids.has(session.pid)) {
+          console.log(`[ClaudeReconcile] session ended — process gone sessionId=${session.id} pid=${session.pid}`);
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
@@ -205,6 +207,7 @@ export class SessionMonitor extends EventEmitter {
 
         // Assign PID if not yet set or if source was not session_registry
         if (existing.pid !== entry.pid || existing.pidSource !== 'session_registry') {
+          console.log(`[ClaudeRegistry] pid assigned sessionId=${entry.sessionId} pid=${entry.pid} (was ${existing.pid})`);
           const updated = { ...existing, pid: entry.pid, pidSource: 'session_registry' as const };
           upsertSession(updated);
           broadcast({ type: 'session.updated', timestamp: now, data: updated as unknown as Record<string, unknown> });
@@ -214,6 +217,7 @@ export class SessionMonitor extends EventEmitter {
         const repo = getRepositoryByPath(entry.cwd);
         if (!repo) continue; // Unregistered repo, ignore
 
+        console.log(`[ClaudeRegistry] session created sessionId=${entry.sessionId} pid=${entry.pid} cwd="${entry.cwd}"`);
         const session: Session = {
           id: entry.sessionId,
           repositoryId: repo.id,
@@ -243,6 +247,7 @@ export class SessionMonitor extends EventEmitter {
       const activeSessions = getSessions({ status: 'active', type: 'claude-code' });
       for (const session of activeSessions) {
         if (session.pid === oldPid && session.pidSource === 'session_registry') {
+          console.log(`[ClaudeRegistry] session ended — registry file gone sessionId=${session.id} pid=${oldPid}`);
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
