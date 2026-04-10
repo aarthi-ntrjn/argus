@@ -103,13 +103,20 @@ export default function SessionDetail({ items, dark = false, className, displayM
         <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}>
           {typeInfo.label}
         </span>
-        {item.toolName && (
-          <span className={`text-xs truncate ${dark ? 'text-purple-400' : 'text-purple-600'}`}>[{item.toolName}]</span>
-        )}
         <span className={`text-[10px] whitespace-nowrap ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
           {formatTime(item.timestamp)}
         </span>
       </div>
+    );
+  }
+
+  function renderToolNameBadge(toolName: string | null | undefined) {
+    if (!toolName) return null;
+    const badgeColor = dark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700';
+    return (
+      <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap shrink-0 ${badgeColor}`}>
+        {toolName}
+      </span>
     );
   }
 
@@ -131,6 +138,7 @@ export default function SessionDetail({ items, dark = false, className, displayM
     if (isToolUse && !isExpanded) {
       return (
         <div className="flex items-center gap-2">
+          {renderToolNameBadge(item.toolName)}
           <span className={`break-words ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{summariseToolUse(item)}</span>
           <button
             aria-label="Show details"
@@ -153,6 +161,7 @@ export default function SessionDetail({ items, dark = false, className, displayM
 
     return (
       <div>
+        {item.toolName && <div className="mb-0.5">{renderToolNameBadge(item.toolName)}</div>}
         <span className={`min-w-0 break-words whitespace-pre-wrap ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{displayContent}</span>
         {isTruncatable && !isFullyExpanded && (
           <button
@@ -190,15 +199,13 @@ export default function SessionDetail({ items, dark = false, className, displayM
                 <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}>
                   {typeInfo.label}
                 </span>
-                {toolUse.toolName && (
-                  <span className={`text-xs truncate ${dark ? 'text-purple-400' : 'text-purple-600'}`}>[{toolUse.toolName}]</span>
-                )}
                 <span className={`text-[10px] whitespace-nowrap ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
                   {formatTime(toolUse.timestamp)}
                 </span>
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
+                  {renderToolNameBadge(toolUse.toolName)}
                   <span className={`break-words ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
                     {isExpanded ? fullToolUseText(toolUse) : summariseToolUse(toolUse)}
                   </span>

@@ -66,14 +66,14 @@ describe('SessionDetail — type badges', () => {
 });
 
 describe('SessionDetail — tool names', () => {
-  it('shows the tool name in brackets for tool_use items', () => {
+  it('shows the tool name as a badge in the content column for tool_use items', () => {
     render(<SessionDetail sessionId="s1" items={[output({ type: 'tool_use', role: null, toolName: 'read_file', content: 'read_file(main.ts)' })]} />);
-    expect(screen.getByText('[read_file]')).toBeInTheDocument();
+    expect(screen.getByText('read_file')).toBeInTheDocument();
   });
 
-  it('shows the tool name in brackets for tool_result items', () => {
+  it('shows the tool name as a badge in the content column for tool_result items', () => {
     render(<SessionDetail sessionId="s1" items={[output({ type: 'tool_result', role: null, toolName: 'bash', content: 'exit 0' })]} displayMode="verbose" />);
-    expect(screen.getByText('[bash]')).toBeInTheDocument();
+    expect(screen.getByText('bash')).toBeInTheDocument();
   });
 
   it('does not show a tool name when toolName is null', () => {
