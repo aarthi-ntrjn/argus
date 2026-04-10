@@ -147,35 +147,33 @@ if (isWin) {
       // powershell.exe -> conhost.exe / copilot.exe (or node.exe wrapping it)
       let currentPid = pty.pid;
       let currentName = 'powershell.exe';
-      for (let depth = 0; depth < 5; depth++) {
+
+      // First: ask wmic directly for a child of pty.pid with the exact target name.
+      try {
         const out = execSync(
-          `wmic process where (ParentProcessId=${currentPid}) get ProcessId /value`,
+          `wmic process where (ParentProcessId=${pty.pid} and Name="${targetExe}") get ProcessId /value`,
           { encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] }
         );
-        const childPids = [...out.matchAll(/ProcessId=(\d+)/g)].map(m => parseInt(m[1], 10));
-        if (childPids.length === 0) break;
+        const pid = parseInt(out.match(/ProcessId=(\d+)/)?.[1] ?? '', 10);
+        if (pid) { currentPid = pid; currentName = targetExe; }
+      } catch { /* fall through to depth walk */ }
 
-        let chosen = childPids[0];
-        let chosenName = '';
-        let foundTarget = false;
-        for (const cpid of childPids) {
-          try {
-            const nameOut = execSync(
-              `wmic process where (ProcessId=${cpid}) get Name /value`,
-              { encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] }
-            );
-            const name = nameOut.match(/Name=(.+)/)?.[1]?.trim().toLowerCase() ?? '';
-            if (name === targetExe) {
-              chosen = cpid; chosenName = name; foundTarget = true; break;
-            }
-            if (name !== 'conhost.exe') {
-              chosen = cpid; chosenName = name;
-            }
-          } catch { /* use first child */ }
+      // Fallback: target exe not a direct child (e.g. wrapped in node.exe).
+      // Walk the tree depth-first, skipping conhost.exe, until no more children.
+      if (currentPid === pty.pid) {
+        for (let depth = 0; depth < 5; depth++) {
+          const out = execSync(
+            `wmic process where (ParentProcessId=${currentPid} and Name!="conhost.exe") get ProcessId,Name /value`,
+            { encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] }
+          );
+          const blocks = out.split(/\r?\n\r?\n/).filter(b => b.trim());
+          if (blocks.length === 0) break;
+          const pid = parseInt(blocks[0].match(/ProcessId=(\d+)/)?.[1] ?? '', 10);
+          const name = blocks[0].match(/Name=(.+)/)?.[1]?.trim().toLowerCase() ?? '';
+          if (!pid) break;
+          currentPid = pid;
+          currentName = name;
         }
-        currentPid = chosen;
-        currentName = chosenName;
-        if (foundTarget) break; // no need to walk deeper once the target is found
       }
       if (currentPid !== pty.pid) {
         process.stderr.write(`[launch] resolved tool process: ${currentName} PID=${currentPid}\n`);
