@@ -31,6 +31,11 @@ vi.mock('../../src/services/pty-registry.js', () => ({
   },
 }));
 
+// Mock ps-list so we can control which PIDs appear running per test.
+// Default: no running processes (testPid 99999 is not running).
+const mockPsList = vi.hoisted(() => vi.fn(async () => []));
+vi.mock('ps-list', () => ({ default: mockPsList }));
+
 import { CopilotCliDetector } from '../../src/services/copilot-cli-detector.js';
 
 describe('CopilotCliDetector', () => {
@@ -63,6 +68,8 @@ updated_at: ${new Date().toISOString()}
     mockClaimForSession.mockClear();
     mockHas.mockClear();
     mockGetSession.mockClear();
+    mockPsList.mockClear();
+    mockPsList.mockResolvedValue([]); // default: no running processes
   });
 
   it('detects session directory with lock file', async () => {
@@ -78,7 +85,6 @@ updated_at: ${new Date().toISOString()}
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
     const session = sessions.find((s) => s.id === testSessionId);
-    // PID 99999 should not be running, so status should be 'ended'
     expect(session?.status).toBe('ended');
   });
 
@@ -106,7 +112,9 @@ updated_at: ${new Date().toISOString()}
     expect(session?.pidSource).toBe('lockfile');
   });
 
-  it('re-claims a new pending WS when alreadyClaimed=true but WS is disconnected (Argus restart scenario)', async () => {
+  it('re-claims a new pending WS when alreadyClaimed=true, WS disconnected, and process still running (Argus restart)', async () => {
+    // Make testPid appear running so the re-link path is exercised
+    mockPsList.mockResolvedValueOnce([{ pid: testPid, name: 'test', ppid: 1 }]);
     // Simulate: DB has launchMode:'pty' but in-memory WS is gone (Argus restarted)
     mockGetSession.mockReturnValueOnce({
       id: testSessionId,
@@ -128,22 +136,25 @@ updated_at: ${new Date().toISOString()}
     expect(mockClaimForSession).toHaveBeenCalledWith(testSessionId, testRepoCwd);
   });
 
-  it('downgrades to launchMode=null when alreadyClaimed=true but WS gone and no pending reconnect', async () => {
+  it('preserves launchMode=pty when alreadyClaimed=true and WS disconnected but process ended (no re-claim)', async () => {
+    // Process not running — WS closed because session ended, not because of backend restart.
+    // launchMode must be preserved as a historical record; claimForSession must NOT be called.
     mockGetSession.mockReturnValueOnce({
       id: testSessionId,
       launchMode: 'pty',
       pid: 11111,
       pidSource: 'pty_registry' as const,
-      status: 'active',
+      status: 'ended',
     });
     mockHas.mockReturnValueOnce(false);
-    mockClaimForSession.mockReturnValueOnce(null);
 
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
     const session = sessions.find((s) => s.id === testSessionId);
 
-    expect(session?.launchMode).toBeNull();
+    expect(session?.launchMode).toBe('pty');
+    expect(session?.pid).toBe(11111); // preserved from existingSession
+    expect(mockClaimForSession).not.toHaveBeenCalled();
   });
 
   it('preserves launchMode=pty without re-claiming when alreadyClaimed=true and WS is still live', async () => {

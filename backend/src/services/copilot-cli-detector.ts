@@ -9,7 +9,7 @@ import { upsertSession, getRepositoryByPath, deleteSessionOutput, getSession } f
 import { ptyRegistry } from './pty-registry.js';
 import { OutputStore } from './output-store.js';
 import { parseJsonlLine, parseModelFromEvent } from './events-parser.js';
-import type { Session } from '../models/index.js';
+import type { Session, PidSource } from '../models/index.js';
 
 const DEFAULT_SESSION_DIR = join(homedir(), '.copilot', 'session-state');
 
@@ -81,23 +81,31 @@ export class CopilotCliDetector {
 
     let launchMode: 'pty' | null = null;
     let resolvedPid = pid;
-    let resolvedPidSource: 'pty_registry' | 'lockfile' | null = pid != null ? 'lockfile' : null;
+    let resolvedPidSource: PidSource | null = pid != null ? 'lockfile' : null;
 
-    if (alreadyClaimed && ptyRegistry.has(sessionId)) {
-      // Preserve PTY state — the WS connection is still live from a previous scan cycle
+    if (alreadyClaimed) {
+      // Preserve launchMode:'pty' as a historical record — this session was launched via argus launch
       launchMode = 'pty';
       resolvedPid = existingSession.pid;
       resolvedPidSource = existingSession.pidSource;
+      // If the WS is gone but the process is still running (e.g. Argus restarted), try to
+      // re-link to a freshly reconnected launcher WS. If that also fails, keep the existing
+      // pid/pidSource — the launcher will reconnect within 2s and the next scan will claim it.
+      if (!ptyRegistry.has(sessionId) && isRunning) {
+        const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
+        if (claimed) {
+          resolvedPid = claimed.pid;
+          resolvedPidSource = 'pty_registry';
+        }
+      }
     } else {
-      // Either not yet claimed, or was claimed but the WS disconnected (e.g. Argus restarted).
-      // Try to claim or re-claim a pending launcher WS registered by `argus launch copilot`.
+      // Not yet claimed — try initial claim from a pending launcher WS
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
       if (claimed) {
         launchMode = 'pty';
         resolvedPid = claimed.pid;
         resolvedPidSource = 'pty_registry';
       }
-      // If re-claim also fails, launchMode stays null — session downgrades to detected-only.
     }
 
     const session: Session = {
