@@ -292,8 +292,7 @@ describe('SessionDetail — tool groups (focused mode)', () => {
     expect(screen.getByText('Read: file.txt')).toBeInTheDocument();
   });
 
-  it('splits groups on non-empty assistant messages between pairs (GHCP pattern)', async () => {
-    const user = userEvent.setup();
+  it('splits groups on non-empty assistant messages between pairs (GHCP pattern)', () => {
     const items = [
       output({ id: '1', type: 'tool_use', toolCallId: 'call-1', toolName: 'Bash', content: 'ls', sequenceNumber: 1 }),
       output({ id: '2', type: 'tool_result', toolCallId: 'call-1', content: 'file.txt', toolName: null, sequenceNumber: 2 }),
