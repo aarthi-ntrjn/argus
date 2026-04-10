@@ -60,6 +60,8 @@ export class SessionController {
       throw Object.assign(new Error('Session already ended'), { code: 'CONFLICT' });
     }
 
+    console.log(`[sendPrompt] sessionId=${sessionId} type=${session.type} launchMode=${session.launchMode} ptyRegistryHas=${ptyRegistry.has(sessionId)}`);
+
     // Only PTY-launched sessions have a delivery channel
     if (session.launchMode !== 'pty') {
       const action: ControlAction = {
@@ -110,11 +112,13 @@ export class SessionController {
     ptyRegistry.sendPrompt(sessionId, action.id, prompt)
       .then(() => {
         const now = new Date().toISOString();
+        console.log(`[sendPrompt] DELIVERED actionId=${action.id} sessionId=${sessionId}`);
         updateControlAction(action.id, 'completed', now, null);
         this.broadcastAction({ ...action, status: 'completed', completedAt: now });
       })
       .catch((err: Error) => {
         const now = new Date().toISOString();
+        console.log(`[sendPrompt] FAILED actionId=${action.id} sessionId=${sessionId} error=${err.message}`);
         updateControlAction(action.id, 'failed', now, err.message);
         this.broadcastAction({ ...action, status: 'failed', completedAt: now, result: err.message });
       });

@@ -3,7 +3,8 @@ import type { SessionType } from '../models/index.js';
 
 interface RegisterInfo {
   sessionId: string;
-  pid: number;
+  hostPid: number;
+  pid: number | null;
   sessionType: SessionType;
   cwd: string;
 }
@@ -11,17 +12,31 @@ interface RegisterInfo {
 type PromptCallback = (actionId: string, prompt: string) => void;
 
 export class ArgusLaunchClient {
-  private ws: WebSocket;
+  private ws!: WebSocket;
+  private url: string;
   private registerInfo: RegisterInfo | null = null;
   private promptCallback: PromptCallback | null = null;
+  private isClosing = false;
+  private workspaceSessionId: string | null = null;
 
   constructor(url: string) {
-    this.ws = new WebSocket(url);
+    this.url = url;
+    this.connect();
+  }
+
+  private connect(): void {
+    this.ws = new WebSocket(this.url);
     this.ws.on('open', () => this.handleOpen());
     this.ws.on('message', (data: Buffer) => this.handleMessage(data));
     this.ws.on('error', (err: Error) => {
       // Connection errors are non-fatal — argus may not be running
       process.stderr.write(`[argus] Could not connect to Argus backend: ${err.message}\n`);
+    });
+    this.ws.on('close', () => {
+      if (!this.isClosing) {
+        // Backend restarted or connection dropped — reconnect and re-register
+        setTimeout(() => this.connect(), 2000);
+      }
     });
   }
 
@@ -45,7 +60,13 @@ export class ArgusLaunchClient {
     this.send({ type: 'update_pid', pid });
   }
 
+  sendWorkspaceId(id: string): void {
+    this.workspaceSessionId = id;
+    this.send({ type: 'workspace_id', sessionId: id });
+  }
+
   notifySessionEnded(sessionId: string, exitCode: number | null): Promise<void> {
+    this.isClosing = true;
     return new Promise<void>((resolve) => {
       const done = () => { clearTimeout(timer); resolve(); };
       // Safety timeout so the launcher never hangs if the server is unresponsive
@@ -63,6 +84,10 @@ export class ArgusLaunchClient {
     if (this.registerInfo) {
       this.send({ type: 'register', ...this.registerInfo });
     }
+    // Re-send workspace_id on reconnect so the backend can re-claim the session
+    if (this.workspaceSessionId) {
+      this.send({ type: 'workspace_id', sessionId: this.workspaceSessionId });
+    }
   }
 
   private handleMessage(data: Buffer): void {
@@ -74,6 +99,7 @@ export class ArgusLaunchClient {
     }
 
     if (msg.type === 'send_prompt' && msg.actionId && msg.prompt !== undefined) {
+      process.stderr.write(`[argus-launch-client] send_prompt received actionId=${msg.actionId} promptLen=${msg.prompt.length}\n`);
       this.promptCallback?.(msg.actionId, msg.prompt);
     }
   }

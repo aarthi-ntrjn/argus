@@ -33,6 +33,7 @@ export interface Session {
   type: SessionType;
   launchMode: SessionLaunchMode | null;
   pid: number | null;
+  hostPid: number | null;
   pidSource: PidSource | null;
   status: SessionStatus;
   startedAt: string;

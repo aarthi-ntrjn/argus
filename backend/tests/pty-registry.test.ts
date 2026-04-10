@@ -40,10 +40,10 @@ describe('PtyRegistry', () => {
     expect(registry.claimForSession('any', '/no/pending')).toBeNull();
   });
 
-  it('claimForSession returns pid when a pending launcher exists', () => {
+  it('claimForSession returns hostPid and null pid when a pending launcher exists', () => {
     const ws = makeMockWs();
     registry.registerPending('t', ws as any, '/repo', 9999);
-    expect(registry.claimForSession('s', '/repo')).toEqual({ pid: 9999 });
+    expect(registry.claimForSession('s', '/repo')).toEqual({ pid: null, hostPid: 9999 });
   });
 
   it('getClaimedId returns the claude session ID after claim', () => {
@@ -98,6 +98,32 @@ describe('PtyRegistry', () => {
 
   it('handleAck() for unknown actionId is a no-op (does not throw)', () => {
     expect(() => registry.handleAck('unknown-action', true)).not.toThrow();
+  });
+
+  it('claimByTempId returns hostPid and null pid when pending entry found', () => {
+    const ws = makeMockWs();
+    registry.registerPending('temp-abc', ws as any, '/repo', 7777);
+    const result = registry.claimByTempId('temp-abc', 'workspace-session-1');
+    expect(result).toEqual({ pid: null, hostPid: 7777 });
+    expect(registry.has('workspace-session-1')).toBe(true);
+  });
+
+  it('claimByTempId returns null when tempId not found', () => {
+    expect(registry.claimByTempId('no-such-temp', 'any-session')).toBeNull();
+  });
+
+  it('claimByTempId sets getClaimedId mapping', () => {
+    const ws = makeMockWs();
+    registry.registerPending('temp-xyz', ws as any, '/repo2', 8888);
+    registry.claimByTempId('temp-xyz', 'workspace-session-2');
+    expect(registry.getClaimedId('temp-xyz')).toBe('workspace-session-2');
+  });
+
+  it('claimByTempId removes pending entry so subsequent claimForSession returns null', () => {
+    const ws = makeMockWs();
+    registry.registerPending('temp-def', ws as any, '/repo3', 9999);
+    registry.claimByTempId('temp-def', 'workspace-session-3');
+    expect(registry.claimForSession('other', '/repo3')).toBeNull();
   });
 
   it('sendPrompt() rejects after timeout when no ack arrives', async () => {

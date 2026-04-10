@@ -14,7 +14,7 @@ import type { Session, Repository } from '../models/index.js';
 
 const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json');
 const HOOK_COMMAND = 'curl -sf -X POST http://127.0.0.1:7411/hooks/claude -H "Content-Type: application/json" -d @- 2>/dev/null || true';
-const HOOK_EVENTS = ['SessionStart', 'PreToolUse', 'PostToolUse', 'Stop', 'SessionEnd'];
+const HOOK_EVENTS = ['SessionStart', 'SessionEnd'];
 
 interface ClaudeSettings {
   hooks?: Record<string, Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>>;
@@ -45,6 +45,20 @@ export class ClaudeCodeDetector {
       }
       if (!settings.hooks) settings.hooks = {};
       let changed = false;
+
+      // Remove Argus hooks from events no longer in HOOK_EVENTS (e.g. PreToolUse, PostToolUse, Stop)
+      for (const event of Object.keys(settings.hooks)) {
+        if (!HOOK_EVENTS.includes(event)) {
+          const before = settings.hooks[event];
+          const after = before.filter((e) => !e.hooks?.some((h) => h.command === HOOK_COMMAND));
+          if (after.length !== before.length) {
+            settings.hooks[event] = after;
+            changed = true;
+          }
+        }
+      }
+
+      // Add hooks for current HOOK_EVENTS
       for (const event of HOOK_EVENTS) {
         if (!this.hasHook(settings, event)) {
           if (!settings.hooks[event]) settings.hooks[event] = [];
@@ -187,6 +201,7 @@ export class ClaudeCodeDetector {
           type: 'claude-code',
           launchMode: 'pty',
           pid: claimed.pid,
+          hostPid: claimed.hostPid,
           pidSource: 'pty_registry',
           status: 'active',
           startedAt: now,
@@ -210,6 +225,7 @@ export class ClaudeCodeDetector {
       type: 'claude-code',
       launchMode: null,
       pid: null,
+      hostPid: null,
       pidSource: null,
       status: 'active',
       startedAt: now,
@@ -242,12 +258,14 @@ export class ClaudeCodeDetector {
       // Check whether argus launch is pending for this repo — claim it if so.
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
       if (claimed) {
+        console.log(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
         const session: Session = {
           id: sessionId,
           repositoryId: repo.id,
           type: 'claude-code',
           launchMode: 'pty',
           pid: claimed.pid,
+          hostPid: claimed.hostPid,
           pidSource: 'pty_registry',
           status: 'active',
           startedAt: now,
@@ -277,6 +295,7 @@ export class ClaudeCodeDetector {
       type: 'claude-code',
       launchMode: null,
       pid: claudePid,
+      hostPid: null,
       pidSource: null,
       status: 'active',
       startedAt: now,
@@ -287,6 +306,7 @@ export class ClaudeCodeDetector {
       model: null,
       reconciled: true,
     };
+    console.log(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
     upsertSession({ ...base, status: 'active', endedAt: null, lastActivityAt: now, pid: claudePid });
     await this.watchJsonlFile(sessionId, repo.path);
   }
@@ -336,6 +356,7 @@ export class ClaudeCodeDetector {
           if (model) {
             const existing = getSession(sessionId);
             if (existing) {
+              console.log(`[ClaudeDetector] model detected sessionId=${sessionId} model=${model}`);
               const updated = { ...existing, model };
               upsertSession(updated);
               broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
@@ -348,6 +369,15 @@ export class ClaudeCodeDetector {
       this.sequenceCounters.set(sessionId, seq);
       if (outputs.length > 0) {
         this.outputStore.insertOutput(sessionId, outputs);
+
+        // Update lastActivityAt from the JSONL watcher — replaces PreToolUse/PostToolUse hooks
+        const now = new Date().toISOString();
+        const active = getSession(sessionId);
+        if (active) {
+          const updated = { ...active, lastActivityAt: now };
+          upsertSession(updated);
+          broadcast({ type: 'session.updated', timestamp: now, data: updated as unknown as Record<string, unknown> });
+        }
       }
 
       // Update summary with the most recent user prompt in this batch
@@ -357,6 +387,7 @@ export class ClaudeCodeDetector {
         if (existing) {
           const summary = lastUserMsg.content.slice(0, 120);
           if (existing.summary !== summary) {
+            console.log(`[ClaudeDetector] summary updated sessionId=${sessionId}`);
             const updated = { ...existing, summary };
             upsertSession(updated);
             broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });

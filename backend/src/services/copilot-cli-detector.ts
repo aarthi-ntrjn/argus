@@ -6,9 +6,10 @@ import psList from 'ps-list';
 import { randomUUID } from 'crypto';
 import chokidar, { type FSWatcher } from 'chokidar';
 import { upsertSession, getRepositoryByPath, deleteSessionOutput, getSession } from '../db/database.js';
+import { ptyRegistry } from './pty-registry.js';
 import { OutputStore } from './output-store.js';
 import { parseJsonlLine, parseModelFromEvent } from './events-parser.js';
-import type { Session } from '../models/index.js';
+import type { Session, PidSource } from '../models/index.js';
 
 const DEFAULT_SESSION_DIR = join(homedir(), '.copilot', 'session-state');
 
@@ -65,22 +66,85 @@ export class CopilotCliDetector {
     const pid = lockFile ? this.extractPid(lockFile) : null;
     const isRunning = pid !== null && runningPids.has(pid);
 
+    const sessionId = workspace.id ?? randomUUID();
+    const existingSession = getSession(sessionId);
+
+    // Skip directories for sessions already recorded as ended: no lock file means
+    // nothing has changed since we last marked them ended.
+    if (!isRunning && existingSession?.status === 'ended') return null;
+
     const repo = workspace.cwd ? getRepositoryByPath(normalize(workspace.cwd)) : null;
     if (!repo) return null;
 
-    const sessionId = workspace.id ?? randomUUID();
     const status = isRunning ? 'active' : 'ended';
 
     const toIso = (val: string | Date | undefined): string =>
       val ? (val instanceof Date ? val.toISOString() : val) : new Date().toISOString();
 
+    // Check if this session was already claimed as a PTY session on a previous scan
+    const alreadyClaimed = existingSession?.launchMode === 'pty';
+
+    let launchMode: 'pty' | null = null;
+    let resolvedPid = pid;
+    let resolvedHostPid: number | null = existingSession?.hostPid ?? null;
+    let resolvedPidSource: PidSource | null = pid != null ? 'lockfile' : null;
+
+    const registryHas = ptyRegistry.has(sessionId);
+
+    if (alreadyClaimed) {
+      // Preserve launchMode:'pty' as a historical record — this session was launched via argus launch
+      launchMode = 'pty';
+      resolvedPid = existingSession.pid;
+      resolvedHostPid = existingSession.hostPid;
+      resolvedPidSource = existingSession.pidSource;
+      // If the WS is gone but the process is still running (e.g. Argus restarted), try to
+      // re-link to a freshly reconnected launcher WS. If that also fails, keep the existing
+      // pid/pidSource — the launcher will reconnect within 2s and the next scan will claim it.
+      if (!registryHas && isRunning) {
+        console.log(`[CopilotDetector] alreadyClaimed + WS gone + isRunning — attempting re-link sessionId=${sessionId}`);
+        const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
+        if (claimed) {
+          resolvedPid = claimed.pid;
+          resolvedHostPid = claimed.hostPid;
+          resolvedPidSource = 'pty_registry';
+          console.log(`[CopilotDetector] re-link OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
+        } else {
+          console.log(`[CopilotDetector] re-link MISS — no pending WS yet for sessionId=${sessionId}`);
+        }
+      }
+    } else if (registryHas) {
+      // workspace_id message already claimed this session before the scan ran
+      console.log(`[CopilotDetector] ptyRegistry already has sessionId=${sessionId} — marking pty`);
+      launchMode = 'pty';
+      resolvedPidSource = 'pty_registry';
+    } else if (isRunning && existingSession == null) {
+      // Fallback: try claiming via repoPath (workspace_id message not yet received).
+      // Only attempt for sessions we have never seen before. Once in the DB, either
+      // hostPid is set and launchMode=pty (handled by alreadyClaimed above), or
+      // hostPid is null and launchMode=null (read-only — no PTY will ever arrive).
+      // Non-running (ended) sessions must not steal a pending launcher WS that belongs
+      // to the new active session for the same cwd.
+      console.log(`[CopilotDetector] isRunning + not claimed — trying claimForSession sessionId=${sessionId} repoPath="${repo.path}"`);
+      const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
+      if (claimed) {
+        launchMode = 'pty';
+        resolvedPid = claimed.pid;
+        resolvedHostPid = claimed.hostPid;
+        resolvedPidSource = 'pty_registry';
+        console.log(`[CopilotDetector] claimForSession OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
+      } else {
+        console.log(`[CopilotDetector] claimForSession MISS — no pending WS — sessionId=${sessionId} will be read-only`);
+      }
+    }
+
     const session: Session = {
       id: sessionId,
       repositoryId: repo.id,
       type: 'copilot-cli',
-      launchMode: null,
-      pid: pid,
-      pidSource: pid != null ? 'lockfile' : null,
+      launchMode,
+      pid: resolvedPid,
+      hostPid: resolvedHostPid,
+      pidSource: resolvedPidSource,
       status,
       startedAt: toIso(workspace.created_at),
       endedAt: status === 'ended' ? toIso(workspace.updated_at) : null,

@@ -5,6 +5,49 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
+## T114 — T113 regression: PTY launchMode wiped when session ends
+
+**Date**: 2026-04-10
+**Symptom**: After T113, GHCP sessions showed as read-only (launchMode: null) again immediately after the session exited.
+**Root cause**: T113 changed `if (alreadyClaimed)` to `if (alreadyClaimed && ptyRegistry.has(sessionId))`. When a PTY session exits, the WS closes and the server calls `ptyRegistry.unregister`, removing the session from `connections`. On the next scan: `alreadyClaimed=true` but `has()=false`, so the `else` branch ran, `claimForSession` failed (no pending WS for an ended process), and `launchMode` was set to `null` — incorrectly erasing the historical launch mode. The fix needed to distinguish between "WS gone because process ended" and "WS gone because Argus restarted while process was still running".
+**Why it was missed**: The T113 tests used test PID 99999 (never running), so `isRunning=false` in all tests. The re-claim branch was never tested with `isRunning=true` vs `isRunning=false`. The existing test for `downgrades to null` was actually testing a wrong scenario and passed by coincidence with the wrong expected value.
+**How to prevent**: When adding a conditional re-claim path, always test BOTH sub-cases: (1) process still running (backend restart), and (2) process ended (normal exit). Use a `ps-list` mock to control `isRunning` independently of the PID value used in test fixtures.
+**Fix summary**: `copilot-cli-detector.ts` — restructured the `alreadyClaimed` branch to always preserve `launchMode:'pty'` as a historical record, then separately try `claimForSession` only when `!has() && isRunning` (restart scenario). Also fixed pre-existing TypeScript type error by using `PidSource | null` instead of a narrowed literal union.
+
+---
+
+## T115 — ended sessions stealing pending PTY WS claim
+
+**Date**: 2026-04-10
+**Symptom**: After `argus launch copilot`, the new GHCP session was detected as read-only (`launchMode: null`) even when the launcher WS connected and registered successfully.
+**Root cause**: `CopilotCliDetector.processSessionDir()` called `ptyRegistry.claimForSession(sessionId, repo.path)` in the `else` branch (not yet claimed) without checking `isRunning`. GHCP creates a new UUID session directory for each launch; old ended directories from previous runs with the same `cwd` were also scanned. If an old ended directory was processed before the new active one, it consumed the single pending WS entry in `pendingByRepoPath[cwd]`, leaving the new active session with nothing to claim (`launchMode: null`).
+**Why it was missed**: Tests used a single session directory. The bug only manifests when multiple GHCP session directories share the same `cwd` and the non-running one is processed first.
+**How to prevent**: Whenever a scan-based detector calls a singleton registry to claim a resource keyed by path, always guard the claim with a liveness check (`isRunning`). A non-running session has no business claiming a live connection.
+**Fix summary**: `copilot-cli-detector.ts` — changed `else { claimForSession(...) }` to `else if (isRunning) { claimForSession(...) }` so only active sessions can claim a pending launcher WS.
+
+---
+
+
+**Date**: 2026-04-10
+**Symptom**: After restarting the Argus backend (while `argus launch copilot` was still running), the session continued to show as PTY-launched in the UI, but every `sendPrompt` call failed with "Session launcher is not connected to Argus".
+**Root cause**: Three cooperating issues: (1) `copilot-cli-detector.ts` checked `alreadyClaimed = existingSession?.launchMode === 'pty'` and when true, blindly preserved `launchMode: 'pty'` without checking `ptyRegistry.has(sessionId)`. After a backend restart, the in-memory `ptyRegistry.connections` is empty but the SQLite DB still has `launchMode: 'pty'`, so the detector skipped the `claimForSession` call that would have re-linked the new WS. (2) `ArgusLaunchClient` had no reconnect logic, so when the backend restarted and the WS closed, the launcher never re-registered. (3) `ptyRegistry.sendPrompt` had no `readyState` guard, meaning a stale closed WS in `connections` would throw an unhandled error instead of a clean rejection.
+**Why it was missed**: The T112 fix correctly handled the first-launch case (alreadyClaimed=false) but introduced an implicit assumption that the in-memory WS registry is always in sync with the DB's `launchMode`. No test exercised the backend-restart-mid-session scenario where the two diverge.
+**How to prevent**: Whenever DB state (persisted) and in-memory state (ephemeral) are used together for a feature, write at least one test that simulates the "DB has data but in-memory is empty" scenario. For any WS-backed feature, add a `readyState` guard before `ws.send()` and a reconnect handler on the client side.
+**Fix summary**: `copilot-cli-detector.ts` — added `ptyRegistry.has(sessionId)` to the `alreadyClaimed` guard so the code re-attempts `claimForSession` when the WS is gone. `argus-launch-client.ts` — added `close` event handler that calls `connect()` after 2s when `!isClosing`, plus `isClosing = true` in `notifySessionEnded`. `pty-registry.ts` — added `readyState !== OPEN` guard in `sendPrompt` that removes the stale entry and rejects cleanly.
+
+---
+
+## T112 — GHCP launched via argus launch shows as read-only instead of live PTY session
+
+**Date**: 2026-04-10
+**Symptom**: After running `argus launch copilot`, the session appeared in Argus as a read-only detected session with `launchMode: null`. The PTY was running and the WS connection was registered, but sending prompts failed immediately.
+**Root cause**: `CopilotCliDetector.processSessionDir()` always hardcoded `launchMode: null`. Unlike `ClaudeCodeDetector` which calls `ptyRegistry.claimForSession()` when a hook fires, the copilot detector never checked `ptyRegistry` for a pending WS connection matching the same `cwd`. The pending entry sat unclaimed in `pendingByRepoPath` forever.
+**Why it was missed**: The copilot-cli detection path was implemented independently from the PTY launcher path. The `claimForSession` pattern was only documented in comments referencing Claude hooks. No integration test existed that covered the scenario of a PTY pending + a workspace.yaml scan happening together.
+**How to prevent**: When adding a new session detection pathway, explicitly check whether a PTY claim step is needed — especially when `launchMode: null` is the default. Add a test that combines `ptyRegistry.registerPending` with a scan to verify `launchMode` is set correctly.
+**Fix summary**: `copilot-cli-detector.ts` — added `ptyRegistry` import and PTY claim logic in `processSessionDir()`. If `ptyRegistry.claimForSession()` returns a claimed entry for the repo path, `launchMode` is set to `'pty'` and `pid`/`pidSource` are taken from the registry instead of the lock file.
+
+---
+
 ## T109 — Adding a reminder does not appear in the list
 
 **Date**: 2026-04-05

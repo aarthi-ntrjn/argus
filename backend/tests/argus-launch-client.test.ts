@@ -6,17 +6,24 @@ import { ArgusLaunchClient } from '../src/cli/argus-launch-client.js';
 // once() + close() simulate the close handshake.
 const { MockWebSocket } = vi.hoisted(() => {
   const ctor = vi.fn().mockImplementation(() => {
-    const listeners = new Map<string, Function>();
+    const listeners = new Map<string, Function[]>();
+    const addListener = (event: string, cb: Function) => {
+      if (!listeners.has(event)) listeners.set(event, []);
+      listeners.get(event)!.push(cb);
+    };
+    const emit = (event: string, ...args: unknown[]) => {
+      (listeners.get(event) ?? []).forEach((cb) => cb(...args));
+    };
     return {
-      on: vi.fn(),
-      once: vi.fn((event: string, cb: Function) => { listeners.set(event, cb); }),
+      on: vi.fn((event: string, cb: Function) => addListener(event, cb)),
+      once: vi.fn((event: string, cb: Function) => addListener(event, cb)),
       send: vi.fn((_data: string, cb?: () => void) => { if (cb) cb(); }),
-      close: vi.fn(function (this: { _listeners: Map<string, Function> }) {
-        // Simulate async close: fire the 'close' listener on next tick
-        const closeCb = listeners.get('close');
-        if (closeCb) setTimeout(closeCb, 0);
+      close: vi.fn(function () {
+        // Simulate async close: fire the 'close' listeners on next tick
+        setTimeout(() => emit('close'), 0);
       }),
       readyState: 1,
+      emit,
       _listeners: listeners,
     };
   });
@@ -41,7 +48,7 @@ describe('ArgusLaunchClient', () => {
     const openHandler = mockWs.on.mock.calls.find((c: string[]) => c[0] === 'open')?.[1];
     expect(openHandler).toBeDefined();
 
-    const registerInfo = { sessionId: 'abc-123', pid: 5555, sessionType: 'claude-code' as const, cwd: '/tmp' };
+    const registerInfo = { sessionId: 'abc-123', hostPid: 5555, pid: null, sessionType: 'claude-code' as const, cwd: '/tmp' };
     client.setRegisterInfo(registerInfo);
     openHandler();
 
@@ -110,5 +117,115 @@ describe('ArgusLaunchClient', () => {
     await client.notifySessionEnded('sess-2', 1);
     expect(mockWs.send).not.toHaveBeenCalled();
     expect(mockWs.close).not.toHaveBeenCalled();
+  });
+
+  it('reconnects automatically after unexpected WS close and re-sends register on reconnect', async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
+      expect(MockWebSocket).toHaveBeenCalledTimes(1);
+
+      const registerInfo = { sessionId: 'abc', hostPid: 1, pid: 1, sessionType: 'claude-code' as const, cwd: '/tmp' };
+      client.setRegisterInfo(registerInfo);
+
+      // Trigger unexpected close on the first WS
+      const firstWs = MockWebSocket.mock.results[0].value;
+      firstWs.emit('close');
+
+      // Advance timers to trigger the 2-second reconnect delay
+      vi.advanceTimersByTime(2100);
+
+      // A second WebSocket should have been created
+      expect(MockWebSocket).toHaveBeenCalledTimes(2);
+
+      // Simulate the second WS opening — it should re-send the register message
+      const secondWs = MockWebSocket.mock.results[1].value;
+      const openHandler = secondWs.on.mock.calls.find((c: string[]) => c[0] === 'open')?.[1];
+      expect(openHandler).toBeDefined();
+      openHandler();
+
+      expect(secondWs.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'register', ...registerInfo })
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sendWorkspaceId sends workspace_id message over the WebSocket', () => {
+    const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
+    const mockWs = (client as any).ws;
+    mockWs.readyState = 1;
+
+    client.sendWorkspaceId('copilot-session-uuid');
+    expect(mockWs.send).toHaveBeenCalledWith(
+      JSON.stringify({ type: 'workspace_id', sessionId: 'copilot-session-uuid' })
+    );
+  });
+
+  it('sendWorkspaceId re-sends workspace_id on WS reconnect via handleOpen', async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
+      const firstWs = MockWebSocket.mock.results[0].value;
+      firstWs.readyState = 1;
+
+      // Discover the workspace ID before reconnect
+      client.sendWorkspaceId('copilot-ws-id');
+
+      // Simulate unexpected WS close and reconnect
+      firstWs.emit('close');
+      vi.advanceTimersByTime(2100);
+
+      const secondWs = MockWebSocket.mock.results[1].value;
+      const openHandler = secondWs.on.mock.calls.find((c: string[]) => c[0] === 'open')?.[1];
+      expect(openHandler).toBeDefined();
+      openHandler();
+
+      // Should have sent both register and workspace_id
+      const sent = secondWs.send.mock.calls.map((c: string[]) => JSON.parse(c[0]));
+      expect(sent.some((m: { type: string }) => m.type === 'workspace_id' && (m as any).sessionId === 'copilot-ws-id')).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('handleOpen does not send workspace_id if sendWorkspaceId was never called', () => {
+    const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
+    const mockWs = (client as any).ws;
+
+    const registerInfo = { sessionId: 'abc', hostPid: 1, pid: 1, sessionType: 'copilot-cli' as const, cwd: '/tmp' };
+    client.setRegisterInfo(registerInfo);
+
+    const openHandler = mockWs.on.mock.calls.find((c: string[]) => c[0] === 'open')?.[1];
+    openHandler();
+
+    const sent = mockWs.send.mock.calls.map((c: string[]) => JSON.parse(c[0]));
+    expect(sent.every((m: { type: string }) => m.type !== 'workspace_id')).toBe(true);
+  });
+
+  it('notifySessionEnded sets isClosing flag and prevents reconnect after intentional shutdown', async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
+      expect(MockWebSocket).toHaveBeenCalledTimes(1);
+
+      const firstWs = MockWebSocket.mock.results[0].value;
+      firstWs.readyState = 1;
+
+      // Intentional shutdown via notifySessionEnded
+      const promise = client.notifySessionEnded('sess-3', 0);
+      // Advance timers to fire the mock close event (setTimeout 0ms) so the promise resolves
+      vi.runAllTimers();
+      await promise;
+
+      // Advance further — no reconnect should be scheduled since isClosing=true
+      vi.advanceTimersByTime(5000);
+
+      // Still only one WebSocket — reconnect was blocked by isClosing
+      expect(MockWebSocket).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

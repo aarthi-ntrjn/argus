@@ -28,6 +28,8 @@ export class SessionMonitor extends EventEmitter {
   private activeSessionMap = new Map<string, Session>();
   // Track registry PIDs seen on the previous cycle to detect disappearances
   private previousRegistryPids = new Set<number>();
+  // Track last-emitted state per session to suppress no-op session.updated events
+  private lastEmittedSessions = new Map<string, string>();
 
   constructor() {
     super();
@@ -134,6 +136,7 @@ export class SessionMonitor extends EventEmitter {
       for (const session of liveSessions) {
         const repo = repos.find(r => r.id === session.repositoryId);
         if (!repo) {
+          console.log(`[ClaudeReconcile] session ended — repo removed sessionId=${session.id}`);
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
@@ -142,12 +145,27 @@ export class SessionMonitor extends EventEmitter {
 
         // Check if the process is still running
         if (session.pid != null && !runningPids.has(session.pid)) {
+          console.log(`[ClaudeReconcile] session ended — process gone sessionId=${session.id} pid=${session.pid}`);
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
         }
       }
     } catch { /* ignore — liveness check is best-effort */ }
+  }
+
+  private sessionSignature(session: Session): string {
+    return JSON.stringify({
+      status: session.status,
+      lastActivityAt: session.lastActivityAt,
+      summary: session.summary,
+      model: session.model,
+      pid: session.pid,
+      hostPid: session.hostPid,
+      pidSource: session.pidSource,
+      launchMode: session.launchMode,
+      endedAt: session.endedAt,
+    });
   }
 
   stop(): void {
@@ -189,6 +207,7 @@ export class SessionMonitor extends EventEmitter {
 
         // Assign PID if not yet set or if source was not session_registry
         if (existing.pid !== entry.pid || existing.pidSource !== 'session_registry') {
+          console.log(`[ClaudeRegistry] pid assigned sessionId=${entry.sessionId} pid=${entry.pid} (was ${existing.pid})`);
           const updated = { ...existing, pid: entry.pid, pidSource: 'session_registry' as const };
           upsertSession(updated);
           broadcast({ type: 'session.updated', timestamp: now, data: updated as unknown as Record<string, unknown> });
@@ -198,12 +217,14 @@ export class SessionMonitor extends EventEmitter {
         const repo = getRepositoryByPath(entry.cwd);
         if (!repo) continue; // Unregistered repo, ignore
 
+        console.log(`[ClaudeRegistry] session created sessionId=${entry.sessionId} pid=${entry.pid} cwd="${entry.cwd}"`);
         const session: Session = {
           id: entry.sessionId,
           repositoryId: repo.id,
           type: 'claude-code',
           launchMode: null,
           pid: entry.pid,
+          hostPid: null,
           pidSource: 'session_registry',
           status: 'active',
           startedAt: new Date(entry.startedAt).toISOString(),
@@ -226,6 +247,7 @@ export class SessionMonitor extends EventEmitter {
       const activeSessions = getSessions({ status: 'active', type: 'claude-code' });
       for (const session of activeSessions) {
         if (session.pid === oldPid && session.pidSource === 'session_registry') {
+          console.log(`[ClaudeRegistry] session ended — registry file gone sessionId=${session.id} pid=${oldPid}`);
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
@@ -254,19 +276,30 @@ export class SessionMonitor extends EventEmitter {
           const endedSession: Session = { ...session, status: 'ended', endedAt: now };
           this.emit('session.ended', endedSession);
           this.activeSessionMap.delete(id);
+          this.lastEmittedSessions.delete(id);
         }
       }
 
       for (const session of sessions) {
         if (!this.knownSessionIds.has(session.id)) {
           this.knownSessionIds.add(session.id);
+          this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
           this.emit('session.created', session);
         } else {
-          this.emit('session.updated', session);
+          const sig = this.sessionSignature(session);
+          if (this.lastEmittedSessions.get(session.id) !== sig) {
+            this.lastEmittedSessions.set(session.id, sig);
+            this.emit('session.updated', session);
+          }
         }
         if (session.status === 'ended') {
-          this.emit('session.ended', session);
-          this.activeSessionMap.delete(session.id);
+          // Only emit session.ended once: when the session was previously tracked as active.
+          // Ended sessions remain on disk and would re-trigger this on every scan otherwise.
+          if (this.activeSessionMap.has(session.id)) {
+            this.emit('session.ended', session);
+            this.activeSessionMap.delete(session.id);
+            this.lastEmittedSessions.delete(session.id);
+          }
         } else if (session.status === 'active') {
           this.activeSessionMap.set(session.id, session);
         }
