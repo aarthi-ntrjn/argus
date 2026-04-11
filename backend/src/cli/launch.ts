@@ -205,11 +205,17 @@ client.onSendPrompt((actionId: string, prompt: string) => {
   log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length}`);
   try {
     if (sessionType === 'copilot-cli') {
-      for (const ch of prompt + '\r') {
+      log(`win32 focus-in`);
+      process.stdin.push(Buffer.from('\x1b[I'));
+      for (const ch of prompt) {
         for (const buf of win32InputEvents(ch)) {
           log(`win32 push ch=${JSON.stringify(ch)} seq=${buf.toString()}`);
           process.stdin.push(buf);
         }
+      }
+      for (const buf of win32InputEvents('\r')) {
+        log(`win32 enter seq=${buf.toString()}`);
+        process.stdin.push(buf);
       }
     } else {
       pty.write(prompt + '\r');
