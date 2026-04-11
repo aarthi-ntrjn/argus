@@ -175,11 +175,9 @@ let workspaceWatcher: ReturnType<typeof setInterval> | null = null;
 // }
 log(`workspace watcher: disabled`);
 
-// Encode a string as Win32 input mode sequences (ESC[Vk;Sc;Uc;Kd;Cs;Rc_).
-// When copilot enables WIN32_INPUT_MODE, it receives key events as these
-// structured sequences rather than raw ASCII, so we must send the same format.
-// Each character produces a key-down then key-up pair.
-function encodeAsWin32Input(text: string): Buffer {
+// Yield Win32 input mode sequences (ESC[Vk;Sc;Uc;Kd;Cs;Rc_) for a single character,
+// one buffer per event: key-down first, then key-up.
+function* win32InputEvents(ch: string): Generator<Buffer> {
   // [VirtualKey, ScanCode] for US QWERTY layout
   const keyInfo: Record<string, [number, number]> = {
     'a': [65, 30], 'b': [66, 48], 'c': [67, 46], 'd': [68, 32], 'e': [69, 18],
@@ -193,15 +191,11 @@ function encodeAsWin32Input(text: string): Buffer {
     '-': [189, 12], '=': [187, 13], '[': [219, 26], ']': [221, 27],
     ';': [186, 39], "'": [222, 40], ',': [188, 51], '.': [190, 52], '/': [191, 53],
   };
-  const parts: string[] = [];
-  for (const ch of text) {
-    const lower = ch.toLowerCase();
-    const [vk, sc] = keyInfo[lower] ?? [ch.charCodeAt(0), 0];
-    const uc = ch.charCodeAt(0);
-    parts.push(`\x1b[${vk};${sc};${uc};1;0;1_`); // key down
-    parts.push(`\x1b[${vk};${sc};${uc};0;0;1_`); // key up
-  }
-  return Buffer.from(parts.join(''));
+  const lower = ch.toLowerCase();
+  const [vk, sc] = keyInfo[lower] ?? [ch.charCodeAt(0), 0];
+  const uc = ch.charCodeAt(0);
+  yield Buffer.from(`\x1b[${vk};${sc};${uc};1;0;1_`); // key down
+  yield Buffer.from(`\x1b[${vk};${sc};${uc};0;0;1_`); // key up
 }
 
 // When Argus sends a prompt, write it to the PTY.
@@ -211,9 +205,12 @@ client.onSendPrompt((actionId: string, prompt: string) => {
   log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length}`);
   try {
     if (sessionType === 'copilot-cli') {
-      const encoded = encodeAsWin32Input(prompt + '\r');
-      log(`win32 encoded len=${encoded.length}`);
-      process.stdin.push(encoded);
+      for (const ch of prompt + '\r') {
+        for (const buf of win32InputEvents(ch)) {
+          log(`win32 push ch=${JSON.stringify(ch)} seq=${buf.toString()}`);
+          process.stdin.push(buf);
+        }
+      }
     } else {
       pty.write(prompt + '\r');
     }
