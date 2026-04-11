@@ -134,7 +134,7 @@ client.onSendPrompt((actionId: string, prompt: string) => {
 
   const doWrite = async () => {
     if (sessionType === 'copilot-cli') {
-      await new Promise<void>(r => setTimeout(r, 500));
+      await new Promise<void>(r => setTimeout(r, 1000));
       for (const ch of prompt) {
         pty.write(ch);
         await new Promise<void>(r => setTimeout(r, 50));
