@@ -32,7 +32,7 @@ function toHex(str) {
 
 async function run() {
   // process.stderr.write('[test] Waiting 5s for copilot to show its input prompt...\n');
-  await sleep(5000);
+  await sleep(10000);
 
   // Snapshot what copilot has rendered so far
   // process.stderr.write(`[test] Output so far (hex):\n${toHex(outputLog)}\n\n`);
@@ -40,27 +40,28 @@ async function run() {
   // Test 1: single character — does anything echo?
   // process.stderr.write('[test] Writing single char "a" — watch for echo...\n');
   outputLog = '';
-  pty.write('a');
-  await sleep(1000);
+  pty.write('what is the day today \r');
+  //pty.write('\r');
+  await sleep(20000);
   // process.stderr.write(`[test] Output after "a" (hex): ${toHex(outputLog)}\n`);
 
   // Test 2: character-by-character with 50ms delays
-  const PROMPT = 'list files';
-  // process.stderr.write(`\n[test] Writing "${PROMPT}" char-by-char with 50ms delays...\n`);
-  outputLog = '';
-  for (const ch of PROMPT) {
-    pty.write(ch);
-    await sleep(50);
-  }
-  await sleep(500);
-  // process.stderr.write(`[test] Output after typing (hex): ${toHex(outputLog)}\n`);
+  // const PROMPT = 'list files';
+  // // process.stderr.write(`\n[test] Writing "${PROMPT}" char-by-char with 50ms delays...\n`);
+  // outputLog = '';
+  // for (const ch of PROMPT) {
+  //   pty.write(ch);
+  //   await sleep(50);
+  // }
+  // await sleep(500);
+  // // process.stderr.write(`[test] Output after typing (hex): ${toHex(outputLog)}\n`);
 
-  // Test 3: send Enter
-  // process.stderr.write('[test] Sending \\r (Enter)...\n');
-  outputLog = '';
-  pty.write('\r');
-  await sleep(5000);
-  // process.stderr.write(`[test] Output after Enter (hex): ${toHex(outputLog)}\n`);
+  // // Test 3: send Enter
+  // // process.stderr.write('[test] Sending \\r (Enter)...\n');
+  // outputLog = '';
+  // pty.write('\r');
+  // await sleep(20000);
+  // // process.stderr.write(`[test] Output after Enter (hex): ${toHex(outputLog)}\n`);
 
   pty.kill();
 }
