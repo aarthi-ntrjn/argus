@@ -9,6 +9,16 @@ import { load as yamlLoad } from 'js-yaml';
 import { resolveLaunchCommand } from './launch-command-resolver.js';
 import { ArgusLaunchClient } from './argus-launch-client.js';
 
+const sessionId = randomUUID();
+const logDir = join(tmpdir(), 'argus-logs');
+mkdirSync(logDir, { recursive: true });
+const logFile = join(logDir, `launch-${sessionId}.log`);
+function log(msg: string) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  appendFileSync(logFile, line);
+}
+process.stderr.write(`[launch] log: ${logFile}\n`);
+
 // Parse --cwd <path> out of argv before passing the rest to resolveLaunchCommand.
 // This is needed because npm --workspace changes cwd to the workspace root, so we
 // cannot rely on process.cwd() to know which repo the user wants to work in.
@@ -18,6 +28,7 @@ const toolArgs: string[] = [];
 for (let i = 0; i < rawArgs.length; i++) {
   if ((rawArgs[i] === '--cwd' || rawArgs[i] === '-cwd') && rawArgs[i + 1]) {
     cwd = rawArgs[++i];
+    log(`argv: --cwd resolved to ${cwd}`);
   } else {
     toolArgs.push(rawArgs[i]);
   }
@@ -33,22 +44,17 @@ if (toolArgs.length === 0) {
 }
 
 const { sessionType, cmd, cmdArgs } = resolveLaunchCommand(toolArgs);
-const sessionId = randomUUID();
-
-const logDir = join(tmpdir(), 'argus-logs');
-mkdirSync(logDir, { recursive: true });
-const logFile = join(logDir, `launch-${sessionId}.log`);
-function log(msg: string) {
-  const line = `[${new Date().toISOString()}] ${msg}\n`;
-  appendFileSync(logFile, line);
-}
 log(`launch started: sessionType=${sessionType} cmd=${cmd} args=${JSON.stringify(cmdArgs)} cwd=${cwd}`);
-process.stderr.write(`[launch] log: ${logFile}\n`);
 
 // On Windows, node-pty's ConPTY API requires a real .exe — .cmd/.bat scripts
 // (like claude.cmd, copilot.cmd) must be run through a shell.
 // Spawn powershell.exe and pass the command as a -Command string.
 const isWin = platform() === 'win32';
+if (isWin) {
+  log(`platform: windows — wrapping in powershell.exe`);
+} else {
+  log(`platform: ${platform()} — spawning ${cmd} directly`);
+}
 const ptyFile = isWin ? 'powershell.exe' : cmd;
 const ptyArgs = isWin
   ? ['-NoProfile', '-Command', [cmd, ...cmdArgs].join(' ')]
@@ -63,6 +69,7 @@ for (const key of Object.keys(cleanEnv)) {
   }
 }
 
+log(`spawning PTY: ${ptyFile} ${JSON.stringify(ptyArgs)}`);
 const pty = spawn(ptyFile, ptyArgs, {
   name: 'xterm-256color',
   cols: process.stdout.columns || 80,
@@ -70,6 +77,7 @@ const pty = spawn(ptyFile, ptyArgs, {
   cwd,
   env: cleanEnv as Record<string, string>
 });
+log(`PTY spawned: pty.pid=${pty.pid}`);
 
 // Proxy PTY output to the user's terminal
 pty.onData((data: string) => {
@@ -78,7 +86,10 @@ pty.onData((data: string) => {
 
 // Proxy user's keystrokes to PTY stdin
 if (process.stdin.isTTY) {
+  log(`stdin is TTY — enabling raw mode`);
   process.stdin.setRawMode(true);
+} else {
+  log(`stdin is not a TTY — skipping raw mode`);
 }
 process.stdin.resume();
 process.stdin.on('data', (chunk: Buffer) => {
@@ -87,13 +98,16 @@ process.stdin.on('data', (chunk: Buffer) => {
 
 // Forward terminal resize events to the PTY
 process.stdout.on('resize', () => {
+  log(`terminal resized to ${process.stdout.columns}x${process.stdout.rows}`);
   pty.resize(process.stdout.columns || 80, process.stdout.rows || 24);
 });
 
 // Connect to Argus backend
+log(`connecting to Argus WebSocket ws://127.0.0.1:7411/launcher`);
 const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher');
 // On Windows the real tool PID is unknown until the process tree walk resolves it.
 // On non-Windows pty.pid is already the tool directly (no shell wrapper).
+log(`registering session: sessionId=${sessionId} hostPid=${pty.pid} pid=${isWin ? null : pty.pid} sessionType=${sessionType}`);
 client.setRegisterInfo({ sessionId, hostPid: pty.pid, pid: isWin ? null : pty.pid, sessionType, cwd });
 
 // For copilot-cli: watch the session-state dir for a workspace.yaml whose cwd
@@ -105,13 +119,20 @@ const launchStartMs = Date.now();
 
 let workspaceWatcher: ReturnType<typeof setInterval> | null = null;
 if (sessionType === 'copilot-cli') {
+  log(`sessionType is copilot-cli — starting workspace.yaml watcher`);
   const sessionStateDir = join(homedir(), '.copilot', 'session-state');
   let watchAttempts = 0;
   workspaceWatcher = setInterval(() => {
     watchAttempts++;
-    if (watchAttempts > 60) { clearInterval(workspaceWatcher!); workspaceWatcher = null; return; }
+    if (watchAttempts > 60) {
+      log(`workspace watcher: giving up after 60 attempts`);
+      clearInterval(workspaceWatcher!); workspaceWatcher = null; return;
+    }
     try {
-      if (!existsSync(sessionStateDir)) return;
+      if (!existsSync(sessionStateDir)) {
+        log(`workspace watcher: sessionStateDir not found (attempt ${watchAttempts})`);
+        return;
+      }
       const entries = readdirSync(sessionStateDir, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
@@ -119,20 +140,36 @@ if (sessionType === 'copilot-cli') {
         if (!existsSync(workspaceFile)) continue;
         try {
           const content = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as { id?: string; cwd?: string; created_at?: string };
-          if (!content?.cwd || !content.id) continue;
-          if (normalize(content.cwd).toLowerCase() !== normalize(cwd).toLowerCase()) continue;
+          if (!content?.cwd || !content.id) {
+            log(`workspace watcher: skipping ${entry.name} — missing cwd or id`);
+            continue;
+          }
+          if (normalize(content.cwd).toLowerCase() !== normalize(cwd).toLowerCase()) {
+            log(`workspace watcher: skipping ${entry.name} — cwd mismatch (got ${content.cwd})`);
+            continue;
+          }
           // Ignore workspace.yaml files that predate this launch — they belong to sessions
           // already running before argus launch was invoked (e.g. process 42088 above).
           const createdAt = content.created_at ? new Date(content.created_at).getTime() : 0;
-          if (createdAt < launchStartMs - 3000) continue;
+          if (createdAt < launchStartMs - 3000) {
+            log(`workspace watcher: skipping ${entry.name} — predates launch (createdAt=${content.created_at})`);
+            continue;
+          }
+          log(`workspace watcher: matched ${entry.name} workspaceId=${content.id}`);
           client.sendWorkspaceId(content.id);
           clearInterval(workspaceWatcher!);
           workspaceWatcher = null;
           break;
-        } catch { /* ignore malformed yaml */ }
+        } catch (err) {
+          log(`workspace watcher: error parsing ${entry.name}/workspace.yaml — ${err}`);
+        }
       }
-    } catch { /* ignore fs errors */ }
+    } catch (err) {
+      log(`workspace watcher: fs error — ${err}`);
+    }
   }, 500);
+} else {
+  log(`sessionType is ${sessionType} — skipping workspace.yaml watcher`);
 }
 
 // When Argus sends a prompt, write it to the PTY.
@@ -140,7 +177,6 @@ if (sessionType === 'copilot-cli') {
 // TUI to finish its echo/redraw cycle, then send Enter. Sending Enter in the
 // same write as the text causes it to be discarded during the redraw.
 client.onSendPrompt((actionId: string, prompt: string) => {
-
   log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length}`);
   try {
     pty.write(prompt + '\r');
@@ -156,10 +192,14 @@ client.onSendPrompt((actionId: string, prompt: string) => {
 // to find the real tool process (claude.exe, copilot.exe, etc.) and update Argus.
 if (isWin) {
   const targetExe = `${cmd}.exe`.toLowerCase(); // e.g. claude.exe or copilot.exe
+  log(`pid resolver: starting — looking for ${targetExe} under pty.pid=${pty.pid}`);
   let pidAttempts = 0;
   const pidInterval = setInterval(() => {
     pidAttempts++;
-    if (pidAttempts > 20) { clearInterval(pidInterval); return; } // give up after ~10s
+    if (pidAttempts > 20) {
+      log(`pid resolver: giving up after 20 attempts`);
+      clearInterval(pidInterval); return;
+    }
     try {
       // Walk the process tree from pty.pid downward.
       // Stop as soon as we find the target exe; otherwise take the deepest non-conhost child.
@@ -174,8 +214,15 @@ if (isWin) {
           { encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] }
         );
         const pid = parseInt(out.match(/ProcessId=(\d+)/)?.[1] ?? '', 10);
-        if (pid) { currentPid = pid; currentName = targetExe; }
-      } catch { /* fall through to depth walk */ }
+        if (pid) {
+          log(`pid resolver: found ${targetExe} as direct child PID=${pid}`);
+          currentPid = pid; currentName = targetExe;
+        } else {
+          log(`pid resolver: ${targetExe} not a direct child of ${pty.pid} — falling back to depth walk`);
+        }
+      } catch (err) {
+        log(`pid resolver: wmic direct lookup failed — ${err}`);
+      }
 
       // Fallback: target exe not a direct child (e.g. wrapped in node.exe).
       // Walk the tree depth-first, skipping conhost.exe, until no more children.
@@ -186,10 +233,17 @@ if (isWin) {
             { encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] }
           );
           const blocks = out.split(/\r?\n\r?\n/).filter(b => b.trim());
-          if (blocks.length === 0) break;
+          if (blocks.length === 0) {
+            log(`pid resolver: depth walk stopped at depth=${depth} — no more children of PID=${currentPid}`);
+            break;
+          }
           const pid = parseInt(blocks[0].match(/ProcessId=(\d+)/)?.[1] ?? '', 10);
           const name = blocks[0].match(/Name=(.+)/)?.[1]?.trim().toLowerCase() ?? '';
-          if (!pid) break;
+          if (!pid) {
+            log(`pid resolver: depth walk stopped at depth=${depth} — could not parse PID`);
+            break;
+          }
+          log(`pid resolver: depth walk depth=${depth} found ${name} PID=${pid}`);
           currentPid = pid;
           currentName = name;
         }
@@ -198,20 +252,30 @@ if (isWin) {
         log(`resolved tool process: ${currentName} PID=${currentPid}`);
         client.updatePid(currentPid);
         clearInterval(pidInterval);
+      } else {
+        log(`pid resolver: attempt ${pidAttempts} — tool process not yet visible`);
       }
-    } catch { /* retry next tick */ }
+    } catch (err) {
+      log(`pid resolver: unexpected error on attempt ${pidAttempts} — ${err}`);
+    }
   }, 500);
 }
 
 // When the tool exits, clean up
 pty.onExit(({ exitCode }: { exitCode: number }) => {
-  if (workspaceWatcher) { clearInterval(workspaceWatcher); workspaceWatcher = null; }
+  log(`PTY exited with exitCode=${exitCode}`);
+  if (workspaceWatcher) {
+    log(`clearing workspace watcher`);
+    clearInterval(workspaceWatcher); workspaceWatcher = null;
+  }
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(false);
   }
   // Await the WebSocket flush so the backend receives the session_ended
   // message before this process exits.
+  log(`notifying Argus session ended`);
   client.notifySessionEnded(sessionId, exitCode).then(() => {
+    log(`session_ended ack received — exiting with code ${exitCode}`);
     process.exit(exitCode ?? 0);
   });
 });
