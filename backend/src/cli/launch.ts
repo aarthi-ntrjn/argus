@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { spawn } from 'node-pty';
 import { execSync } from 'child_process';
-import { readdirSync, existsSync, readFileSync } from 'fs';
+import { readdirSync, existsSync, readFileSync, appendFileSync, mkdirSync } from 'fs';
 import { randomUUID } from 'crypto';
-import { platform, homedir } from 'os';
+import { platform, homedir, tmpdir } from 'os';
 import { join, normalize } from 'path';
 import { load as yamlLoad } from 'js-yaml';
 import { resolveLaunchCommand } from './launch-command-resolver.js';
@@ -35,6 +35,16 @@ if (toolArgs.length === 0) {
 const { sessionType, cmd, cmdArgs } = resolveLaunchCommand(toolArgs);
 const sessionId = randomUUID();
 
+const logDir = join(tmpdir(), 'argus-logs');
+mkdirSync(logDir, { recursive: true });
+const logFile = join(logDir, `launch-${sessionId}.log`);
+function log(msg: string) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  appendFileSync(logFile, line);
+}
+log(`launch started: sessionType=${sessionType} cmd=${cmd} args=${JSON.stringify(cmdArgs)} cwd=${cwd}`);
+process.stderr.write(`[launch] log: ${logFile}\n`);
+
 // On Windows, node-pty's ConPTY API requires a real .exe — .cmd/.bat scripts
 // (like claude.cmd, copilot.cmd) must be run through a shell.
 // Spawn powershell.exe and pass the command as a -Command string.
@@ -58,12 +68,12 @@ const pty = spawn(ptyFile, ptyArgs, {
   cols: process.stdout.columns || 80,
   rows: process.stdout.rows || 24,
   cwd,
-  env: cleanEnv as Record<string, string>,
+  env: cleanEnv as Record<string, string>
 });
 
 // Proxy PTY output to the user's terminal
 pty.onData((data: string) => {
-  process.stdout.write(data);
+  process.stderr.write(data);
 });
 
 // Proxy user's keystrokes to PTY stdin
@@ -130,14 +140,14 @@ if (sessionType === 'copilot-cli') {
 // TUI to finish its echo/redraw cycle, then send Enter. Sending Enter in the
 // same write as the text causes it to be discarded during the redraw.
 client.onSendPrompt((actionId: string, prompt: string) => {
-  process.stderr.write(`[launch] onSendPrompt actionId=${actionId} prompt=${prompt}\n`);
 
+  log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length}`);
   try {
     pty.write(prompt + '\r');
-    pty.write('\r');
     client.ackDelivered(actionId);
+    log(`ackDelivered actionId=${actionId}`);
   } catch (err) {
-    process.stderr.write(`[launch] PTY write failed: ${err}\n`);
+    log(`PTY write failed: ${err}`);
     client.ackFailed(actionId, err instanceof Error ? err.message : 'PTY write failed');
   }
 });
@@ -185,7 +195,7 @@ if (isWin) {
         }
       }
       if (currentPid !== pty.pid) {
-        process.stderr.write(`[launch] resolved tool process: ${currentName} PID=${currentPid}\n`);
+        log(`resolved tool process: ${currentName} PID=${currentPid}`);
         client.updatePid(currentPid);
         clearInterval(pidInterval);
       }
