@@ -257,6 +257,10 @@ if (isWin) {
           log(`pid resolver: depth walk depth=${depth} found ${name} PID=${pid}`);
           currentPid = pid;
           currentName = name;
+          if (name === targetExe) {
+            log(`pid resolver: depth walk found target ${targetExe} at depth=${depth}`);
+            break;
+          }
         }
       }
       if (currentPid !== pty.pid) {
