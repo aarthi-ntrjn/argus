@@ -81,6 +81,7 @@ log(`PTY spawned: pty.pid=${pty.pid}`);
 
 // Proxy PTY output to the user's terminal
 pty.onData((data: string) => {
+  log(`pty.onData len=${data.length}`);
   process.stderr.write(data);
 });
 
@@ -93,6 +94,7 @@ if (process.stdin.isTTY) {
 }
 process.stdin.resume();
 process.stdin.on('data', (chunk: Buffer) => {
+  log(`stdin.data len=${chunk.length}`);
   pty.write(chunk.toString('binary'));
 });
 
