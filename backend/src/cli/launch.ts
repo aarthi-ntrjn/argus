@@ -263,12 +263,12 @@ if (isWin) {
           }
         }
       }
-      if (currentPid !== pty.pid) {
+      if (currentName === targetExe) {
         log(`resolved tool process: ${currentName} PID=${currentPid}`);
         client.updatePid(currentPid);
         clearInterval(pidInterval);
       } else {
-        log(`pid resolver: attempt ${pidAttempts} — tool process not yet visible`);
+        log(`pid resolver: attempt ${pidAttempts} — target ${targetExe} not yet visible (deepest found: ${currentName} PID=${currentPid})`);
       }
     } catch (err) {
       log(`pid resolver: unexpected error on attempt ${pidAttempts} — ${err}`);
