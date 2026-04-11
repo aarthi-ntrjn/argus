@@ -228,11 +228,11 @@ if (isWin) {
       }
 
       // Fallback: target exe not a direct child (e.g. wrapped in node.exe).
-      // Walk the tree depth-first, skipping conhost.exe, until no more children.
+      // Walk the tree depth-first until no more children.
       if (currentPid === pty.pid) {
         for (let depth = 0; depth < 10; depth++) {
           const out = execSync(
-            `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"ParentProcessId=${currentPid} AND Name != 'conhost.exe'\\" | Select-Object -First 1 ProcessId,Name | ConvertTo-Json -Compress"`,
+            `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"ParentProcessId=${currentPid}\\" | Select-Object -First 1 ProcessId,Name | ConvertTo-Json -Compress"`,
             { encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] }
           );
           const trimmed = out.trim();
