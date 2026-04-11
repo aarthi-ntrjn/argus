@@ -177,17 +177,23 @@ log(`workspace watcher: disabled`);
 
 // When Argus sends a prompt, write it to the PTY.
 // For copilot-cli: write the prompt text first, then wait 500ms for copilot's
-// TUI to finish its echo/redraw cycle, then send Enter. Sending Enter in the
-// same write as the text causes it to be discarded during the redraw.
+// For copilot-cli, push the prompt into process.stdin so it flows through the
+// existing stdin->pty pipe, matching how real keystrokes arrive.
+// For other session types, write directly to the PTY.
 client.onSendPrompt((actionId: string, prompt: string) => {
   log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length}`);
   try {
-    pty.write(prompt + '\r');
+    if (sessionType === 'copilot-cli') {
+      log(`push buffer`);
+      process.stdin.push(Buffer.from(prompt + '\r'));
+    } else {
+      pty.write(prompt + '\r');
+    }
     client.ackDelivered(actionId);
     log(`ackDelivered actionId=${actionId}`);
   } catch (err) {
-    log(`PTY write failed: ${err}`);
-    client.ackFailed(actionId, err instanceof Error ? err.message : 'PTY write failed');
+    log(`prompt delivery failed: ${err}`);
+    client.ackFailed(actionId, err instanceof Error ? err.message : 'prompt delivery failed');
   }
 });
 
