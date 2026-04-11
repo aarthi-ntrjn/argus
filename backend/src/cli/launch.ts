@@ -126,20 +126,15 @@ if (sessionType === 'copilot-cli') {
 }
 
 // When Argus sends a prompt, write it to the PTY.
-// For copilot-cli: type character by character with 50ms delays so the TUI
-// processes each keystroke, then send Enter. This matches how the copilot TUI
-// expects input (same pattern confirmed working in test-pty-copilot.mjs).
+// For copilot-cli: wait 500ms before typing so copilot's input loop is in its
+// read-ready state (the first ~400ms after a send fires are a dead window where
+// the TUI discards input). Then type character by character with 50ms delays.
 client.onSendPrompt((actionId: string, prompt: string) => {
   process.stderr.write(`[launch] onSendPrompt actionId=${actionId} promptLen=${prompt.length}\n`);
 
   const doWrite = async () => {
-    // Capture PTY output after the write for diagnostics
-    let postWriteOutput = '';
-    const diagListener = (data: string) => { postWriteOutput += data; };
-    pty.onData(diagListener);
-
     if (sessionType === 'copilot-cli') {
-      // Type character by character with 50ms delay between keystrokes
+      await new Promise<void>(r => setTimeout(r, 500));
       for (const ch of prompt) {
         pty.write(ch);
         await new Promise<void>(r => setTimeout(r, 50));
@@ -149,16 +144,7 @@ client.onSendPrompt((actionId: string, prompt: string) => {
     } else {
       pty.write(prompt + '\r');
     }
-
     client.ackDelivered(actionId);
-
-    // Report PTY response after 3 seconds so the backend can see what copilot did
-    setTimeout(() => {
-      // Strip ANSI escape sequences for readability
-      const clean = postWriteOutput.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '').trim();
-      const snippet = clean.slice(-300) || '(no output)';
-      client.sendDiagnostic(actionId, `PTY output after write (${postWriteOutput.length} raw chars): ${snippet}`);
-    }, 3000);
   };
 
   doWrite().catch(err => {
