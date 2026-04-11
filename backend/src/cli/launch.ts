@@ -69,7 +69,8 @@ for (const key of Object.keys(cleanEnv)) {
   }
 }
 
-log(`spawning PTY: ${ptyFile} ${JSON.stringify(ptyArgs)}`);
+const spawnStartMs = Date.now();
+log(`spawning PTY: ${ptyFile} ${JSON.stringify(ptyArgs)} at=${new Date(spawnStartMs).toISOString()}`);
 const pty = spawn(ptyFile, ptyArgs, {
   name: 'xterm-256color',
   cols: process.stdout.columns || 80,
@@ -77,7 +78,7 @@ const pty = spawn(ptyFile, ptyArgs, {
   cwd,
   env: cleanEnv as Record<string, string>
 });
-log(`PTY spawned: pty.pid=${pty.pid}`);
+log(`PTY spawned: pty.pid=${pty.pid} spawnMs=${Date.now() - spawnStartMs}`);
 
 // Proxy PTY output to the user's terminal
 pty.onData((data: string) => {  
