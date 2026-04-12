@@ -239,13 +239,28 @@ Group findings by session. If a session has no matches, omit it from the output.
 
 ## Step 6: Report
 
-Present a structured report:
+### Derive the output filename
 
-```
+Derive a short slug from the pattern description — uppercase, words joined by hyphens, max 4 words. Examples:
+
+| Pattern description | Slug | Filename |
+|---|---|---|
+| find AI cycles | CYCLES | `RETROSPECTIVE-CYCLES.md` |
+| user corrections on decisions | USER-CORRECTIONS | `RETROSPECTIVE-USER-CORRECTIONS.md` |
+| decision reversals | DECISION-REVERSALS | `RETROSPECTIVE-DECISION-REVERSALS.md` |
+| repeated failed bash commands | FAILED-BASH | `RETROSPECTIVE-FAILED-BASH.md` |
+
+Write the report to `docs/RETROSPECTIVE-<SLUG>.md` in the current repository. Create the `docs/` directory if it does not exist.
+
+### Report format
+
+```markdown
 # Retrospective: [pattern description]
-Scope: [input path patterns] -> [matched project directories]
-Sessions scanned: N
-Sessions with matches: M
+
+**Date**: YYYY-MM-DD
+**Scope**: [input path patterns] -> [matched project directories]
+**Sessions scanned**: N
+**Sessions with matches**: M
 
 ## Summary
 
@@ -264,13 +279,13 @@ Sessions with matches: M
 "Cycles tend to occur on Bash commands, not file reads", etc.]
 ```
 
-If no matches are found, state that clearly and suggest alternative patterns the user might try.
+If no matches are found, still write the file and note that clearly. After writing, tell the user the filename.
 
 ---
 
 ## Constraints
 
-- Do not modify any files during this analysis. This skill is read-only.
+- Do not modify any source files or session data. The only file this skill writes is the output report in `docs/`.
 - JSONL files can be large due to tool call payloads (file reads, writes, command output). To avoid missing conversations, skip tool call content entirely when reading: ignore `tool.execution_start`, `tool.execution_complete`, and assistant content blocks of `type: "tool_use"` and their corresponding `tool_result` entries. Only extract user turns, assistant prose, and abort/error events. This keeps the full conversation thread without the bulk.
 - Truncate conversation excerpts to 3 lines per turn in the report to keep output concise.
 - Include `type: "thinking"` blocks in the analysis. They are the most reliable signal for cycle detection: the AI often explicitly acknowledges in its reasoning that it is repeating itself, going in circles, or trying the same approach again. Scan thinking content for phrases like "I've tried this before", "this is the same approach", "I'm going in circles", "I already attempted", "let me try something different". When a match is found in a thinking block, include a truncated excerpt (2-3 sentences max) in the finding. Do not dump full thinking blocks into the report.
