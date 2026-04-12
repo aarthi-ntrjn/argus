@@ -25,9 +25,13 @@ Open **http://localhost:7411** and you're in. The port is configurable in [`~/.a
 
 ## Monitor
 
+![Argus Dashboard](docs/images/argus.png)
+
 See everything happening across your AI sessions without switching terminals.
 
 ### Session Cards
+
+![Session Cards](docs/images/argus-sessions.png)
 
 Each card is a live snapshot of a session:
 
@@ -44,7 +48,9 @@ Each card is a live snapshot of a session:
 
 ### Session Output
 
-Click any card to open a **live output pane** on the right inline. The card list stays visible on the left. Press **Escape** or click the **X** icon to close it. Click another card to switch sessions.
+![Session Output](docs/images/argus-session-stream.png)
+
+Click any card to open a **live output pane** on the right inline.The card list stays visible on the left. Press **Escape** or click the **X** icon to close it. Click another card to switch sessions.
 
 Output lines carry type badges so you always know what's what: **YOU** (your input), **AI** (assistant reply), **TOOL** (tool call), **RESULT** (tool result), **STATUS** (status change), **ERR** (error). These are streamed in real time, including tool calls.
 
@@ -53,7 +59,12 @@ Output lines carry type badges so you always know what's what: **YOU** (your inp
 The output pane has two display modes, toggled via the **Focused / Verbose** button in the pane header:
 
 - **Focused** (default): hides noisy tool results. Tool calls show a compact one-line summary. Click **show result** on any row to expand it inline. Your messages, AI replies, status changes, and errors are always visible.
+
+  ![Focused Mode](docs/images/argus-stream-focused.png)
+
 - **Verbose**: shows everything. Long tool results (over 40 lines) are truncated with a **show more** button. Tool calls show their full content.
+
+  ![Verbose Mode](docs/images/argus-stream-verbose.png)
 
 The selected mode persists across sessions and page reloads.
 
@@ -82,7 +93,9 @@ Every session card and the session detail page have a **kill button** (■ icon)
 
 ### Starting a Session with Prompt Control
 
-To send prompts to a session, start it through Argus. This gives Argus a direct PTY write channel to the process.
+![Connected Session](docs/images/argus-connected.png)
+
+To send prompts to a session, start it through Argus.This gives Argus a direct PTY write channel to the process.
 
 The easiest way is to click the **Launch with Argus** dropdown in any repo card header and select **Claude Code** or **Copilot CLI**.
 
@@ -108,11 +121,15 @@ Prompt injection works for both Claude Code and Copilot CLI when started via `La
 
 ### Repository Management
 
+![Repository Cards](docs/images/argus-repos.png)
+
 Click **Add Repository**, type or paste a root folder path (e.g. `C:\source` or `/home/user/projects`), then click **Scan &amp; Add**. Argus scans that folder recursively for git repos and registers all new ones in one go. Already-registered repos are skipped automatically.
 
 ## To Tackle
 
-The **To Tackle** panel lives on the right side of the dashboard. Use it to jot down tasks, reminders, or notes essentially your brain dump.
+![To Tackle Panel](docs/images/argus-todo.png)
+
+The **To Tackle** panel lives on the right side of the dashboard.Use it to jot down tasks, reminders, or notes essentially your brain dump.
 
 - Add items with the input at the top, press **Enter** to save
 - Check off completed items; toggle visibility of done items with the button in the header
@@ -131,6 +148,8 @@ Argus is fully usable when you remote into your machine from mobile devices (390
 Desktop layout (two-column with inline output pane) is unchanged.
 
 ## Dashboard Settings
+
+![Settings Panel](docs/images/argus-settings.png)
 
 Click the **gear icon** (top-right) to open Settings.
 
@@ -160,7 +179,9 @@ To disable, toggle Yolo mode off in Settings. No confirmation is required to dis
 
 ## Onboarding
 
-New to Argus? An interactive tour launches automatically on your first visit. Dismiss it any time and replay it later from Settings.
+![Onboarding Tour](docs/images/argus-welcome.png)
+
+New to Argus? An interactive tour launches automatically on your first visit.Dismiss it any time and replay it later from Settings.
 
 ## Storage
 
