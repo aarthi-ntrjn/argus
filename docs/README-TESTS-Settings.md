@@ -37,10 +37,10 @@ Manual tests for the settings panel. Run these against a live Argus instance.
 | G-14 | Toggle **Yolo mode** ON and click **Enable Yolo Mode** | The dialog closes, the checkbox is checked, and a yellow "All permission checks disabled" label appears beneath it |
 | G-15 | With Yolo mode ON, copy a Claude launch command | The copied command includes `--dangerously-skip-permissions` |
 | G-16 | With Yolo mode ON, copy a Copilot launch command | The copied command includes `--allow-all` |
-| G-17 | With Yolo mode ON, click **Launch Claude** from the Launch dropdown for any repo | A new terminal window opens; open Task Manager, find the `claude.exe` process, and verify its command line includes `--dangerously-skip-permissions` |
-| G-18 | With Yolo mode ON, click **Launch Copilot** from the Launch dropdown for any repo | A new terminal window opens; open Task Manager, find the `copilot.exe` process, and verify its command line includes `--allow-all` |
+| G-17 | With Yolo mode ON, click **Launch Claude** from the Launch dropdown for any repo | A new terminal window opens; open Task Manager, find the `claude.exe` process, and verify its command line includes `--dangerously-skip-permissions`; within a few seconds the new session card in Argus shows a red **yolo** badge |
+| G-18 | With Yolo mode ON, click **Launch Copilot** from the Launch dropdown for any repo | A new terminal window opens; open Task Manager, find the `copilot.exe` process, and verify its command line includes `--allow-all`; within a few seconds the new session card in Argus shows a red **yolo** badge |
 | G-19 | Toggle **Yolo mode** OFF | No dialog appears; the checkbox unchecks immediately and the warning label disappears |
-| G-20 | With Yolo mode OFF, click **Launch Claude** | A new terminal window opens; open Task Manager, find the `claude.exe` process, and verify its command line does NOT include `--dangerously-skip-permissions` |
-| G-21 | With Yolo mode OFF, click **Launch Copilot** | A new terminal window opens; open Task Manager, find the `copilot.exe` process, and verify its command line does NOT include `--allow-all` |
+| G-20 | With Yolo mode OFF, click **Launch Claude** | A new terminal window opens; open Task Manager, find the `claude.exe` process, and verify its command line does NOT include `--dangerously-skip-permissions`; the new session card does NOT show a **yolo** badge |
+| G-21 | With Yolo mode OFF, click **Launch Copilot** | A new terminal window opens; open Task Manager, find the `copilot.exe` process, and verify its command line does NOT include `--allow-all`; the new session card does NOT show a **yolo** badge |
 | G-22 | With Yolo mode OFF, copy a Claude launch command | The copied command does NOT include `--dangerously-skip-permissions` |
 | G-23 | With Yolo mode OFF, copy a Copilot launch command | The copied command does NOT include `--allow-all` |
