@@ -94,7 +94,7 @@ if (process.stdin.isTTY) {
 }
 process.stdin.resume();
 process.stdin.on('data', (chunk: Buffer) => {
-  // log(`stdin.data len=${chunk.length} chunk=${chunk.toString('utf8')}`);
+  log(`stdin.data len=${chunk.length} chunk=${chunk.toString('utf8')}`);
   pty.write(chunk.toString('binary'));
 });
 
@@ -147,17 +147,18 @@ client.onSendPrompt((actionId: string, prompt: string) => {
   try {
     if (sessionType === 'copilot-cli') {
       log(`win32 focus-in`);
-      pty.write('\x1b[I');
+      process.stdin.push(Buffer.from('\x1b[I'));
       for (const ch of prompt) {
         for (const buf of win32InputEvents(ch)) {
           // log(`win32 push ch=${JSON.stringify(ch)} seq=${buf.toString()}`);
-          pty.write(buf.toString('binary'));
+          process.stdin.push(buf);
         }
       }
       for (const buf of win32InputEvents('\r')) {
-        //log(`win32 enter seq=${buf.toString()}`);
-        pty.write(buf.toString('binary'));
+        // log(`win32 enter seq=${buf.toString()}`);
+        process.stdin.push(buf);
       }
+      process.stdin.push(Buffer.from('\x1b[O'));
     } else {
       pty.write(prompt + '\r');
     }
@@ -177,7 +178,7 @@ if (isWin) {
   let pidAttempts = 0;
   const pidInterval = setInterval(() => {
     pidAttempts++;
-    if (pidAttempts > 20) {
+    if (pidAttempts > 10) {
       log(`pid resolver: giving up after 20 attempts`);
       clearInterval(pidInterval); return;
     }
@@ -222,7 +223,7 @@ if (isWin) {
       }
 
       if (foundPid) {
-        log(`resolved tool process: ${targetExe} PID=${foundPid}`);
+        log(`resolved tool process: ${targetExe} PID=${foundPid} attempt=${pidAttempts}`);
         client.updatePid(foundPid);
         clearInterval(pidInterval);
       } else {
