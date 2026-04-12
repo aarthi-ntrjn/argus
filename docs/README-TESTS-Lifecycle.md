@@ -80,12 +80,3 @@ Manual tests for session state transitions across different scenarios: terminal 
 | L5-01 | Navigate to a running session's detail page; locate the power button in the meta row | Power icon button is visible in the session header meta row |
 | L5-02 | Click the power button, then click Kill Session in the confirmation dialog | Spinner shows "Killing session..."; after the process exits, the page navigates back to the dashboard |
 | L5-03 | On the dashboard, verify the killed session now shows "ended" status | Session card shows grey "ended" badge |
-
----
-
-## L6: Kill session error scenarios
-
-| # | Steps | Expected |
-|---|-------|----------|
-| L6-01 | Kill a session whose process has already exited (PID recycled or gone) before clicking Kill Session | Dialog shows an error message: "Process is no longer running"; Cancel and Kill Session buttons remain enabled for retry or dismissal |
-| L6-02 | Kill a session while the backend is unreachable (stop the server after the dialog opens) | Dialog shows a network error message; user can close the dialog with Cancel |
