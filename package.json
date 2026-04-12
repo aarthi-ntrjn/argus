@@ -24,7 +24,7 @@
     "type": "git",
     "url": "https://github.com/aarthi-ntrjn/argus.git"
   },
-  "author": "artynuts",
+  "author": "aarthi-ntrjn",
   "workspaces": [
     "backend",
     "frontend"
