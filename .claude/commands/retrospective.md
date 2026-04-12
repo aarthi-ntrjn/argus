@@ -271,6 +271,6 @@ If no matches are found, state that clearly and suggest alternative patterns the
 ## Constraints
 
 - Do not modify any files during this analysis. This skill is read-only.
-- If a JSONL file is too large to read in full, read the first 500 lines and the last 200 lines, then note that the middle was skipped.
+- JSONL files can be large due to tool call payloads (file reads, writes, command output). To avoid missing conversations, skip tool call content entirely when reading: ignore `tool.execution_start`, `tool.execution_complete`, and assistant content blocks of `type: "tool_use"` and their corresponding `tool_result` entries. Only extract user turns, assistant prose, and abort/error events. This keeps the full conversation thread without the bulk.
 - Truncate conversation excerpts to 3 lines per turn in the report to keep output concise.
 - Do not include content from `type: "thinking"` blocks in the report (those are internal reasoning, not visible behavior).
