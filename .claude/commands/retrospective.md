@@ -119,32 +119,72 @@ Repeat for each matched directory. Deduplicate if the same file appears from mul
 
 ### GitHub Copilot sessions
 
-Copilot conversations in VS Code are stored in SQLite databases under `%APPDATA%\Code\User\workspaceStorage\`. These are not directly readable as text. If the user asks for Copilot analysis, report that Copilot sessions require SQLite tooling and suggest they export conversations manually, or note this limitation clearly.
+Copilot sessions are stored as directories under `~/.copilot/session-state/` (Windows: `C:\Users\<username>\.copilot\session-state\`). Each session directory contains:
+
+- `workspace.yaml` — session metadata including `git_root` (the project path) and `cwd`
+- `events.jsonl` — the full event log for the session
+
+To find Copilot sessions matching a path pattern:
+
+1. List all session directories:
+   ```bash
+   ls ~/.copilot/session-state/
+   ```
+
+2. For each session directory, read `workspace.yaml` and check if `git_root` matches any of the user's path patterns. Matching is case-insensitive on Windows and supports `*` as a suffix wildcard (e.g., `C:\source\github\artynuts\argus*` matches `C:\source\github\artynuts\argus`, `C:\source\github\artynuts\argus2`, etc.):
+   ```bash
+   grep "git_root" ~/.copilot/session-state/*/workspace.yaml 2>/dev/null
+   ```
+
+3. Collect `events.jsonl` from all sessions whose `git_root` matched.
 
 ---
 
 ## Step 3: Parse Each Session
 
-For each JSONL file found, read it and reconstruct the conversation thread.
+For each JSONL file found, read it and reconstruct the conversation thread. The schema differs between Claude Code and Copilot sessions.
 
-Each line is a JSON object. The relevant types are:
+### Claude Code event schema
 
-```
-type: "user"      -> message.content is the human turn (string or array)
-type: "assistant" -> message.content is an array of content blocks
-                     - {type: "text", text: "..."}          assistant prose
-                     - {type: "tool_use", name: "...", input: {...}}  tool call
-                     - {type: "thinking", thinking: "..."}   internal reasoning
-type: "attachment" -> hook output, ignore for pattern analysis
-```
-
-Build an ordered list of turns per session:
+Each line is a JSON object keyed on `type`:
 
 ```
-[timestamp] [role] [content summary]
+type: "user"      -> message.content: human turn text (string or array of content blocks)
+type: "assistant" -> message.content: array of content blocks:
+                     {type: "text", text: "..."}                  assistant prose
+                     {type: "tool_use", name: "...", input: {...}} tool call
+                     {type: "thinking", thinking: "..."}           skip (internal)
+type: "attachment" -> hook output, skip for pattern analysis
 ```
 
-For tool calls, record: `tool_name(key_argument_or_path)`.
+### Copilot event schema
+
+Each line is a JSON object keyed on `type`:
+
+```
+type: "session.start"          -> data.context.{cwd, gitRoot, branch, headCommit}
+type: "user.message"           -> data.content: user turn text
+type: "assistant.message"      -> data.content: assistant prose
+                                  data.toolRequests: array of tool calls [{toolName, arguments}]
+type: "tool.execution_start"   -> data.{toolCallId, toolName, arguments}
+type: "tool.execution_complete"-> data.{toolCallId, toolName, success, result}
+type: "abort"                  -> user interrupted the assistant mid-turn (strong correction signal)
+type: "skill.invoked"          -> data.skillName: a slash command was called
+type: "subagent.started"       -> data.subagentType
+type: "subagent.completed"     -> data.success
+type: "session.error"          -> data.error
+type: "session.compaction_start" / "session.compaction_complete" -> context window hit, skip
+```
+
+### Turn sequence
+
+For both sources, build an ordered list of turns:
+
+```
+[timestamp] [source: claude|copilot] [role: user|assistant] [content summary]
+```
+
+For tool calls, record: `tool_name(key_argument_or_path)`. For `abort` events, record: `[USER ABORT at timestamp]`.
 
 ---
 
@@ -161,10 +201,11 @@ A cycle is present if within a session:
 
 ### User Correction Detection
 
-A correction is present if a user turn:
-- Starts with or contains any of: "no,", "no.", "actually,", "wait,", "that's not", "I said", "not that", "don't", "stop doing", "you missed", "wrong", "incorrect", "that is wrong", "please don't", "not what I asked"
-- Follows an assistant turn that made a concrete decision or code change (not just a clarifying question)
-- Overrides a tool action the assistant just took (e.g., "revert that", "undo that change")
+A correction is present if:
+- (Copilot) An `abort` event appears, interrupting an assistant turn mid-execution
+- (Copilot or Claude) A `user.message` / `user` turn starts with or contains any of: "no,", "no.", "actually,", "wait,", "that's not", "I said", "not that", "don't", "stop doing", "you missed", "wrong", "incorrect", "that is wrong", "please don't", "not what I asked"
+- The user turn follows an assistant turn that made a concrete decision or code change (not just a clarifying question)
+- The user turn overrides a tool action the assistant just took (e.g., "revert that", "undo that change")
 
 ### Decision Reversal Detection
 
