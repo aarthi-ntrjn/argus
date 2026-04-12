@@ -44,7 +44,7 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
       className={`flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden ${className ?? 'h-full'}`}
     >
       <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-gray-200">
-        <span className="text-xs text-gray-500 font-mono truncate">Session {session.id}</span>
+        <span className="text-sm text-gray-600 truncate">Session {session.id}</span>
         <div className="flex items-center gap-2">
           <button
             onClick={toggleMode}
