@@ -105,6 +105,16 @@ Run this in any terminal: VS Code integrated terminal, Windows Terminal, iTerm2,
 Sessions detected automatically (not started via `argus launch`) show a **read-only** badge. Their prompt bars are not visible. Interrupt (Esc) and Stop still work for any detected session since those use OS signals, not stdin.  
 [aarthin] check the note about esc and stop. i dont think the work properly. it has not been tested. add as task to test.
 
+### ATTENTION NEEDED Alert
+
+When an AI session is waiting for user input (e.g., GitHub Copilot CLI's `ask_user` tool or Claude Code's `AskUserQuestion` tool), the session card summary line changes to a bold red **ATTENTION NEEDED** indicator.
+
+The alert shows:
+- The question the AI asked (e.g., "Which option?")
+- Numbered choices when available (e.g., "1. Alpha / 2. Beta")
+
+The alert appears for both read-only and connected sessions. It disappears automatically once the AI receives an answer (detected via a subsequent `tool_result` in the session output). It is never shown for sessions with status `ended` or `completed`.
+
 ### Prompt Bar
 
 Every session card has a prompt bar. For **live** (PTY-launched) sessions, type a message and press **↵** to send it.

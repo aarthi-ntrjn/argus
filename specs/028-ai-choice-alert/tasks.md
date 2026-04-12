@@ -70,12 +70,12 @@
 
 **Goal**: E2E test coverage; README update; build verification.
 
-- [ ] T006 [P4] Write `frontend/tests/e2e/sc-028-ai-choice-alert.spec.ts` with mocked API:
+- [x] T006 [P4] Write `frontend/tests/e2e/sc-028-ai-choice-alert.spec.ts` with mocked API:
   - A session card with a pending `ask_user` tool_use shows "ATTENTION NEEDED" in the summary line.
   - The question text appears in the summary line.
   - The labelled choices appear in the summary line.
   - A session card with an answered `ask_user` (tool_result present) shows the normal summary.
   - A session with `status: 'ended'` does not show the alert even with a pending tool_use in output.
-- [ ] T007 [P4] Update `README.md`: document the ATTENTION NEEDED alert (what triggers it, what it shows, difference between readonly and connected sessions).
-- [ ] T008 [P4] Run `npm run build --workspace=frontend` and confirm zero errors.
-- [ ] T009 [P4] Run `npm test --workspace=frontend` (all unit tests pass) and `npm run test:e2e` (all e2e mock tests pass).
+- [x] T007 [P4] Update `README.md`: document the ATTENTION NEEDED alert (what triggers it, what it shows, difference between readonly and connected sessions).
+- [x] T008 [P4] Run `npm run build --workspace=frontend` and confirm zero errors.
+- [x] T009 [P4] Run `npm test --workspace=frontend` (all unit tests pass) and `npm run test:e2e` (all e2e mock tests pass).
