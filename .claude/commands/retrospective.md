@@ -8,7 +8,28 @@ description: Scan Claude Code session histories for user-specified behavioral pa
 $ARGUMENTS
 ```
 
-The text after `/retrospective` is the pattern or analysis query. You **MUST** use it. Do not proceed if it is empty — ask the user to describe the pattern they want to search for.
+### Argument format
+
+```
+/retrospective [path1 path2 ...] -- pattern description
+```
+
+- **Paths** (optional, before `--`): one or more repository paths or glob patterns, space-separated. Paths may use `*` as a wildcard suffix (e.g., `c:\source\github\artynuts\argus*` matches argus, argus2, argus3). Both Windows-style backslashes and forward slashes are accepted.
+- **`--` separator**: required when paths are provided; separates paths from the pattern.
+- **Pattern** (required, after `--` or the entire argument when no paths given): the behavioral pattern to search for.
+
+Examples:
+
+```
+/retrospective c:\source\github\artynuts\argus -- find AI cycles
+/retrospective c:\source\github\artynuts\argus* -- user corrections
+/retrospective c:\source\github\artynuts\argus c:\source\github\foo\bar -- decision reversals
+/retrospective find AI cycles
+```
+
+You **MUST** have a pattern. Do not proceed if the pattern is empty — ask the user to describe what to search for.
+
+If no paths are provided, default to the `cwd` of the current session (the project you are currently running in).
 
 ## What This Skill Does
 
@@ -27,37 +48,74 @@ Supported built-in pattern categories (infer from the user's description):
 
 ---
 
-## Step 1: Clarify the Pattern
+## Step 1: Parse Arguments and Clarify the Pattern
 
-Read `$ARGUMENTS` and determine:
+Split `$ARGUMENTS` on ` -- ` (space-dash-dash-space):
 
-1. Which built-in category applies, or describe what custom signals to look for
-2. Whether the user wants to scope to: a specific project path, a date range, or all sessions
-3. Whether the user wants a summary count or detailed excerpts per match
+- If a ` -- ` separator is present: everything before it is the path list, everything after is the pattern.
+- If no separator: the entire argument is the pattern; use the current project directory as the scope.
 
-If `$ARGUMENTS` is ambiguous, make a reasonable assumption and state it before proceeding.
+From the path list, extract individual paths by splitting on whitespace. Each path may end with `*` as a glob wildcard.
+
+Then determine:
+
+1. Which built-in pattern category applies, or what custom signals to look for
+2. Whether the user wants a summary count or detailed excerpts per match
+
+If the pattern is ambiguous, make a reasonable assumption and state it before proceeding.
 
 ---
 
 ## Step 2: Discover JSONL Files
 
-### Claude Code sessions
+### Convert repository paths to Claude directory names
 
-Run the following to list all session JSONL files across all projects:
+Claude Code stores per-project session files under `~/.claude/projects/`. The subdirectory name for a project is derived from its absolute path by replacing every `:` and `\` (or `/`) with `-`.
+
+Examples:
+- `C:\source\github\artynuts\argus` becomes `C--source-github-artynuts-argus`
+- `C:\source\github\artynuts\argus2` becomes `C--source-github-artynuts-argus2`
+- `/home/user/projects/myapp` becomes `-home-user-projects-myapp`
+
+**Conversion algorithm** for each input path (apply before glob expansion):
+
+1. Replace `:` with `-`
+2. Replace `\` and `/` with `-`
+3. If a trailing `*` wildcard was present, keep it at the end
+4. The result is the directory name pattern to match under `~/.claude/projects/`
+
+For example, `c:\source\github\artynuts\argus*` converts to `c--source-github-artynuts-argus*`.
+
+### List matching project directories
+
+After converting each path, list which project directories under `~/.claude/projects/` match. Run one command per converted pattern (matching is case-insensitive on Windows):
 
 ```bash
-find ~/.claude/projects -name "*.jsonl" -type f 2>/dev/null | sort
+# For a pattern like c--source-github-artynuts-argus*
+ls ~/.claude/projects/ | grep -i "^c--source-github-artynuts-argus"
 ```
 
-If the user scoped to a specific project, filter to that project's subdirectory. The directory name is the project path with path separators replaced by `-` (e.g., `C--source-github-artynuts-argus`).
-
-Also check the global history file:
+Or list all and let you filter:
 
 ```bash
-ls -la ~/.claude/history.jsonl 2>/dev/null
+ls ~/.claude/projects/
 ```
 
-Note: the global history file contains only prompt text and metadata, not full conversations. Focus on the per-session JSONL files for deep analysis.
+Collect the full set of matching project directories. If none match, report the mismatch clearly: show the input paths, the converted patterns, and the actual directory names found.
+
+### Collect JSONL files from matched directories
+
+For each matched project directory, find all session JSONL files:
+
+```bash
+find ~/.claude/projects/C--source-github-artynuts-argus -name "*.jsonl" -type f 2>/dev/null
+```
+
+Repeat for each matched directory. Deduplicate if the same file appears from multiple patterns.
+
+### Note on the global history file
+
+`~/.claude/history.jsonl` contains only prompt text and timestamps, not full conversations. Do not use it for pattern analysis.
 
 ### GitHub Copilot sessions
 
@@ -144,7 +202,7 @@ Present a structured report:
 
 ```
 # Retrospective: [pattern description]
-Scope: [files scanned, date range if applicable]
+Scope: [input path patterns] -> [matched project directories]
 Sessions scanned: N
 Sessions with matches: M
 
