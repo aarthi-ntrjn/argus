@@ -2,7 +2,7 @@
 
 **Feature Branch**: `026-configurable-resting`
 **Created**: 2026-04-11
-**Status**: Draft
+**Status**: Clarified
 **Input**: User description: "make the resting duration configurable. i think it is currently 20min. default 20 min is fine."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -70,6 +70,12 @@ A user who has customized the resting threshold wants to restore it to the syste
 - **SC-002**: Session resting state reflects the updated threshold within 1 second of saving, with no page reload required.
 - **SC-003**: Invalid inputs are rejected immediately with a clear, inline error message before any save attempt reaches persistent storage.
 - **SC-004**: The default value (20 minutes) is preserved after a reset action regardless of any previously stored value.
+
+## Clarifications
+
+### Session 2026-04-11
+
+- **UI location**: The resting threshold control is added to the existing `SettingsPanel` settings menu (the gear/settings dropdown on the dashboard), not a new page or modal. It appears inline near the "Hide inactive sessions" checkbox, which currently hardcodes 20 minutes. The label for that checkbox will dynamically reflect the configured threshold.
 
 ## Assumptions
 
