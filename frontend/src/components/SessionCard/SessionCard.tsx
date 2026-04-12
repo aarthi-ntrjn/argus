@@ -5,6 +5,8 @@ import { getSessionOutput } from '../../services/api';
 import { isInactive } from '../../utils/sessionUtils';
 import SessionPromptBar from '../SessionPromptBar/SessionPromptBar';
 import SessionMetaRow from '../SessionMetaRow/SessionMetaRow';
+import { useKillSession } from '../../hooks/useKillSession';
+import { KillSessionDialog } from '../KillSessionDialog/KillSessionDialog';
 
 interface Props {
   session: Session;
@@ -19,6 +21,8 @@ function SessionCard({ session, selected, onSelect }: Props) {
     queryFn: () => getSessionOutput(session.id, { limit: 10 }),
     staleTime: Infinity,
   });
+
+  const kill = useKillSession();
 
   const items = lastOutput?.items ?? [];
   const previewItem =
@@ -39,7 +43,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect?.(session.id); } }}
     >
       {/* Header row */}
-      <SessionMetaRow session={session} showLink />
+      <SessionMetaRow session={session} showLink onKill={kill.requestKill} killPending={kill.isPending} />
 
       {/* Summary / topic */}
       <p className={`text-sm mt-2 truncate ${session.summary ? 'text-gray-600' : 'text-gray-400 italic'}`}>
@@ -56,6 +60,16 @@ function SessionCard({ session, selected, onSelect }: Props) {
           <SessionPromptBar session={session} />
         </div>
       )}
+
+      <KillSessionDialog
+        open={kill.dialogOpen}
+        sessionType={session.type}
+        sessionId={session.id}
+        isPending={kill.isPending}
+        error={kill.error}
+        onConfirm={kill.confirmKill}
+        onCancel={kill.cancelKill}
+      />
     </div>
   );
 }

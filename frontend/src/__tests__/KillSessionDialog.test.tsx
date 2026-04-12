@@ -1,0 +1,71 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { KillSessionDialog } from '../components/KillSessionDialog/KillSessionDialog';
+
+describe('KillSessionDialog', () => {
+  it('renders when open is true', () => {
+    render(<KillSessionDialog open={true} onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('does not render when open is false', () => {
+    render(<KillSessionDialog open={false} onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('calls onConfirm when the confirm button is clicked', async () => {
+    const onConfirm = vi.fn();
+    render(<KillSessionDialog open={true} onConfirm={onConfirm} onCancel={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /kill session/i }));
+    expect(onConfirm).toHaveBeenCalledOnce();
+  });
+
+  it('calls onCancel when the cancel button is clicked', async () => {
+    const onCancel = vi.fn();
+    render(<KillSessionDialog open={true} onConfirm={vi.fn()} onCancel={onCancel} />);
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it('shows session type and short id in description', () => {
+    render(
+      <KillSessionDialog
+        open={true}
+        sessionType="claude-code"
+        sessionId="abcdef12-3456-7890-abcd-ef1234567890"
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('dialog')).toHaveTextContent('claude-code');
+    expect(screen.getByRole('dialog')).toHaveTextContent('abcdef12');
+  });
+
+  it('shows "Killing..." text and disables buttons when isPending', () => {
+    render(
+      <KillSessionDialog open={true} isPending={true} onConfirm={vi.fn()} onCancel={vi.fn()} />
+    );
+    expect(screen.getByRole('button', { name: /killing/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled();
+  });
+
+  it('displays error message when error is provided', () => {
+    render(
+      <KillSessionDialog
+        open={true}
+        error={new Error('Session already ended')}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Session already ended')).toBeInTheDocument();
+  });
+
+  it('has correct accessibility attributes', () => {
+    render(<KillSessionDialog open={true} onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toHaveAttribute('aria-labelledby', 'kill-dialog-title');
+  });
+});
