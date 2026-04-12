@@ -1,24 +1,55 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { stopSession } from '../services/api';
+import { stopSession, getSession } from '../services/api';
 
 export function useKillSession() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [targetSessionId, setTargetSessionId] = useState<string | null>(null);
+  const [isWaitingForExit, setIsWaitingForExit] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const mutation = useMutation({
     mutationFn: (sessionId: string) => stopSession(sessionId),
     onSuccess: (_data, sessionId) => {
-      setDialogOpen(false);
-      setTargetSessionId(null);
-      queryClient.invalidateQueries({ queryKey: ['session', sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      setIsWaitingForExit(true);
+      // Poll until the session status shows ended/completed
+      pollRef.current = setInterval(async () => {
+        try {
+          const session = await getSession(sessionId);
+          if (session.status === 'ended' || session.status === 'completed') {
+            clearPoll();
+            setIsWaitingForExit(false);
+            setDialogOpen(false);
+            setTargetSessionId(null);
+            queryClient.invalidateQueries({ queryKey: ['session', sessionId] });
+            queryClient.invalidateQueries({ queryKey: ['sessions'] });
+          }
+        } catch {
+          // Session may have been removed; treat as success
+          clearPoll();
+          setIsWaitingForExit(false);
+          setDialogOpen(false);
+          setTargetSessionId(null);
+          queryClient.invalidateQueries({ queryKey: ['sessions'] });
+        }
+      }, 500);
     },
   });
 
+  function clearPoll() {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }
+
+  // Cleanup on unmount
+  useEffect(() => clearPoll, []);
+
   function requestKill(sessionId: string) {
     mutation.reset();
+    setIsWaitingForExit(false);
     setTargetSessionId(sessionId);
     setDialogOpen(true);
   }
@@ -30,6 +61,8 @@ export function useKillSession() {
   }
 
   function cancelKill() {
+    if (isWaitingForExit) return; // can't cancel while killing
+    clearPoll();
     setDialogOpen(false);
     setTargetSessionId(null);
     mutation.reset();
@@ -38,7 +71,7 @@ export function useKillSession() {
   return {
     dialogOpen,
     targetSessionId,
-    isPending: mutation.isPending,
+    isPending: mutation.isPending || isWaitingForExit,
     isError: mutation.isError,
     error: mutation.error,
     requestKill,

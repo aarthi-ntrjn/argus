@@ -42,12 +42,14 @@ describe('KillSessionDialog', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('abcdef12');
   });
 
-  it('shows "Killing..." text and disables buttons when isPending', () => {
+  it('shows spinner with "Killing session" text when isPending', () => {
     render(
       <KillSessionDialog open={true} isPending={true} onConfirm={vi.fn()} onCancel={vi.fn()} />
     );
-    expect(screen.getByRole('button', { name: /killing/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled();
+    expect(screen.getByText(/killing session/i)).toBeInTheDocument();
+    expect(screen.getByText(/waiting for the process to exit/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /kill session/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument();
   });
 
   it('displays error message when error is provided', () => {
