@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Moon, Play, ShieldOff, ExternalLink, Plug, Eye, Square } from 'lucide-react';
+import { Moon, Play, ShieldOff, ExternalLink, Plug, Eye, Power } from 'lucide-react';
 import type { Session } from '../../types';
 import { isInactive } from '../../utils/sessionUtils';
 import { useSettings } from '../../hooks/useSettings';
@@ -99,7 +99,7 @@ export default function SessionMetaRow({ session, showLink = false, onKill, kill
             className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Kill session"
           >
-            <Square size={14} />
+            <Power size={14} />
           </button>
         )}
       </div>

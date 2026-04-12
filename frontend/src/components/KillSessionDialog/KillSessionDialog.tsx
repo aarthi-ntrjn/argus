@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+
 interface KillSessionDialogProps {
   open: boolean;
   sessionType?: string;
@@ -21,12 +23,13 @@ export function KillSessionDialog({
 
   const shortId = sessionId?.slice(0, 8) ?? 'unknown';
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="kill-dialog-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div className="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 p-5">
         <h2 id="kill-dialog-title" className="text-sm font-semibold text-gray-900 mb-2">
@@ -60,6 +63,7 @@ export function KillSessionDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
