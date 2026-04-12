@@ -34,6 +34,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     summary: null,
     expiresAt: null,
     model: null,
+    yoloMode: false,
     ...overrides,
   };
 }
@@ -51,9 +52,9 @@ describe('SessionCard — prompt bar keyboard isolation', () => {
 describe('SessionCard — launchMode badge', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('shows "live" badge when launchMode is "pty"', () => {
+  it('shows "connected" badge when launchMode is "pty"', () => {
     render(<SessionCard session={makeSession({ launchMode: 'pty' })} />);
-    expect(screen.getByText('live')).toBeInTheDocument();
+    expect(screen.getByText('connected')).toBeInTheDocument();
   });
 
   it('shows "read-only" badge when launchMode is "detected"', () => {

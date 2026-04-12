@@ -43,6 +43,7 @@ export interface Session {
   expiresAt: string | null;
   model: string | null;
   reconciled: boolean;
+  yoloMode: boolean | null;
 }
 
 export interface SessionOutput {
@@ -83,4 +84,5 @@ export interface ArgusConfig {
   sessionRetentionHours: number;
   outputRetentionMbPerSession: number;
   autoRegisterRepos: boolean;
+  yoloMode: boolean;
 }

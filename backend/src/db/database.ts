@@ -41,6 +41,17 @@ export function getDb(): Database.Database {
     if (!sessionCols.includes('host_pid')) {
       db.exec('ALTER TABLE sessions ADD COLUMN host_pid INTEGER');
     }
+    const yoloColInfo = (db.pragma('table_info(sessions)') as Array<{ name: string; notnull: number }>)
+      .find(c => c.name === 'yolo_mode');
+    if (!yoloColInfo) {
+      db.exec('ALTER TABLE sessions ADD COLUMN yolo_mode INTEGER DEFAULT NULL');
+    } else if (yoloColInfo.notnull === 1) {
+      // Migrate from NOT NULL DEFAULT 0 to nullable — preserve existing true values
+      db.exec('ALTER TABLE sessions ADD COLUMN yolo_mode_new INTEGER DEFAULT NULL');
+      db.exec('UPDATE sessions SET yolo_mode_new = 1 WHERE yolo_mode = 1');
+      db.exec('ALTER TABLE sessions DROP COLUMN yolo_mode');
+      db.exec('ALTER TABLE sessions RENAME COLUMN yolo_mode_new TO yolo_mode');
+    }
   }
   return db;
 }
@@ -91,24 +102,24 @@ export function deleteRepository(id: string): void {
 export interface SessionFilters { repositoryId?: string; status?: string; type?: string; limit?: number; }
 
 export function getSessions(filters: SessionFilters = {}): Session[] {
-  let sql = 'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, host_pid as hostPid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled FROM sessions WHERE 1=1';
+  let sql = 'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, host_pid as hostPid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled, yolo_mode as yoloMode FROM sessions WHERE 1=1';
   const params: unknown[] = [];
   if (filters.repositoryId) { sql += ' AND repository_id = ?'; params.push(filters.repositoryId); }
   if (filters.status) { sql += ' AND status = ?'; params.push(filters.status); }
   if (filters.type) { sql += ' AND type = ?'; params.push(filters.type); }
   sql += ' ORDER BY started_at DESC';
   sql += ' LIMIT ?'; params.push(filters.limit ?? 500);
-  return (getDb().prepare(sql).all(...params) as Array<Omit<Session, 'reconciled'> & { reconciled: number }>).map(
-    r => ({ ...r, reconciled: r.reconciled === 1 })
+  return (getDb().prepare(sql).all(...params) as Array<Omit<Session, 'reconciled' | 'yoloMode'> & { reconciled: number; yoloMode: number | null }>).map(
+    r => ({ ...r, reconciled: r.reconciled === 1, yoloMode: r.yoloMode === null ? null : r.yoloMode === 1 })
   );
 }
 
 export function getSession(id: string): Session | undefined {
   const row = getDb().prepare(
-    'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, host_pid as hostPid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled FROM sessions WHERE id = ?'
-  ).get(id) as (Omit<Session, 'reconciled'> & { reconciled: number }) | undefined;
+    'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, host_pid as hostPid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled, yolo_mode as yoloMode FROM sessions WHERE id = ?'
+  ).get(id) as (Omit<Session, 'reconciled' | 'yoloMode'> & { reconciled: number; yoloMode: number | null }) | undefined;
   if (!row) return undefined;
-  return { ...row, reconciled: row.reconciled === 1 };
+  return { ...row, reconciled: row.reconciled === 1, yoloMode: row.yoloMode === null ? null : row.yoloMode === 1 };
 }
 
 export function updateSessionStatus(id: string, status: string, endedAt: string | null, reconciled?: boolean): void {
@@ -125,8 +136,8 @@ export function updateSessionStatus(id: string, status: string, endedAt: string 
 
 export function upsertSession(session: Session): void {
   getDb().prepare(`
-    INSERT INTO sessions (id, repository_id, type, launch_mode, pid, host_pid, pid_source, status, started_at, ended_at, last_activity_at, summary, expires_at, model, reconciled)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO sessions (id, repository_id, type, launch_mode, pid, host_pid, pid_source, status, started_at, ended_at, last_activity_at, summary, expires_at, model, reconciled, yolo_mode)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       launch_mode = COALESCE(excluded.launch_mode, launch_mode),
       pid = excluded.pid, host_pid = COALESCE(excluded.host_pid, host_pid),
@@ -134,11 +145,12 @@ export function upsertSession(session: Session): void {
       status = excluded.status, ended_at = excluded.ended_at,
       last_activity_at = excluded.last_activity_at, summary = excluded.summary,
       expires_at = excluded.expires_at, model = COALESCE(excluded.model, model),
-      reconciled = excluded.reconciled
+      reconciled = excluded.reconciled,
+      yolo_mode = COALESCE(excluded.yolo_mode, yolo_mode)
   `).run(session.id, session.repositoryId, session.type, session.launchMode ?? null, session.pid,
     session.hostPid ?? null, session.pidSource ?? null, session.status, session.startedAt, session.endedAt,
     session.lastActivityAt, session.summary, session.expiresAt, session.model ?? null,
-    session.reconciled ? 1 : 0);
+    session.reconciled ? 1 : 0, session.yoloMode === null ? null : (session.yoloMode ? 1 : 0));
 }
 
 export function getOutputForSession(sessionId: string, limit = 100, before?: string): SessionOutput[] {

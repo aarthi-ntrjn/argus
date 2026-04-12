@@ -1,60 +1,19 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Moon, Play } from 'lucide-react';
-import { getSession, getSessionOutput } from '../services/api';
-import SessionDetail from '../components/SessionDetail/SessionDetail';
+import { ArrowLeft } from 'lucide-react';
+import { getSession } from '../services/api';
+import OutputPane from '../components/OutputPane/OutputPane';
 import SessionPromptBar from '../components/SessionPromptBar/SessionPromptBar';
-import SessionTypeIcon from '../components/SessionTypeIcon/SessionTypeIcon';
-import { isInactive } from '../utils/sessionUtils';
-import { useSettings } from '../hooks/useSettings';
+import SessionMetaRow from '../components/SessionMetaRow/SessionMetaRow';
 
-function getElapsed(startedAt: string, endedAt: string | null): string {
-  const end = endedAt ? new Date(endedAt) : new Date();
-  const ms = end.getTime() - new Date(startedAt).getTime();
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  return `${Math.floor(m / 60)}h ${m % 60}m`;
-}
-
-function claudeShortId(id: string): string {
-  return id.match(/[0-9a-f]{8}-[0-9a-f]{4}/)?.[0].slice(0, 8) ?? id.slice(0, 8);
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-100 text-green-800',
-  running: 'bg-green-100 text-green-800',
-  idle: 'bg-yellow-100 text-yellow-800',
-  waiting: 'bg-blue-100 text-blue-800',
-  error: 'bg-red-100 text-red-800',
-  completed: 'bg-gray-100 text-gray-800',
-  ended: 'bg-gray-100 text-gray-500',
-};
-
-const TYPE_COLORS: Record<string, string> = {
-  'copilot-cli': 'bg-purple-100 text-purple-800',
-  'claude-code': 'bg-orange-100 text-orange-800',
-};
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [settings, updateSetting] = useSettings();
-  const displayMode = settings.outputDisplayMode ?? 'focused';
 
-  function toggleMode() {
-    updateSetting('outputDisplayMode', displayMode === 'focused' ? 'verbose' : 'focused');
-  }
   const { data: session, isLoading: sessionLoading, error: sessionError } = useQuery({
     queryKey: ['session', id],
     queryFn: () => getSession(id!),
-    enabled: !!id,
-  });
-
-  const { data: outputPage, isLoading: outputLoading } = useQuery({
-    queryKey: ['session-output', id],
-    queryFn: () => getSessionOutput(id!, { limit: 100 }),
     enabled: !!id,
   });
 
@@ -86,45 +45,14 @@ export default function SessionPage() {
       {/* Always-visible header — shrink-0 sibling of the scrollable area */}
       <div className="shrink-0 px-4 md:px-8 pt-4 md:pt-6">
         <div className="max-w-4xl mx-auto w-full">
-          <button onClick={() => navigate('/')} className="text-blue-600 hover:text-blue-800 mb-4 py-2 flex items-center gap-1">
-            ← Back to Dashboard
+          <button onClick={() => navigate('/')} className="text-sm font-medium text-gray-700 hover:text-blue-600 mb-4 py-2 flex items-center gap-1">
+            <ArrowLeft size={14} />Back
           </button>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex flex-wrap gap-3 items-center mb-2">
-              <span
-                data-tour-id="session-status"
-                className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full font-medium ${TYPE_COLORS[session.type] ?? 'bg-gray-100'}`}
-              >
-                <SessionTypeIcon type={session.type} size={14} />
-                {session.type}
-              </span>
-              {session.model && (
-                <span className="text-xs text-gray-500 font-mono">{session.model}</span>
-              )}
-              {isInactive(session) ? (
-                <span className="inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full font-medium bg-amber-100 text-amber-700">
-                  <Moon size={12} />resting
-                </span>
-              ) : (
-                <span className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full font-medium ${STATUS_COLORS[session.status] ?? 'bg-gray-100'}`}>
-                  {session.status === 'active' && <Play size={12} />}
-                  {session.status === 'active' ? 'running' : session.status}
-                </span>
-              )}
-              {session.pid && (
-                <span className="text-xs text-gray-500 font-mono">PID: {session.pid}</span>
-              )}
-              {!session.pid && session.type === 'claude-code' && (
-                <span className="text-xs text-gray-500 font-mono">ID: {claudeShortId(session.id)}</span>
-              )}
-              <span className="text-xs text-gray-500 font-mono">
-                Duration: {getElapsed(session.startedAt, session.endedAt)}
-              </span>
-            </div>
+          <div className="bg-white rounded-lg shadow px-3 pt-3 pb-2" data-tour-id="session-status">
+            <SessionMetaRow session={session} />
             {session.summary && (
-              <p className="text-gray-600 text-sm mt-1">{session.summary}</p>
+              <p className="font-mono text-sm text-gray-800 mt-2 px-1">{session.summary}</p>
             )}
-            <p className="text-xs text-gray-500 mt-1">ID: {session.id}</p>
           </div>
         </div>
       </div>
@@ -133,31 +61,13 @@ export default function SessionPage() {
       <div className="flex-1 min-h-0 flex flex-col px-4 md:px-8 pb-4 md:pb-6 mt-4">
         <div className="max-w-4xl mx-auto w-full flex-1 min-h-0 flex flex-col">
 
-          <div data-tour-id="session-output-stream" className="flex-1 min-h-0 flex flex-col bg-white border border-gray-200 rounded-lg shadow overflow-hidden">
-            <div className="p-4 border-b border-gray-200 shrink-0 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Output Stream</h2>
-              <button
-                onClick={toggleMode}
-                className="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
-              >
-                {displayMode === 'focused' ? 'Focused' : 'Verbose'}
-              </button>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto bg-gray-900 rounded-b-lg">
-              {outputLoading ? (
-                <div className="p-8 text-center text-gray-400">Loading output...</div>
-              ) : (
-                <SessionDetail
-                  sessionId={session.id}
-                  items={outputPage?.items ?? []}
-                  displayMode={displayMode}
-                  dark
-                />
-              )}
-            </div>
-          </div>
+          <OutputPane
+            session={session}
+            className="flex-1 min-h-0 shadow"
+            data-tour-id="session-output-stream"
+          />
 
-          <div data-tour-id="session-prompt-bar" className="bg-white rounded-lg shadow p-4 mt-4 shrink-0">
+          <div data-tour-id="session-prompt-bar" className="mt-2 shrink-0">
             <SessionPromptBar session={session} />
           </div>
 
