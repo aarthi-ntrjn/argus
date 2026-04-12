@@ -43,6 +43,7 @@ export interface Session {
   expiresAt: string | null;
   model: string | null;
   reconciled: boolean;
+  yoloMode: boolean;
 }
 
 export interface SessionOutput {

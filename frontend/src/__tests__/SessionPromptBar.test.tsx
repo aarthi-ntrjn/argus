@@ -26,6 +26,7 @@ const SESSION: Session = {
   summary: null,
   expiresAt: null,
   model: null,
+  yoloMode: false,
 };
 
 const READ_ONLY_SESSION: Session = { ...SESSION, launchMode: 'detected' };

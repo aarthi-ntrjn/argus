@@ -14,6 +14,7 @@ vi.mock('../services/api', () => ({
     repositoryId: 'repo-1',
     summary: 'Test session',
     model: null,
+    yoloMode: false,
     pid: null,
     pidSource: null,
   }),

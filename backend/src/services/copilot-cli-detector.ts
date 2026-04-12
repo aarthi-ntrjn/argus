@@ -9,6 +9,7 @@ import { upsertSession, getRepositoryByPath, deleteSessionOutput, getSession } f
 import { ptyRegistry } from './pty-registry.js';
 import { OutputStore } from './output-store.js';
 import { parseJsonlLine, parseModelFromEvent } from './events-parser.js';
+import { detectYoloModeFromPids } from './process-utils.js';
 import type { Session, PidSource } from '../models/index.js';
 
 const DEFAULT_SESSION_DIR = join(homedir(), '.copilot', 'session-state');
@@ -137,6 +138,7 @@ export class CopilotCliDetector {
       }
     }
 
+    const yoloMode = detectYoloModeFromPids(resolvedPid, resolvedHostPid, 'copilot-cli');
     const session: Session = {
       id: sessionId,
       repositoryId: repo.id,
@@ -153,6 +155,7 @@ export class CopilotCliDetector {
       expiresAt: null,
       model: this.extractModelFromEventsFile(join(dirPath, 'events.jsonl')),
       reconciled: true,
+      yoloMode,
     };
 
     upsertSession(session);

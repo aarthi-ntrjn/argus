@@ -8,6 +8,7 @@ import { loadConfig } from '../config/config-loader.js';
 import { getSessions, getSession, upsertSession, updateSessionStatus, getRepositories, getRepositoryByPath, updateRepositoryBranch } from '../db/database.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { getCurrentBranch } from './repository-scanner.js';
+import { detectYoloModeFromPids } from './process-utils.js';
 import type { Session, Repository } from '../models/index.js';
 
 export interface SessionMonitorEvents {
@@ -234,6 +235,7 @@ export class SessionMonitor extends EventEmitter {
           expiresAt: null,
           model: null,
           reconciled: true,
+          yoloMode: entry.pid ? detectYoloModeFromPids(entry.pid, null, 'claude-code') : false,
         };
         upsertSession(session);
         broadcast({ type: 'session.created', timestamp: now, data: session as unknown as Record<string, unknown> });

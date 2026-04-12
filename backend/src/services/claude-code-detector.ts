@@ -10,6 +10,7 @@ import { ClaudeSessionRegistry } from './claude-session-registry.js';
 import { OutputStore } from './output-store.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { parseClaudeJsonlLine, parseModel } from './claude-code-jsonl-parser.js';
+import { detectYoloModeFromPids } from './process-utils.js';
 import type { Session, Repository } from '../models/index.js';
 
 const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json');
@@ -195,6 +196,7 @@ export class ClaudeCodeDetector {
     if (!existing) {
       const claimed = normalizedCwd ? ptyRegistry.claimForSession(session_id, normalizedCwd) : null;
       if (claimed) {
+        const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'claude-code');
         const session: Session = {
           id: session_id,
           repositoryId: repo.id,
@@ -211,6 +213,7 @@ export class ClaudeCodeDetector {
           expiresAt: null,
           model: null,
           reconciled: true,
+          yoloMode,
         };
         upsertSession(session);
         broadcast({ type: 'session.created', timestamp: now, data: session as unknown as Record<string, unknown> });
@@ -235,6 +238,7 @@ export class ClaudeCodeDetector {
       expiresAt: null,
       model: null,
       reconciled: true,
+      yoloMode: false,
     };
 
     session.status = 'active';
@@ -259,6 +263,7 @@ export class ClaudeCodeDetector {
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
       if (claimed) {
         console.log(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
+        const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'claude-code');
         const session: Session = {
           id: sessionId,
           repositoryId: repo.id,
@@ -275,6 +280,7 @@ export class ClaudeCodeDetector {
           expiresAt: null,
           model: null,
           reconciled: true,
+          yoloMode,
         };
         upsertSession(session);
         await this.watchJsonlFile(sessionId, repo.path);
@@ -305,6 +311,7 @@ export class ClaudeCodeDetector {
       expiresAt: null,
       model: null,
       reconciled: true,
+      yoloMode: claudePid ? detectYoloModeFromPids(claudePid, null, 'claude-code') : false,
     };
     console.log(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
     upsertSession({ ...base, status: 'active', endedAt: null, lastActivityAt: now, pid: claudePid });

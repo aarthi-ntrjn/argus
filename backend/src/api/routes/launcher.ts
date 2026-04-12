@@ -11,6 +11,7 @@ import {
   insertRepository,
 } from '../../db/database.js';
 import { broadcast } from '../ws/event-dispatcher.js';
+import { detectYoloModeFromPids } from '../../services/process-utils.js';
 import type { Repository } from '../../models/index.js';
 import type { SessionType } from '../../models/index.js';
 
@@ -132,10 +133,11 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         if (claudeSessionId) {
           const session = getSession(claudeSessionId);
           if (session) {
-            const updated = { ...session, pid: msg.pid };
+            const yoloMode = session.yoloMode || detectYoloModeFromPids(msg.pid, session.hostPid ?? null, session.type);
+            const updated = { ...session, pid: msg.pid, yoloMode };
             upsertSession(updated);
             broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
-            fastify.log.info({ claudeSessionId, pid: msg.pid }, 'Updated session with resolved tool PID');
+            fastify.log.info({ claudeSessionId, pid: msg.pid, yoloMode }, 'Updated session with resolved tool PID');
           }
         }
         return;
