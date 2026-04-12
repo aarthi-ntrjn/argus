@@ -74,8 +74,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Add error display to `KillSessionDialog` (if not already handled in T007): show error text from API response, allow retry or dismiss
-- [ ] T014 [US3] Add error scenario tests in `frontend/src/__tests__/KillSessionDialog.test.tsx`: test error message from 404 (not found), 409 (already ended), 403 (not permitted), generic network error, verify retry capability
+- [x] T013 [US3] Add error display to `KillSessionDialog` (if not already handled in T007): show error text from API response, allow retry or dismiss
+- [x] T014 [US3] Add error scenario tests in `frontend/src/__tests__/KillSessionDialog.test.tsx`: test error message from 404 (not found), 409 (already ended), 403 (not permitted), generic network error, verify retry capability
 
 **Checkpoint**: Error feedback works for all failure modes
 

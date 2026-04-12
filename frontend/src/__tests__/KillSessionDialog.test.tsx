@@ -69,3 +69,66 @@ describe('KillSessionDialog', () => {
     expect(dialog).toHaveAttribute('aria-labelledby', 'kill-dialog-title');
   });
 });
+
+describe('KillSessionDialog error scenarios', () => {
+  it('displays 404 not-found error message', () => {
+    render(
+      <KillSessionDialog
+        open={true}
+        error={new Error('Session not found')}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Session not found')).toBeInTheDocument();
+  });
+
+  it('displays 409 already-ended error message', () => {
+    render(
+      <KillSessionDialog
+        open={true}
+        error={new Error('Session has already ended')}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Session has already ended')).toBeInTheDocument();
+  });
+
+  it('displays 403 not-permitted error message', () => {
+    render(
+      <KillSessionDialog
+        open={true}
+        error={new Error('Not permitted to kill this session')}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Not permitted to kill this session')).toBeInTheDocument();
+  });
+
+  it('displays generic network error message', () => {
+    render(
+      <KillSessionDialog
+        open={true}
+        error={new Error('Network Error')}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Network Error')).toBeInTheDocument();
+  });
+
+  it('allows retry after error by keeping confirm button enabled', () => {
+    render(
+      <KillSessionDialog
+        open={true}
+        error={new Error('Network Error')}
+        isPending={false}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('button', { name: /kill session/i })).not.toBeDisabled();
+  });
+});
