@@ -160,3 +160,61 @@ describe('SessionCard — ATTENTION NEEDED alert', () => {
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
   });
 });
+
+describe('SessionCard — hook-aware pending choice (T016)', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('shows ATTENTION NEEDED from hook cache even when getSessionOutput returns no pending tool_use', async () => {
+    const session = makeSession({ status: 'active' });
+    vi.mocked(api.getSessionOutput).mockResolvedValue({ items: [], nextBefore: null, total: 0 });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(['session-pending-choice', session.id], {
+      question: 'Hook-sourced question?',
+      choices: ['Option A', 'Option B'],
+    });
+    render(
+      <QueryClientProvider client={qc}>
+        <SessionCard session={session} />
+      </QueryClientProvider>
+    );
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(screen.getByRole('alert')).toHaveTextContent('Hook-sourced question?');
+    expect(screen.getByRole('alert')).toHaveTextContent('1. Option A');
+    expect(screen.getByRole('alert')).toHaveTextContent('2. Option B');
+  });
+
+  it('shows ATTENTION NEEDED from JSONL fallback when hook cache is null', async () => {
+    const session = makeSession({ status: 'active' });
+    const content = JSON.stringify({ question: 'Fallback question?', choices: ['X', 'Y'] });
+    vi.mocked(api.getSessionOutput).mockResolvedValue({
+      items: [makeOutput({ type: 'tool_use', toolName: 'ask_user', toolCallId: 'fb-1', content, sequenceNumber: 1 })],
+      nextBefore: null,
+      total: 1,
+    });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(['session-pending-choice', session.id], null);
+    render(
+      <QueryClientProvider client={qc}>
+        <SessionCard session={session} />
+      </QueryClientProvider>
+    );
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(screen.getByRole('alert')).toHaveTextContent('Fallback question?');
+  });
+
+  it('does NOT show ATTENTION NEEDED when session is terminated even if hook cache is populated', async () => {
+    const session = makeSession({ status: 'ended' });
+    vi.mocked(api.getSessionOutput).mockResolvedValue({ items: [], nextBefore: null, total: 0 });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(['session-pending-choice', session.id], {
+      question: 'Suppressed question?',
+      choices: ['A'],
+    });
+    render(
+      <QueryClientProvider client={qc}>
+        <SessionCard session={session} />
+      </QueryClientProvider>
+    );
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+  });
+});

@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Session } from '../../types';
 import { getSessionOutput } from '../../services/api';
-import { isInactive, detectPendingChoice } from '../../utils/sessionUtils';
+import { isInactive, detectPendingChoice, type PendingChoice } from '../../utils/sessionUtils';
 import { useSettings } from '../../hooks/useSettings';
 import SessionPromptBar from '../SessionPromptBar/SessionPromptBar';
 import SessionMetaRow from '../SessionMetaRow/SessionMetaRow';
@@ -26,6 +26,13 @@ function SessionCard({ session, selected, onSelect }: Props) {
     staleTime: Infinity,
   });
 
+  const { data: hookPendingChoice = null } = useQuery<PendingChoice | null>({
+    queryKey: ['session-pending-choice', session.id],
+    queryFn: () => Promise.resolve(null),
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
   const kill = useKillSession();
 
   const items = lastOutput?.items ?? [];
@@ -36,7 +43,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
     null;
   const previewContent = previewItem?.content?.trim() ?? null;
   const isTerminated = session.status === 'ended' || session.status === 'completed';
-  const pendingChoice = isTerminated ? null : detectPendingChoice(items);
+  const pendingChoice = isTerminated ? null : (hookPendingChoice ?? detectPendingChoice(items));
 
   return (
     <div
