@@ -13,9 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Never use em dashes** (`—`) in any documentation, comments, or content. They are tiresome to read. Use a comma, colon, parentheses, or rewrite the sentence instead.
 
-## Project Purpose
+## Project Context
 
-Argus is a tool for centrally monitoring and remotely controlling Claude Code and GitHub Copilot sessions. The repository currently contains application code and the Speckit SDD (Specification-Driven Development) infrastructure for building it.
+Argus is a tool for centrally monitoring and remotely controlling Claude Code and GitHub Copilot sessions. For full project documentation, see [README.md](README.md). For architecture, API reference, and dev setup, see [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md).
 
 ## Speckit Workflow
 
@@ -75,6 +75,4 @@ All automation is PowerShell (`.ps1`) under `.specify/scripts/powershell/`. VS C
 Optional lifecycle hooks (`before_specify`, `after_specify`, etc.) can be defined in `.specify/extensions.yml`.
 
 - `.specify/init-options.json`: `speckit_version: "0.4.3"`, `ai: "claude"`, `script: "ps"`, `branch_numbering: "sequential"`
-- `.gitignore` excludes `.claude/` and `.github/copilot/` credential folders  
-[aarthin] why is the above line needed. infact it is also not true.  
-[aarthin] CLAUDE.md is largely about speckit and does not actually have anything about project itself. shouldnt it point to the README.md files
+
