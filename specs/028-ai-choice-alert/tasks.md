@@ -9,7 +9,7 @@
 
 **Goal**: Add the `PendingChoice` type and `detectPendingChoice` function signature (stub) to `sessionUtils.ts`. No behaviour change yet.
 
-- [ ] T001 [P1] Add `PendingChoice` interface and stub `detectPendingChoice(items: SessionOutput[]): PendingChoice | null` (returns `null`) to `frontend/src/utils/sessionUtils.ts`.
+- [x] T001 [P1] Add `PendingChoice` interface and stub `detectPendingChoice(items: SessionOutput[]): PendingChoice | null` (returns `null`) to `frontend/src/utils/sessionUtils.ts`.
 
 ---
 
@@ -19,7 +19,7 @@
 
 **Independent test criteria**: `npm test` in the frontend passes overall; the new `detectPendingChoice` tests fail until T003 is implemented.
 
-- [ ] T002 [P2] Add `describe('detectPendingChoice', ...)` block to `frontend/src/__tests__/sessionUtils.test.ts` covering:
+- [x] T002 [P2] Add `describe('detectPendingChoice', ...)` block to `frontend/src/__tests__/sessionUtils.test.ts` covering:
   - Returns `null` for empty items array.
   - Returns `null` when no `ask_user` or `AskUserQuestion` tool_use exists.
   - Returns `PendingChoice` with question and choices when last item is an unanswered `ask_user` tool_use (Copilot format).
@@ -30,7 +30,7 @@
 
 *Confirm tests are red, then implement T003.*
 
-- [ ] T003 [P2] Implement `detectPendingChoice` in `frontend/src/utils/sessionUtils.ts` (full logic per data-model.md). Confirm all T002 tests turn green.
+- [x] T003 [P2] Implement `detectPendingChoice` in `frontend/src/utils/sessionUtils.ts` (full logic per data-model.md). Confirm all T002 tests turn green.
 
 ---
 
