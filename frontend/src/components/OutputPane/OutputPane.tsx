@@ -41,10 +41,8 @@ export default function OutputPane({ session, onClose }: Props) {
       aria-label="Session output"
       className="flex flex-col h-full bg-white border border-gray-200 rounded-lg overflow-hidden"
     >
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-        <span className="text-sm font-medium text-gray-700 truncate">
-          Output — {session.id.slice(0, 8)}
-        </span>
+      <div className="flex items-center justify-between px-3 py-1 bg-gray-50 border-b border-gray-200">
+        <span className="text-xs text-gray-500 font-mono truncate">{session.id}</span>
         <div className="flex items-center gap-2">
           <button
             onClick={toggleMode}
