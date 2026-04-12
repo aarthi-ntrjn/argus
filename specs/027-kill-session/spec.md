@@ -2,7 +2,7 @@
 
 **Feature Branch**: `027-kill-session`  
 **Created**: 2026-04-12  
-**Status**: Draft  
+**Status**: Clarified  
 **Input**: User description: "Add a kill button to each session next to the details button. When it is clicked show a dialog for confirmation. When yes is clicked, kill the process using the OS APIs."
 
 ## User Scenarios & Testing *(mandatory)*
