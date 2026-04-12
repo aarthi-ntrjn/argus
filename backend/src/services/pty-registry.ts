@@ -109,8 +109,9 @@ export class PtyRegistry {
     return this.connections.has(sessionId);
   }
 
-  // timeoutMs exposed for testing; defaults to 10s in production
-  sendPrompt(sessionId: string, actionId: string, prompt: string, timeoutMs = 10_000): Promise<void> {
+  // timeoutMs exposed for testing; defaults to 30s in production
+  // (copilot-cli adds a 500ms initial delay + 50ms per character, so longer prompts need more time)
+  sendPrompt(sessionId: string, actionId: string, prompt: string, timeoutMs = 30_000): Promise<void> {
     const ws = this.connections.get(sessionId);
     console.log(`[PtyRegistry.sendPrompt] sessionId=${sessionId} wsFound=${!!ws} wsState=${ws?.readyState}`);
     if (!ws) {

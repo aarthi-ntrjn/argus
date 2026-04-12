@@ -50,13 +50,20 @@ interface WorkspaceIdMessage {
   sessionId: string;
 }
 
+interface DiagnosticMessage {
+  type: 'diagnostic';
+  actionId: string;
+  detail: string;
+}
+
 type LauncherMessage =
   | RegisterMessage
   | PromptDeliveredMessage
   | PromptFailedMessage
   | UpdatePidMessage
   | SessionEndedMessage
-  | WorkspaceIdMessage;
+  | WorkspaceIdMessage
+  | DiagnosticMessage;
 
 function ensureRepository(cwd: string): Repository {
   const existing = getRepositoryByPath(cwd);
@@ -95,7 +102,7 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         // The session is created in ClaudeCodeDetector.handleHookPayload once
         // Claude fires its first hook and we learn the real session ID.
         ptyRegistry.registerPending(msg.sessionId, socket, msg.cwd, msg.hostPid, msg.pid);
-        fastify.log.info({ tempId: msg.sessionId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending — waiting for Claude hook');
+        fastify.log.info({ tempId: msg.sessionId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending waiting for Claude hook');
         return;
       }
 
@@ -106,6 +113,11 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (msg.type === 'prompt_failed') {
         ptyRegistry.handleAck(msg.actionId, false, msg.error);
+        return;
+      }
+
+      if (msg.type === 'diagnostic') {
+        fastify.log.info({ actionId: msg.actionId, detail: msg.detail }, 'Launcher diagnostic');
         return;
       }
 
