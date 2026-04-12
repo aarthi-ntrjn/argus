@@ -120,7 +120,7 @@
 
 ### Test tasks (write first)
 
-- [ ] T010 [P5] Add unit tests to `backend/tests/unit/claude-code-detector-hook.test.ts` covering:
+- [x] T010 [P5] Add unit tests to `backend/tests/unit/claude-code-detector-hook.test.ts` covering:
   - `handleHookPayload` with `hook_event_name: 'PreToolUse'` and `tool_name: 'AskUserQuestion'` stores pending choice in the internal map.
   - Pending choice is extracted correctly from the nested `questions[0].question` / `questions[0].options[].label` format.
   - `handleHookPayload` with `hook_event_name: 'PostToolUse'` and `tool_name: 'AskUserQuestion'` removes the pending choice from the internal map.
@@ -129,7 +129,7 @@
 
 ### Implementation tasks
 
-- [ ] T011 [P5] Refactor `HOOK_EVENTS` constant in `backend/src/services/claude-code-detector.ts` from `string[]` to `Array<{ event: string; matcher: string }>`:
+- [x] T011 [P5] Refactor `HOOK_EVENTS` constant in `backend/src/services/claude-code-detector.ts` from `string[]` to `Array<{ event: string; matcher: string }>`:
   ```typescript
   const HOOK_EVENTS: Array<{ event: string; matcher: string }> = [
     { event: 'SessionStart', matcher: '' },
@@ -140,7 +140,7 @@
   ```
   Update `hasHook(settings, event, matcher)` to match on both event AND matcher. Update `injectHooks()` to push entries with the correct matcher (not always `''`). Update `removeAllHooks()` to filter by both event+matcher. Update the stale-entry cleanup loop to remove Argus entries whose event is no longer in `HOOK_EVENTS` OR whose matcher no longer matches.
 
-- [ ] T012 [P5] Add `private pendingChoices = new Map<string, import('../../models/index.js').PendingChoice>()` to `ClaudeCodeDetector` in `backend/src/services/claude-code-detector.ts`. Expose a `getPendingChoice(sessionId: string): PendingChoice | null` method (used by tests).
+- [x] T012 [P5] Add `private pendingChoices = new Map<string, import('../../models/index.js').PendingChoice>()` to `ClaudeCodeDetector` in `backend/src/services/claude-code-detector.ts`. Expose a `getPendingChoice(sessionId: string): PendingChoice | null` method (used by tests).
 
   Add `PendingChoice` type to `backend/src/models/index.ts` (or reuse from frontend type, but define independently in backend):
   ```typescript
@@ -150,7 +150,7 @@
   }
   ```
 
-- [ ] T013 [P5] Extend `handleHookPayload()` in `backend/src/services/claude-code-detector.ts` to handle PreToolUse and PostToolUse for AskUserQuestion. Insert the new cases before the existing `SessionEnd` block:
+- [x] T013 [P5] Extend `handleHookPayload()` in `backend/src/services/claude-code-detector.ts` to handle PreToolUse and PostToolUse for AskUserQuestion. Insert the new cases before the existing `SessionEnd` block:
 
   For `PreToolUse/AskUserQuestion`:
   - Extract `question` from `payload.tool_input?.questions?.[0]?.question` (or `payload.tool_input?.question` as fallback).
@@ -176,7 +176,7 @@
 
 ### Implementation tasks
 
-- [ ] T014 [P6] Add two event handlers to `initSocketHandlers()` in `frontend/src/services/socket.ts`:
+- [x] T014 [P6] Add two event handlers to `initSocketHandlers()` in `frontend/src/services/socket.ts`:
 
   ```typescript
   onEvent('session.pending_choice', (data) => {
@@ -198,7 +198,7 @@
   });
   ```
 
-- [ ] T015 [P6] Update `frontend/src/components/SessionCard/SessionCard.tsx` to read the hook-based pending choice from React Query and merge it with the JSONL-based detection:
+- [x] T015 [P6] Update `frontend/src/components/SessionCard/SessionCard.tsx` to read the hook-based pending choice from React Query and merge it with the JSONL-based detection:
 
   Add a new `useQuery` call below the existing session output query:
   ```tsx
@@ -219,7 +219,7 @@
 
 ### Test tasks
 
-- [ ] T016 [P6] Add tests to `frontend/src/__tests__/SessionCard.test.tsx` for the hook-aware path:
+- [x] T016 [P6] Add tests to `frontend/src/__tests__/SessionCard.test.tsx` for the hook-aware path:
   - When `['session-pending-choice', sessionId]` cache is pre-populated with a `PendingChoice` (via `qc.setQueryData`), the SessionCard renders ATTENTION NEEDED with the correct question and choices — even if `getSessionOutput` returns no pending tool_use items.
   - When `['session-pending-choice', sessionId]` is `null` and `getSessionOutput` returns a pending `ask_user` item, ATTENTION NEEDED still renders (JSONL fallback still works).
   - When `isTerminated` is `true` and `['session-pending-choice']` is populated, ATTENTION NEEDED is NOT shown (terminated sessions are always suppressed regardless of hook state).
@@ -230,9 +230,9 @@
 
 **Goal**: Documentation, build check, full test run.
 
-- [ ] T017 [P7] Update `README.md` to document the PreToolUse hook mechanism under the "ATTENTION NEEDED Alert" section: explain that for Claude Code sessions Argus uses a `PreToolUse` hook (auto-configured in `~/.claude/settings.json`) for real-time detection, and that for Copilot sessions the detection is via output stream parsing.
-- [ ] T018 [P7] Run `npm run build --workspace=frontend` and `cd backend && npm run build` — both must succeed with zero errors.
-- [ ] T019 [P7] Run `npm test --workspace=frontend` (all unit tests pass) and `cd backend && npm test` (all backend unit tests pass) and `npm run test:e2e` (all e2e mock tests pass).
+- [x] T017 [P7] Update `README.md` to document the PreToolUse hook mechanism under the "ATTENTION NEEDED Alert" section: explain that for Claude Code sessions Argus uses a `PreToolUse` hook (auto-configured in `~/.claude/settings.json`) for real-time detection, and that for Copilot sessions the detection is via output stream parsing.
+- [x] T018 [P7] Run `npm run build --workspace=frontend` and `cd backend && npm run build` — both must succeed with zero errors.
+- [x] T019 [P7] Run `npm test --workspace=frontend` (all unit tests pass) and `cd backend && npm test` (all backend unit tests pass) and `npm run test:e2e` (all e2e mock tests pass).
 
 ---
 
