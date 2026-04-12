@@ -123,7 +123,11 @@ Prompt injection works for both Claude Code and Copilot CLI when started via `La
 
 ![Repository Cards](docs/images/argus-repos.png)
 
-Click **Add Repository**, type or paste a root folder path (e.g. `C:\source` or `/home/user/projects`), then click **Scan &amp; Add**. Argus scans that folder recursively for git repos and registers all new ones in one go. Already-registered repos are skipped automatically.
+Click **Add Repository**, type or paste a root folder path (e.g. `C:\source` or `/home/user/projects`), then click **Scan &amp; Add**.
+
+![Add Repository Dialog](docs/images/argus-addrepo.png)
+
+Argus scans that folder recursively for git repos and registers all new ones in one go. Already-registered repos are skipped automatically.
 
 ## To Tackle
 
