@@ -6,10 +6,10 @@ This file is a manual audit of all the code across the Argus project.
 
 - [] **`.claude`** -
 - [] **`.github`** -
-- [] **`.specify`** -
-- [] **`.vscode`** -
+- [x] **`.specify`** -
+- [x] **`.vscode`** - Only contains settings.json
 - [] **`backend`** -
-- [] **`doc`** -
+- [x] **`docs`** - The docs for understanding this repository
 - [] **`frontend`** -
 - [x] **`images`** - This folder contains the argus logo.
 - [x] **`node_modules`** - The git ignored modules
@@ -42,3 +42,20 @@ This file is a manual audit of all the code across the Argus project.
 - [] is kill-port.mjs not used for npm run dev?
 - [] scripts - i see powershell scripts for both, will this work on Mac?
 - [] node_modules - why is this present only for sqllite3
+- [] docs - manual.md is not needed any more. instead it can just link to the different TESTS-*.md files.
+- [] docs - viewmode.md can be cleanup. the references to the other files can be removed from this
+- [] docs - update Arch
+- [] docs - update cli comparison
+- [] docs - update contributors
+- [] docs - update devlog.md
+- [] dosc - update gtm.md
+- [] docs - update learnings.
+- [] doc - update tests.md 
+- [] .vscode - understand promptFilesRecommendations
+- [] speckit - not sure which are autoinstalled and which are manually installed
+- [] constitution - not sure when something should be a constitution versus a workflow. 
+- [] kill-dev.ps1 why is that under scipts powershell in speckit as opposed to root.
+- [] copilot-instructions.md - should i really duplicate content between this and claude.md
+- [] workflows - i dont see it actually blocking. i also dont know when the supply-chain ones run
+- [] i dont understand the supply-chain folder
+- [] 

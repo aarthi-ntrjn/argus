@@ -2,7 +2,7 @@
 
 ## Project Purpose
 
-Argus is a **Speckit-based specification-driven development (SDD) framework**. The repository contains no application code yet — it is the infrastructure for building the Argus session-monitoring tool (which centrally monitors and remotely controls Claude Code and GitHub Copilot sessions).
+Argus is a tool for centrally monitoring and remotely controlling Claude Code and GitHub Copilot sessions. The repository currently contains application code and the Speckit SDD (Specification-Driven Development) infrastructure for building it.
 
 All feature work follows a strict spec → plan → tasks → implement pipeline, orchestrated by AI agents.
 
@@ -12,17 +12,17 @@ All feature work follows a strict spec → plan → tasks → implement pipeline
 
 The 9-step workflow commands (available as Claude slash commands in `.claude/commands/` and as GitHub Copilot agents in `.github/agents/`):
 
-| Command | Purpose |
-|---|---|
-| `/speckit.specify` | Create/update `spec.md` from a feature description |
-| `/speckit.clarify` | Identify ambiguities and encode answers into the spec |
-| `/speckit.plan` | Generate `plan.md` with technical design and phases |
-| `/speckit.tasks` | Generate dependency-ordered `tasks.md` |
-| `/speckit.analyze` | Cross-artifact consistency and quality check |
-| `/speckit.implement` | Execute tasks from `tasks.md` |
-| `/speckit.checklist` | Generate a domain-specific checklist |
-| `/speckit.constitution` | Create/update immutable project principles |
-| `/speckit.taskstoissues` | Convert tasks to GitHub Issues |
+| Command                  | Purpose                                               |
+| ------------------------ | ----------------------------------------------------- |
+| `/speckit.specify`       | Create/update `spec.md` from a feature description    |
+| `/speckit.clarify`       | Identify ambiguities and encode answers into the spec |
+| `/speckit.plan`          | Generate `plan.md` with technical design and phases   |
+| `/speckit.tasks`         | Generate dependency-ordered `tasks.md`                |
+| `/speckit.analyze`       | Cross-artifact consistency and quality check          |
+| `/speckit.implement`     | Execute tasks from `tasks.md`                         |
+| `/speckit.checklist`     | Generate a domain-specific checklist                  |
+| `/speckit.constitution`  | Create/update immutable project principles            |
+| `/speckit.taskstoissues` | Convert tasks to GitHub Issues                        |
 
 **Ordering matters**: `specify` → `clarify` → `plan` → `tasks` → `analyze` → `implement`. Earlier phase artifacts are immutable during later phases.
 
