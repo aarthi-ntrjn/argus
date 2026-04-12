@@ -10,6 +10,16 @@ Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every
 ## Getting Started
 
 ```sh
+npx argus-ai-monitor
+```
+
+Open **http://localhost:7411** and you're in. The port is configurable in [`~/.argus/config.json`](#storage).
+
+### Development Setup
+
+If you want to run from source:
+
+```sh
 # 1. Install dependencies (once)
 npm install
 
@@ -20,8 +30,6 @@ npm run build --workspace=frontend
 npm run dev
 
 ```
-
-Open **http://localhost:7411** and you're in. The port is configurable in [`~/.argus/config.json`](#storage).
 
 ## Monitor
 
