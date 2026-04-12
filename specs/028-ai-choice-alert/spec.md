@@ -2,7 +2,7 @@
 
 **Feature Branch**: `028-ai-choice-alert`
 **Created**: 2026-04-11
-**Status**: Draft
+**Status**: Clarified
 **Input**: User description: "for some AI interactions the user will need to provide a choice. Can you research the event logs and identify those kinds of queries. For readonly session change the summary line to say ATTENTION NEEDED for connected session change summary line to attention needed and include the user choice options in the summary line. the attention needed should be in bold and red."
 
 ## Research Summary
@@ -27,7 +27,7 @@ A developer monitoring a read-only Claude Code or Copilot session in Argus notic
 
 **Acceptance Scenarios**:
 
-1. **Given** a readonly session whose last output is an unanswered `ask_user` or `AskUserQuestion` tool call, **When** the session card is displayed, **Then** the summary line shows **ATTENTION NEEDED** in bold red text instead of the normal session summary.
+1. **Given** a readonly session whose last output is an unanswered `ask_user` or `AskUserQuestion` tool call with a question and choices, **When** the session card is displayed, **Then** the summary line shows **ATTENTION NEEDED** in bold red, followed by the question text, followed by the labelled choices (e.g., "1. A / 2. B / 3. C").
 2. **Given** a readonly session where the most recent user-choice tool call has a matching `tool_result` (i.e., the user already responded), **When** the session card is displayed, **Then** the summary line shows the normal session summary (no alert).
 3. **Given** a readonly session with no user-choice tool calls at all, **When** the session card is displayed, **Then** the summary line shows the normal session summary.
 
@@ -64,8 +64,8 @@ A developer monitoring a connected (PTY-launched) session sees the AI is waiting
 ### Functional Requirements
 
 - **FR-001**: The system MUST detect a pending user-choice interaction when the most recent `tool_use` output item for a session has `toolName` equal to `"ask_user"` (Copilot) or `"AskUserQuestion"` (Claude Code) AND no `tool_result` with a later or equal sequence number exists in the fetched output window.
-- **FR-002**: For any session with a detected pending user-choice interaction, the system MUST replace the summary line on the session card with an **ATTENTION NEEDED** indicator rendered in bold, red text.
-- **FR-003**: For a connected session (launchMode `"pty"`) with a detected pending choice, the system MUST display the available choice options inline after the **ATTENTION NEEDED** indicator.
+- **FR-002**: For any session with a detected pending user-choice interaction, the system MUST replace the summary line on the session card with an **ATTENTION NEEDED** indicator rendered in bold, red text, followed by the question text, followed by the labelled choices.
+- **FR-003**: The question text and choice options MUST be shown for both readonly sessions and connected sessions (launchMode `"pty"`).
 - **FR-004**: The **ATTENTION NEEDED** indicator MUST NOT appear for sessions whose status is `"ended"` or `"completed"`.
 - **FR-005**: The **ATTENTION NEEDED** indicator MUST NOT appear when the pending tool call has a matching `tool_result` in the fetched output window (the choice was already answered).
 - **FR-006**: When a pending `ask_user` tool call provides a `choices` array, the system MUST render each choice as a labelled option (e.g., "1. Option A / 2. Option B").
@@ -96,6 +96,10 @@ A developer monitoring a connected (PTY-launched) session sees the AI is waiting
 - **"connected session"**: A session with `launchMode: "pty"`. Argus has a prompt bar for sending input.
 - **Detection signal**: `tool_use` items already stored in session output today. No new event types or backend changes needed.
 - **Choice source for Claude Code**: The `AskUserQuestion` tool input JSON may include an `options` array. The exact schema will be confirmed during the plan phase from the `AskUserQuestion` tool definition.
+
+### Session 2026-04-12
+
+- **Question and choices for all sessions**: Both the question text AND the labelled choice options are shown in the summary line for ALL sessions (readonly and connected). There is no distinction between session types for what is displayed — both get the full context: ATTENTION NEEDED + question + choices. The distinction (readonly vs connected) remains relevant for whether the developer can respond via the Argus prompt bar, not for what is displayed.
 
 ## Assumptions
 
