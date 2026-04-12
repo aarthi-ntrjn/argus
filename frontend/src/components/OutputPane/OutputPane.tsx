@@ -7,10 +7,12 @@ import SessionDetail from '../SessionDetail/SessionDetail';
 
 interface Props {
   session: Session;
-  onClose: () => void;
+  onClose?: () => void;
+  className?: string;
+  'data-tour-id'?: string;
 }
 
-export default function OutputPane({ session, onClose }: Props) {
+export default function OutputPane({ session, onClose, className, 'data-tour-id': dataTourId }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [settings, updateSetting] = useSettings();
   const displayMode = settings.outputDisplayMode ?? 'focused';
@@ -21,9 +23,8 @@ export default function OutputPane({ session, onClose }: Props) {
   });
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
+    if (!onClose) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
@@ -39,7 +40,8 @@ export default function OutputPane({ session, onClose }: Props) {
   return (
     <section
       aria-label="Session output"
-      className="flex flex-col h-full bg-white border border-gray-200 rounded-lg overflow-hidden"
+      data-tour-id={dataTourId}
+      className={`flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden ${className ?? 'h-full'}`}
     >
       <div className="flex items-center justify-between px-3 py-1 bg-gray-50 border-b border-gray-200">
         <span className="text-xs text-gray-500 font-mono truncate">Session {session.id}</span>
@@ -52,15 +54,17 @@ export default function OutputPane({ session, onClose }: Props) {
           >
             {displayMode === 'focused' ? 'Focused' : 'Verbose'}
           </button>
-          <button
-            onClick={onClose}
-            aria-label="Close output pane"
-            className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400"
-          >
-            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              aria-label="Close output pane"
+              className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400"
+            >
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
       <div className="flex-1 overflow-y-auto rounded-b-lg">

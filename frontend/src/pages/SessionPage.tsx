@@ -1,30 +1,18 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getSession, getSessionOutput } from '../services/api';
-import SessionDetail from '../components/SessionDetail/SessionDetail';
+import { getSession } from '../services/api';
+import OutputPane from '../components/OutputPane/OutputPane';
 import SessionPromptBar from '../components/SessionPromptBar/SessionPromptBar';
 import SessionMetaRow from '../components/SessionMetaRow/SessionMetaRow';
-import { useSettings } from '../hooks/useSettings';
 
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [settings, updateSetting] = useSettings();
-  const displayMode = settings.outputDisplayMode ?? 'focused';
 
-  function toggleMode() {
-    updateSetting('outputDisplayMode', displayMode === 'focused' ? 'verbose' : 'focused');
-  }
   const { data: session, isLoading: sessionLoading, error: sessionError } = useQuery({
     queryKey: ['session', id],
     queryFn: () => getSession(id!),
-    enabled: !!id,
-  });
-
-  const { data: outputPage, isLoading: outputLoading } = useQuery({
-    queryKey: ['session-output', id],
-    queryFn: () => getSessionOutput(id!, { limit: 100 }),
     enabled: !!id,
   });
 
@@ -72,29 +60,11 @@ export default function SessionPage() {
       <div className="flex-1 min-h-0 flex flex-col px-4 md:px-8 pb-4 md:pb-6 mt-4">
         <div className="max-w-4xl mx-auto w-full flex-1 min-h-0 flex flex-col">
 
-          <div data-tour-id="session-output-stream" className="flex-1 min-h-0 flex flex-col bg-white border border-gray-200 rounded-lg shadow overflow-hidden">
-            <div className="px-3 py-1 border-b border-gray-200 shrink-0 flex items-center justify-between bg-gray-50">
-              <span className="text-xs text-gray-500 font-mono truncate">Session {session.id}</span>
-              <button
-                onClick={toggleMode}
-                className="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 shrink-0 ml-2"
-              >
-                {displayMode === 'focused' ? 'Focused' : 'Verbose'}
-              </button>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto bg-gray-900 rounded-b-lg">
-              {outputLoading ? (
-                <div className="p-8 text-center text-gray-400">Loading output...</div>
-              ) : (
-                <SessionDetail
-                  sessionId={session.id}
-                  items={outputPage?.items ?? []}
-                  displayMode={displayMode}
-                  dark
-                />
-              )}
-            </div>
-          </div>
+          <OutputPane
+            session={session}
+            className="flex-1 min-h-0 shadow"
+            data-tour-id="session-output-stream"
+          />
 
           <div data-tour-id="session-prompt-bar" className="bg-white rounded-lg shadow p-4 mt-4 shrink-0">
             <SessionPromptBar session={session} />
