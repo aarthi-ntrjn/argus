@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import type { DashboardSettings } from '../../types';
 import { useArgusSettings } from '../../hooks/useArgusSettings';
 import { YoloWarningDialog } from '../YoloWarningDialog/YoloWarningDialog';
@@ -19,8 +19,6 @@ export function SettingsPanel({ settings, onToggle, onUpdateThreshold, onRestart
   const [showYoloWarning, setShowYoloWarning] = useState(false);
   const [thresholdInput, setThresholdInput] = useState(String(settings.restingThresholdMinutes ?? DEFAULT_THRESHOLD));
   const [thresholdError, setThresholdError] = useState<string | null>(null);
-  // Track the latest raw input so the cleanup effect can save if the dropdown closes before blur fires.
-  const pendingInputRef = useRef<string | null>(null);
 
   const handleYoloChange = (checked: boolean) => {
     if (checked) {
@@ -38,21 +36,6 @@ export function SettingsPanel({ settings, onToggle, onUpdateThreshold, onRestart
   const handleYoloCancel = () => {
     setShowYoloWarning(false);
   };
-
-  // If the dropdown unmounts before the input fires blur (e.g. user clicks outside),
-  // save the pending value so changes are never lost.
-  useEffect(() => {
-    return () => {
-      const raw = pendingInputRef.current;
-      if (raw === null) return;
-      const trimmed = raw.trim();
-      const rounded = Math.round(parseFloat(trimmed));
-      if (!isNaN(rounded) && rounded >= MIN_THRESHOLD && rounded <= MAX_THRESHOLD) {
-        onUpdateThreshold?.(rounded);
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const commitThreshold = (raw: string, normalizeInput = false) => {
     const trimmed = raw.trim();
@@ -137,13 +120,9 @@ export function SettingsPanel({ settings, onToggle, onUpdateThreshold, onRestart
               max={MAX_THRESHOLD}
               onChange={e => {
                 setThresholdInput(e.target.value);
-                setThresholdError(null);
-                pendingInputRef.current = e.target.value;
+                commitThreshold(e.target.value);
               }}
-              onBlur={e => {
-                pendingInputRef.current = null;
-                commitThreshold(e.target.value, true);
-              }}
+              onBlur={e => commitThreshold(e.target.value, true)}
               className="w-14 text-sm px-1 py-0.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 text-center"
             />
             <span className="text-sm text-gray-500 shrink-0">min</span>
