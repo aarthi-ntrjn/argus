@@ -37,11 +37,24 @@ export default function LaunchDropdown({ repoPath }: Props) {
     return () => document.removeEventListener('keydown', handler);
   }, [open]);
 
-  const handleCopy = (tool: 'claude' | 'copilot') => {
+  const handleCopy = async (tool: 'claude' | 'copilot') => {
     const base = tool === 'claude' ? tools?.claudeCmd : tools?.copilotCmd;
     // Append --cwd so the command launches in this repo regardless of where it's pasted.
     const cmd = base ? `${base} --cwd "${repoPath}"` : undefined;
-    if (cmd) navigator.clipboard.writeText(cmd);
+    if (!cmd) return;
+    try {
+      await navigator.clipboard.writeText(cmd);
+    } catch {
+      // Fallback for environments where the async Clipboard API is denied.
+      const el = document.createElement('textarea');
+      el.value = cmd;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
     setCopied(tool);
     setTimeout(() => setCopied(null), 1500);
     setOpen(false);
