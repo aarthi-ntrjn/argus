@@ -9,19 +9,19 @@
 
 **Goal**: Extend the settings type and update the core utility function signature. No behaviour change yet.
 
-- [ ] T001 [P1] Extend `DashboardSettings` interface in `frontend/src/types.ts` to add `restingThresholdMinutes: number` and set its default to `20` in `DEFAULT_SETTINGS`.
-- [ ] T002 [P1] Update `isInactive` in `frontend/src/utils/sessionUtils.ts` to accept an optional second parameter `thresholdMs?: number` (defaulting to `INACTIVE_THRESHOLD_MS`) and use it instead of the constant directly.
+- [x] T001 [P1] Extend `DashboardSettings` interface in `frontend/src/types.ts` to add `restingThresholdMinutes: number` and set its default to `20` in `DEFAULT_SETTINGS`.
+- [x] T002 [P1] Update `isInactive` in `frontend/src/utils/sessionUtils.ts` to accept an optional second parameter `thresholdMs?: number` (defaulting to `INACTIVE_THRESHOLD_MS`) and use it instead of the constant directly.
 
 ---
 
-## Phase 2: Foundational (tests first — CRITICAL gate)
+## Phase 2: Foundational (tests first -- CRITICAL gate)
 
 **Goal**: Write failing tests for the type extension and updated function before any callers change.
 
 **Independent test criteria**: `npm test` in the frontend passes with the new test cases; existing tests remain green.
 
-- [ ] T003 [P2] Update `frontend/src/__tests__/sessionUtils.test.ts`: add test cases that pass an explicit `thresholdMs` to `isInactive` (shorter and longer than default) and verify correct resting classification.
-- [ ] T004 [P2] Update `frontend/src/__tests__/useSettings.test.ts`: add a test that verifies `restingThresholdMinutes` defaults to `20` when no stored value exists, and that it persists when updated.
+- [x] T003 [P2] Update `frontend/src/__tests__/sessionUtils.test.ts`: add test cases that pass an explicit `thresholdMs` to `isInactive` (shorter and longer than default) and verify correct resting classification.
+- [x] T004 [P2] Update `frontend/src/__tests__/useSettings.test.ts`: add a test that verifies `restingThresholdMinutes` defaults to `20` when no stored value exists, and that it persists when updated.
 
 *Confirm tests are red for T003/T004, then implement T001/T002, then confirm green.*
 
@@ -35,7 +35,7 @@
 
 ### Test tasks (write first)
 
-- [ ] T005 [P3] [US1] Update `frontend/src/__tests__/SettingsPanel.test.tsx`: add tests for:
+- [x] T005 [P3] [US1] Update `frontend/src/__tests__/SettingsPanel.test.tsx`: add tests for:
   - threshold input renders with current value from `settings.restingThresholdMinutes`
   - changing the value to a valid number calls `onUpdateThreshold` with the parsed integer
   - invalid inputs (0, negative, >1440, non-numeric, empty) show an inline error and do NOT call `onUpdateThreshold`
@@ -43,20 +43,20 @@
 
 ### Implementation tasks
 
-- [ ] T006 [P3] [US1] [P] Update `frontend/src/components/SettingsPanel/SettingsPanel.tsx`:
+- [x] T006 [P3] [US1] [P] Update `frontend/src/components/SettingsPanel/SettingsPanel.tsx`:
   - Add `onUpdateThreshold?: (minutes: number) => void` to `SettingsPanelProps`
   - Add local state `inputValue` (string) initialised from `settings.restingThresholdMinutes`
   - Add local state `inputError` (string | null)
   - Render a number input below "Hide inactive sessions" checkbox (label: "Resting after")
   - Validate on blur: reject outside 1-1440, non-numeric, empty; call `onUpdateThreshold` on valid commit
   - Update the "Hide inactive sessions" checkbox label to show `settings.restingThresholdMinutes` instead of hardcoded 20
-- [ ] T007 [P3] [US1] [P] Update `frontend/src/pages/DashboardPage.tsx`:
+- [x] T007 [P3] [US1] [P] Update `frontend/src/pages/DashboardPage.tsx`:
   - Pass `onUpdateThreshold={(m) => updateSetting('restingThresholdMinutes', m)}` to `SettingsPanel`
   - Pass `settings.restingThresholdMinutes * 60_000` as second arg to `isInactive` in the filter callback
-- [ ] T008 [P3] [US1] [P] Update `frontend/src/components/SessionCard/SessionCard.tsx`:
+- [x] T008 [P3] [US1] [P] Update `frontend/src/components/SessionCard/SessionCard.tsx`:
   - Call `useSettings()` to get `restingThresholdMinutes`
   - Pass `restingThresholdMinutes * 60_000` to `isInactive(session, ...)`
-- [ ] T009 [P3] [US1] [P] Update `frontend/src/components/SessionMetaRow/SessionMetaRow.tsx`:
+- [x] T009 [P3] [US1] [P] Update `frontend/src/components/SessionMetaRow/SessionMetaRow.tsx`:
   - Call `useSettings()` to get `restingThresholdMinutes`
   - Pass `restingThresholdMinutes * 60_000` to `isInactive(session, ...)`
 
@@ -70,14 +70,14 @@
 
 ### Test tasks (write first)
 
-- [ ] T010 [P4] [US2] Add tests in `frontend/src/__tests__/SettingsPanel.test.tsx`:
+- [x] T010 [P4] [US2] Add tests in `frontend/src/__tests__/SettingsPanel.test.tsx`:
   - Reset button is rendered next to the threshold input
   - Clicking reset calls `onUpdateThreshold(20)` and sets the input value back to "20"
   - Clicking reset clears any existing validation error
 
 ### Implementation tasks
 
-- [ ] T011 [P4] [US2] Update `frontend/src/components/SettingsPanel/SettingsPanel.tsx`:
+- [x] T011 [P4] [US2] Update `frontend/src/components/SettingsPanel/SettingsPanel.tsx`:
   - Add a "Reset" button (small, inline) next to the threshold input
   - On click: set `inputValue` to "20", clear `inputError`, call `onUpdateThreshold?.(20)`
 
@@ -87,11 +87,11 @@
 
 **Goal**: End-to-end test coverage; README update; build verification.
 
-- [ ] T012 [P5] Write `frontend/tests/e2e/sc-026-resting-threshold.spec.ts` with mocked API:
+- [x] T012 [P5] Write `frontend/tests/e2e/sc-026-resting-threshold.spec.ts` with mocked API:
   - Opening the settings panel shows a threshold input with value 20
   - Changing the value to 5 and blurring calls through to the displayed label ("Hide inactive sessions (>5 min)")
   - Entering an invalid value (0) shows an error inline
   - Clicking Reset restores the input to 20
-- [ ] T013 [P5] Update `README.md`: document the new `restingThresholdMinutes` setting (what it controls, default, valid range, where to find it in the UI).
-- [ ] T014 [P5] Run `npm run build --workspace=frontend` and confirm zero errors.
-- [ ] T015 [P5] Run `npm test --workspace=frontend` (all unit tests pass) and `npm run test:e2e` (all e2e mock tests pass).
+- [x] T013 [P5] Update `README.md`: document the new `restingThresholdMinutes` setting (what it controls, default, valid range, where to find it in the UI).
+- [x] T014 [P5] Run `npm run build --workspace=frontend` and confirm zero errors.
+- [x] T015 [P5] Run `npm test --workspace=frontend` (all unit tests pass) and `npm run test:e2e` (all e2e mock tests pass).
