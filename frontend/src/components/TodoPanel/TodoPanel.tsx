@@ -119,9 +119,22 @@ export default function TodoPanel() {
     }
   }, [addRowId]);
 
-  const [showDone, setShowDone] = useState(true);
-  const [showTimestamps, setShowTimestamps] = useState(true);
-  const [wrapText, setWrapText] = useState(false);
+  const [showDone, setShowDone] = useState(() => {
+    const v = localStorage.getItem('argus.todo.showDone');
+    return v === null ? true : v === 'true';
+  });
+  const [showTimestamps, setShowTimestamps] = useState(() => {
+    const v = localStorage.getItem('argus.todo.showTimestamps');
+    return v === null ? true : v === 'true';
+  });
+  const [wrapText, setWrapText] = useState(() => {
+    const v = localStorage.getItem('argus.todo.wrapText');
+    return v === null ? false : v === 'true';
+  });
+
+  useEffect(() => { localStorage.setItem('argus.todo.showDone', String(showDone)); }, [showDone]);
+  useEffect(() => { localStorage.setItem('argus.todo.showTimestamps', String(showTimestamps)); }, [showTimestamps]);
+  useEffect(() => { localStorage.setItem('argus.todo.wrapText', String(wrapText)); }, [wrapText]);
 
   const reversedTodos = useMemo(
     () => [...todos].reverse().filter(todo => showDone || !todo.done),
