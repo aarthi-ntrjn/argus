@@ -89,6 +89,7 @@ export function useRepositoryManagement(): RepositoryManagement {
         }
       }
       await queryClient.invalidateQueries({ queryKey: ['repositories'] });
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] });
       setScanResult({ added, failed, total: newRepos.length });
       setShowFolderInput(false);
     } catch (err: unknown) {

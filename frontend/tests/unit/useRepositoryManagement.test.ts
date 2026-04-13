@@ -122,4 +122,16 @@ describe('useRepositoryManagement — folder input flow', () => {
     expect(result.current.scanResult).toEqual({ added: 1, failed: 1, total: 2 });
     expect(result.current.addError).toBeNull();
   });
+
+  it('invalidates both repositories and sessions queries after successful add', async () => {
+    mockScanFolder.mockResolvedValue([
+      { path: 'C:\source\new-repo', name: 'new-repo' },
+    ]);
+    mockAddRepository.mockResolvedValue({});
+    const { result } = renderHook(() => useRepositoryManagement());
+    act(() => { result.current.setFolderInputPath('C:\source'); });
+    await act(async () => { await result.current.handleFolderSubmit(REPOS); });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['repositories'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['sessions'] });
+  });
 });
