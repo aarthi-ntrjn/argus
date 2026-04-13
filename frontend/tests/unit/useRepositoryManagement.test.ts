@@ -50,7 +50,7 @@ describe('useRepositoryManagement — folder input flow', () => {
     expect(mockScanFolder).toHaveBeenCalledWith('C:\source');
   });
 
-  it('handleFolderSubmit keeps the dialog open after scanning', async () => {
+  it('handleFolderSubmit dismisses the dialog after scanning', async () => {
     mockScanFolder.mockResolvedValue([]);
     const { result } = renderHook(() => useRepositoryManagement());
     act(() => {
@@ -59,7 +59,7 @@ describe('useRepositoryManagement — folder input flow', () => {
     });
     expect(result.current.showFolderInput).toBe(true);
     await act(async () => { await result.current.handleFolderSubmit(REPOS); });
-    expect(result.current.showFolderInput).toBe(true);
+    expect(result.current.showFolderInput).toBe(false);
     expect(result.current.scanResult).toEqual({ added: 0, failed: 0, total: 0 });
   });
 

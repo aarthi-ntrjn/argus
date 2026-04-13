@@ -75,6 +75,7 @@ export function useRepositoryManagement(): RepositoryManagement {
       const newRepos = found.filter(r => !registeredPaths.has(r.path));
       if (newRepos.length === 0) {
         setScanResult({ added: 0, failed: 0, total: 0 });
+        setShowFolderInput(false);
         return;
       }
       let added = 0;
@@ -89,6 +90,7 @@ export function useRepositoryManagement(): RepositoryManagement {
       }
       await queryClient.invalidateQueries({ queryKey: ['repositories'] });
       setScanResult({ added, failed, total: newRepos.length });
+      setShowFolderInput(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to scan folder';
       setAddError(msg);
