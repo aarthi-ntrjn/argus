@@ -153,28 +153,26 @@ const pushStdin = (buf: Buffer): Promise<void> => {
   return new Promise<void>((resolve) => setTimeout(resolve, KEYSTROKE_DELAY_MS));
 };
 
-// When Argus sends a prompt, write it to the PTY.
-// For copilot-cli: encode as Win32 input sequences pushed to process.stdin — Copilot
-// reads via the Windows console API, not the PTY master, so pty.write() has no effect.
-// For claude-code: write directly to the PTY master via pty.write().
+// When Argus sends a prompt, encode it as Win32 input sequences and push to stdin.
+// Both claude-code and copilot-cli read input via the Windows Console API, so
+// process.stdin.push() with Win32 sequences is the correct delivery path for both.
+// pty.write() does not work for interactive prompts (e.g. AskUserQuestion in
+// claude-code) because the PTY may be in raw/char mode waiting for a single keystroke.
 client.onSendPrompt(async (actionId: string, prompt: string) => {
   log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length}`);
   try {
-    if (sessionType === 'copilot-cli') {
-      log(`win32 focus-in`);
-      await pushStdin(Buffer.from('\x1b[I'));
-      for (const ch of prompt) {
-        for (const buf of win32InputEvents(ch)) {
-          await pushStdin(buf);
-        }
-      }
-      for (const buf of win32InputEvents('\r')) {
+    log(`win32 focus-in`);
+    await pushStdin(Buffer.from('\x1b[I'));
+    for (const ch of prompt) {
+      for (const buf of win32InputEvents(ch)) {
         await pushStdin(buf);
       }
-      await pushStdin(Buffer.from('\x1b[O'));
-    } else {
-      pty.write(prompt + '\r');
     }
+    for (const buf of win32InputEvents('\r')) {
+      await pushStdin(buf);
+    }
+    await pushStdin(Buffer.from('\x1b[O'));
+    // pty.write(prompt + '\r'); // does not reach claude-code when PTY is in raw/char mode
     client.ackDelivered(actionId);
   } catch (err) {
     log(`prompt delivery failed: ${err}`);
