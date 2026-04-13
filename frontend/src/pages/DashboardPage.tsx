@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState, useEffect, useMemo } from 'react';
+import { Plus } from 'lucide-react';
 import LaunchDropdown from '../components/LaunchDropdown/LaunchDropdown';
 import { useNavigate } from 'react-router-dom';
 import { getSessions, getRepositories } from '../services/api';
@@ -271,7 +272,9 @@ export default function DashboardPage() {
               data-tour-id="dashboard-add-repo"
               onClick={handleAddRepo}
               disabled={adding}
+              className="inline-flex items-center gap-1"
             >
+              <Plus size={11} aria-hidden="true" />
               {adding ? 'Adding...' : 'Add Repository'}
             </Button>
           </div>
