@@ -246,3 +246,14 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 - `staleTime` ≠ `refetchInterval`. Always explicitly set `refetchInterval` on queries that need to stay live with the server.
 - When wiring up a backend polling loop, check end-to-end: does the frontend also have a matching poll? Trace the full data path from server update → DB → API → React Query → UI.
 **Fix summary**: Added `refetchInterval: 5000` to both `useQuery` calls (repositories and sessions) in `DashboardPage.tsx`. Also updated the `repository-scanner.js` vitest mock to properly export `getCurrentBranch`, fixing a silent mock gap where `refreshRepositoryBranches()` errors were being swallowed by the catch block.
+
+---
+
+## T116 — Sessions not shown after adding repository until page refresh
+
+**Date**: 2026-04-13
+**Symptom**: After adding a repository via the "Add Repository" dialog, the Copilot sessions for that repository did not appear on the dashboard. They only appeared after a manual page refresh.
+**Root cause**: `handleFolderSubmit()` in `useRepositoryManagement.ts` only invalidated the `['repositories']` React Query cache after adding repos, but never invalidated `['sessions']`. The sessions query served stale cached data that did not include sessions for the newly added repos. Compare with `handleRemoveRepoById()` which correctly invalidated both queries.
+**Why it was missed**: The auto-dismiss dialog change (removing the result state) made it more obvious because the user lands on the dashboard immediately. Before that, the result summary screen gave enough time for `refetchInterval` (5s) to eventually refresh the sessions. The missing invalidation was always there but masked by the polling interval.
+**How to prevent**: When invalidating related queries after a mutation, audit all query keys that depend on the same data. Repository and session data are tightly coupled: any mutation that changes repositories should also invalidate sessions. Add a helper or constant for related query groups.
+**Fix summary**: Added `await queryClient.invalidateQueries({ queryKey: ['sessions'] })` after the existing `['repositories']` invalidation in `handleFolderSubmit()` (`frontend/src/hooks/useRepositoryManagement.ts`). Added regression test verifying both query keys are invalidated.
