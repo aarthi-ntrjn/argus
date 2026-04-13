@@ -2,7 +2,7 @@
 
 **Feature Branch**: `032-repo-compare-session-focus`
 **Created**: 2026-04-13
-**Status**: Draft
+**Status**: Clarified
 **Input**: User description: "Add GitHub compare link to repository card and focus CLI process button to session card"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -20,7 +20,7 @@ A developer monitoring multiple repositories in Argus wants to quickly see what 
 1. **Given** a repository with a GitHub remote URL and a non-default branch is registered, **When** the user views the repository card, **Then** a compare link icon appears next to the branch badge that opens `https://github.com/<owner>/<repo>/compare/<default>...<current>` in a new tab.
 2. **Given** a repository whose remote URL is not a GitHub URL (e.g., GitLab, local), **When** the user views the repository card, **Then** no compare link is shown.
 3. **Given** a repository with no remote URL or no branch, **When** the user views the repository card, **Then** no compare link is shown.
-4. **Given** a repository on the default branch (master or main), **When** the user views the repository card, **Then** no compare link is shown (comparing a branch to itself is meaningless).
+4. **Given** a repository on the default branch (master or main), **When** the user views the repository card, **Then** a compare link is shown pointing to the GitHub repository's default compare page (`https://github.com/<owner>/<repo>/compare`).
 
 ---
 
@@ -37,7 +37,7 @@ A developer has a Claude Code or Copilot CLI session running in a terminal windo
 1. **Given** an active session with a known PID, **When** the user clicks the Focus button, **Then** the OS brings the terminal window hosting that process to the foreground.
 2. **Given** an ended or completed session, **When** the user views the session card, **Then** no Focus button is shown (no process to focus).
 3. **Given** an active session where the process window cannot be located (e.g., headless server), **When** the user clicks Focus, **Then** the button shows a brief error state and the user is not left with a broken UI.
-4. **Given** a session running on Windows, macOS, or Linux, **When** the user clicks Focus, **Then** the OS-appropriate mechanism is used to bring the window to front.
+4. **Given** a session with no PID yet (just started), **When** the user views the session card, **Then** the Focus button is shown but disabled/greyed out.
 
 ---
 
@@ -56,11 +56,11 @@ A developer has a Claude Code or Copilot CLI session running in a terminal windo
 
 - **FR-001**: The system MUST store the remote origin URL for each repository when it is registered or scanned.
 - **FR-002**: The system MUST detect GitHub remote URLs (both HTTPS and SSH formats) and construct a compare URL of the form `https://github.com/<owner>/<repo>/compare/<base>...<head>`.
-- **FR-003**: The repository card MUST display a compare link icon when: the repository has a GitHub remote URL, the current branch is known, and the current branch differs from the detected default branch (master or main).
+- **FR-003**: The repository card MUST display a compare link icon when: the repository has a GitHub remote URL and the current branch is known. When the current branch is a non-default branch (not master/main), the link points to `https://github.com/<owner>/<repo>/compare/<default>...<current>`. When on the default branch, the link points to `https://github.com/<owner>/<repo>/compare`.
 - **FR-004**: The compare link MUST open in a new browser tab and MUST NOT navigate the Argus dashboard.
 - **FR-005**: The system MUST expose a `POST /api/v1/sessions/:id/focus` endpoint that attempts to bring the process's terminal window to the foreground.
 - **FR-006**: The focus endpoint MUST use OS-appropriate mechanisms: PowerShell on Windows, AppleScript on macOS, wmctrl/xdotool on Linux.
-- **FR-007**: The session card MUST display a Focus button for sessions that are not in `ended` or `completed` status.
+- **FR-007**: The session card MUST display a Focus button for sessions that are not in `ended` or `completed` status. The button MUST be disabled (greyed out) when the session has no known PID.
 - **FR-008**: The focus endpoint MUST return structured errors using the `{ error, message, requestId }` contract.
 - **FR-009**: The remote URL MUST be persisted in the database so it survives backend restarts.
 - **FR-010**: The remote URL MUST be refreshed whenever the repository branch is refreshed.
@@ -82,7 +82,14 @@ A developer has a Claude Code or Copilot CLI session running in a terminal windo
 - **SC-006**: The focus endpoint responds within 500ms (p95) per §VIII of the constitution.
 - **SC-007**: All new API endpoints have integration tests. All new frontend components have unit tests.
 
-## Assumptions
+## Clarifications
+
+### Session 2026-04-13
+
+- **Compare link on default branch**: When the current branch is the default branch (master/main), the compare link is still shown but points to `https://github.com/<owner>/<repo>/compare` (the GitHub default compare page) rather than a branch-specific compare URL.
+- **Focus button visibility**: The Focus button is shown on all non-ended/non-completed sessions. It is disabled (greyed out) when no PID is known. When a PID becomes available (session detects a process), the button becomes enabled automatically.
+
+
 
 - The Argus backend runs on the same machine as the developer's terminal, making OS-level window focus feasible.
 - The primary use case is GitHub-hosted repositories; GitLab and Bitbucket compare links are out of scope for v1.
