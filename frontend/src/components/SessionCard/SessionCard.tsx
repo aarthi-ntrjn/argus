@@ -60,15 +60,17 @@ function SessionCard({ session, selected, onSelect }: Props) {
 
       {/* Summary / topic */}
       {pendingChoice !== null ? (
-        <p role="alert" className="text-sm mt-2 line-clamp-3 whitespace-normal break-words">
+        <div role="alert" className="text-sm mt-2">
           <span className="font-bold text-red-600">ATTENTION NEEDED</span>
           {pendingChoice.question ? ` ${pendingChoice.question}` : ''}
           {pendingChoice.choices.length > 0 && (
-            <span className="text-gray-600">
-              {' '}{pendingChoice.choices.map((c, i) => `${i + 1}. ${c}`).join(' / ')}
-            </span>
+            <div className="text-gray-600 mt-1">
+              {pendingChoice.choices.map((c, i) => (
+                <div key={i}>{i + 1}. {c}</div>
+              ))}
+            </div>
           )}
-        </p>
+        </div>
       ) : (
         <p className={`text-sm mt-2 truncate ${session.summary ? 'text-gray-600' : 'text-gray-500 italic'}`}>
           {session.summary || 'Nothing sent yet'}
