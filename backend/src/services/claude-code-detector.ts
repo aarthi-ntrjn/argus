@@ -11,6 +11,7 @@ import { OutputStore } from './output-store.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { parseClaudeJsonlLine, parseModel } from './claude-code-jsonl-parser.js';
 import { detectYoloModeFromPids } from './process-utils.js';
+import { SessionTypes } from '../models/index.js';
 import type { Session, Repository, PendingChoice } from '../models/index.js';
 
 const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json');
@@ -249,11 +250,11 @@ export class ClaudeCodeDetector {
     if (!existing) {
       const claimed = normalizedCwd ? ptyRegistry.claimForSession(session_id, normalizedCwd) : null;
       if (claimed) {
-        const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'claude-code');
+        const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, SessionTypes.CLAUDE_CODE);
         const session: Session = {
           id: session_id,
           repositoryId: repo.id,
-          type: 'claude-code',
+          type: SessionTypes.CLAUDE_CODE,
           launchMode: 'pty',
           pid: claimed.pid,
           hostPid: claimed.hostPid,
@@ -278,7 +279,7 @@ export class ClaudeCodeDetector {
     const session: Session = existing ?? {
       id: session_id,
       repositoryId: repo.id,
-      type: 'claude-code',
+      type: SessionTypes.CLAUDE_CODE,
       launchMode: null,
       pid: null,
       hostPid: null,
@@ -316,11 +317,11 @@ export class ClaudeCodeDetector {
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
       if (claimed) {
         console.log(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
-        const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'claude-code');
+        const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, SessionTypes.CLAUDE_CODE);
         const session: Session = {
           id: sessionId,
           repositoryId: repo.id,
-          type: 'claude-code',
+          type: SessionTypes.CLAUDE_CODE,
           launchMode: 'pty',
           pid: claimed.pid,
           hostPid: claimed.hostPid,
@@ -351,7 +352,7 @@ export class ClaudeCodeDetector {
     const base: Session = existingSession ?? {
       id: sessionId,
       repositoryId: repo.id,
-      type: 'claude-code',
+      type: SessionTypes.CLAUDE_CODE,
       launchMode: null,
       pid: claudePid,
       hostPid: null,
@@ -364,7 +365,7 @@ export class ClaudeCodeDetector {
       expiresAt: null,
       model: null,
       reconciled: true,
-      yoloMode: claudePid ? detectYoloModeFromPids(claudePid, null, 'claude-code') : null,
+      yoloMode: claudePid ? detectYoloModeFromPids(claudePid, null, SessionTypes.CLAUDE_CODE) : null,
     };
     console.log(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
     upsertSession({ ...base, status: 'active', endedAt: null, lastActivityAt: now, pid: claudePid });

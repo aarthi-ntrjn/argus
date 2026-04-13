@@ -140,23 +140,28 @@ function* win32InputEvents(ch: string): Generator<Buffer> {
   yield Buffer.from(`\x1b[${vk};${sc};${uc};0;0;1_`); // key up
 }
 
+// Delay between Win32 keystroke pairs so Copilot CLI can process each character
+// before the next arrives. Without this, all pushes land in a single event-loop
+// tick and the PTY drops or merges them.
+const KEYSTROKE_DELAY_MS = 10;
+
 // When Argus sends a prompt, write it to the PTY.
 // For copilot-cli, encode as Win32 input sequences to match real keystrokes.
 // For other session types, write directly to the PTY.
-client.onSendPrompt((actionId: string, prompt: string) => {
+client.onSendPrompt(async (actionId: string, prompt: string) => {
   log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length}`);
   try {
     if (sessionType === 'copilot-cli') {
+      const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
       log(`win32 focus-in`);
       process.stdin.push(Buffer.from('\x1b[I'));
       for (const ch of prompt) {
         for (const buf of win32InputEvents(ch)) {
-          // log(`win32 push ch=${JSON.stringify(ch)} seq=${buf.toString()}`);
           process.stdin.push(buf);
         }
+        await delay(KEYSTROKE_DELAY_MS);
       }
       for (const buf of win32InputEvents('\r')) {
-        // log(`win32 enter seq=${buf.toString()}`);
         process.stdin.push(buf);
       }
       process.stdin.push(Buffer.from('\x1b[O'));
@@ -164,7 +169,6 @@ client.onSendPrompt((actionId: string, prompt: string) => {
       pty.write(prompt + '\r');
     }
     client.ackDelivered(actionId);
-    // log(`ackDelivered actionId=${actionId}`);
   } catch (err) {
     log(`prompt delivery failed: ${err}`);
     client.ackFailed(actionId, err instanceof Error ? err.message : 'prompt delivery failed');
