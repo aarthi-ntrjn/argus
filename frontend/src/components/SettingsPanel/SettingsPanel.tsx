@@ -4,6 +4,7 @@ import type { DashboardSettings } from '../../types';
 import { useArgusSettings } from '../../hooks/useArgusSettings';
 import { YoloWarningDialog } from '../YoloWarningDialog/YoloWarningDialog';
 import { Checkbox } from '../Checkbox';
+import { Button } from '../Button';
 
 const DEFAULT_THRESHOLD = 20;
 const MIN_THRESHOLD = 1;
@@ -128,15 +129,16 @@ export function SettingsPanel({ settings, onToggle, onUpdateThreshold, onRestart
               className="w-14 text-sm px-1 py-0.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 text-center"
             />
             <span className="text-sm text-gray-500 shrink-0">min</span>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleReset}
               aria-label="Reset resting threshold to default"
               title="Reset to default (20 min, max 60 min)"
-              className="text-gray-500 hover:text-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded-sm"
+              className="!p-0"
             >
               <RotateCcw size={12} aria-hidden="true" />
-            </button>
+            </Button>
           </div>
           {thresholdError && (
             <p role="alert" className="text-xs text-red-600 mt-0.5 px-1">{thresholdError}</p>
@@ -163,12 +165,14 @@ export function SettingsPanel({ settings, onToggle, onUpdateThreshold, onRestart
 
         {onRestartTour && (
           <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col gap-1">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onRestartTour}
-              className="w-full text-left text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-sm px-2 py-1 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full text-left !text-sm"
             >
               Restart Tour
-            </button>
+            </Button>
           </div>
         )}
       </div>
