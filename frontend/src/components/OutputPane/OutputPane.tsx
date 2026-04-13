@@ -4,6 +4,7 @@ import { getSessionOutput } from '../../services/api';
 import type { Session } from '../../types';
 import { useSettings } from '../../hooks/useSettings';
 import SessionDetail from '../SessionDetail/SessionDetail';
+import { Button } from '../Button';
 
 interface Props {
   session: Session;
@@ -46,14 +47,15 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
       <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-gray-200">
         <span className="text-xs font-medium text-gray-600 truncate">Session <span className="font-mono text-[10px] text-gray-500">{session.id}</span></span>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={toggleMode}
             aria-label={displayMode === 'focused' ? 'Focused' : 'Verbose'}
             title={displayMode === 'focused' ? 'Switch to verbose mode' : 'Switch to focused mode'}
-            className="inline-flex items-center text-xs px-2 py-0.5 rounded font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400"
           >
             {displayMode === 'focused' ? 'Focused' : 'Verbose'}
-          </button>
+          </Button>
           {onClose && (
             <button
               onClick={onClose}
