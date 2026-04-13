@@ -92,11 +92,19 @@ function applyOutputEvent(qc: QueryClient, sessionId: string, output: SessionOut
 
 function applyOutputBatchEvent(qc: QueryClient, sessionId: string, outputs: SessionOutput[]): void {
   qc.setQueryData<OutputQueryData>(['session-output', sessionId], (old) => {
-    if (!old) return old;
+    if (!old) {
+      // Cache not yet seeded (session.output.batch arrived before SessionCard mounted).
+      // Seed it so the conversation is visible as soon as the pane opens.
+      const items = outputs.slice(-100);
+      return { items, nextBefore: items.length > 0 ? String(items[0].sequenceNumber) : null, total: outputs.length };
+    }
     return { ...old, items: [...old.items, ...outputs], total: old.total + outputs.length };
   });
   qc.setQueryData<OutputQueryData>(['session-output-last', sessionId], (old) => {
-    if (!old) return old;
+    if (!old) {
+      // Cache not yet seeded; seed from the batch so the session card preview shows immediately.
+      return { items: outputs.slice(-10), nextBefore: null, total: outputs.length };
+    }
     return { ...old, items: [...old.items, ...outputs].slice(-10), total: old.total + outputs.length };
   });
 }
