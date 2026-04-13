@@ -1,10 +1,10 @@
 /**
- * Regression tests for T116: copilot-cli send-prompt keystroke injection must be async.
+ * Regression tests for T116: Win32 keystroke injection for send-prompt.
  *
- * For copilot-cli, all pushes go through pushStdin() which adds KEYSTROKE_DELAY_MS so
- * events arrive one per event-loop tick rather than all at once.
- * For claude-code, pty.write() is used instead (claude-code reads from the PTY master,
- * not from process.stdin).
+ * Both claude-code and copilot-cli use the Win32 stdin path (pushStdin +
+ * win32InputEvents). pty.write() does not work when the PTY is in raw/char
+ * mode (e.g. AskUserQuestion). Every push goes through pushStdin() which
+ * adds KEYSTROKE_DELAY_MS so events arrive one per event-loop tick.
  */
 import { describe, it, expect, vi } from 'vitest';
 
@@ -53,7 +53,7 @@ async function injectWin32Prompt(prompt: string, push: (buf: Buffer) => void): P
 
 // ---- end replicated logic ----
 
-describe('copilot-cli Win32 keystroke injection', () => {
+describe('Win32 keystroke injection (claude-code and copilot-cli)', () => {
   it('win32InputEvents emits key-down then key-up buffer for a character', () => {
     const bufs = [...win32InputEvents('a')];
     expect(bufs).toHaveLength(2);
