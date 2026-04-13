@@ -255,3 +255,16 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: The delivery function was tested with single-character prompts or short strings where the race was not reliably reproducible. The log-lines-help clue was not recognised as a timing signal.
 **How to prevent**: When injecting input into a PTY as individual "keystroke" events, always add an inter-character delay. Real keyboard input is never instantaneous; PTY readers are optimised for a stream with natural inter-key gaps. A synchronous burst of events should be treated as a red flag.
 **Fix summary**: Made the `onSendPrompt` callback in `launch.ts` async and added `await delay(KEYSTROKE_DELAY_MS)` (10 ms) after each character's key-down/key-up pair. Updated `PromptCallback` type in `argus-launch-client.ts` to allow `Promise<void>` return.
+
+---
+
+## T116 (master) — Conversation history not shown when adding a repository with an active session
+
+**Date**: 2026-04-13
+**Symptom**: After adding a repository that already had an active Claude Code session, the session card showed "Waiting for output..." and the output pane was empty, even though the conversation had been happening for some time.
+**Root cause**: `applyOutputBatchEvent` in `frontend/src/services/socket.ts` had `if (!old) return old` as a guard. When `session.output.batch` arrived before the `SessionCard` was mounted (cache key `['session-output-last', sessionId]` not yet populated), the updater returned `undefined` and the batch was silently dropped. The `SessionCard` subsequently fired an API call that could race the backend's `insertOutput` write. If the API response arrived before `insertOutput` completed, the cache was seeded with empty data and, because `staleTime: Infinity` was set on that query, it was never refetched.
+**Why it was missed**: The two code paths (broadcast from `reconcileClaudeSessionRegistry` and JSONL write from `scanExistingSessions`) are decoupled and run in sequence with an async gap between them. The race window was considered unlikely but is observable when the browser renders quickly and the JSONL file is large (slow read).
+**How to prevent**:
+- Any `setQueryData` updater that can receive `undefined` as `old` should either create a valid seed entry or be documented as an intentional no-op. Never silently discard an event by returning `old` without checking.
+- When a new entity is broadcast via WS (`session.created`) and its associated data immediately follows (`session.output.batch`), assume the second event may arrive before the first has been processed by React. Design cache updaters to be order-independent.
+**Fix summary**: Changed `if (!old) return old` to seed the cache in both `['session-output', sessionId]` and `['session-output-last', sessionId]` updaters inside `applyOutputBatchEvent` in `frontend/src/services/socket.ts`, so the batch always populates the cache regardless of whether the component has mounted yet.

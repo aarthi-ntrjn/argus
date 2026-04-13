@@ -137,10 +137,3 @@ export interface TourStep {
   disableBeacon?: boolean;
   targetWaitTimeout?: number;
 }
-
-export interface ContextualHint {
-  id: string;
-  label: string;
-  ariaLabel: string;
-  placement: 'top' | 'bottom' | 'left' | 'right';
-}
