@@ -129,16 +129,15 @@ export function SettingsPanel({ settings, onToggle, onUpdateThreshold, onRestart
               className="w-14 text-sm px-1 py-0.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 text-center"
             />
             <span className="text-sm text-gray-500 shrink-0">min</span>
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               onClick={handleReset}
               aria-label="Reset resting threshold to default"
               title="Reset to default (20 min, max 60 min)"
-              className="!p-0"
+              className="icon-btn text-gray-500 hover:text-blue-600"
             >
               <RotateCcw size={12} aria-hidden="true" />
-            </Button>
+            </button>
           </div>
           {thresholdError && (
             <p role="alert" className="text-xs text-red-600 mt-0.5 px-1">{thresholdError}</p>
