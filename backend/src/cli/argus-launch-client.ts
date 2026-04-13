@@ -18,9 +18,12 @@ export class ArgusLaunchClient {
   private promptCallback: PromptCallback | null = null;
   private isClosing = false;
   private workspaceSessionId: string | null = null;
+  private pendingPid: number | null = null;
+  private log: (msg: string) => void;
 
-  constructor(url: string) {
+  constructor(url: string, log?: (msg: string) => void) {
     this.url = url;
+    this.log = log ?? (() => {});
     this.connect();
   }
 
@@ -57,6 +60,17 @@ export class ArgusLaunchClient {
   }
 
   updatePid(pid: number): void {
+    const wsState = this.ws.readyState;
+    const isOpen = wsState === WebSocket.OPEN;
+    this.log(`updatePid pid=${pid} ws.readyState=${wsState} (${isOpen ? 'OPEN' : 'NOT_OPEN'})`);
+    if (!isOpen) {
+      this.log(`updatePid: ws not open, parking pid=${pid} in registerInfo for replay on open`);
+      if (this.registerInfo) {
+        this.registerInfo = { ...this.registerInfo, pid };
+      }
+      this.pendingPid = pid;
+      return;
+    }
     this.send({ type: 'update_pid', pid });
   }
 
@@ -87,6 +101,12 @@ export class ArgusLaunchClient {
     // Re-send workspace_id on reconnect so the backend can re-claim the session
     if (this.workspaceSessionId) {
       this.send({ type: 'workspace_id', sessionId: this.workspaceSessionId });
+    }
+    // Replay a pid that arrived before the connection was ready
+    if (this.pendingPid !== null) {
+      this.log(`handleOpen: replaying deferred update_pid pid=${this.pendingPid}`);
+      this.send({ type: 'update_pid', pid: this.pendingPid });
+      this.pendingPid = null;
     }
   }
 
