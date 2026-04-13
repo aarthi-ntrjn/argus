@@ -41,6 +41,7 @@ function getProcessCommandLine(pid: number): string | null {
   }
 }
 
+
 /**
  * Check yolo mode by inspecting multiple PIDs (pid and hostPid).
  * Returns true if any process has the yolo flag, false if a process was found but has no flag,
