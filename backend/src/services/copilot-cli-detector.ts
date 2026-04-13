@@ -11,6 +11,7 @@ import { OutputStore } from './output-store.js';
 import { parseJsonlLine, parseModelFromEvent } from './events-parser.js';
 import { detectYoloModeFromPids } from './process-utils.js';
 import { isAiToolProcess } from './pid-validator.js';
+import { SessionTypes } from '../models/index.js';
 import type { Session, PidSource } from '../models/index.js';
 
 const DEFAULT_SESSION_DIR = join(homedir(), '.copilot', 'session-state');
@@ -54,7 +55,7 @@ export class CopilotCliDetector {
       // a live Copilot session.
       return new Set(
         processes
-          .filter((p) => isAiToolProcess(p.name, 'copilot-cli'))
+          .filter((p) => isAiToolProcess(p.name, SessionTypes.COPILOT_CLI))
           .map((p) => p.pid)
       );
     } catch {
@@ -146,11 +147,11 @@ export class CopilotCliDetector {
       }
     }
 
-    const yoloMode = detectYoloModeFromPids(resolvedPid, resolvedHostPid, 'copilot-cli');
+    const yoloMode = detectYoloModeFromPids(resolvedPid, resolvedHostPid, SessionTypes.COPILOT_CLI);
     const session: Session = {
       id: sessionId,
       repositoryId: repo.id,
-      type: 'copilot-cli',
+      type: SessionTypes.COPILOT_CLI,
       launchMode,
       pid: resolvedPid,
       hostPid: resolvedHostPid,
