@@ -48,7 +48,14 @@ export class CopilotCliDetector {
   private async getRunningPids(): Promise<Set<number>> {
     try {
       const processes = await psList();
-      return new Set(processes.map((p) => p.pid));
+      // Only include Copilot processes. If a lock-file PID is reused by an
+      // unrelated process after the session ends, it must not be treated as
+      // a live Copilot session. Mirrors the check in pid-validator.ts.
+      return new Set(
+        processes
+          .filter((p) => p.name.toLowerCase().includes('copilot'))
+          .map((p) => p.pid)
+      );
     } catch {
       return new Set();
     }
