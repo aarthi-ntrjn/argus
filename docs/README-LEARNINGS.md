@@ -301,3 +301,14 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: The live-update path (`readNewLines` writing the user message as summary) was implemented and tested in isolation. The scan path was tested separately. The interaction between them — scan running repeatedly and clobbering the live update — was never tested end-to-end.
 **How to prevent**: When a periodic reconciliation loop upserts a record, prefer existing DB values over freshly-read file values for fields that can be updated by other code paths. Use `existingRecord?.field ?? freshValue` rather than always trusting the file. Any field whose update path differs from the scan path should be protected this way.
 **Fix summary**: Changed `summary: workspace.summary ?? null` to `summary: existingSession?.summary ?? workspace.summary ?? null` in `processSessionDir()` in `backend/src/services/copilot-cli-detector.ts`, preserving any summary already written by `readNewLines`.
+
+---
+
+## T120 — Copilot model/summary updates not broadcast; dashboard polled unnecessarily
+
+**Date**: 2026-04-13
+**Symptom**: Copilot session model and summary updates were only visible after the next 5-second poll cycle. The dashboard made HTTP requests to `/api/v1/sessions` and `/api/v1/repositories` every 5 seconds even though a WebSocket push channel already covered all lifecycle events.
+**Root cause**: `copilot-cli-detector.ts` `readNewLines()` called `upsertSession()` for both model-detection and summary-update paths but never called `broadcast()`. All other session mutation sites (claude-jsonl-watcher, session-monitor, launcher) broadcast `session.updated` immediately after writing. The missing broadcasts meant the only way for the frontend to see these changes was via polling. The `refetchInterval: 5000` in `DashboardPage.tsx` was added before the WS event model was fully wired up and never removed once the WS covered all session lifecycle events.
+**Why it was missed**: The model/summary update paths in `copilot-cli-detector.ts` were added incrementally. Each added `upsertSession` but the `broadcast` step was not in the immediate context and was easy to overlook. No test existed that verified a `broadcast` was emitted after these updates. The polling was not reviewed for removal when the WS was deemed complete.
+**How to prevent**: Any code path that mutates a session and calls `upsertSession()` must also call `broadcast({ type: 'session.updated', ... })`. Treat these two as an inseparable pair. The integration test for `copilot-cli-detector` now asserts `broadcast` is called, making future omissions detectable.
+**Fix summary**: Added `broadcast()` calls after both `upsertSession()` calls in `readNewLines()` in `backend/src/services/copilot-cli-detector.ts`; removed `refetchInterval: 5000` from both `useQuery` hooks in `frontend/src/pages/DashboardPage.tsx`.
