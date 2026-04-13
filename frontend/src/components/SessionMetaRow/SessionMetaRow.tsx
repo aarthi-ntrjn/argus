@@ -84,7 +84,7 @@ export default function SessionMetaRow({ session, showLink = false, onKill, kill
           <Link
             to={`/sessions/${session.id}`}
             onClick={e => e.stopPropagation()}
-            className="text-gray-500 hover:text-blue-600 transition-colors"
+            className="icon-btn text-gray-500 hover:text-blue-600"
             aria-label="View details"
           >
             <ExternalLink size={14} aria-hidden="true" />
@@ -94,7 +94,7 @@ export default function SessionMetaRow({ session, showLink = false, onKill, kill
           <button
             onClick={e => { e.stopPropagation(); onKill(session.id); }}
             disabled={killPending}
-            className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="icon-btn text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Kill session"
           >
             <Power size={14} aria-hidden="true" />

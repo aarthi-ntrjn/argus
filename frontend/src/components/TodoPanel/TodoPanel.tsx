@@ -48,10 +48,9 @@ export default function TodoPanel() {
     }
   }, [addRowId]);
 
-  const [collapsed, setCollapsed] = useState(false);
   const [showDone, setShowDone] = useState(true);
   const [showTimestamps, setShowTimestamps] = useState(true);
-  const [wrapText, setWrapText] = useState(false);
+  const [wrapText, setWrapText] = useState(true);
 
   const reversedTodos = useMemo(
     () => [...todos].reverse().filter(todo => showDone || !todo.done),
@@ -136,48 +135,27 @@ export default function TodoPanel() {
   return (
     <aside data-tour-id="dashboard-todo" className="w-full h-full flex flex-col bg-white rounded-lg shadow border border-gray-200 max-h-[calc(100vh-9rem)]">
       <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <button
-          onClick={() => setCollapsed(v => !v)}
-          aria-expanded={!collapsed}
-          aria-controls="tackle-panel-body"
-          className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 rounded-sm"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-            className={`h-3.5 w-3.5 transition-transform duration-150 ${collapsed ? '-rotate-90' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-          To Do or Not To Do
-          {collapsed && todos.length > 0 && (
-            <span className="ml-1 text-xs font-normal text-gray-500">({todos.length})</span>
-          )}
-        </button>
-        {!collapsed && (
-          <div className="flex items-center gap-1">
-            <ToggleIconButton pressed={wrapText} onToggle={() => setWrapText(v => !v)} label={wrapText ? 'Single line' : 'Wrap text'}>
-              <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10a3 3 0 010 6h-3m3-6l2 2-2 2" />
-              </svg>
-            </ToggleIconButton>
-            <ToggleIconButton pressed={showTimestamps} onToggle={() => setShowTimestamps(v => !v)} label={showTimestamps ? 'Hide timestamps' : 'Show timestamps'}>
-              <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </ToggleIconButton>
-            <ToggleIconButton pressed={showDone} onToggle={() => setShowDone(v => !v)} label={showDone ? 'Hide completed' : 'Show completed'}>
-              <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </ToggleIconButton>
-          </div>
-        )}
+        <span className="text-xs font-medium text-gray-600">To Do or Not To Do</span>
+        <div className="flex items-center gap-1">
+          <ToggleIconButton pressed={wrapText} onToggle={() => setWrapText(v => !v)} label={wrapText ? 'Single line' : 'Wrap text'}>
+            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10a3 3 0 010 6h-3m3-6l2 2-2 2" />
+            </svg>
+          </ToggleIconButton>
+          <ToggleIconButton pressed={showTimestamps} onToggle={() => setShowTimestamps(v => !v)} label={showTimestamps ? 'Hide timestamps' : 'Show timestamps'}>
+            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </ToggleIconButton>
+          <ToggleIconButton pressed={showDone} onToggle={() => setShowDone(v => !v)} label={showDone ? 'Hide completed' : 'Show completed'}>
+            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </ToggleIconButton>
+        </div>
       </div>
 
-      {!collapsed && (
-        <div id="tackle-panel-body" className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         {/* Add row always visible regardless of loading state */}
         <div
           className="flex items-center gap-2 px-4 py-2 border-b border-gray-50 cursor-text"
@@ -276,7 +254,6 @@ export default function TodoPanel() {
           </ul>
         )}
       </div>
-      )}
     </aside>
   );
 }

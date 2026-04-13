@@ -60,7 +60,7 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
             <button
               onClick={onClose}
               aria-label="Close output pane"
-              className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400"
+              className="icon-btn text-gray-500 hover:text-blue-600"
             >
               <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
