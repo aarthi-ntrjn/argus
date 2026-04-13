@@ -8,6 +8,7 @@ import { useSettings } from '../hooks/useSettings';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { useRepositoryManagement } from '../hooks/useRepositoryManagement';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { Button } from '../components/Button';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { RemoveConfirmDialog } from '../components/RemoveConfirmDialog';
 import SessionCard from '../components/SessionCard/SessionCard';
@@ -262,14 +263,13 @@ export default function DashboardPage() {
                 />
               )}
             </div>
-            <button
+            <Button
               data-tour-id="dashboard-add-repo"
               onClick={handleAddRepo}
               disabled={adding}
-              className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded hover:bg-blue-700 disabled:opacity-40 transition-colors"
             >
               {adding ? 'Adding...' : 'Add Repository'}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -370,12 +370,7 @@ export default function DashboardPage() {
                   </p>
                 )}
                 <div className="flex justify-end w-full mt-4">
-                  <button
-                    onClick={dismissDialog}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  >
-                    Done
-                  </button>
+                  <Button onClick={dismissDialog}>Done</Button>
                 </div>
               </div>
             ) : addError ? (
@@ -385,13 +380,8 @@ export default function DashboardPage() {
                 </svg>
                 <p role="alert" className="text-sm text-red-700 text-center">{addError}</p>
                 <div className="flex justify-end gap-2 w-full mt-4">
-                  <button onClick={dismissDialog} className="px-4 py-2 text-gray-600 hover:text-gray-800">Close</button>
-                  <button
-                    onClick={resetScanState}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  >
-                    Try Again
-                  </button>
+                  <Button variant="ghost" onClick={dismissDialog}>Close</Button>
+                  <Button onClick={resetScanState}>Try Again</Button>
                 </div>
               </div>
             ) : (
@@ -408,14 +398,13 @@ export default function DashboardPage() {
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
                 <div className="flex justify-end gap-2 mt-4">
-                  <button onClick={dismissDialog} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
-                  <button
+                  <Button variant="ghost" onClick={dismissDialog}>Cancel</Button>
+                  <Button
                     onClick={() => handleFolderSubmit(repos)}
                     disabled={!folderInputPath.trim()}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-40"
                   >
                     Scan &amp; Add
-                  </button>
+                  </Button>
                 </div>
               </>
             )}

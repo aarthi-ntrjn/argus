@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { Button } from './Button';
 
 interface RemoveConfirmDialogProps {
   repoName: string | undefined;
@@ -43,21 +44,21 @@ export function RemoveConfirmDialog({ repoName, removing, skipConfirm, onSkipCon
             Don't ask again
           </label>
           <div className="flex gap-2">
-            <button
+            <Button
               ref={cancelRef}
+              variant="ghost"
               onClick={onCancel}
               disabled={removing}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 rounded-sm"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="danger"
               onClick={onConfirm}
               disabled={removing}
-              className="bg-red-600 text-white px-4 py-2 rounded-sm hover:bg-red-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400"
             >
               {removing ? 'Removing...' : 'Remove'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
