@@ -59,6 +59,7 @@ export interface SessionOutput {
   toolCallId: string | null;
   role: OutputRole | null;
   sequenceNumber: number;
+  isMeta?: boolean;
 }
 
 export interface ArgusConfig {

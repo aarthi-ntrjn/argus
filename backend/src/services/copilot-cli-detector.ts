@@ -244,7 +244,7 @@ export class CopilotCliDetector {
       }
 
       // Update summary with the most recent user prompt in this batch
-      const lastUserMsg = [...outputs].reverse().find(o => o.role === 'user' && o.type === 'message');
+      const lastUserMsg = [...outputs].reverse().find(o => o.role === 'user' && o.type === 'message' && !o.isMeta);
       if (lastUserMsg?.content) {
         const existing = getSession(sessionId);
         if (existing) {

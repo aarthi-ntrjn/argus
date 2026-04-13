@@ -95,7 +95,7 @@ export class ClaudeJsonlWatcher {
   }
 
   private applySummaryUpdate(sessionId: string, outputs: ReturnType<typeof parseClaudeJsonlLine>): void {
-    const lastUserMsg = [...outputs].reverse().find(o => o.role === 'user' && o.type === 'message');
+    const lastUserMsg = [...outputs].reverse().find(o => o.role === 'user' && o.type === 'message' && !o.isMeta);
     if (!lastUserMsg?.content) return;
     const existing = getSession(sessionId);
     if (!existing) return;
