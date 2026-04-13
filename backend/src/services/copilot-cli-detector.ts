@@ -10,6 +10,7 @@ import { ptyRegistry } from './pty-registry.js';
 import { OutputStore } from './output-store.js';
 import { parseJsonlLine, parseModelFromEvent } from './events-parser.js';
 import { detectYoloModeFromPids } from './process-utils.js';
+import { isAiToolProcess } from './pid-validator.js';
 import type { Session, PidSource } from '../models/index.js';
 
 const DEFAULT_SESSION_DIR = join(homedir(), '.copilot', 'session-state');
@@ -50,10 +51,10 @@ export class CopilotCliDetector {
       const processes = await psList();
       // Only include Copilot processes. If a lock-file PID is reused by an
       // unrelated process after the session ends, it must not be treated as
-      // a live Copilot session. Mirrors the check in pid-validator.ts.
+      // a live Copilot session.
       return new Set(
         processes
-          .filter((p) => p.name.toLowerCase().includes('copilot'))
+          .filter((p) => isAiToolProcess(p.name, 'copilot-cli'))
           .map((p) => p.pid)
       );
     } catch {
