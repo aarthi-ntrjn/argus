@@ -23,7 +23,7 @@
 
 ### Tests (write first — must be failing before Phase 2 implementation tasks run)
 
-- [ ] T005 Write `backend/tests/unit/telemetry-service.test.ts`:
+- [x] T005 Write `backend/tests/unit/telemetry-service.test.ts`:
   - Installation ID is created and persisted when `~/.argus/telemetry-id` does not exist
   - Re-reading returns the same ID (idempotent)
   - Corrupt/empty file triggers regeneration
@@ -32,7 +32,7 @@
   - `sendEvent()` is a no-op when `TELEMETRY_URL` is empty
   - No exception propagates when fetch throws
 
-- [ ] T006 Write `backend/tests/contract/telemetry.test.ts`:
+- [x] T006 Write `backend/tests/contract/telemetry.test.ts`:
   - `POST /api/v1/telemetry/event` with valid type returns 204
   - `POST /api/v1/telemetry/event` with unknown type returns 400 `{ error: "INVALID_EVENT_TYPE" }`
   - `POST /api/v1/telemetry/event` when `telemetryEnabled: false` returns 503 `{ error: "TELEMETRY_DISABLED" }`
@@ -41,17 +41,17 @@
 
 ### Implementation
 
-- [ ] T007 Create `backend/src/services/telemetry-service.ts`:
+- [x] T007 Create `backend/src/services/telemetry-service.ts`:
   - `loadOrCreateInstallationId(): string` — reads `~/.argus/telemetry-id`; generates UUID v4 if absent or corrupt; structured log on creation
   - `readAppVersion(): string` — reads `version` from `backend/package.json`; fallback `"unknown"`
   - `sendEvent(type: TelemetryEventType, extra?: Record<string, string>): void` — fire-and-forget POST to PostHog capture API with `AbortSignal.timeout(2000)`; structured log on dispatch attempt; silently swallows all errors; no-op if `TELEMETRY_URL` env var is empty
   - Export a singleton `telemetryService` instance
 
-- [ ] T008 Add `TelemetryEventType` enum/union and `TelemetryEvent` interface to `backend/src/models/index.ts`
+- [x] T008 Add `TelemetryEventType` enum/union and `TelemetryEvent` interface to `backend/src/models/index.ts`
 
-- [ ] T009 Create `backend/src/api/routes/telemetry.ts` — `POST /api/v1/telemetry/event` per `contracts/telemetry-relay-api.md`: validate type, check `telemetryEnabled`, call `telemetryService.sendEvent()`, return 204
+- [x] T009 Create `backend/src/api/routes/telemetry.ts` — `POST /api/v1/telemetry/event` per `contracts/telemetry-relay-api.md`: validate type, check `telemetryEnabled`, call `telemetryService.sendEvent()`, return 204
 
-- [ ] T010 Register telemetry route in `backend/src/server.ts`
+- [x] T010 Register telemetry route in `backend/src/server.ts`
 
 ---
 
