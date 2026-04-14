@@ -5,7 +5,7 @@ import { CopilotCliDetector } from './copilot-cli-detector.js';
 import { ClaudeCodeDetector } from './claude-code-detector.js';
 import { ClaudeSessionRegistry } from './claude-session-registry.js';
 import { loadConfig } from '../config/config-loader.js';
-import { getSessions, getSession, upsertSession, updateSessionStatus, getRepositories, getRepositoryByPath, updateRepositoryBranch } from '../db/database.js';
+import { getSessions, getSession, getRepository, upsertSession, updateSessionStatus, getRepositories, getRepositoryByPath, updateRepositoryBranch } from '../db/database.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { getCurrentBranch } from './repository-scanner.js';
 import * as logger from '../utils/logger.js';
@@ -207,6 +207,10 @@ export class SessionMonitor extends EventEmitter {
           const branch = await getCurrentBranch(repo.path);
           if (branch !== repo.branch) {
             updateRepositoryBranch(repo.id, branch);
+            const updated = getRepository(repo.id);
+            if (updated) {
+              broadcast({ type: 'repository.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
+            }
           }
         } catch { /* ignore — branch refresh is best-effort */ }
       })

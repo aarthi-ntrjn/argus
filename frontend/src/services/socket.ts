@@ -124,6 +124,9 @@ export function initSocketHandlers(qc: QueryClient): void {
     qc.invalidateQueries({ queryKey: ['repositories'] });
     qc.invalidateQueries({ queryKey: ['sessions'] });
   });
+  onEvent('repository.updated', () => {
+    qc.invalidateQueries({ queryKey: ['repositories'] });
+  });
   onEvent('repository.removed', () => {
     qc.invalidateQueries({ queryKey: ['repositories'] });
     qc.invalidateQueries({ queryKey: ['sessions'] });
