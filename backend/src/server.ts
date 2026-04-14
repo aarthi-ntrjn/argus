@@ -1,3 +1,5 @@
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 import Fastify, { type FastifyError } from 'fastify';
 import fastifyWebsocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
@@ -5,6 +7,12 @@ import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+
+// Load .env from repo root if present (no-op in production where bin/argus.js already loaded it)
+{
+  const envPath = resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env');
+  if (existsSync(envPath)) process.loadEnvFile(envPath);
+}
 import { randomUUID } from 'crypto';
 import { loadConfig } from './config/config-loader.js';
 import { addClient, removeClient, broadcast } from './api/ws/event-dispatcher.js';

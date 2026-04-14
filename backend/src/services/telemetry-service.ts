@@ -51,7 +51,7 @@ export class TelemetryService {
     } catch {
       this.appVersion = 'unknown';
     }
-    return this.appVersion;
+    return this.appVersion!;
   }
 
   sendEvent(type: TelemetryEventType, extra?: Record<string, string>): void {
