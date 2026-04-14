@@ -9,6 +9,7 @@ import { getSessions, getSession, upsertSession, updateSessionStatus, getReposit
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { getCurrentBranch } from './repository-scanner.js';
 import { detectYoloModeFromPids } from './process-utils.js';
+import { isAiToolProcess } from './pid-validator.js';
 import { SessionTypes } from '../models/index.js';
 import type { Session, Repository, ClaudeSessionRegistryEntry } from '../models/index.js';
 
@@ -81,9 +82,13 @@ export class SessionMonitor extends EventEmitter {
       // Source 2b: Copilot lock file registry (session ID → PID)
       const copilotLockEntries = this.cliDetector.scanLockEntries();
 
-      // Source 3: Running OS processes
+      // Source 3: Running OS processes (filtered to AI tools only to avoid PID reuse false-positives)
       const processes = await psList();
-      const runningPids = new Set(processes.map((p) => p.pid));
+      const runningPids = new Set(
+        processes
+          .filter((p) => isAiToolProcess(p.name, SessionTypes.CLAUDE_CODE) || isAiToolProcess(p.name, SessionTypes.COPILOT_CLI))
+          .map((p) => p.pid)
+      );
 
       const now = new Date().toISOString();
 
@@ -131,7 +136,11 @@ export class SessionMonitor extends EventEmitter {
       if (liveSessions.length === 0) return;
 
       const processes = await psList();
-      const runningPids = new Set(processes.map((p) => p.pid));
+      const runningPids = new Set(
+        processes
+          .filter((p) => isAiToolProcess(p.name, SessionTypes.CLAUDE_CODE))
+          .map((p) => p.pid)
+      );
       const repos = getRepositories();
       const now = new Date().toISOString();
 
