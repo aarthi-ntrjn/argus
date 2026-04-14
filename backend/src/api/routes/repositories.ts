@@ -14,9 +14,9 @@ import { broadcast } from '../ws/event-dispatcher.js';
 import { ClaudeCodeDetector } from '../../services/claude-code-detector.js';
 import { getCurrentBranch, getRemoteUrl } from '../../services/repository-scanner.js';
 
-let _monitor: { triggerScan(): void } | null = null;
+let _monitor: { triggerScan(): void; triggerCopilotScan(): void } | null = null;
 
-export function setMonitor(monitor: { triggerScan(): void }): void {
+export function setMonitor(monitor: { triggerScan(): void; triggerCopilotScan(): void }): void {
   _monitor = monitor;
 }
 
@@ -54,6 +54,7 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
 
     broadcast({ type: 'repository.added', timestamp: new Date().toISOString(), data: repo as unknown as Record<string, unknown> });
     _monitor?.triggerScan();
+    _monitor?.triggerCopilotScan();
     return reply.status(201).send(repo);
   });
 

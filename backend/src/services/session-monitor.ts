@@ -174,6 +174,10 @@ export class SessionMonitor extends EventEmitter {
     this.runScan().catch((err) => this.emit('error', err));
   }
 
+  triggerCopilotScan(): void {
+    this.cliDetector.scan().catch((err) => this.emit('error', err));
+  }
+
   stop(): void {
     if (this.scanInterval) {
       clearInterval(this.scanInterval);
