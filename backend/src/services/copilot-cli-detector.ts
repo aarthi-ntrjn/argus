@@ -78,7 +78,7 @@ export class CopilotCliDetector {
       const session = await this.processSessionDir(dirPath);
       const dirMs = Date.now() - tDir;
       if (dirMs > 50) {
-        logger.log(`[CopilotDetector] slow dir (${dirMs}ms): ${dirPath}`);
+        logger.info(`[CopilotDetector] slow dir (${dirMs}ms): ${dirPath}`);
       }
       if (session) {
         sessions.push(session);
@@ -176,37 +176,37 @@ export class CopilotCliDetector {
       resolvedHostPid = existingSession!.hostPid;
       resolvedPidSource = existingSession!.pidSource;
       if (!registryHas && isRunning) {
-        logger.log(`[CopilotDetector] alreadyClaimed + WS gone + isRunning — attempting re-link sessionId=${sessionId}`);
+        logger.info(`[CopilotDetector] alreadyClaimed + WS gone + isRunning — attempting re-link sessionId=${sessionId}`);
         const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
         if (claimed) {
           resolvedPid = claimed.pid;
           resolvedHostPid = claimed.hostPid;
           resolvedPidSource = 'pty_registry';
-          logger.log(`[CopilotDetector] re-link OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
+          logger.info(`[CopilotDetector] re-link OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
         } else {
-          logger.log(`[CopilotDetector] re-link MISS — no pending WS yet for sessionId=${sessionId}`);
+          logger.info(`[CopilotDetector] re-link MISS — no pending WS yet for sessionId=${sessionId}`);
         }
       }
     } else if (registryHas) {
-      logger.log(`[CopilotDetector] ptyRegistry already has sessionId=${sessionId} — marking pty`);
+      logger.info(`[CopilotDetector] ptyRegistry already has sessionId=${sessionId} — marking pty`);
       launchMode = 'pty';
       resolvedPidSource = 'pty_registry';
       const parkedPid = ptyRegistry.getClaimedPid(sessionId);
       if (parkedPid != null) {
         resolvedPid = parkedPid;
-        logger.log(`[CopilotDetector] using parked resolved pid=${parkedPid} for sessionId=${sessionId}`);
+        logger.info(`[CopilotDetector] using parked resolved pid=${parkedPid} for sessionId=${sessionId}`);
       }
     } else if (isRunning && existingSession == null) {
-      logger.log(`[CopilotDetector] isRunning + not claimed — trying claimForSession sessionId=${sessionId} repoPath="${repo.path}"`);
+      logger.info(`[CopilotDetector] isRunning + not claimed — trying claimForSession sessionId=${sessionId} repoPath="${repo.path}"`);
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
       if (claimed) {
         launchMode = 'pty';
         resolvedPid = claimed.pid;
         resolvedHostPid = claimed.hostPid;
         resolvedPidSource = 'pty_registry';
-        logger.log(`[CopilotDetector] claimForSession OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
+        logger.info(`[CopilotDetector] claimForSession OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
       } else {
-        logger.log(`[CopilotDetector] claimForSession MISS — no pending WS — sessionId=${sessionId} will be read-only`);
+        logger.info(`[CopilotDetector] claimForSession MISS — no pending WS — sessionId=${sessionId} will be read-only`);
       }
     }
 

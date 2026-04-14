@@ -147,7 +147,7 @@ export class SessionMonitor extends EventEmitter {
       for (const session of liveSessions) {
         const repo = repos.find(r => r.id === session.repositoryId);
         if (!repo) {
-          logger.log(`[ClaudeReconcile] session ended — repo removed sessionId=${session.id}`);
+          logger.info(`[ClaudeReconcile] session ended — repo removed sessionId=${session.id}`);
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
@@ -155,7 +155,7 @@ export class SessionMonitor extends EventEmitter {
         }
 
         if (session.pid != null && !isPidRunning(session.pid)) {
-          logger.log(`[ClaudeReconcile] session ended — process gone sessionId=${session.id} pid=${session.pid}`);
+          logger.info(`[ClaudeReconcile] session ended — process gone sessionId=${session.id} pid=${session.pid}`);
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
@@ -243,7 +243,7 @@ export class SessionMonitor extends EventEmitter {
         : detectYoloModeFromPids(entry.pid, null, 'claude-code');
       const yoloResolved = existing.yoloMode === null && yoloMode !== null;
       if (pidChanged || yoloResolved) {
-        logger.log(`[ClaudeRegistry] pid assigned sessionId=${entry.sessionId} pid=${entry.pid} (was ${existing.pid}) yoloMode=${yoloMode}`);
+        logger.info(`[ClaudeRegistry] pid assigned sessionId=${entry.sessionId} pid=${entry.pid} (was ${existing.pid}) yoloMode=${yoloMode}`);
         const updated = { ...existing, pid: entry.pid, pidSource: 'session_registry' as const, yoloMode };
         upsertSession(updated);
         broadcast({ type: 'session.updated', timestamp: now, data: updated as unknown as Record<string, unknown> });
@@ -256,7 +256,7 @@ export class SessionMonitor extends EventEmitter {
   private createSessionFromRegistryEntry(entry: ClaudeSessionRegistryEntry, now: string): void {
     const repo = getRepositoryByPath(entry.cwd);
     if (!repo) return;
-    logger.log(`[ClaudeRegistry] session created sessionId=${entry.sessionId} pid=${entry.pid} cwd="${entry.cwd}"`);
+    logger.info(`[ClaudeRegistry] session created sessionId=${entry.sessionId} pid=${entry.pid} cwd="${entry.cwd}"`);
     const session: Session = {
       id: entry.sessionId,
       repositoryId: repo.id,
@@ -285,7 +285,7 @@ export class SessionMonitor extends EventEmitter {
       const activeSessions = getSessions({ status: 'active', type: 'claude-code' });
       for (const session of activeSessions) {
         if (session.pid === oldPid && session.pidSource === 'session_registry') {
-          logger.log(`[ClaudeRegistry] session ended — registry file gone sessionId=${session.id} pid=${oldPid}`);
+          logger.info(`[ClaudeRegistry] session ended — registry file gone sessionId=${session.id} pid=${oldPid}`);
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
           this.restingNotifiedSessions.delete(session.id);
@@ -304,7 +304,7 @@ export class SessionMonitor extends EventEmitter {
       await this.claudeDetector.scanExistingSessions();
       this.reconcileClaudeCodeSessions();
       const sessions = await this.cliDetector.scan();
-      logger.log(`[SessionMonitor] runScan total — ${Date.now() - tRun}ms`);
+      logger.info(`[SessionMonitor] runScan total — ${Date.now() - tRun}ms`);
       const currentScanIds = new Set<string>(sessions.map((s) => s.id));
 
       // Detect sessions that were active but are no longer returned (process exited + dir cleaned up)
@@ -357,7 +357,7 @@ export class SessionMonitor extends EventEmitter {
         if (age >= thresholdMs) {
           if (!this.restingNotifiedSessions.has(session.id)) {
             this.restingNotifiedSessions.add(session.id);
-            logger.log(`[SessionMonitor] resting transition sessionId=${session.id} lastActivityAt=${session.lastActivityAt} ageMin=${Math.round(age / 60000)}`);
+            logger.info(`[SessionMonitor] resting transition sessionId=${session.id} lastActivityAt=${session.lastActivityAt} ageMin=${Math.round(age / 60000)}`);
             broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: session as unknown as Record<string, unknown> });
           }
         } else {

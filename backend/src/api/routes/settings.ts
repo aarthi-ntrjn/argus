@@ -29,3 +29,4 @@ const settingsRoutes: FastifyPluginAsync = async (app) => {
 };
 
 export default settingsRoutes;
+

@@ -80,7 +80,7 @@ export class ClaudeJsonlWatcher {
   private applyModelUpdate(sessionId: string, model: string): void {
     const existing = getSession(sessionId);
     if (!existing) return;
-    logger.log(`[ClaudeDetector] model detected sessionId=${sessionId} model=${model}`);
+    logger.info(`[ClaudeDetector] model detected sessionId=${sessionId} model=${model}`);
     const updated = { ...existing, model };
     upsertSession(updated);
     broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
@@ -102,7 +102,7 @@ export class ClaudeJsonlWatcher {
     if (!existing) return;
     const summary = lastUserMsg.content.slice(0, 120);
     if (existing.summary === summary) return;
-    logger.log(`[ClaudeDetector] summary updated sessionId=${sessionId}`);
+    logger.info(`[ClaudeDetector] summary updated sessionId=${sessionId}`);
     const updated = { ...existing, summary };
     upsertSession(updated);
     broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
@@ -124,3 +124,4 @@ export class ClaudeJsonlWatcher {
     this.sequenceCounters.clear();
   }
 }
+
