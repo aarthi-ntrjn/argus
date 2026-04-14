@@ -13,18 +13,6 @@ import { isAiToolProcess } from './pid-validator.js';
 import { SessionTypes } from '../models/index.js';
 import type { Session, Repository, ClaudeSessionRegistryEntry } from '../models/index.js';
 
-// Lightweight liveness check — no process list scan needed.
-// EPERM means the process exists but we lack signal permission (still alive).
-// ESRCH means the process does not exist.
-function isPidRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return (e as NodeJS.ErrnoException).code === 'EPERM';
-  }
-}
-
 export interface SessionMonitorEvents {
   'session.created': (session: Session) => void;
   'session.updated': (session: Session) => void;
@@ -142,11 +130,17 @@ export class SessionMonitor extends EventEmitter {
     }
   }
 
-  private reconcileClaudeCodeSessions(): void {
+  private async reconcileClaudeCodeSessions(): Promise<void> {
     try {
       const liveSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
       if (liveSessions.length === 0) return;
 
+      const processes = await psList();
+      const runningPids = new Set(
+        processes
+          .filter((p) => isAiToolProcess(p.name, SessionTypes.CLAUDE_CODE))
+          .map((p) => p.pid)
+      );
       const repos = getRepositories();
       const now = new Date().toISOString();
 
@@ -160,8 +154,8 @@ export class SessionMonitor extends EventEmitter {
           continue;
         }
 
-        // Check liveness via signal 0 — zero-cost, no process list scan needed.
-        if (session.pid != null && !isPidRunning(session.pid)) {
+        // Check if the process is still running
+        if (session.pid != null && !runningPids.has(session.pid)) {
           console.log(`[ClaudeReconcile] session ended — process gone sessionId=${session.id} pid=${session.pid}`);
           updateSessionStatus(session.id, 'ended', now);
           this.claudeDetector.closeSessionWatcher(session.id);
@@ -310,7 +304,7 @@ export class SessionMonitor extends EventEmitter {
       await this.claudeDetector.scanExistingSessions();
       console.log(`[SessionMonitor] claudeDetector.scanExistingSessions — ${Date.now() - t}ms`);
       t = Date.now();
-      this.reconcileClaudeCodeSessions();
+      await this.reconcileClaudeCodeSessions();
       console.log(`[SessionMonitor] reconcileClaudeCodeSessions — ${Date.now() - t}ms`);
       t = Date.now();
       const sessions = await this.cliDetector.scan();
