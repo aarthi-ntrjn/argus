@@ -36,10 +36,10 @@ export class CopilotCliDetector {
 
   constructor(private sessionStateDir: string = DEFAULT_SESSION_DIR) {}
 
-  async scan(): Promise<Session[]> {
+  async scan(force = false): Promise<Session[]> {
     if (!existsSync(this.sessionStateDir)) return [];
     const t0 = Date.now();
-    console.log(`[CopilotDetector] scan start`);
+    console.log(`[CopilotDetector] scan start${force ? ' (forced)' : ''}`);
 
     const runningPids = await this.getRunningPids();
     const t1 = Date.now();
@@ -47,6 +47,8 @@ export class CopilotCliDetector {
 
     // Collect dirs to process:
     // 1. Dirs modified since last scan — may contain new sessions.
+    //    When force=true (triggered by repo add) skip the mtime filter so we catch
+    //    sessions whose dir predates the last scan (e.g. after a repo remove+re-add).
     // 2. Dirs that had an active session last scan — detect if they have ended.
     const dirsToProcess = new Set<string>();
     let totalDirs = 0;
@@ -59,6 +61,11 @@ export class CopilotCliDetector {
         const dirPath = join(this.sessionStateDir, entry.name);
 
         if (this.activeDirPaths.has(dirPath)) {
+          dirsToProcess.add(dirPath);
+          continue;
+        }
+
+        if (force) {
           dirsToProcess.add(dirPath);
           continue;
         }
@@ -94,11 +101,10 @@ export class CopilotCliDetector {
       // Only include Copilot processes. If a lock-file PID is reused by an
       // unrelated process after the session ends, it must not be treated as
       // a live Copilot session.
-      return new Set(
-        processes
-          .filter((p) => isAiToolProcess(p.name, SessionTypes.COPILOT_CLI))
-          .map((p) => p.pid)
-      );
+      const matched = processes.filter((p) => isAiToolProcess(p.name, SessionTypes.COPILOT_CLI));
+      const names = [...new Set(matched.map((p) => p.name))];
+      if (names.length > 0) console.log(`[CopilotDetector] matched process names: ${names.join(', ')}`);
+      return new Set(matched.map((p) => p.pid));
     } catch {
       return new Set();
     }
