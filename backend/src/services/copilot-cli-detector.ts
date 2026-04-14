@@ -123,7 +123,7 @@ export class CopilotCliDetector {
 
     const yoloMode = existingSession?.yoloMode != null
       ? existingSession.yoloMode
-      : detectYoloModeFromPids(resolvedPid, resolvedHostPid, SessionTypes.COPILOT_CLI);
+      : isRunning ? detectYoloModeFromPids(resolvedPid, resolvedHostPid, SessionTypes.COPILOT_CLI) : null;
     const session: Session = {
       id: sessionId,
       repositoryId: repo.id,
