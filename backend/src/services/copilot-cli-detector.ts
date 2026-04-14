@@ -42,7 +42,6 @@ export class CopilotCliDetector {
 
     const runningPids = await this.getRunningPids();
     const t1 = Date.now();
-    console.log(`[CopilotDetector] psList done — ${runningPids.size} copilot pid(s) running — ${t1 - t0}ms`);
 
     // Collect dirs to process:
     // 1. Dirs modified since last scan — may contain new sessions.
