@@ -47,3 +47,4 @@ export function saveConfig(config: ArgusConfig): void {
   mkdirSync(configDir, { recursive: true });
   writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
 }
+

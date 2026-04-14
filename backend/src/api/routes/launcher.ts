@@ -217,3 +217,4 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default launcherRoutes;
+

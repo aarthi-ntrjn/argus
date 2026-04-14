@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import * as logger from '../utils/logger.js';
 import { join, dirname, normalize } from 'path';
 import { homedir } from 'os';
 import { getSession, upsertSession, updateSessionStatus, getRepositoryByPath } from '../db/database.js';
@@ -262,7 +263,7 @@ export class ClaudeCodeDetector {
     if (!existingSession) {
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
       if (claimed) {
-        console.log(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
+        logger.info(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
         await this.createPtySession(sessionId, repo, claimed, now);
         return;
       }
@@ -277,7 +278,7 @@ export class ClaudeCodeDetector {
     // When the terminal closes, the WS close handler calls ptyRegistry.unregister(),
     // so has() being false means the launcher is gone and the session should stay ended.
     if (existingSession?.launchMode === 'pty' && !ptyRegistry.has(sessionId)) {
-      console.log(`[ClaudeDetector] skipping re-activation — PTY launcher gone sessionId=${sessionId}`);
+      logger.info(`[ClaudeDetector] skipping re-activation — PTY launcher gone sessionId=${sessionId}`);
       return;
     }
     this.jsonlWatcher.closeWatcher(sessionId);
@@ -299,7 +300,7 @@ export class ClaudeCodeDetector {
       reconciled: true,
       yoloMode: claudePid ? detectYoloModeFromPids(claudePid, null, 'claude-code') : null,
     };
-    console.log(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
+    logger.info(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
     upsertSession({ ...base, status: 'active', endedAt: null, lastActivityAt: now, pid: claudePid });
     await this.jsonlWatcher.watchFile(sessionId, repo.path);
   }
@@ -312,3 +313,4 @@ export class ClaudeCodeDetector {
     this.jsonlWatcher.stopAll();
   }
 }
+
