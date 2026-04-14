@@ -54,6 +54,7 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
 
     broadcast({ type: 'repository.added', timestamp: new Date().toISOString(), data: repo as unknown as Record<string, unknown> });
     _monitor?.triggerScan();
+    console.log(`[Repositories] triggerCopilotScan fired for path="${repoPath}"`);
     _monitor?.triggerCopilotScan();
     return reply.status(201).send(repo);
   });

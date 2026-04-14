@@ -35,16 +35,27 @@ export class CopilotCliDetector {
 
   async scan(): Promise<Session[]> {
     if (!existsSync(this.sessionStateDir)) return [];
+    const t0 = Date.now();
+    console.log(`[CopilotDetector] scan start`);
+
     const runningPids = await this.getRunningPids();
+    const t1 = Date.now();
+    console.log(`[CopilotDetector] psList done — ${runningPids.size} copilot pid(s) running — ${t1 - t0}ms`);
+
     const sessions: Session[] = [];
+    let dirCount = 0;
     try {
       const entries = readdirSync(this.sessionStateDir, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
+        dirCount++;
         const session = await this.processSessionDir(join(this.sessionStateDir, entry.name), runningPids);
         if (session) sessions.push(session);
       }
     } catch { /* ignore */ }
+
+    const t2 = Date.now();
+    console.log(`[CopilotDetector] scan done — ${dirCount} dir(s), ${sessions.length} session(s) — dirs: ${t2 - t1}ms — total: ${t2 - t0}ms`);
     return sessions;
   }
 
@@ -116,6 +127,7 @@ export class CopilotCliDetector {
 
     upsertSession(session);
     if (!existingSession) {
+      console.log(`[CopilotDetector] broadcasting session.created sessionId=${sessionId}`);
       broadcast({ type: 'session.created', timestamp: new Date().toISOString(), data: session as unknown as Record<string, unknown> });
     }
 
