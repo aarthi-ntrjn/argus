@@ -117,8 +117,6 @@ export class ClaudeCodeDetector {
   }
 
   async scanExistingSessions(): Promise<void> {
-    const t0 = Date.now();
-
     const registry = new ClaudeSessionRegistry();
     const registryEntries = registry.scanEntries();
 
@@ -133,7 +131,6 @@ export class ClaudeCodeDetector {
       await this.activateFoundSession(entry.sessionId, repo, null);
     }
 
-    console.log(`[ClaudeDetector] scanExistingSessions done — ${Date.now() - t0}ms`);
   }
 
   async handleHookPayload(payload: HookPayload): Promise<void> {

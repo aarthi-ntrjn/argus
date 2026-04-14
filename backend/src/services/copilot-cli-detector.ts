@@ -71,7 +71,6 @@ export class CopilotCliDetector {
 
     const sessions: Session[] = [];
     const newActiveDirPaths = new Set<string>();
-    const tProcess = Date.now();
 
     for (const dirPath of dirsToProcess) {
       const tDir = Date.now();
@@ -89,7 +88,6 @@ export class CopilotCliDetector {
     this.activeDirPaths = newActiveDirPaths;
     this.lastScanTime = t0;
 
-    console.log(`[CopilotDetector] scan done${force ? ' (forced)' : ''} — ${totalDirs} total, ${dirsToProcess.size} processed, ${totalDirs - dirsToProcess.size} skipped, ${sessions.length} session(s) — process:${Date.now() - tProcess}ms total:${Date.now() - t0}ms`);
     return sessions;
   }
 
