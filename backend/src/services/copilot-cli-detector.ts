@@ -138,7 +138,7 @@ export class CopilotCliDetector {
       lastActivityAt: toIso(workspace.updated_at),
       summary: existingSession?.summary ?? workspace.summary ?? null,
       expiresAt: null,
-      model: existingSession?.model ?? this.extractModelFromEventsFile(join(dirPath, 'events.jsonl')),
+      model: existingSession?.model ?? null,
       reconciled: true,
       yoloMode,
     };
@@ -230,18 +230,6 @@ export class CopilotCliDetector {
     const watcher = chokidar.watch(eventsFile, { persistent: false, usePolling: false });
     watcher.on('change', () => this.readNewLines(sessionId, eventsFile));
     this.watchers.set(sessionId, watcher);
-  }
-
-  private extractModelFromEventsFile(filePath: string): string | null {
-    if (!existsSync(filePath)) return null;
-    try {
-      const lines = readFileSync(filePath, 'utf-8').split('\n');
-      for (const line of lines) {
-        const model = parseModelFromEvent(line);
-        if (model) return model;
-      }
-    } catch { /* ignore */ }
-    return null;
   }
 
   private readNewLines(sessionId: string, filePath: string): void {
