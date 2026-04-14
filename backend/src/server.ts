@@ -33,7 +33,7 @@ export async function buildServer() {
 
   const app = Fastify({
     logger: {
-      level: 'info',
+      level: process.env.LOG_LEVEL ?? 'info',
       transport: process.env.NODE_ENV !== 'production'
         ? { target: 'pino-pretty', options: { colorize: true } }
         : undefined,
@@ -143,3 +143,4 @@ if (isMain) {
     process.exit(1);
   });
 }
+
