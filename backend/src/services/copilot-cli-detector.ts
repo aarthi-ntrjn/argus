@@ -135,7 +135,9 @@ export class CopilotCliDetector {
       status,
       startedAt: toIso(workspace.created_at),
       endedAt: status === 'ended' ? toIso(workspace.updated_at) : null,
-      lastActivityAt: toIso(workspace.updated_at),
+      lastActivityAt: existingSession?.lastActivityAt && existingSession.lastActivityAt > toIso(workspace.updated_at)
+        ? existingSession.lastActivityAt
+        : toIso(workspace.updated_at),
       summary: existingSession?.summary ?? workspace.summary ?? null,
       expiresAt: null,
       model: existingSession?.model ?? null,
@@ -255,6 +257,13 @@ export class CopilotCliDetector {
       this.sequenceCounters.set(sessionId, seq);
       if (outputs.length > 0) {
         this.outputStore.insertOutput(sessionId, outputs);
+        const now = new Date().toISOString();
+        const active = getSession(sessionId);
+        if (active) {
+          const updated = { ...active, lastActivityAt: now };
+          upsertSession(updated);
+          broadcast({ type: 'session.updated', timestamp: now, data: updated as unknown as Record<string, unknown> });
+        }
       }
 
       if (detectedModel && !getSession(sessionId)?.model) {
