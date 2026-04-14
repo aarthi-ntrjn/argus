@@ -115,6 +115,9 @@ export class CopilotCliDetector {
     };
 
     upsertSession(session);
+    if (!existingSession) {
+      broadcast({ type: 'session.created', timestamp: new Date().toISOString(), data: session as unknown as Record<string, unknown> });
+    }
 
     if (isRunning) {
       this.watchEventsFile(sessionId, dirPath);
