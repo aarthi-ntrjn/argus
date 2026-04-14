@@ -312,3 +312,14 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: The model/summary update paths in `copilot-cli-detector.ts` were added incrementally. Each added `upsertSession` but the `broadcast` step was not in the immediate context and was easy to overlook. No test existed that verified a `broadcast` was emitted after these updates. The polling was not reviewed for removal when the WS was deemed complete.
 **How to prevent**: Any code path that mutates a session and calls `upsertSession()` must also call `broadcast({ type: 'session.updated', ... })`. Treat these two as an inseparable pair. The integration test for `copilot-cli-detector` now asserts `broadcast` is called, making future omissions detectable.
 **Fix summary**: Added `broadcast()` calls after both `upsertSession()` calls in `readNewLines()` in `backend/src/services/copilot-cli-detector.ts`; removed `refetchInterval: 5000` from both `useQuery` hooks in `frontend/src/pages/DashboardPage.tsx`.
+
+---
+
+## T121 — pid=null after backend restart reconnect
+
+**Date**: 2026-04-13
+**Symptom**: After the Argus backend restarted, the re-linked Copilot PTY session showed `pid=null` in the re-link log and in the DB, even though the process was still running and the pid had been resolved earlier.
+**Root cause**: `ArgusLaunchClient.updatePid()` in `backend/src/cli/argus-launch-client.ts` sent `update_pid` immediately when the WS was open, but did not update `this.registerInfo.pid`. On reconnect, `handleOpen()` replays the `register` message using `this.registerInfo`, which still held `pid: null`. The `pendingPid` replay path was also a dead end: `pendingPid` is only set when the WS is closed at the time `updatePid` fires, so it was `null` after the normal initial launch. The net result was that every reconnect sent `register` with `pid: null`.
+**Why it was missed**: The reconnect path was added in T114 and tested for `workspace_id` and `register` replay, but the test used `pid: 1` in `registerInfo` directly — it never exercised the case where `pid` starts as `null` and is resolved later via `updatePid()` while the WS is already open.
+**How to prevent**: Any field that can be updated after initial registration (pid, workspaceSessionId) must be kept in sync in the object used for reconnect replay. Treat `registerInfo` as the source of truth for what the next `register` message will contain, and update it eagerly on every mutation.
+**Fix summary**: Added `if (this.registerInfo) { this.registerInfo = { ...this.registerInfo, pid }; }` at the top of `updatePid()` in `backend/src/cli/argus-launch-client.ts`, before the `isOpen` check.
