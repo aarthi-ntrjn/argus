@@ -11,7 +11,7 @@
 - [ ] T001 [P] Add `telemetryEnabled: boolean` (default `true`) and `telemetryPromptSeen: boolean` (default `false`) to `ArgusConfig` interface in `backend/src/models/index.ts`
 - [ ] T002 [P] Add `telemetryEnabled: true` and `telemetryPromptSeen: false` to `DEFAULTS` in `backend/src/config/config-loader.ts`
 - [ ] T003 [P] Add `telemetryEnabled` and `telemetryPromptSeen` to `ALLOWED_KEYS` in `backend/src/api/routes/settings.ts`
-- [ ] T004 [P] Add `TELEMETRY_URL` and `TELEMETRY_API_KEY` entries to `.env.example` with placeholder values and inline comments explaining their purpose
+- [ ] T004 [P] Add `TELEMETRY_URL` entry to `.env.example` (optional override for maintainer; blank = telemetry disabled). The PostHog project API key is NOT a user-facing secret — hardcode it as a constant in `telemetry-service.ts` at commit time (PostHog project keys are public write-only keys, safe in source)
 
 ---
 
