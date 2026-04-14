@@ -9,23 +9,11 @@ import { broadcast } from '../api/ws/event-dispatcher.js';
 import { ptyRegistry } from './pty-registry.js';
 import { OutputStore } from './output-store.js';
 import { parseJsonlLine, parseModelFromEvent } from './events-parser.js';
-import { detectYoloModeFromPids } from './process-utils.js';
+import { detectYoloModeFromPids, isPidRunning } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
 import type { Session, PidSource } from '../models/index.js';
 
 const DEFAULT_SESSION_DIR = join(homedir(), '.copilot', 'session-state');
-
-// Lightweight liveness check — no process list scan needed.
-// EPERM means the process exists but we lack signal permission (still alive).
-// ESRCH means the process does not exist.
-function isPidRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return (e as NodeJS.ErrnoException).code === 'EPERM';
-  }
-}
 
 interface WorkspaceYaml {
   id?: string;
