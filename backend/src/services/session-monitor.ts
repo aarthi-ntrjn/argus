@@ -21,7 +21,7 @@ export interface SessionMonitorEvents {
   'repository.removed': (repo: Repository) => void;
 }
 
-// Must match INACTIVE_THRESHOLD_MS in frontend/src/utils/sessionUtils.ts
+// Must match the default restingThresholdMinutes in config-loader.ts
 const INACTIVE_THRESHOLD_MS = 20 * 60 * 1000;
 
 export class SessionMonitor extends EventEmitter {
@@ -345,10 +345,11 @@ export class SessionMonitor extends EventEmitter {
       // threshold, so already-connected clients flip the badge without a page refresh.
       // Fires once per session; resets if the session becomes active again.
       const now = Date.now();
+      const thresholdMs = loadConfig().restingThresholdMinutes * 60_000;
       for (const session of getSessions({ status: 'active' })) {
         if (!session.lastActivityAt) continue;
         const age = now - new Date(session.lastActivityAt).getTime();
-        if (age >= INACTIVE_THRESHOLD_MS) {
+        if (age >= thresholdMs) {
           if (!this.restingNotifiedSessions.has(session.id)) {
             this.restingNotifiedSessions.add(session.id);
             console.log(`[SessionMonitor] resting transition sessionId=${session.id} lastActivityAt=${session.lastActivityAt} ageMin=${Math.round(age / 60000)}`);
