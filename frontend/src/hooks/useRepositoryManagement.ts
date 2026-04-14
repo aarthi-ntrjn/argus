@@ -69,7 +69,7 @@ export function useRepositoryManagement(): RepositoryManagement {
       for (const repo of newRepos) {
         try {
           const newRepo = await addRepository(repo.path);
-          queryClient.setQueryData<Repository[]>(['repositories'], (old = []) => [...old, newRepo]);
+          queryClient.setQueryData<Repository[]>(['repositories'], (old = []) => [newRepo, ...old]);
           added++;
         } catch {
           failed++;
