@@ -170,6 +170,10 @@ export class SessionMonitor extends EventEmitter {
     });
   }
 
+  triggerScan(): void {
+    this.runScan().catch((err) => this.emit('error', err));
+  }
+
   stop(): void {
     if (this.scanInterval) {
       clearInterval(this.scanInterval);

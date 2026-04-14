@@ -14,6 +14,12 @@ import { broadcast } from '../ws/event-dispatcher.js';
 import { ClaudeCodeDetector } from '../../services/claude-code-detector.js';
 import { getCurrentBranch, getRemoteUrl } from '../../services/repository-scanner.js';
 
+let _monitor: { triggerScan(): void } | null = null;
+
+export function setMonitor(monitor: { triggerScan(): void }): void {
+  _monitor = monitor;
+}
+
 const repositoriesRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/v1/repositories', async (_req, reply) => {
     const repos = getRepositories();
@@ -47,6 +53,7 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
     new ClaudeCodeDetector().injectHooks();
 
     broadcast({ type: 'repository.added', timestamp: new Date().toISOString(), data: repo as unknown as Record<string, unknown> });
+    _monitor?.triggerScan();
     return reply.status(201).send(repo);
   });
 
