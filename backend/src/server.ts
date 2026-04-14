@@ -7,6 +7,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import { loadConfig } from './config/config-loader.js';
+import * as logger from './utils/logger.js';
 import { addClient, removeClient, broadcast } from './api/ws/event-dispatcher.js';
 import repositoriesRoutes, { setMonitor } from './api/routes/repositories.js';
 import sessionsRoutes from './api/routes/sessions.js';
@@ -137,17 +138,8 @@ export async function startServer() {
 // Only auto-start when run directly (not when imported by tests)
 const isMain = process.argv[1]?.endsWith('server.ts') || process.argv[1]?.endsWith('server.js');
 if (isMain) {
-  // Prepend ISO timestamp to every console.log/warn/error in server output
-  const ts = () => new Date().toISOString();
-  const origLog = console.log.bind(console);
-  const origWarn = console.warn.bind(console);
-  const origError = console.error.bind(console);
-  console.log = (...args: unknown[]) => origLog(ts(), ...args);
-  console.warn = (...args: unknown[]) => origWarn(ts(), ...args);
-  console.error = (...args: unknown[]) => origError(ts(), ...args);
-
   startServer().catch((err) => {
-    console.error('Failed to start server:', err);
+    logger.error('Failed to start server:', err);
     process.exit(1);
   });
 }
