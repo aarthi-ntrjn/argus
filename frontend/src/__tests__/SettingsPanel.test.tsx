@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SettingsPanel } from '../components/SettingsPanel/SettingsPanel';
@@ -107,8 +107,8 @@ describe('SettingsPanel', () => {
     it('calls patchArgusSettings with the parsed integer on valid blur', async () => {
       renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
       const input = screen.getByRole('spinbutton', { name: /resting after/i });
-      await userEvent.clear(input);
-      await userEvent.type(input, '5');
+      fireEvent.change(input, { target: { value: '5' } });
+      await userEvent.tab();
       await userEvent.tab();
       expect(api.patchArgusSettings).toHaveBeenCalledWith({ restingThresholdMinutes: 5 });
     });
@@ -136,7 +136,8 @@ describe('SettingsPanel', () => {
     it('shows an inline error and does NOT call patchArgusSettings for empty input', async () => {
       renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
       const input = screen.getByRole('spinbutton', { name: /resting after/i });
-      await userEvent.clear(input);
+      await userEvent.tripleClick(input);
+      await userEvent.keyboard('{Backspace}');
       await userEvent.tab();
       expect(api.patchArgusSettings).not.toHaveBeenCalled();
       expect(screen.getByRole('alert')).toBeInTheDocument();
