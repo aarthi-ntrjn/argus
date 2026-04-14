@@ -64,6 +64,16 @@ specs/[###-feature-name]/
 
 **Constitution**: `.specify/memory/constitution.md` uses normative language (MUST/SHOULD) and is **never modified during feature work**.
 
+## Code Quality Rules
+
+**No magic strings**: Any string used as an identifier, event name, log prefix, file path segment, or status value must be a named constant. Do not inline the same string literal in two places. Examples: event names like `session.created`, log tag prefixes like `[CopilotDetector]`, status strings like `ended`.
+
+**No code duplication**: Before writing new logic, grep the codebase for similar patterns. If equivalent logic exists, extract it into a shared utility and call it from both places. Never copy-paste a block and adjust it slightly.
+
+**PID reuse is a real bug**: `process.kill(pid, 0)` only confirms that *a* process with that PID is alive, not that it is the *original* process. PIDs are recycled by the OS. Whenever using `isPidRunning` to decide whether a session is still active, also verify the process identity (e.g., command-line substring match, start time comparison, or a sentinel file the process owns). Failing to do this causes ended sessions to appear alive when a new unrelated process takes the same PID.
+
+**Audit before committing**: When adding or modifying any utility function, event name, or status value, search for existing constants or helpers first. If you introduce a new string that will be used in more than one place, define it as a `const` immediately.
+
 ## Performance Rules for the Scan Cycle
 
 The scan cycle runs on a tight loop. Any code that touches it must follow these rules proactively. Do not wait for the user to report slowness.
