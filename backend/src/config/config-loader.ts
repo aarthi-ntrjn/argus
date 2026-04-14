@@ -19,6 +19,8 @@ const DEFAULTS: ArgusConfig = {
   outputRetentionMbPerSession: 10,
   autoRegisterRepos: false,
   yoloMode: false,
+  telemetryEnabled: true,
+  telemetryPromptSeen: false,
 };
 
 export function loadConfig(): ArgusConfig {
