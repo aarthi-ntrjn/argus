@@ -121,9 +121,7 @@ export class CopilotCliDetector {
     const { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource } =
       this.resolvePtyLinkage(sessionId, existingSession, repo, pid, isRunning);
 
-    const yoloMode = existingSession?.yoloMode != null
-      ? existingSession.yoloMode
-      : isRunning ? detectYoloModeFromPids(resolvedPid, resolvedHostPid, SessionTypes.COPILOT_CLI) : null;
+    const yoloMode = existingSession?.yoloMode ?? null;
     const session: Session = {
       id: sessionId,
       repositoryId: repo.id,
@@ -151,6 +149,22 @@ export class CopilotCliDetector {
 
     if (isRunning) {
       this.watchEventsFile(sessionId, dirPath);
+
+      // Detect yolo mode asynchronously to avoid blocking the scan with a PowerShell spawn.
+      // If yolo mode hasn't been resolved yet, check in the background and broadcast an update.
+      if (yoloMode === null) {
+        setImmediate(() => {
+          const detected = detectYoloModeFromPids(resolvedPid, resolvedHostPid, SessionTypes.COPILOT_CLI);
+          if (detected !== null) {
+            const current = getSession(sessionId);
+            if (current && current.yoloMode === null) {
+              const updated = { ...current, yoloMode: detected };
+              upsertSession(updated);
+              broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
+            }
+          }
+        });
+      }
     }
 
     return session;
