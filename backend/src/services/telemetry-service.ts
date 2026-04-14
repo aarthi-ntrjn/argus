@@ -7,8 +7,8 @@ import type { TelemetryEventType } from '../models/index.js';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // PostHog project API key — write-only, intentionally public (cannot read analytics data).
-// Set this to your PostHog project key before release.
 const POSTHOG_API_KEY = 'phc_utcNEdTjgVREGCdpmyDeMWVwjDmL9LBZSFvhrNkPUZGr';
+const POSTHOG_URL = 'https://app.posthog.com/capture/';
 
 function getIdPath(): string {
   return process.env.ARGUS_TELEMETRY_ID_PATH ?? join(homedir(), '.argus', 'telemetry-id');
@@ -55,7 +55,7 @@ export class TelemetryService {
   }
 
   sendEvent(type: TelemetryEventType, extra?: Record<string, string>): void {
-    const url = process.env.TELEMETRY_URL ?? '';
+    const url = process.env.TELEMETRY_URL ?? POSTHOG_URL;
     if (!url) return;
 
     const installationId = this.loadOrCreateInstallationId();
