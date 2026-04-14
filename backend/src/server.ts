@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import Fastify, { type FastifyError } from 'fastify';
 import fastifyWebsocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
