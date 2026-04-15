@@ -88,18 +88,6 @@ export default function TelemetryPage() {
           </ul>
         </section>
 
-        <section className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Where data is sent</h2>
-          <p className="text-sm text-gray-700">
-            Events are sent to{' '}
-            <a href="https://posthog.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-              PostHog
-            </a>
-            , an open-source product analytics platform. The API key used is write-only: it can submit
-            events but cannot read or query your data.
-          </p>
-        </section>
-
         <section className="bg-white border border-gray-200 rounded-lg p-5">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Opting out</h2>
           <p className="text-sm text-gray-700">
