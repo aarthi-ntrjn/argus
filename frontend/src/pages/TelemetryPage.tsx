@@ -31,11 +31,10 @@ export default function TelemetryPage() {
         </div>
 
         <section className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Included in every event</h2>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">What is included</h2>
           <ul className="space-y-2 text-sm text-gray-700">
             <li>
-              <span className="font-medium text-gray-900">Anonymous installation ID:</span> a random UUID generated on
-              first run. It is not linked to your identity, account, or machine.
+              <span className="font-medium text-gray-900">Anonymous installation ID:</span> a random UUID generated on first run. It is not linked to your identity, account, or machine.
             </li>
             <li>
               <span className="font-medium text-gray-900">App version:</span> the Argus version number (e.g. 0.1.0).
@@ -43,21 +42,14 @@ export default function TelemetryPage() {
             <li>
               <span className="font-medium text-gray-900">Timestamp:</span> when the event occurred (UTC).
             </li>
-          </ul>
-        </section>
-
-        <section className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Included in session events</h2>
-          <p className="text-sm text-gray-600 mb-3">The following properties are included in all <span className="font-mono text-gray-800">session_*</span> events.</p>
-          <ul className="space-y-2 text-sm text-gray-700">
             <li>
-              <span className="font-medium text-gray-900">Session ID:</span> a random UUID assigned to each session. It identifies the session within a run but is not linked to any user or machine.
+              <span className="font-medium text-gray-900">Session ID:</span> a random UUID assigned to each session. Not linked to any user or machine.
             </li>
             <li>
-              <span className="font-medium text-gray-900">Session type:</span> whether the session is a Claude Code or Copilot session.
+              <span className="font-medium text-gray-900">Session type:</span> whether the session is Claude Code or Copilot.
             </li>
             <li>
-              <span className="font-medium text-gray-900">Launch mode</span> (session_started only): whether the session was launched via Argus (connected) or auto-detected (readonly).
+              <span className="font-medium text-gray-900">Launch mode:</span> whether the session was launched via Argus (connected) or auto-detected (readonly).
             </li>
             <li>
               <span className="font-medium text-gray-900">Yolo mode:</span> whether the session was started with the <span className="font-mono">--dangerously-skip-permissions</span> or <span className="font-mono">--allow-all</span> flags.
