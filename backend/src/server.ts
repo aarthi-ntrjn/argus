@@ -125,7 +125,7 @@ export async function startServer() {
   });
   monitor.on('session.ended', (session: Session) => {
     broadcast({ type: 'session.ended', timestamp: new Date().toISOString(), data: session as unknown as Record<string, unknown> });
-    telemetryService.sendEvent('session_ended', { sessionType: session.type, sessionId: session.id, yoloMode: session.yoloMode });
+    telemetryService.sendEvent('session_ended', { sessionType: session.type, sessionId: session.id, launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly', yoloMode: session.yoloMode });
   });
   monitor.on('repository.added', (repo: Repository) => {
     broadcast({ type: 'repository.added', timestamp: new Date().toISOString(), data: repo as unknown as Record<string, unknown> });
