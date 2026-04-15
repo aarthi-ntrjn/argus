@@ -59,12 +59,18 @@ if ($existingPr) {
     Write-Step "Creating PR on $publicRepo"
     $originUrl = git remote get-url origin
     $commitMsg = git log -1 --pretty="%s"
+    # Build PR body from all commits since the last common ancestor with public/master
+    $commitLog = git --no-pager log "${PUBLIC_REMOTE}/${TARGET_BRANCH}..HEAD" --pretty=format:"- %s" --no-merges 2>$null
+    if (-not $commitLog) {
+        $commitLog = git --no-pager log -20 --pretty=format:"- %s" --no-merges
+    }
+    $prBody = "Automated sync from $originUrl master.`n`n## Changes`n`n$commitLog"
     $prUrl = gh pr create `
         --repo $publicRepo `
         --head $SYNC_BRANCH `
         --base $TARGET_BRANCH `
         --title "Sync from private: $commitMsg" `
-        --body "Automated sync from $originUrl master."
+        --body $prBody
     # Extract PR number from URL
     $prNumber = $prUrl -replace ".*/", ""
     Write-Ok "Created PR #${prNumber}: $prUrl"
