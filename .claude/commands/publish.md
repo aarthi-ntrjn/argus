@@ -53,6 +53,7 @@ Using the commit list and diff stat from Step 2, write:
 **Body**: A structured markdown description with:
 - A short paragraph (2-4 sentences) summarising what this sync brings and why it matters.
 - A `## Changes` section with bullet points grouped by area (e.g. Backend, Frontend, CI, Docs, Scripts). Each bullet should be a human-readable sentence, not a raw commit subject. Omit trivial housekeeping commits (formatting, typo fixes) unless they are the only changes.
+- A `## Commits` section with the raw commit log lines from Step 2 (verbatim, as a code block or bullet list), so reviewers can cross-reference exact commits.
 - If `$ARGUMENTS` was supplied, incorporate that context prominently.
 
 Do NOT use em dashes in the description.

@@ -66,17 +66,18 @@ if ($existingPr) {
 } else {
     Write-Step "Creating PR on $publicRepo"
     $originUrl = git remote get-url origin
-    # Use AI-generated title/body if provided, otherwise fall back to commit log
+    # Always append raw commit log so reviewers can cross-reference exact commits
+    $commitLog = git --no-pager log "${PUBLIC_REMOTE}/${TARGET_BRANCH}..HEAD" --pretty=format:"- %h %s" --no-merges 2>$null
+    if (-not $commitLog) {
+        $commitLog = git --no-pager log -20 --pretty=format:"- %h %s" --no-merges
+    }
     if (-not $Title) {
         $Title = "Sync from private: $(git log -1 --pretty='%s')"
     }
     if (-not $Body) {
-        $commitLog = git --no-pager log "${PUBLIC_REMOTE}/${TARGET_BRANCH}..HEAD" --pretty=format:"- %s" --no-merges 2>$null
-        if (-not $commitLog) {
-            $commitLog = git --no-pager log -20 --pretty=format:"- %s" --no-merges
-        }
-        $Body = "Automated sync from $originUrl master.`n`n## Changes`n`n$commitLog"
+        $Body = "Automated sync from $originUrl master."
     }
+    $Body = "$Body`n`n## Commits`n`n$commitLog"
     $prUrl = gh pr create `
         --repo $publicRepo `
         --head $SYNC_BRANCH `
