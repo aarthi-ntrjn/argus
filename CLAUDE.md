@@ -112,7 +112,7 @@ Always reuse shared components and CSS classes from `frontend/src/components/` a
 
 ## Scripts
 
-**All scripts must be placed in the `scripts/` folder at the repo root.** Never create `.ps1`, `.sh`, or other executable scripts in the repo root or any other location. The only exception is `.specify/scripts/powershell/`, which is reserved for Speckit automation.
+**All scripts must be placed in the `scripts/` folder at the repo root.** Never create `.ps1`, `.sh`, `.mjs`, or other executable scripts in the repo root or any other location. The `.specify/scripts/powershell/` folder is strictly reserved for scripts that are directly invoked by the Speckit workflow steps (`speckit.specify`, `speckit.plan`, `speckit.tasks`, etc.). Do not put application or dev tooling scripts there.
 
 All automation is PowerShell (`.ps1`) under `.specify/scripts/powershell/`. VS Code (and Claude's tool execution) auto-approves these scripts.
 
