@@ -7,6 +7,7 @@ import SessionCard from '../SessionCard/SessionCard';
 
 export interface RepoWithSessions extends Repository {
   sessions: Session[];
+  hasHiddenSessions: boolean;
 }
 
 interface RepoCardProps {
@@ -14,14 +15,13 @@ interface RepoCardProps {
   skipConfirm: boolean;
   selectedSessionId: string | null;
   isMobile: boolean;
-  hideEndedSessions?: boolean;
   onRemoveById: (id: string) => void;
   onSetRemoveConfirm: (id: string) => void;
   onSelectSession: (id: string) => void;
 }
 
 export default function RepoCard({
-  repo, skipConfirm, selectedSessionId, isMobile, hideEndedSessions,
+  repo, skipConfirm, selectedSessionId, isMobile,
   onRemoveById, onSetRemoveConfirm, onSelectSession,
 }: RepoCardProps) {
   return (
@@ -80,7 +80,7 @@ export default function RepoCard({
       </div>
       {repo.sessions.length === 0 ? (
         <p className="text-gray-500 text-sm">
-          {hideEndedSessions ? 'No active sessions' : 'No sessions'}
+          {repo.hasHiddenSessions ? 'No active sessions' : 'No sessions'}
         </p>
       ) : (
         <div data-tour-id="dashboard-session-card" className="space-y-2">

@@ -116,7 +116,7 @@ export default function DashboardPage() {
       if (settings.hideInactiveSessions && isInactive(s, (argusSettings?.restingThresholdMinutes ?? 20) * 60_000)) return false;
       return true;
     });
-    return { ...repo, sessions: visibleSessions };
+    return { ...repo, sessions: visibleSessions, hasHiddenSessions: visibleSessions.length < repoSessions.length };
   }).filter((repo) => {
     if (!settings.hideReposWithNoActiveSessions) return true;
     return (sessionsByRepo.get(repo.id) ?? []).some(s => ACTIVE_STATUSES.has(s.status));
@@ -165,7 +165,6 @@ export default function DashboardPage() {
           skipConfirm={skipConfirm}
           selectedSessionId={selectedSessionId}
           isMobile={isMobile}
-          hideEndedSessions={settings.hideEndedSessions}
           onRemoveById={handleRemoveRepoById}
           onSetRemoveConfirm={setRemoveConfirmId}
           onSelectSession={handleSessionSelect}
