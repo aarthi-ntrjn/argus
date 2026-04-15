@@ -1,12 +1,20 @@
 #!/usr/bin/env pwsh
 # publish.ps1 — Push origin/master to the public repo via a PR with CI gate.
 #
-# Usage: ./publish.ps1
+# Usage: ./scripts/publish.ps1 [-Title <string>] [-Body <string>]
+#
+# When invoked via the /publish Claude command, Title and Body are AI-generated.
+# When invoked directly, they fall back to the commit log.
 #
 # Requirements:
 #   - gh CLI authenticated (gh auth login)
 #   - 'public' remote pointing to the public repo
 #   - Must be run from origin/master
+
+param(
+    [string]$Title = "",
+    [string]$Body  = ""
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -58,19 +66,23 @@ if ($existingPr) {
 } else {
     Write-Step "Creating PR on $publicRepo"
     $originUrl = git remote get-url origin
-    $commitMsg = git log -1 --pretty="%s"
-    # Build PR body from all commits since the last common ancestor with public/master
-    $commitLog = git --no-pager log "${PUBLIC_REMOTE}/${TARGET_BRANCH}..HEAD" --pretty=format:"- %s" --no-merges 2>$null
-    if (-not $commitLog) {
-        $commitLog = git --no-pager log -20 --pretty=format:"- %s" --no-merges
+    # Use AI-generated title/body if provided, otherwise fall back to commit log
+    if (-not $Title) {
+        $Title = "Sync from private: $(git log -1 --pretty='%s')"
     }
-    $prBody = "Automated sync from $originUrl master.`n`n## Changes`n`n$commitLog"
+    if (-not $Body) {
+        $commitLog = git --no-pager log "${PUBLIC_REMOTE}/${TARGET_BRANCH}..HEAD" --pretty=format:"- %s" --no-merges 2>$null
+        if (-not $commitLog) {
+            $commitLog = git --no-pager log -20 --pretty=format:"- %s" --no-merges
+        }
+        $Body = "Automated sync from $originUrl master.`n`n## Changes`n`n$commitLog"
+    }
     $prUrl = gh pr create `
         --repo $publicRepo `
         --head $SYNC_BRANCH `
         --base $TARGET_BRANCH `
-        --title "Sync from private: $commitMsg" `
-        --body $prBody
+        --title $Title `
+        --body $Body
     # Extract PR number from URL
     $prNumber = $prUrl -replace ".*/", ""
     Write-Ok "Created PR #${prNumber}: $prUrl"
