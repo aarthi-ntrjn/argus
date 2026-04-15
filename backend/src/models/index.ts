@@ -109,7 +109,7 @@ export type TelemetryEventType =
   | 'app_ended'
   | 'session_started'
   | 'session_ended'
-  | 'prompt_sent'
+  | 'session_prompt_sent'
   | 'session_stopped'
   | 'todo_added'
   | 'view_diff_opened';
@@ -119,7 +119,7 @@ export const TELEMETRY_EVENT_TYPES = new Set<TelemetryEventType>([
   'app_ended',
   'session_started',
   'session_ended',
-  'prompt_sent',
+  'session_prompt_sent',
   'session_stopped',
   'todo_added',
   'view_diff_opened',

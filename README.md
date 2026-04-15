@@ -268,7 +268,7 @@ Argus collects anonymous usage data to help improve the product. No personal inf
 | `app_started` | Argus server starts |
 | `session_started` | A new Claude Code or Copilot session is detected |
 | `session_ended` | A session completes or ends |
-| `prompt_sent` | A prompt is dispatched to a session via Argus |
+| `session_prompt_sent` | A prompt is dispatched to a session via Argus |
 | `session_stopped` | A session is stopped via Argus |
 
 Each event includes: an anonymous installation ID (a random UUID stored in `~/.argus/telemetry-id`), the Argus version, and a timestamp. No file paths, prompts, session content, or user-identifying information are included.

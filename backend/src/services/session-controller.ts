@@ -127,7 +127,7 @@ export class SessionController {
       .then(() => {
         const now = new Date().toISOString();
         logger.info(`[sendPrompt] DELIVERED actionId=${action.id} sessionId=${sessionId}`);
-        telemetryService.sendEvent('prompt_sent', { sessionType: session.type, sessionId, yoloMode: session.yoloMode });
+        telemetryService.sendEvent('session_prompt_sent', { sessionType: session.type, sessionId, yoloMode: session.yoloMode });
         updateControlAction(action.id, 'completed', now, null);
         this.broadcastAction({ ...action, status: 'completed', completedAt: now });
       })

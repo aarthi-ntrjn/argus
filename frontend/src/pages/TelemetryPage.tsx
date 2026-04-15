@@ -5,10 +5,10 @@ import ArgusLogo from '../components/ArgusLogo';
 const EVENTS = [
   { name: 'app_started', when: 'The Argus backend server starts and begins listening.' },
   { name: 'app_ended', when: 'The Argus backend server shuts down gracefully (SIGTERM or SIGINT).' },
-  { name: 'session_started', when: 'A new session is detected. Includes session ID, session type, and whether it is connected (launched via Argus) or readonly (auto-detected).' },
-  { name: 'session_ended', when: 'A session ends (process exits or is reconciled as finished). Includes session ID and session type.' },
-  { name: 'session_stopped', when: 'You manually stop a session using the Stop button. Includes session ID and session type.' },
-  { name: 'prompt_sent', when: 'You send a prompt to a session via Argus. Includes session ID and session type.' },
+  { name: 'session_started', when: 'A new session is detected.' },
+  { name: 'session_ended', when: 'A session ends (process exits or is reconciled as finished).' },
+  { name: 'session_stopped', when: 'You manually stop a session using the Stop button.' },
+  { name: 'session_prompt_sent', when: 'You send a prompt to a session via Argus.' },
   { name: 'todo_added', when: 'You add a new todo item in Argus.' },
   { name: 'view_diff_opened', when: 'You click the "View diff on GitHub" button for a repository.' },
 ];
@@ -42,6 +42,25 @@ export default function TelemetryPage() {
             </li>
             <li>
               <span className="font-medium text-gray-900">Timestamp:</span> when the event occurred (UTC).
+            </li>
+          </ul>
+        </section>
+
+        <section className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Included in session events</h2>
+          <p className="text-sm text-gray-600 mb-3">The following properties are included in all session events: <span className="font-mono text-gray-800">session_started</span>, <span className="font-mono text-gray-800">session_ended</span>, <span className="font-mono text-gray-800">session_stopped</span>, <span className="font-mono text-gray-800">session_prompt_sent</span>.</p>
+          <ul className="space-y-2 text-sm text-gray-700">
+            <li>
+              <span className="font-medium text-gray-900">Session ID:</span> a random UUID assigned to each session. It identifies the session within a run but is not linked to any user or machine.
+            </li>
+            <li>
+              <span className="font-medium text-gray-900">Session type:</span> whether the session is a Claude Code or Copilot session.
+            </li>
+            <li>
+              <span className="font-medium text-gray-900">Launch mode</span> (session_started only): whether the session was launched via Argus (connected) or auto-detected (readonly).
+            </li>
+            <li>
+              <span className="font-medium text-gray-900">Yolo mode:</span> whether the session was started with the <span className="font-mono">--dangerously-skip-permissions</span> flag.
             </li>
           </ul>
         </section>
