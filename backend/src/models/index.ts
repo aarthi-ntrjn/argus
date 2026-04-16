@@ -57,6 +57,7 @@ export interface Session {
   model: string | null;
   reconciled: boolean;
   yoloMode: boolean | null;
+  ptyLaunchId?: string | null;
 }
 
 export interface SessionOutput {

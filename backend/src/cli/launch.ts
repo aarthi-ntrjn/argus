@@ -106,8 +106,9 @@ process.stdout.on('resize', () => {
 });
 
 // Connect to Argus backend
-log(`connecting to Argus WebSocket ws://127.0.0.1:7411/launcher`);
-const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher', log);
+const ptyLaunchId = randomUUID();
+log(`connecting to Argus WebSocket ws://127.0.0.1:7411/launcher ptyLaunchId=${ptyLaunchId}`);
+const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher', ptyLaunchId, log);
 // On Windows the real tool PID is unknown until the process tree walk resolves it.
 // On non-Windows pty.pid is already the tool directly (no shell wrapper).
 log(`registering session: hostPid=${pty.pid} pid=${isWin ? null : pty.pid} sessionType=${sessionType}`);

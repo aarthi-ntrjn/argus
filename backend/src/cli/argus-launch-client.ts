@@ -18,11 +18,10 @@ export class ArgusLaunchClient {
   private isClosing = false;
   private workspaceSessionId: string | null = null;
   private pendingPid: number | null = null;
-  private assignedTempId: string | null = null;
   private log: (msg: string) => void;
 
-  constructor(url: string, log?: (msg: string) => void) {
-    this.url = url;
+  constructor(url: string, ptyLaunchId: string, log?: (msg: string) => void) {
+    this.url = `${url}?id=${ptyLaunchId}`;
     this.log = log ?? (() => {});
     this.connect();
   }
@@ -96,32 +95,27 @@ export class ArgusLaunchClient {
   }
 
   private handleOpen(): void {
-    // Registration is deferred until the server sends assigned_id.
-    // On reconnect the server sends a fresh assigned_id, which triggers
-    // re-registration via handleMessage below.
+    this.log('connected — waiting for server handshake');
   }
 
   private handleMessage(data: Buffer): void {
-    let msg: { type: string; tempId?: string; actionId?: string; prompt?: string };
+    let msg: { type: string; actionId?: string; prompt?: string };
     try {
       msg = JSON.parse(data.toString());
     } catch {
       return;
     }
 
-    if (msg.type === 'assigned_id' && msg.tempId) {
-      this.assignedTempId = msg.tempId;
-      this.log(`assigned_id received tempId=${msg.tempId}`);
+    if (msg.type === 'connected') {
+      this.log(`connected`);
       if (this.registerInfo) {
         this.send({ type: 'register', ...this.registerInfo });
       }
-      // Re-send workspace_id on reconnect so the backend can re-claim the session.
       if (this.workspaceSessionId) {
         this.send({ type: 'workspace_id', sessionId: this.workspaceSessionId });
       }
-      // Replay a pid that arrived before the connection was ready.
       if (this.pendingPid !== null) {
-        this.log(`assigned_id: replaying deferred update_pid pid=${this.pendingPid}`);
+        this.log(`handleConnected: replaying deferred update_pid pid=${this.pendingPid}`);
         this.send({ type: 'update_pid', pid: this.pendingPid });
         this.pendingPid = null;
       }

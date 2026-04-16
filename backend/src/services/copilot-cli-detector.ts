@@ -119,7 +119,7 @@ export class CopilotCliDetector {
     const toIso = (val: string | Date | undefined): string =>
       val ? (val instanceof Date ? val.toISOString() : val) : new Date().toISOString();
 
-    const { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource } =
+    const { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource, resolvedPtyLaunchId } =
       this.resolvePtyLinkage(sessionId, existingSession, repo, pid, isRunning);
 
     const yoloMode = existingSession?.yoloMode != null
@@ -144,6 +144,7 @@ export class CopilotCliDetector {
       model: existingSession?.model ?? null,
       reconciled: true,
       yoloMode,
+      ptyLaunchId: resolvedPtyLaunchId,
     };
 
     upsertSession(session);
@@ -161,7 +162,7 @@ export class CopilotCliDetector {
     repo: { path: string },
     pid: number | null,
     isRunning: boolean,
-  ): { launchMode: 'pty' | null; resolvedPid: number | null; resolvedHostPid: number | null; resolvedPidSource: PidSource | null } {
+  ): { launchMode: 'pty' | null; resolvedPid: number | null; resolvedHostPid: number | null; resolvedPidSource: PidSource | null; resolvedPtyLaunchId: string | null } {
     const alreadyClaimed = existingSession?.launchMode === 'pty';
     const registryHas = ptyRegistry.has(sessionId);
 
@@ -169,6 +170,7 @@ export class CopilotCliDetector {
     let resolvedPid = pid;
     let resolvedHostPid: number | null = existingSession?.hostPid ?? null;
     let resolvedPidSource: PidSource | null = pid != null ? 'lockfile' : null;
+    let resolvedPtyLaunchId: string | null = existingSession?.ptyLaunchId ?? null;
 
     if (alreadyClaimed) {
       launchMode = 'pty';
@@ -193,6 +195,7 @@ export class CopilotCliDetector {
           resolvedPid = claimed.pid;
           resolvedHostPid = claimed.hostPid;
           resolvedPidSource = 'pty_registry';
+          resolvedPtyLaunchId = claimed.ptyLaunchId;
           logger.info(`[CopilotDetector] re-link OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
         } else {
           logger.info(`[CopilotDetector] re-link MISS — no pending WS yet for sessionId=${sessionId}`);
@@ -202,6 +205,7 @@ export class CopilotCliDetector {
       logger.info(`[CopilotDetector] ptyRegistry already has sessionId=${sessionId} — marking pty`);
       launchMode = 'pty';
       resolvedPidSource = 'pty_registry';
+      resolvedPtyLaunchId = existingSession?.ptyLaunchId ?? ptyRegistry.getPtyLaunchIdForSession(sessionId) ?? null;
       const parkedPid = ptyRegistry.getClaimedPid(sessionId);
       if (parkedPid != null) {
         resolvedPid = parkedPid;
@@ -215,13 +219,14 @@ export class CopilotCliDetector {
         resolvedPid = claimed.pid;
         resolvedHostPid = claimed.hostPid;
         resolvedPidSource = 'pty_registry';
+        resolvedPtyLaunchId = claimed.ptyLaunchId;
         logger.info(`[CopilotDetector] claimForSession OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
       } else {
         logger.info(`[CopilotDetector] claimForSession MISS — no pending WS — sessionId=${sessionId} will be read-only`);
       }
     }
 
-    return { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource };
+    return { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource, resolvedPtyLaunchId };
   }
 
   private watchEventsFile(sessionId: string, dirPath: string): void {

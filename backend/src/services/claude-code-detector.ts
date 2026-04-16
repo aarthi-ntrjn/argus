@@ -207,7 +207,7 @@ export class ClaudeCodeDetector {
     broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
   }
 
-  private async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number }, now: string): Promise<void> {
+  private async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
     const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'claude-code');
     const session: Session = {
       id: sessionId,
@@ -226,6 +226,7 @@ export class ClaudeCodeDetector {
       model: null,
       reconciled: true,
       yoloMode,
+      ptyLaunchId: claimed.ptyLaunchId,
     };
     upsertSession(session);
     this.sessionCreatedCallback?.(session);

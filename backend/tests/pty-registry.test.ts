@@ -43,7 +43,7 @@ describe('PtyRegistry', () => {
   it('claimForSession returns hostPid and null pid when a pending launcher exists', () => {
     const ws = makeMockWs();
     registry.registerPending('t', ws as any, '/repo', 9999);
-    expect(registry.claimForSession('s', '/repo', 'claude-code')).toEqual({ pid: null, hostPid: 9999 });
+    expect(registry.claimForSession('s', '/repo', 'claude-code')).toMatchObject({ pid: null, hostPid: 9999 });
   });
 
   it('getClaimedId returns the claude session ID after claim', () => {
