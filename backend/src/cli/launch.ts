@@ -110,8 +110,8 @@ log(`connecting to Argus WebSocket ws://127.0.0.1:7411/launcher`);
 const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher', log);
 // On Windows the real tool PID is unknown until the process tree walk resolves it.
 // On non-Windows pty.pid is already the tool directly (no shell wrapper).
-log(`registering session: sessionId=${sessionId} hostPid=${pty.pid} pid=${isWin ? null : pty.pid} sessionType=${sessionType}`);
-client.setRegisterInfo({ sessionId, hostPid: pty.pid, pid: isWin ? null : pty.pid, sessionType, cwd });
+log(`registering session: hostPid=${pty.pid} pid=${isWin ? null : pty.pid} sessionType=${sessionType}`);
+client.setRegisterInfo({ hostPid: pty.pid, pid: isWin ? null : pty.pid, sessionType, cwd });
 
 // For copilot-cli: watch the session-state dir for a workspace.yaml whose cwd
 // matches ours, then send its session ID to Argus for direct claim — no repoPath
@@ -254,7 +254,7 @@ pty.onExit(({ exitCode }: { exitCode: number }) => {
   // Await the WebSocket flush so the backend receives the session_ended
   // message before this process exits.
   log(`notifying Argus session ended`);
-  client.notifySessionEnded(sessionId, exitCode).then(() => {
+  client.notifySessionEnded(exitCode).then(() => {
     log(`session_ended ack received — exiting with code ${exitCode}`);
     process.exit(exitCode ?? 0);
   });

@@ -17,7 +17,6 @@ import type { SessionType } from '../../models/index.js';
 
 interface RegisterMessage {
   type: 'register';
-  sessionId: string;
   hostPid: number;
   pid: number | null;
   sessionType: SessionType;
@@ -42,7 +41,6 @@ interface UpdatePidMessage {
 
 interface SessionEndedMessage {
   type: 'session_ended';
-  sessionId: string;
   exitCode: number | null;
 }
 
@@ -78,9 +76,14 @@ function ensureRepository(cwd: string): Repository {
 
 const launcherRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/launcher', { websocket: true }, (socket: WebSocket) => {
-    // tempId: the UUID launch.ts generated. Not a DB session ID.
-    let tempId: string | null = null;
+    // tempId: server-assigned UUID for this connection. Sent to the client as
+    // assigned_id so the client echoes it back in register and all subsequent
+    // messages. The server never reads tempId from client messages.
+    const tempId = randomUUID();
     let repoPath: string | null = null;
+
+    // Send the assigned ID to the client immediately so it can register with it.
+    socket.send(JSON.stringify({ type: 'assigned_id', tempId }));
 
     socket.on('message', (raw: Buffer) => {
       let msg: LauncherMessage;
@@ -93,7 +96,6 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       if (msg.type === 'register') {
-        tempId = msg.sessionId;
         repoPath = msg.cwd;
 
         // Ensure the repo exists so the detector can find it by path.
@@ -102,8 +104,8 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         // Hold the connection pending — we do NOT create a DB session here.
         // The session is created in ClaudeCodeDetector.handleHookPayload once
         // Claude fires its first hook and we learn the real session ID.
-        ptyRegistry.registerPending(msg.sessionId, socket, msg.cwd, msg.hostPid, msg.pid, msg.sessionType);
-        fastify.log.info({ tempId: msg.sessionId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending waiting for Claude hook');
+        ptyRegistry.registerPending(tempId, socket, msg.cwd, msg.hostPid, msg.pid, msg.sessionType);
+        fastify.log.info({ tempId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending waiting for Claude hook');
         return;
       }
 

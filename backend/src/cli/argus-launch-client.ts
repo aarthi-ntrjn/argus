@@ -2,7 +2,6 @@ import WebSocket from 'ws';
 import type { SessionType } from '../models/index.js';
 
 interface RegisterInfo {
-  sessionId: string;
   hostPid: number;
   pid: number | null;
   sessionType: SessionType;
@@ -19,6 +18,7 @@ export class ArgusLaunchClient {
   private isClosing = false;
   private workspaceSessionId: string | null = null;
   private pendingPid: number | null = null;
+  private assignedTempId: string | null = null;
   private log: (msg: string) => void;
 
   constructor(url: string, log?: (msg: string) => void) {
@@ -80,7 +80,7 @@ export class ArgusLaunchClient {
     this.send({ type: 'workspace_id', sessionId: id });
   }
 
-  notifySessionEnded(sessionId: string, exitCode: number | null): Promise<void> {
+  notifySessionEnded(exitCode: number | null): Promise<void> {
     this.isClosing = true;
     return new Promise<void>((resolve) => {
       const done = () => { clearTimeout(timer); resolve(); };
@@ -88,7 +88,7 @@ export class ArgusLaunchClient {
       const timer = setTimeout(done, 2000);
       if (this.ws.readyState !== WebSocket.OPEN) { done(); return; }
       // Use the send callback to know when data is flushed, then close
-      this.ws.send(JSON.stringify({ type: 'session_ended', sessionId, exitCode }), () => {
+      this.ws.send(JSON.stringify({ type: 'session_ended', exitCode }), () => {
         this.ws.once('close', done);
         this.ws.close();
       });
@@ -96,26 +96,35 @@ export class ArgusLaunchClient {
   }
 
   private handleOpen(): void {
-    if (this.registerInfo) {
-      this.send({ type: 'register', ...this.registerInfo });
-    }
-    // Re-send workspace_id on reconnect so the backend can re-claim the session
-    if (this.workspaceSessionId) {
-      this.send({ type: 'workspace_id', sessionId: this.workspaceSessionId });
-    }
-    // Replay a pid that arrived before the connection was ready
-    if (this.pendingPid !== null) {
-      this.log(`handleOpen: replaying deferred update_pid pid=${this.pendingPid}`);
-      this.send({ type: 'update_pid', pid: this.pendingPid });
-      this.pendingPid = null;
-    }
+    // Registration is deferred until the server sends assigned_id.
+    // On reconnect the server sends a fresh assigned_id, which triggers
+    // re-registration via handleMessage below.
   }
 
   private handleMessage(data: Buffer): void {
-    let msg: { type: string; actionId?: string; prompt?: string };
+    let msg: { type: string; tempId?: string; actionId?: string; prompt?: string };
     try {
       msg = JSON.parse(data.toString());
     } catch {
+      return;
+    }
+
+    if (msg.type === 'assigned_id' && msg.tempId) {
+      this.assignedTempId = msg.tempId;
+      this.log(`assigned_id received tempId=${msg.tempId}`);
+      if (this.registerInfo) {
+        this.send({ type: 'register', ...this.registerInfo });
+      }
+      // Re-send workspace_id on reconnect so the backend can re-claim the session.
+      if (this.workspaceSessionId) {
+        this.send({ type: 'workspace_id', sessionId: this.workspaceSessionId });
+      }
+      // Replay a pid that arrived before the connection was ready.
+      if (this.pendingPid !== null) {
+        this.log(`assigned_id: replaying deferred update_pid pid=${this.pendingPid}`);
+        this.send({ type: 'update_pid', pid: this.pendingPid });
+        this.pendingPid = null;
+      }
       return;
     }
 
