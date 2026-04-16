@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { spawn } from 'node-pty';
 import { execSync } from 'child_process';
-import { appendFileSync, mkdirSync } from 'fs';
+import { appendFileSync, mkdirSync, readdirSync, readFileSync, watch } from 'fs';
 import { randomUUID } from 'crypto';
-import { platform, tmpdir } from 'os';
-import { join } from 'path';
+import { homedir, platform, tmpdir } from 'os';
+import { join, normalize } from 'path';
 import { resolveLaunchCommand } from './launch-command-resolver.js';
 import { ArgusLaunchClient } from './argus-launch-client.js';
 
@@ -114,11 +114,53 @@ const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher', ptyLaunchId
 log(`registering session: hostPid=${pty.pid} pid=${isWin ? null : pty.pid} sessionType=${sessionType}`);
 client.setRegisterInfo({ hostPid: pty.pid, pid: isWin ? null : pty.pid, sessionType, cwd });
 
-// For copilot-cli: watch the session-state dir for a workspace.yaml whose cwd
-// matches ours, then send its session ID to Argus for direct claim — no repoPath
-// matching required, which eliminates path-normalization failures.
+// For claude-code: watch ~/.claude/sessions/ for a session file whose cwd matches
+// ours, then send its session ID to Argus for direct claim. This is the same pattern
+// as copilot-cli's workspace.yaml. The client replays workspace_id on reconnect, so
+// the server can immediately re-associate the WS without waiting for a scan cycle.
+if (sessionType === 'claude-code') {
+  const sessionsDir = join(homedir(), '.claude', 'sessions');
+  const normCwd = normalize(cwd.trimEnd().replace(/[/\\]+$/, ''));
 
-// Yield Win32 input mode sequences (ESC[Vk;Sc;Uc;Kd;Cs;Rc_) for a single character,
+  function scanSessionFiles(): boolean {
+    try {
+      const files = readdirSync(sessionsDir).filter((f) => f.endsWith('.json'));
+      for (const file of files) {
+        try {
+          const data = JSON.parse(readFileSync(join(sessionsDir, file), 'utf-8'));
+          if (typeof data.sessionId === 'string' && typeof data.cwd === 'string') {
+            const fileCwd = normalize(data.cwd.trimEnd().replace(/[/\\]+$/, ''));
+            if (fileCwd === normCwd) {
+              log(`claude session file found: sessionId=${data.sessionId} file=${file}`);
+              client.sendWorkspaceId(data.sessionId);
+              return true;
+            }
+          }
+        } catch { /* skip malformed file */ }
+      }
+    } catch { /* sessions dir may not exist yet */ }
+    return false;
+  }
+
+  if (!scanSessionFiles()) {
+    let fileWatcher: ReturnType<typeof watch> | null = null;
+    try {
+      mkdirSync(sessionsDir, { recursive: true });
+      fileWatcher = watch(sessionsDir, (_event, filename) => {
+        if (!filename?.endsWith('.json')) return;
+        if (scanSessionFiles()) {
+          fileWatcher?.close();
+          fileWatcher = null;
+        }
+      });
+    } catch (err) {
+      log(`claude session watcher setup failed: ${err}`);
+    }
+    pty.onExit(() => { fileWatcher?.close(); });
+  }
+}
+
+// Yield Win32 input mode sequences(ESC[Vk;Sc;Uc;Kd;Cs;Rc_) for a single character,
 // one buffer per event: key-down first, then key-up.
 function* win32InputEvents(ch: string): Generator<Buffer> {
   // [VirtualKey, ScanCode] for US QWERTY layout

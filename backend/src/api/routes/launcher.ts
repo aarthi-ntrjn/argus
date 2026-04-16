@@ -4,7 +4,6 @@ import type { FastifyPluginAsync, FastifyRequest } from 'fastify';import type { 
 import { ptyRegistry } from '../../services/pty-registry.js';
 import {
   getSession,
-  getSessionByPtyLaunchId,
   upsertSession,
   updateSessionStatus,
   getRepositoryByPath,
@@ -108,32 +107,10 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         ensureRepository(msg.cwd);
 
         // Hold the connection pending — we do NOT create a DB session here.
-        // The session is created in ClaudeCodeDetector.handleHookPayload once
-        // Claude fires its first hook and we learn the real session ID.
+        // The session is created once the session ID is known: either from the
+        // claude-code session file (workspace_id message) or from the scan cycle.
         ptyRegistry.registerPending(ptyLaunchId, socket, msg.cwd, msg.hostPid, msg.pid, msg.sessionType);
-        fastify.log.info({ ptyLaunchId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending waiting for Claude hook');
-
-        // Server-restart reconnect: if a session with this ptyLaunchId already exists in DB
-        // and its process is still alive, immediately re-establish the WS connection so
-        // sendPrompt works without waiting for the next scan or workspace_id message.
-        // Only needed for claude-code — copilot-cli sends workspace_id which handles its own claim.
-        if (msg.sessionType === 'claude-code') {
-          const existingSession = getSessionByPtyLaunchId(ptyLaunchId);
-          if (existingSession) {
-            const livePid = existingSession.hostPid ?? existingSession.pid;
-            if (livePid !== null && isPidRunning(livePid)) {
-              ptyRegistry.claimByPtyLaunchId(ptyLaunchId, existingSession.id);
-              fastify.log.info({ ptyLaunchId, sessionId: existingSession.id, priorStatus: existingSession.status }, 'Launcher reconnected to existing claude-code session via ptyLaunchId');
-              if (existingSession.status === 'ended') {
-                const now = new Date().toISOString();
-                const restored = { ...existingSession, status: 'active' as const, endedAt: null, lastActivityAt: now };
-                upsertSession(restored);
-                broadcast({ type: 'session.updated', timestamp: now, data: restored as unknown as Record<string, unknown> });
-                fastify.log.info({ ptyLaunchId, sessionId: existingSession.id }, 'Launcher: restored session to active after server restart');
-              }
-            }
-          }
-        }
+        fastify.log.info({ ptyLaunchId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending waiting for session ID');
         return;
       }
 
@@ -215,7 +192,7 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
               upsertSession({ ...session, ptyLaunchId });
             }
           }
-          fastify.log.info({ claudeSessionId: msg.sessionId, hostPid: claimed.hostPid, pid: claimed.pid }, 'Copilot session claimed via workspace_id');
+          fastify.log.info({ sessionId: msg.sessionId, hostPid: claimed.hostPid, pid: claimed.pid }, 'PTY session claimed via workspace_id');
         } else {
           fastify.log.warn({ ptyLaunchId, workspaceSessionId: msg.sessionId }, 'Launcher: workspace_id claim failed — no pending entry for ptyLaunchId');
         }
