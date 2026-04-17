@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function OutputPane({ session, onClose, className, 'data-tour-id': dataTourId }: Props) {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [settings, updateSetting] = useSettings();
   const displayMode = settings.outputDisplayMode ?? 'focused';
 
@@ -31,7 +31,8 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
   }, [onClose]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = scrollContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [data]);
 
   function toggleMode() {
@@ -69,13 +70,12 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
           )}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto rounded-b-lg">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto rounded-b-lg">
         {isError ? (
           <p className="p-6 text-center text-sm text-red-600">Failed to load output. Is the server running?</p>
         ) : (
           <>
             <SessionDetail sessionId={session.id} items={data?.items ?? []} dark displayMode={displayMode} className="max-h-none pb-0" />
-            <div ref={bottomRef} />
           </>
         )}
       </div>
