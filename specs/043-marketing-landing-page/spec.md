@@ -92,6 +92,7 @@ A developer who uses Argus wants to share it with teammates. They need a clean, 
 - **FR-010**: The page MUST be fully usable with CSS only (no JavaScript required) for all static content; JavaScript-only enhancements (e.g., clipboard copy, badge counters) MUST degrade gracefully.
 - **FR-011**: The page MUST be responsive and render correctly on viewports from 390px to 2560px wide.
 - **FR-012**: The page MUST achieve a Lighthouse performance score of 90 or above on desktop.
+- **FR-013**: The GitHub Actions deployment workflow MUST trigger automatically on push to `master` only when files under `/landing/**` change, and MUST deploy the `/landing` folder to GitHub Pages.
 
 ## Success Criteria *(mandatory)*
 
@@ -105,12 +106,21 @@ A developer who uses Argus wants to share it with teammates. They need a clean, 
 - **SC-006**: The page achieves a Lighthouse accessibility score of 90 or above.
 - **SC-007**: 80% of testers in a 5-person usability check can list at least 3 features of Argus after viewing the page for 60 seconds.
 
+## Clarifications
+
+### Session 2026-04-18
+
+- Q: Where does the landing page source code live? → A: `/landing` subfolder in the existing public `argus-ai-monitor` repo, deployed via GitHub Actions to GitHub Pages.
+- Q: What analytics tool will be used? → A: GitHub Pages built-in traffic insights only (no script, no cookie banner). Richer analytics deferred to v2.
+- Q: What color theme should the landing page use? → A: Light theme only, visually consistent with the Argus app (`slate-50` background, clean card UI). No dark mode for v1.
+- Q: When does the GitHub Actions deployment trigger? → A: Auto-deploy on push to `master` when any file under `/landing/**` changes.
+
 ## Assumptions
 
-- The landing page will be a standalone static site, separate from the running Argus app (similar in style to openclaw.ai and authentive.ai), hosted on GitHub Pages. A custom domain will be configured once chosen; the site will fall back to `argus-ai-monitor.github.io` until then.
+- The landing page will be a standalone static site, separate from the running Argus app (similar in style to openclaw.ai and authentive.ai), hosted on GitHub Pages. The source code lives in a `/landing` subfolder of the existing public `argus-ai-monitor` repository, deployed via a GitHub Actions workflow. A custom domain will be configured once chosen; the site will fall back to `argus-ai-monitor.github.io` until then.
 - Existing product screenshots from `docs/images/` will be used as assets; no new screenshot production is required for v1.
 - The primary audience is software developers who work with Claude Code or GitHub Copilot CLI.
 - There is no backend required; all badge counts and social proof elements are fetched client-side or embedded as static shield.io badges.
 - Mobile responsiveness is in scope from the start (not deferred to v2), consistent with Argus's existing mobile support.
-- No user accounts, email capture, or analytics beyond standard page view tracking are required for v1.
-- The Argus brand colors and visual style should match or complement the existing app UI.
+- No analytics script is added to the page for v1. Traffic visibility comes from GitHub Pages built-in insights (page views, referrers, 14-day window) readable by repo admins in the GitHub UI. No cookie banner or privacy notice is required.
+- The Argus brand colors and visual style should match the existing app UI: light theme (`slate-50` background, clean card style). Dark mode is out of scope for v1.
