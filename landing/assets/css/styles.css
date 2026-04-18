@@ -256,6 +256,29 @@ code {
   margin-bottom: 1rem;
 }
 
+.hero__supported {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin-bottom: 1.25rem;
+}
+
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  background-color: var(--color-accent-light);
+  color: var(--color-text-link);
+  border: 1px solid #bfdbfe; /* blue-200 */
+}
+
 .hero__subheadline {
   font-size: 1.125rem;
   color: var(--color-text-muted);
