@@ -29,17 +29,23 @@ The DB schema (`session_output` table) is **not changed** by this feature. All c
 
 **Before**: `randomUUID()` on every parse call. INSERT OR IGNORE never deduplicates because IDs are always new.
 
-**After**:
+**After** — unified scheme for both Claude and Copilot:
 
-| Source | ID Format | Example |
-|--------|-----------|---------|
-| Claude JSONL entry (single block or string content) | `${entry.uuid}-u-0` / `${entry.uuid}-a-0` | `abc123-u-0` |
-| Claude JSONL entry (multi-block, block N) | `${entry.uuid}-u-N` / `${entry.uuid}-a-N` | `abc123-a-2` |
-| Copilot events.jsonl line | `${sessionId}-${lineByteOffset}` | `sess-xyz-16384` |
+```
+${sessionId}-${lineByteOffset}-${blockIndex}
+```
 
-Role suffix `u` = user entry, `a` = assistant entry. Block index N is 0-based per entry, assigned as content blocks are iterated.
+| Source | Example ID |
+|--------|------------|
+| Claude JSONL entry, first block | `sess-abc-8192-0` |
+| Claude JSONL entry, second block | `sess-abc-8192-1` |
+| Copilot events.jsonl line (always one block) | `sess-xyz-16384-0` |
 
-**Stability guarantee**: For Claude, `entry.uuid` is written by Claude Code into the JSONL and never changes. For Copilot, `lineByteOffset` is the absolute byte position of the line start within `events.jsonl`; the file is append-only so this is stable.
+- `lineByteOffset` is the absolute byte position of the line's first character within the JSONL file.
+- `blockIndex` is 0-based per line. Claude lines can produce multiple blocks (text, tool_use, tool_result). Copilot lines always produce at most one, so `blockIndex` is always `0` for Copilot.
+- Both files are append-only, so a line at offset X is always the same line across re-reads.
+
+**Stability guarantee**: The ID is derived from file position, computed before JSON parsing. A malformed line still gets a stable ID; it will be skipped by the parser but the ID will not be re-inserted as a duplicate.
 
 ---
 
@@ -71,12 +77,14 @@ This query uses the existing `idx_output_seq` index on `(session_id, sequence_nu
 
 ---
 
-## New Shared Constant
+## New Shared Watcher Utilities
 
-**File**: `backend/src/utils/watcher-constants.ts` (new)
+**File**: `backend/src/utils/watcher-utils.ts` (new)
 
-```
-TAIL_BYTES = 16 * 1024
-```
+| Export | Type | Description |
+|--------|------|-------------|
+| `TAIL_BYTES` | `const number` | `16 * 1024` — tail window for both watchers |
+| `splitLinesWithOffsets(buffer, baseOffset)` | function | Splits a `Buffer` into `{text, byteOffset}[]` using absolute file offsets |
+| `makeLineId(sessionId, byteOffset, blockIndex)` | function | Returns `${sessionId}-${byteOffset}-${blockIndex}` |
 
-Imported by both `claude-jsonl-watcher.ts` and `copilot-cli-detector.ts`. Replaces the inline `16 * 1024` magic number in `copilot-cli-detector.ts`.
+Imported by both `claude-jsonl-watcher.ts` and `copilot-cli-detector.ts`. The parsers do not import from this file directly; they receive IDs via a `makeId` callback (see contracts).

@@ -10,16 +10,19 @@ No external research required. All decisions are fully resolved from direct code
 
 ## Decision 1: Stable ID Scheme for Output Entry Deduplication
 
-**Decision**: Claude entries use `${entry.uuid}-${role}-${blockIndex}` as the output ID. Copilot entries use `${sessionId}-${lineByteOffset}` as the output ID.
+**Decision**: Both Claude and Copilot entries use the same scheme: `${sessionId}-${lineByteOffset}-${blockIndex}`.
 
 **Rationale**:
-- Claude JSONL entries each carry a native `uuid` field. A single JSONL entry can produce multiple `SessionOutput` rows (one per content block). The block index suffix disambiguates them. The suffix `u` (user) / `a` (assistant) prevents any collision if the same UUID appeared in both roles.
-- Copilot events have no native UUID. The file is append-only, so the absolute byte offset of a line is stable for the lifetime of the file. A re-read of the same line always starts at the same offset. This makes `${sessionId}-${lineByteOffset}` a reliable content-addressable key with no dependency on Copilot's event format.
-- Both schemes replace the current `randomUUID()` call, which produces a new ID every parse, making INSERT OR IGNORE effectively useless today.
+- A uniform scheme means one shared `makeLineId(sessionId, byteOffset, blockIndex)` utility in `watcher-utils.ts`. Both watchers call the same helper; both parsers receive the same kind of ID generator.
+- The byte offset is available before JSON parsing, so a malformed line still gets a stable ID. Claude's native `uuid` field requires successful JSON parsing before the ID is known.
+- Claude JSONL entries can produce multiple `SessionOutput` rows (one per content block). The `blockIndex` suffix disambiguates them. Copilot lines always produce at most one row, so `blockIndex` is always `0` for Copilot.
+- Both files are append-only, so a line at byte offset X is always the same line. The ID is stable across tail re-reads.
+- Both schemes replace the current `randomUUID()` call, which produces a new ID on every parse, making INSERT OR IGNORE effectively useless today.
 
 **Alternatives considered**:
-- Hash of line content: rejected because identical content could appear twice (e.g., user sends the same message again), producing an incorrect deduplication collision.
-- Sequential counter persisted in DB: rejected as unnecessary complexity given the byte-offset approach.
+- Claude UUID + block index, Copilot byte offset (original plan): rejected because it requires two different ID strategies, two different parser interfaces, and loses the CLAUDE.md no-duplication rule benefit. Claude's UUID is semantically nicer but adds no practical value over the byte offset.
+- Hash of line content: rejected because identical content (e.g., user sends the same message twice) would produce a deduplication collision.
+- Sequential counter persisted in DB: rejected as unnecessary complexity.
 - Copilot native event ID: no such field exists in observed real events.
 
 ---
@@ -69,9 +72,14 @@ No external research required. All decisions are fully resolved from direct code
 
 ---
 
-## Decision 5: TAIL_BYTES Constant Location
+## Decision 5: Shared Watcher Utilities Location
 
-**Decision**: Extract `TAIL_BYTES = 16 * 1024` to a new shared constants file `backend/src/utils/watcher-constants.ts`, imported by both `claude-jsonl-watcher.ts` and `copilot-cli-detector.ts`.
+**Decision**: Create `backend/src/utils/watcher-utils.ts` containing:
+- `TAIL_BYTES = 16 * 1024`
+- `splitLinesWithOffsets(buffer, baseOffset)` — splits a buffer into lines with their absolute byte offsets
+- `makeLineId(sessionId, byteOffset, blockIndex)` — produces the unified stable ID string
+
+Both watchers import from this single file. The parsers do not import from it directly (they receive IDs via callback — see contracts).
 
 **Rationale**:
 - CLAUDE.md prohibits the same string/value defined in more than one place.

@@ -18,20 +18,22 @@ export function parseClaudeJsonlLine(
   sequenceNumber: number
 ): SessionOutput[]
 
-// After — signature unchanged; ID generation changes internally
+// After — new optional makeId callback
 export function parseClaudeJsonlLine(
   line: string,
   sessionId: string,
-  sequenceNumber: number
+  sequenceNumber: number,
+  makeId?: (blockIndex: number) => string
 ): SessionOutput[]
 ```
 
-**Change**: IDs are now derived from `entry.uuid + role + blockIndex` instead of `randomUUID()`. Callers are unaffected.
+**Change**: Each `SessionOutput` is assigned `id = makeId(blockIndex)` when `makeId` is provided, or `randomUUID()` when absent (preserves backward compatibility for existing tests). Block index is 0-based per JSONL entry.
 
 **Contract**:
 - Returns `[]` for empty lines, unknown types, and `file-history-snapshot` entries.
 - Returns one `SessionOutput` per recognized content block (text, tool_use, tool_result).
-- Each returned entry's `id` is stable: re-parsing the same JSONL line produces the same IDs.
+- When `makeId` is provided, re-parsing the same JSONL line produces identical IDs — enabling INSERT OR IGNORE deduplication.
+- `makeId` is called once per output block, in the order blocks are produced.
 
 ---
 
@@ -47,20 +49,63 @@ export function parseJsonlLine(
   sequenceNumber: number
 ): SessionOutput | null
 
-// After — new optional lineId parameter
+// After — new optional makeId callback
 export function parseJsonlLine(
   line: string,
   sessionId: string,
   sequenceNumber: number,
-  lineId?: string
+  makeId?: (blockIndex: number) => string
 ): SessionOutput | null
 ```
 
-**Change**: Accepts an optional `lineId`. When provided, it is used as the `SessionOutput.id`. When absent, falls back to `randomUUID()` (preserves backward compatibility for tests that don't supply a lineId).
+**Change**: The single returned `SessionOutput` (if any) is assigned `id = makeId(0)` when `makeId` is provided, or `randomUUID()` when absent. Block index is always `0` for Copilot (one output per line).
 
 **Contract**:
 - Returns `null` for empty lines, unknown event types with no role, and message events with no extractable content.
-- When `lineId` is provided by the caller (Copilot watcher), the ID is stable across re-parses of the same line.
+- When `makeId` is provided, re-parsing the same line produces an identical ID.
+
+---
+
+## `splitLinesWithOffsets` (new)
+
+**File**: `backend/src/utils/watcher-utils.ts`
+
+```typescript
+export function splitLinesWithOffsets(
+  buffer: Buffer,
+  baseOffset: number
+): Array<{ text: string; byteOffset: number }>
+```
+
+**Contract**:
+- Splits `buffer` on `\n`, tracking each line's absolute byte position in the source file (`baseOffset` is the file offset of the buffer's first byte).
+- Blank lines (after trim) are excluded from the result.
+- `byteOffset` for each entry is the absolute position of the line's first byte within the file.
+- Used by both `claude-jsonl-watcher.ts` and `copilot-cli-detector.ts` to produce byte offsets for `makeLineId`.
+
+---
+
+## `makeLineId` (new)
+
+**File**: `backend/src/utils/watcher-utils.ts`
+
+```typescript
+export function makeLineId(
+  sessionId: string,
+  byteOffset: number,
+  blockIndex: number
+): string
+```
+
+**Contract**:
+- Returns `${sessionId}-${byteOffset}-${blockIndex}`.
+- Called by watchers to construct the `makeId` callback passed into both parsers:
+  ```typescript
+  // In both watchers, per line:
+  const lineId = (blockIndex: number) => makeLineId(sessionId, line.byteOffset, blockIndex);
+  parseClaudeJsonlLine(line.text, sessionId, seq, lineId);
+  parseJsonlLine(line.text, sessionId, seq, lineId);
+  ```
 
 ---
 
@@ -79,12 +124,13 @@ export function getMaxSequenceNumber(sessionId: string): number
 
 ---
 
-## Watcher Attach Contract (both watchers)
+## Watcher Attach Invariants (both watchers)
 
-The following invariants hold after this feature for both `ClaudeJsonlWatcher.watchFile` and `CopilotCliDetector.watchEventsFile`:
+After this feature, both `ClaudeJsonlWatcher.watchFile` and `CopilotCliDetector.watchEventsFile` satisfy:
 
 1. **No output clearing**: Neither method calls `deleteSessionOutput` or any destructive DB operation.
-2. **Tail read**: File position is initialized to `max(0, fileSize - TAIL_BYTES)`.
-3. **Sequence resumption**: Sequence counter is initialized to `getMaxSequenceNumber(sessionId) + 1`.
-4. **INSERT OR IGNORE**: Duplicate entries (overlap between tail window and stored entries) are silently skipped.
-5. **Async I/O**: All file reads use `fs/promises` (non-blocking).
+2. **Tail read**: File position initialized to `max(0, fileSize - TAIL_BYTES)`.
+3. **Sequence resumption**: Sequence counter initialized to `getMaxSequenceNumber(sessionId) + 1`.
+4. **Stable IDs**: Every parsed line passes `(blockIndex) => makeLineId(sessionId, byteOffset, blockIndex)` to the parser.
+5. **INSERT OR IGNORE**: Duplicate entries from tail-window overlap with stored entries are silently skipped.
+6. **Async I/O**: All file reads use `fs/promises` (non-blocking).

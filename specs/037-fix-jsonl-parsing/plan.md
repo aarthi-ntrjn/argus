@@ -52,19 +52,23 @@ specs/037-fix-jsonl-parsing/
 backend/
 ├── src/
 │   ├── utils/
-│   │   └── watcher-constants.ts          [NEW] TAIL_BYTES shared constant
+│   │   └── watcher-utils.ts              [NEW] TAIL_BYTES, splitLinesWithOffsets,
+│   │                                          makeLineId
 │   ├── db/
 │   │   └── database.ts                   [CHANGE] add getMaxSequenceNumber()
 │   └── services/
-│       ├── claude-code-jsonl-parser.ts   [CHANGE] stable ID generation
-│       ├── events-parser.ts              [CHANGE] accept lineId parameter
-│       ├── claude-jsonl-watcher.ts       [CHANGE] tail read, seq resumption
+│       ├── claude-code-jsonl-parser.ts   [CHANGE] accept makeId callback
+│       ├── events-parser.ts              [CHANGE] accept makeId callback
+│       ├── claude-jsonl-watcher.ts       [CHANGE] tail read, byte offsets,
+│       │                                          makeLineId, seq resumption
 │       └── copilot-cli-detector.ts       [CHANGE] remove clear, async I/O,
-│                                                  byte-offset IDs, seq resumption
+│                                                  byte offsets, makeLineId,
+│                                                  seq resumption
 └── tests/
     └── unit/
-        ├── claude-code-jsonl-parser.test.ts   [CHANGE] test stable IDs
-        ├── events-parser.test.ts              [CHANGE] test lineId parameter
+        ├── watcher-utils.test.ts              [NEW] splitLinesWithOffsets, makeLineId
+        ├── claude-code-jsonl-parser.test.ts   [CHANGE] test makeId callback
+        ├── events-parser.test.ts              [CHANGE] test makeId callback
         ├── claude-jsonl-watcher.test.ts       [NEW] tail read + seq resumption
         └── copilot-watcher.test.ts            [NEW] no-clear + async + dedup
 ```
@@ -74,11 +78,11 @@ backend/
 All unknowns resolved from code inspection. See [research.md](research.md) for full findings.
 
 **Key decisions made**:
-1. Claude IDs: `${entry.uuid}-u-N` / `${entry.uuid}-a-N` (role + block index suffix)
-2. Copilot IDs: `${sessionId}-${lineByteOffset}` (absolute file byte offset)
+1. Unified ID scheme for both: `${sessionId}-${lineByteOffset}-${blockIndex}` via `makeLineId`
+2. Both parsers accept a `makeId?: (blockIndex: number) => string` callback; watchers inject `makeLineId` closures
 3. Both watchers: tail read (`max(0, fileSize - TAIL_BYTES)`) on every attach
 4. Sequence counter: initialized from `getMaxSequenceNumber(sessionId) + 1` on every attach
-5. `TAIL_BYTES = 16 * 1024` extracted to `backend/src/utils/watcher-constants.ts`
+5. `TAIL_BYTES`, `splitLinesWithOffsets`, `makeLineId` extracted to `backend/src/utils/watcher-utils.ts`
 6. Remove `deleteSessionOutput` from `watchEventsFile`; no replacement
 7. Copilot `readNewLines` converted to async (fs/promises)
 
@@ -88,16 +92,34 @@ All unknowns resolved from code inspection. See [research.md](research.md) for f
 
 Six logical change sets, ordered by dependency:
 
-#### Change Set A — Shared Constant (no dependencies)
+#### Change Set A — Shared Watcher Utilities (no dependencies)
 
-Create `backend/src/utils/watcher-constants.ts`:
+Create `backend/src/utils/watcher-utils.ts`:
 
 ```typescript
 /** Maximum bytes read from a JSONL file on initial watcher attach. */
 export const TAIL_BYTES = 16 * 1024;
-```
 
-No other changes in this set.
+/** Splits a buffer into lines with their absolute byte offsets in the source file. */
+export function splitLinesWithOffsets(
+  buffer: Buffer,
+  baseOffset: number,
+): Array<{ text: string; byteOffset: number }> {
+  const results: Array<{ text: string; byteOffset: number }> = [];
+  let pos = 0;
+  for (const part of buffer.toString('utf-8').split('\n')) {
+    const byteLen = Buffer.byteLength(part, 'utf-8');
+    if (part.trim()) results.push({ text: part, byteOffset: baseOffset + pos });
+    pos += byteLen + 1; // +1 for '\n'
+  }
+  return results;
+}
+
+/** Produces a stable, unique output entry ID from file position and block index. */
+export function makeLineId(sessionId: string, byteOffset: number, blockIndex: number): string {
+  return `${sessionId}-${byteOffset}-${blockIndex}`;
+}
+```
 
 #### Change Set B — DB Helper (no dependencies)
 
@@ -114,38 +136,45 @@ export function getMaxSequenceNumber(sessionId: string): number {
 
 Uses existing `idx_output_seq` index. No schema changes.
 
-#### Change Set C — Stable Claude IDs (depends on A)
+#### Change Set C — Claude Parser: makeId Callback (depends on A)
 
-In `claude-code-jsonl-parser.ts`, replace `randomUUID()` with deterministic IDs:
+In `claude-code-jsonl-parser.ts`, update both parser functions to accept and use a `makeId` callback:
 
-- `parseUserEntry`: assign ID `${entry.uuid}-u-${blockIndex}` per block (0-based)
-- `parseAssistantEntry`: assign ID `${entry.uuid}-a-${blockIndex}` per block (0-based)
-- String content (no blocks): ID is `${entry.uuid}-u-0`
+```typescript
+export function parseClaudeJsonlLine(
+  line: string,
+  sessionId: string,
+  sequenceNumber: number,
+  makeId?: (blockIndex: number) => string,
+): SessionOutput[]
+```
 
-Remove the `randomUUID` import if no longer used elsewhere in the file.
+- Replace every `id: randomUUID()` with `id: makeId ? makeId(blockIndex) : randomUUID()`
+- `blockIndex` increments from 0 for each output produced by this call
+- No other logic changes in the parsers
 
-**Edge case**: If `entry.uuid` is missing (malformed line), fall back to `randomUUID()` and log a warning with sessionId + line preview.
+Remove the `randomUUID` import if no other usage remains in the file.
 
-#### Change Set D — Copilot Line ID Parameter (no dependencies)
+#### Change Set D — Copilot Parser: makeId Callback (no dependencies)
 
-In `events-parser.ts`, update `parseJsonlLine` signature:
+In `events-parser.ts`, update `parseJsonlLine` with the same interface:
 
 ```typescript
 export function parseJsonlLine(
   line: string,
   sessionId: string,
   sequenceNumber: number,
-  lineId?: string
+  makeId?: (blockIndex: number) => string,
 ): SessionOutput | null
 ```
 
-Inside: use `lineId ?? randomUUID()` for the output `id`. No other changes.
+Inside: use `makeId ? makeId(0) : randomUUID()` for the output `id`. Block index is always `0` (one output per line). No other changes.
 
 #### Change Set E — Claude Watcher (depends on A, B, C)
 
 In `claude-jsonl-watcher.ts`:
 
-1. Import `TAIL_BYTES` from `watcher-constants.ts`
+1. Import `TAIL_BYTES`, `splitLinesWithOffsets`, `makeLineId` from `watcher-utils.ts`
 2. Import `getMaxSequenceNumber` from `database.ts`
 3. In `watchFile`: change initial file position from `0` to `Math.max(0, fileSize - TAIL_BYTES)`:
    ```typescript
@@ -156,7 +185,17 @@ In `claude-jsonl-watcher.ts`:
    ```typescript
    this.sequenceCounters.set(sessionId, getMaxSequenceNumber(sessionId) + 1);
    ```
-5. Add structured log line on attach: `[ClaudeWatcher] attach sessionId=... fileSize=... startPos=... startSeq=...`
+5. In `readNewLines`: replace the manual `split('\n').filter(...)` with `splitLinesWithOffsets(buffer, lastPos)`, then pass a `makeLineId` closure into `parseClaudeJsonlLine`:
+   ```typescript
+   for (const line of splitLinesWithOffsets(buffer, lastPos)) {
+     seq++;
+     const id = (blockIndex: number) => makeLineId(sessionId, line.byteOffset, blockIndex);
+     const items = parseClaudeJsonlLine(line.text, sessionId, seq, id);
+     outputs.push(...items);
+     ...
+   }
+   ```
+6. Add structured log line on attach: `[ClaudeWatcher] attach sessionId=... fileSize=... startPos=... startSeq=...`
 
 #### Change Set F — Copilot Watcher (depends on A, B, D)
 
@@ -183,14 +222,13 @@ In `copilot-cli-detector.ts`:
      ...
    }
    ```
-8. Track byte offset of each line within the buffer; pass `${sessionId}-${lastPos + lineStartOffset}` as `lineId` to `parseJsonlLine`:
-
+8. Replace the manual `split('\n').filter(...)` with `splitLinesWithOffsets(buffer, lastPos)`, then pass a `makeLineId` closure into `parseJsonlLine`:
    ```typescript
-   let byteOffset = 0;
-   const lines: Array<{ text: string; offset: number }> = [];
-   for (const part of newContent.split('\n')) {
-     if (part.trim()) lines.push({ text: part, offset: lastPos + byteOffset });
-     byteOffset += Buffer.byteLength(part, 'utf-8') + 1; // +1 for '\n'
+   for (const line of splitLinesWithOffsets(buffer, lastPos)) {
+     seq++;
+     const id = (blockIndex: number) => makeLineId(sessionId, line.byteOffset, blockIndex);
+     const output = parseJsonlLine(line.text, sessionId, seq, id);
+     ...
    }
    ```
 
@@ -211,16 +249,7 @@ In `copilot-cli-detector.ts`:
 
 ### Function Size Guard
 
-After the async conversion, `readNewLines` in `copilot-cli-detector.ts` will grow. Extract line-byte-offset tracking into a private helper:
-
-```typescript
-private splitLinesWithOffsets(
-  buffer: Buffer,
-  baseOffset: number
-): Array<{ text: string; offset: number }>
-```
-
-This keeps `readNewLines` under 50 lines (§III).
+After the async conversion, `readNewLines` in `copilot-cli-detector.ts` will grow. The `splitLinesWithOffsets` helper (shared utility, Change Set A) handles the byte-offset tracking, keeping `readNewLines` under 50 lines (§III). The Claude watcher's `readNewLines` is already well under 50 lines and stays so after this change.
 
 ---
 
