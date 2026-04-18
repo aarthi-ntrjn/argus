@@ -272,11 +272,18 @@ code {
   gap: 0.25rem;
   font-size: 0.75rem;
   font-weight: 500;
-  padding: 0.2rem 0.6rem;
-  border-radius: 9999px;
-  background-color: var(--color-accent-light);
-  color: var(--color-text-link);
-  border: 1px solid #bfdbfe; /* blue-200 */
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.hero__badge--claude {
+  background-color: #ffedd5; /* orange-100 */
+  color: #7c2d12;            /* orange-800 */
+}
+
+.hero__badge--copilot {
+  background-color: #f3e8ff; /* purple-100 */
+  color: #3b0764;            /* purple-800 */
 }
 
 .hero__subheadline {
