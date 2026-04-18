@@ -2,8 +2,9 @@
 # Triggered by a version tag push (e.g. v0.1.1) from the private repo,
 # or manually via workflow_dispatch.
 #
-# Authentication: uses npm Trusted Publishing (OIDC). No NPM_TOKEN secret needed.
-# Configure the trusted publisher at: npmjs.com > argus-ai-hub > Settings > Publishing Access.
+# Authentication: requires NPM_TOKEN secret (a Granular Access Token scoped to argus-ai-hub).
+# Create one at npmjs.com > Access Tokens > Generate New Token > Granular Access Token,
+# then add it as NPM_TOKEN in the public repo's Actions secrets.
 
 name: Publish to npm
 
@@ -29,9 +30,7 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
-          # registry-url intentionally omitted: setting it causes setup-node to write
-          # an .npmrc that authenticates via NODE_AUTH_TOKEN, which conflicts with
-          # npm's native OIDC exchange used by Trusted Publishing.
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies (lockfile-enforced, scripts suppressed)
         run: npm ci --ignore-scripts
@@ -53,7 +52,9 @@ jobs:
 
       - name: Publish to npm
         # --ignore-scripts skips prepublishOnly since we already built above.
-        # --provenance attaches a signed build attestation (required for Trusted Publishing).
-        # No NPM_TOKEN needed: npm exchanges the OIDC token (id-token: write) for a
-        # short-lived publish token when Trusted Publishing is configured on npmjs.com.
+        # --provenance attaches a signed build attestation linked to this workflow run.
+        # NPM_TOKEN must be a Granular Access Token scoped to argus-ai-hub (publish only).
+        # Create one at npmjs.com > Access Tokens > Generate New Token > Granular Access Token.
         run: npm publish --ignore-scripts --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
