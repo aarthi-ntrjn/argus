@@ -10,6 +10,7 @@
 ### Session 2026-04-18
 
 - Q: How should file positions be persisted across restarts to avoid re-parsing the full file? → A: No persistent byte-offset storage. On restart, both watchers apply the tail-read (last X bytes) without clearing stored output. INSERT OR IGNORE deduplication handles any overlap between the tail window and already-stored entries.
+- Q: What should uniquely identify a Copilot output entry for deduplication purposes? → A: The file byte offset of the line (stable, append-only file guarantee, no dependency on Copilot event format).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -149,7 +150,7 @@ Today the watchers differ in: read style (async for Claude, blocking sync for Co
 - **FR-010**: Both parsers MUST skip entries whose type is not recognized and that carry no meaningful content (no silent data loss, but no spurious output either).
 - **FR-011**: On Argus restart, the Copilot watcher MUST NOT delete previously stored session output; it MUST only append newly written lines to the existing stored output.
 - **FR-012**: On Argus restart, the Claude watcher MUST apply the tail-read optimization (same tail window as Copilot) rather than re-reading the full file from byte 0; previously stored output MUST NOT be deleted.
-- **FR-013**: Both watchers MUST use the same database insertion strategy: insert new entries and skip any entry whose ID already exists in the store (no delete-then-reinsert pattern).
+- **FR-013**: Both watchers MUST use the same database insertion strategy: insert new entries and skip any entry whose ID already exists in the store (no delete-then-reinsert pattern). For Claude entries, the ID is derived from the entry's native `uuid` field. For Copilot entries, the ID is derived from the byte offset of the line within the `events.jsonl` file, ensuring stability across tail re-reads.
 - **FR-014**: Both watchers MUST apply the tail-read optimization on every attach (first-ever and restart): read only the last X bytes of the JSONL file, regardless of whether stored output exists. INSERT OR IGNORE deduplication ensures previously stored entries are not duplicated. No persistent byte-offset storage is required.
 - **FR-015**: The Copilot watcher MUST use non-blocking async file I/O consistent with the Claude watcher, so that file reads do not block the scan cycle thread.
 
@@ -157,7 +158,7 @@ Today the watchers differ in: read style (async for Claude, blocking sync for Co
 
 - **JSONL Entry (Claude format)**: An object with top-level `type` (`user`, `assistant`, `file-history-snapshot`), a `message` object containing `role`, optional `model`, and `content` (string or ContentBlock array).
 - **JSONL Event (Copilot format)**: An object with dot-notation `type` (e.g., `assistant.message`, `tool.execution_start`), optional flat `content`/`model` fields, and a nested `data` object holding the real payload.
-- **OutputEntry**: The normalized, parser-agnostic record stored in Argus representing a single message, tool_use, or tool_result output with `role`, `content`, and `toolName` fields.
+- **OutputEntry**: The normalized, parser-agnostic record stored in Argus representing a single message, tool_use, or tool_result output with `role`, `content`, and `toolName` fields. Each entry has a stable unique ID: for Claude entries this is the native `uuid` from the JSONL; for Copilot entries this is derived from the byte offset of the source line in `events.jsonl`.
 - **Session record**: The in-memory and persisted state for a monitored session, including `model`, `summary`, `lastActivityAt`, and the list of `OutputEntry` items.
 - **File position**: The byte offset up to which a watcher has already read a JSONL file. Used to read only new bytes on each change event and to resume after restart. Currently in-memory only; this feature may require it to be persisted.
 - **Tail window**: The maximum number of bytes read from a JSONL file on first attach when no stored output exists for the session. Prevents reading megabytes of historical events for long-running sessions.
