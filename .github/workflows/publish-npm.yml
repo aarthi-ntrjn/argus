@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -49,6 +50,7 @@ jobs:
 
       - name: Publish to npm
         # --ignore-scripts skips prepublishOnly since we already built above.
-        run: npm publish --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # --provenance attaches a signed build attestation (required for Trusted Publishing).
+        # No NPM_TOKEN needed: npm exchanges the OIDC token (id-token: write) for a
+        # short-lived publish token when Trusted Publishing is configured on npmjs.com.
+        run: npm publish --ignore-scripts --provenance
