@@ -148,26 +148,33 @@ const pushStdin = (buf: Buffer): Promise<void> => {
   return new Promise<void>((resolve) => setTimeout(resolve, KEYSTROKE_DELAY_MS));
 };
 
-// When Argus sends a prompt, encode it as Win32 input sequences and push to stdin.
-// Both claude-code and copilot-cli read input via the Windows Console API, so
-// process.stdin.push() with Win32 sequences is the correct delivery path for both.
-// pty.write() does not work for interactive prompts (e.g. AskUserQuestion in
-// claude-code) because the PTY may be in raw/char mode waiting for a single keystroke.
+// When Argus sends a prompt, deliver it to the PTY.
+// On Windows: encode as Win32 keyboard input sequences and push to stdin.
+//   Both claude-code and copilot-cli read input via the Windows Console API, so
+//   process.stdin.push() with Win32 sequences is the correct path.
+//   pty.write() does not work for interactive prompts (e.g. AskUserQuestion in
+//   claude-code) because the PTY may be in raw/char mode waiting for a single keystroke.
+// On POSIX (Linux/Mac): write directly to the PTY master — Win32 sequences are
+//   meaningless to a POSIX PTY and will not be understood by the tool.
 client.onSendPrompt(async (actionId: string, prompt: string) => {
   log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length}`);
   try {
-    log(`win32 focus-in`);
-    await pushStdin(Buffer.from('\x1b[I'));
-    for (const ch of prompt) {
-      for (const buf of win32InputEvents(ch)) {
+    if (isWin) {
+      log(`win32 focus-in`);
+      await pushStdin(Buffer.from('\x1b[I'));
+      for (const ch of prompt) {
+        for (const buf of win32InputEvents(ch)) {
+          await pushStdin(buf);
+        }
+      }
+      for (const buf of win32InputEvents('\r')) {
         await pushStdin(buf);
       }
+      await pushStdin(Buffer.from('\x1b[O'));
+    } else {
+      log(`posix pty.write promptLen=${prompt.length}`);
+      pty.write(prompt + '\r');
     }
-    for (const buf of win32InputEvents('\r')) {
-      await pushStdin(buf);
-    }
-    await pushStdin(Buffer.from('\x1b[O'));
-    // pty.write(prompt + '\r'); // does not reach claude-code when PTY is in raw/char mode
     client.ackDelivered(actionId);
   } catch (err) {
     log(`prompt delivery failed: ${err}`);
