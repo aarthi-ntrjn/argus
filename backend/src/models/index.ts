@@ -57,6 +57,8 @@ export interface Session {
   model: string | null;
   reconciled: boolean;
   yoloMode: boolean | null;
+  ptyLaunchId?: string | null;
+  ptyConnected?: boolean | null;
 }
 
 export interface SessionOutput {
@@ -100,6 +102,39 @@ export interface ArgusConfig {
   autoRegisterRepos: boolean;
   yoloMode: boolean;
   restingThresholdMinutes: number;
+  telemetryEnabled: boolean;
+  telemetryPromptSeen: boolean;
+}
+
+export type TelemetryEventType =
+  | 'app_started'
+  | 'app_ended'
+  | 'session_started'
+  | 'session_ended'
+  | 'session_prompt_sent'
+  | 'session_stopped'
+  | 'todo_added'
+  | 'repo_diff_opened'
+  | 'request_error';
+
+export const TELEMETRY_EVENT_TYPES = new Set<TelemetryEventType>([
+  'app_started',
+  'app_ended',
+  'session_started',
+  'session_ended',
+  'session_prompt_sent',
+  'session_stopped',
+  'todo_added',
+  'repo_diff_opened',
+  'request_error',
+]);
+
+export interface TelemetryEvent {
+  installationId: string;
+  type: TelemetryEventType;
+  appVersion: string;
+  timestamp: string;
+  sessionType?: string;
 }
 
 export interface PendingChoice {

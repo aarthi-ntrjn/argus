@@ -10,6 +10,7 @@ import { useRepositoryManagement } from '../hooks/useRepositoryManagement';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Button } from '../components/Button';
 import { SettingsPanel } from '../components/SettingsPanel';
+import { TelemetryBanner } from '../components/TelemetryBanner';
 import { RemoveConfirmDialog } from '../components/RemoveConfirmDialog';
 import OutputPane from '../components/OutputPane/OutputPane';
 import ArgusLogo from '../components/ArgusLogo';
@@ -33,15 +34,27 @@ export default function DashboardPage() {
   const isMobile = useIsMobile();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    () => localStorage.getItem('selectedSessionId')
+  );
+
+  const selectSession = (id: string | null) => {
+    setSelectedSessionId(id);
+    if (id) localStorage.setItem('selectedSessionId', id);
+    else localStorage.removeItem('selectedSessionId');
+  };
   const [activeMobileTab, setActiveMobileTab] = useState<MobileTab>('sessions');
   const settingsRef = useRef<HTMLDivElement>(null);
 
   const [settings, updateSetting] = useSettings();
-  const { settings: argusSettings } = useArgusSettings();
+  const { settings: argusSettings, patchSetting } = useArgusSettings();
   const { tourStatus, seenRepoSteps, startTour, skipTour, completeTour, markRepoStepsSeen, resetOnboarding } = useOnboarding();
   const [tourRun, setTourRun] = useState(false);
   const [catchUpRun, setCatchUpRun] = useState(false);
+
+  const handleTelemetryDismiss = (enabled: boolean) => {
+    patchSetting({ telemetryEnabled: enabled, telemetryPromptSeen: true });
+  };
 
   const {
     addError, addInfo, adding, showFolderInput, folderInputPath,
@@ -111,7 +124,7 @@ export default function DashboardPage() {
       if (settings.hideInactiveSessions && isInactive(s, (argusSettings?.restingThresholdMinutes ?? 20) * 60_000)) return false;
       return true;
     });
-    return { ...repo, sessions: visibleSessions };
+    return { ...repo, sessions: visibleSessions, hasHiddenSessions: visibleSessions.length < repoSessions.length };
   }).filter((repo) => {
     if (!settings.hideReposWithNoActiveSessions) return true;
     return (sessionsByRepo.get(repo.id) ?? []).some(s => ACTIVE_STATUSES.has(s.status));
@@ -123,7 +136,7 @@ export default function DashboardPage() {
     if (isMobile) {
       navigate(`/sessions/${id}`);
     } else {
-      setSelectedSessionId(prev => prev === id ? null : id);
+      selectSession(id);
     }
   };
 
@@ -160,7 +173,6 @@ export default function DashboardPage() {
           skipConfirm={skipConfirm}
           selectedSessionId={selectedSessionId}
           isMobile={isMobile}
-          hideEndedSessions={settings.hideEndedSessions}
           onRemoveById={handleRemoveRepoById}
           onSetRemoveConfirm={setRemoveConfirmId}
           onSelectSession={handleSessionSelect}
@@ -246,6 +258,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {argusSettings?.telemetryPromptSeen === false && (
+          <TelemetryBanner onDismiss={handleTelemetryDismiss} />
+        )}
+
+
         {addError && (
           <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm flex justify-between">
             <span>{addError}</span>
@@ -283,16 +300,16 @@ export default function DashboardPage() {
                   {selectedSessionId && (() => {
                     const selectedSession = sessions.find(s => s.id === selectedSessionId);
                     return selectedSession ? (
-                      <div className={settings.hideTodoPanel ? 'flex-1 min-h-0' : 'flex-[3] min-h-0'}>
+                      <div className={settings.hideTodoPanel ? 'flex-1 min-h-0' : 'flex-[4] min-h-0'}>
                         <OutputPane
                           session={selectedSession}
-                          onClose={() => setSelectedSessionId(null)}
+                          onClose={() => selectSession(null)}
                         />
                       </div>
                     ) : null;
                   })()}
                   {!settings.hideTodoPanel && (
-                    <div className={selectedSessionId ? 'flex-[2] min-h-0 overflow-hidden' : 'flex-1'}>
+                    <div className={selectedSessionId ? 'flex-[1] min-h-0 overflow-hidden' : 'flex-1'}>
                       <TodoPanel />
                     </div>
                   )}

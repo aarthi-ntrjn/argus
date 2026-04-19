@@ -37,6 +37,7 @@ export interface Session {
   repositoryId: string;
   type: SessionType;
   launchMode: SessionLaunchMode | null;
+  ptyConnected?: boolean | null;
   pid: number | null;
   pidSource: PidSource | null;
   status: SessionStatus;
@@ -70,6 +71,8 @@ export interface ArgusConfig {
   autoRegisterRepos: boolean;
   yoloMode: boolean;
   restingThresholdMinutes: number;
+  telemetryEnabled: boolean;
+  telemetryPromptSeen: boolean;
 }
 
 export interface DashboardSettings {

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { RotateCcw } from 'lucide-react';
 import type { DashboardSettings } from '../../types';
 import { useArgusSettings } from '../../hooks/useArgusSettings';
 import { YoloWarningDialog } from '../YoloWarningDialog/YoloWarningDialog';
 import { Checkbox } from '../Checkbox';
 import { Button } from '../Button';
+import { rescanRemoteUrls } from '../../services/api';
 
 const DEFAULT_THRESHOLD = 20;
 const MIN_THRESHOLD = 1;
@@ -19,6 +21,7 @@ interface SettingsPanelProps {
 export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPanelProps) {
   const { settings: argusSettings, patchSetting } = useArgusSettings();
   const [showYoloWarning, setShowYoloWarning] = useState(false);
+  const [rescanState, setRescanState] = useState<'idle' | 'scanning' | 'done'>('idle');
   const [thresholdInput, setThresholdInput] = useState(String(argusSettings?.restingThresholdMinutes ?? DEFAULT_THRESHOLD));
   const [thresholdError, setThresholdError] = useState<string | null>(null);
 
@@ -79,7 +82,7 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
 
   return (
     <>
-      <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3">
+      <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-5">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Settings</p>
         <div className="py-1">
           <Checkbox
@@ -168,13 +171,46 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
           </label>
         </div>
 
+        <div className="mt-2 pt-2 border-t border-gray-100">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Privacy</p>
+          <label className="flex items-start gap-2 cursor-pointer select-none py-1">
+            <Checkbox
+              aria-label="Send anonymous usage telemetry"
+              checked={argusSettings?.telemetryEnabled ?? true}
+              onChange={e => patchSetting({ telemetryEnabled: e.target.checked })}
+              className="mt-0.5"
+            />
+            <span className="flex flex-col">
+              <span className="text-sm text-gray-600">Send anonymous usage telemetry</span>
+              <Link to="/telemetry" className="text-xs text-blue-600 hover:underline">What we collect</Link>
+            </span>
+          </label>
+        </div>
+
+        <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={rescanState === 'scanning'}
+            onClick={async () => {
+              setRescanState('scanning');
+              await rescanRemoteUrls().catch(() => {});
+              setRescanState('done');
+              setTimeout(() => setRescanState('idle'), 2000);
+            }}
+            className="w-full text-left !text-sm hover:!text-blue-600"
+          >
+            {rescanState === 'scanning' ? 'Scanning...' : rescanState === 'done' ? 'Done' : 'Rescan Remote URLs'}
+          </Button>
+        </div>
+
         {onRestartTour && (
           <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col gap-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={onRestartTour}
-              className="w-full text-left !text-sm"
+              className="w-full text-left !text-sm hover:!text-blue-600"
             >
               Restart Tour
             </Button>

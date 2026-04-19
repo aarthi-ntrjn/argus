@@ -1,6 +1,13 @@
-﻿# Argus
+# Argus
 
 Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every session live, send commands, and stop runaway agents, all from a single browser tab.
+
+## Links
+
+- **Landing Page**: [aarthi-ntrjn.github.io/argus](https://aarthi-ntrjn.github.io/argus)
+- **npm**: [npmjs.com/package/argus-ai-hub](https://www.npmjs.com/package/argus-ai-hub)
+- **GitHub**: [aarthi-ntrjn/argus](https://github.com/aarthi-ntrjn/argus)
+- **Contributor docs**: [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md)
 
 ## Requirements
 
@@ -10,7 +17,7 @@ Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every
 ## Getting Started
 
 ```sh
-npx argus-ai-monitor
+npx argus-ai-hub
 ```
 
 Open **http://localhost:7411** and you're in. The port is configurable in [`~/.argus/config.json`](#storage).
@@ -59,7 +66,7 @@ Each card is a live snapshot of a session:
 
 <img src="docs/images/argus-session-stream.png" alt="Session Output" height="300">
 
-Click any card to open a **live output pane** on the right inline.The card list stays visible on the left. Press **Escape** or click the **X** icon to close it. Click another card to switch sessions.
+Click any card to open a **live output pane** on the right inline. The card list stays visible on the left. Click another card to switch sessions. The selected session is persisted across page refreshes. Click the **X** icon in the output pane header to close it.
 
 Output lines carry type badges so you always know what's what: **YOU** (your input), **AI** (assistant reply), **TOOL** (tool call), **RESULT** (tool result), **STATUS** (status change), **ERR** (error). These are streamed in real time, including tool calls.
 
@@ -202,6 +209,10 @@ Click the **gear icon** (top-right) to open Settings.
 
 These settings are saved in your browser (`localStorage`) and restored on every load.
 
+### Rescan Remote URLs
+
+The **Rescan Remote URLs** button (in the Settings panel) re-runs `git remote get-url origin` for every registered repository and updates any that have changed. Use this if you moved a repo to a different remote, renamed the GitHub repo, or added a remote after the repo was already registered. Only changed repos are updated; the compare link in each repo card refreshes automatically via the live WebSocket connection.
+
 ### Launch Behaviour: Yolo Mode
 
 | Setting    | Default | Description                                                                             |
@@ -257,6 +268,54 @@ Default port: **7411**. Override in `~/.argus/config.json`:
 }
 ```
 
+## Telemetry
+
+Argus collects anonymous usage data to help improve the product. No personal information is ever sent.
+
+**What is collected:**
+
+| Event | When |
+| ----- | ---- |
+| `app_started` | Argus server starts |
+| `session_started` | A new Claude Code or Copilot session is detected |
+| `session_ended` | A session completes or ends |
+| `session_prompt_sent` | A prompt is dispatched to a session via Argus |
+| `session_stopped` | A session is stopped via Argus |
+| `request_error` | An HTTP request to the Argus API returns a 4xx or 5xx error |
+
+Each event includes: an anonymous installation ID (a random UUID stored in `~/.argus/telemetry-id`), the Argus version, and a timestamp. No file paths, prompts, session content, or user-identifying information are included. The `request_error` event additionally includes a sanitized error message (file paths and IDs stripped), the HTTP status code, and the origin function name.
+
+**How to disable:**
+
+- On first launch, a banner appears with a checkbox. Uncheck "Send telemetry" before clicking "Got it".
+- At any time, open Settings (gear icon) and uncheck "Send anonymous usage telemetry" under the Privacy section.
+
 ## For Contributors
 
 See [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md) for architecture, dev setup, API reference, security model, CI pipeline, and development guides.
+
+## Uninstall and Cleanup
+
+### Remove the package
+
+If you installed Argus globally via npm:
+
+```bash
+npm uninstall -g argus-ai-hub
+```
+
+If you only ever ran Argus with `npx`, no persistent package is installed. You can optionally clear the npx cache:
+
+```bash
+npx clear-npx-cache
+```
+
+### Remove Argus data
+
+Argus stores all its data under `~/.argus/`. To delete it completely:
+
+```bash
+rm -rf ~/.argus
+```
+
+This removes the SQLite database, config file, and telemetry ID. After this, a fresh run will start with default settings.

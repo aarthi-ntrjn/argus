@@ -43,6 +43,10 @@ export async function removeRepository(id: string): Promise<void> {
   await apiFetch<void>(`/repositories/${id}`, { method: 'DELETE' });
 }
 
+export async function rescanRemoteUrls(): Promise<{ updated: number; total: number }> {
+  return apiFetch<{ updated: number; total: number }>('/repositories/rescan-remotes', { method: 'POST' });
+}
+
 export async function scanFolder(path: string): Promise<Array<{ path: string; name: string }>> {
   const result = await apiFetch<{ repos: Array<{ path: string; name: string }>; error?: string }>(
     '/fs/scan-folder',
@@ -130,4 +134,12 @@ export async function getArgusSettings(): Promise<ArgusConfig> {
 
 export async function patchArgusSettings(patch: Partial<ArgusConfig>): Promise<ArgusConfig> {
   return apiFetch<ArgusConfig>('/settings', { method: 'PATCH', body: JSON.stringify(patch) });
+}
+
+export function postTelemetryEvent(type: string): void {
+  void fetch(`${BASE}/telemetry/event`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type }),
+  }).catch(() => { /* fire-and-forget */ });
 }

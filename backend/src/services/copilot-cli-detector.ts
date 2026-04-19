@@ -10,7 +10,7 @@ import { broadcast } from '../api/ws/event-dispatcher.js';
 import { ptyRegistry } from './pty-registry.js';
 import { OutputStore } from './output-store.js';
 import { parseJsonlLine, parseModelFromEvent } from './events-parser.js';
-import { detectYoloModeFromPids, isPidRunning } from './process-utils.js';
+import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
 import type { Session, PidSource } from '../models/index.js';
 
@@ -103,10 +103,22 @@ export class CopilotCliDetector {
 
     const lockFile = this.findLockFile(dirPath);
     const pid = lockFile ? this.extractPid(lockFile) : null;
-    const isRunning = pid !== null && isPidRunning(pid);
 
     const sessionId = workspace.id ?? randomUUID();
     const existingSession = getSession(sessionId);
+
+    // Guard 1: process is running (cheap signal-0 check)
+    // Guard 2: session is not already ended in DB
+    // Guard 3 (only when guard 1 passes but guard 2 fails): verify process name matches
+    //   — catches PID reuse where an unrelated process inherited a previously-used PID.
+    const pidAlive = pid !== null && isPidRunning(pid);
+    const isRunning = pidAlive && (
+      existingSession?.status !== 'ended' ||
+      isExpectedProcess(pid!, SessionTypes.COPILOT_CLI)
+    );
+    if (pidAlive && !isRunning) {
+      logger.info(`[CopilotDetector] PID reuse detected: session ${sessionId} is ended but pid ${pid} is running with wrong name — skipping`);
+    }
 
     // Skip directories for sessions already recorded as ended: no lock file means
     // nothing has changed since we last marked them ended.
@@ -119,7 +131,7 @@ export class CopilotCliDetector {
     const toIso = (val: string | Date | undefined): string =>
       val ? (val instanceof Date ? val.toISOString() : val) : new Date().toISOString();
 
-    const { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource } =
+    const { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource, resolvedPtyLaunchId } =
       this.resolvePtyLinkage(sessionId, existingSession, repo, pid, isRunning);
 
     const yoloMode = existingSession?.yoloMode != null
@@ -144,6 +156,7 @@ export class CopilotCliDetector {
       model: existingSession?.model ?? null,
       reconciled: true,
       yoloMode,
+      ptyLaunchId: resolvedPtyLaunchId,
     };
 
     upsertSession(session);
@@ -161,7 +174,7 @@ export class CopilotCliDetector {
     repo: { path: string },
     pid: number | null,
     isRunning: boolean,
-  ): { launchMode: 'pty' | null; resolvedPid: number | null; resolvedHostPid: number | null; resolvedPidSource: PidSource | null } {
+  ): { launchMode: 'pty' | null; resolvedPid: number | null; resolvedHostPid: number | null; resolvedPidSource: PidSource | null; resolvedPtyLaunchId: string | null } {
     const alreadyClaimed = existingSession?.launchMode === 'pty';
     const registryHas = ptyRegistry.has(sessionId);
 
@@ -169,19 +182,32 @@ export class CopilotCliDetector {
     let resolvedPid = pid;
     let resolvedHostPid: number | null = existingSession?.hostPid ?? null;
     let resolvedPidSource: PidSource | null = pid != null ? 'lockfile' : null;
+    let resolvedPtyLaunchId: string | null = existingSession?.ptyLaunchId ?? null;
 
     if (alreadyClaimed) {
       launchMode = 'pty';
       resolvedPid = existingSession!.pid;
       resolvedHostPid = existingSession!.hostPid;
       resolvedPidSource = existingSession!.pidSource;
+      // The lockfile PID is ground truth: it is written by the Copilot process itself and
+      // is always authoritative for which process owns this session. If it disagrees with the
+      // stored pid, the DB row is stale. The most likely cause is the session-type hijack bug
+      // where a Copilot scan claimed a Claude launcher's pending registry entry (keyed only by
+      // repo path) before the workspace_id message arrived, writing Claude's PID into this row.
+      // Correcting to the lockfile PID here lets the DB converge within one scan cycle.
+      if (pid !== null && pid !== existingSession!.pid) {
+        logger.warn(`[CopilotDetector] alreadyClaimed pid mismatch: lockfile=${pid} stored=${existingSession!.pid} sessionId=${sessionId} — correcting to lockfile pid`);
+        resolvedPid = pid;
+        resolvedPidSource = 'lockfile';
+      }
       if (!registryHas && isRunning) {
         logger.info(`[CopilotDetector] alreadyClaimed + WS gone + isRunning — attempting re-link sessionId=${sessionId}`);
-        const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
+        const claimed = ptyRegistry.claimForSession(sessionId, repo.path, 'copilot-cli');
         if (claimed) {
           resolvedPid = claimed.pid;
           resolvedHostPid = claimed.hostPid;
           resolvedPidSource = 'pty_registry';
+          resolvedPtyLaunchId = claimed.ptyLaunchId;
           logger.info(`[CopilotDetector] re-link OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
         } else {
           logger.info(`[CopilotDetector] re-link MISS — no pending WS yet for sessionId=${sessionId}`);
@@ -191,6 +217,7 @@ export class CopilotCliDetector {
       logger.info(`[CopilotDetector] ptyRegistry already has sessionId=${sessionId} — marking pty`);
       launchMode = 'pty';
       resolvedPidSource = 'pty_registry';
+      resolvedPtyLaunchId = existingSession?.ptyLaunchId ?? ptyRegistry.getPtyLaunchIdForSession(sessionId) ?? null;
       const parkedPid = ptyRegistry.getClaimedPid(sessionId);
       if (parkedPid != null) {
         resolvedPid = parkedPid;
@@ -198,19 +225,20 @@ export class CopilotCliDetector {
       }
     } else if (isRunning && existingSession == null) {
       logger.info(`[CopilotDetector] isRunning + not claimed — trying claimForSession sessionId=${sessionId} repoPath="${repo.path}"`);
-      const claimed = ptyRegistry.claimForSession(sessionId, repo.path);
+      const claimed = ptyRegistry.claimForSession(sessionId, repo.path, 'copilot-cli');
       if (claimed) {
         launchMode = 'pty';
         resolvedPid = claimed.pid;
         resolvedHostPid = claimed.hostPid;
         resolvedPidSource = 'pty_registry';
+        resolvedPtyLaunchId = claimed.ptyLaunchId;
         logger.info(`[CopilotDetector] claimForSession OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
       } else {
         logger.info(`[CopilotDetector] claimForSession MISS — no pending WS — sessionId=${sessionId} will be read-only`);
       }
     }
 
-    return { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource };
+    return { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource, resolvedPtyLaunchId };
   }
 
   private watchEventsFile(sessionId: string, dirPath: string): void {

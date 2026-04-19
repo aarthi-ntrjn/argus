@@ -25,8 +25,8 @@ function handleMessage(event: MessageEvent): void {
     if (allHandlers) {
       allHandlers.forEach((h) => h(msg));
     }
-  } catch {
-    // ignore parse errors
+  } catch (err) {
+    console.warn('[socket] Failed to parse WebSocket message', err);
   }
 }
 
@@ -76,6 +76,10 @@ function updateSessionInCache(qc: QueryClient, session: Session): void {
   qc.setQueryData<Session[]>(['sessions'], (old) => {
     if (!old) return old;
     return old.map((s) => s.id === session.id ? { ...s, ...session } : s);
+  });
+  qc.setQueryData<Session>(['session', session.id], (old) => {
+    if (!old) return old;
+    return { ...old, ...session };
   });
 }
 
