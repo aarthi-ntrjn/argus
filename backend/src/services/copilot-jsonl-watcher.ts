@@ -6,8 +6,8 @@ import type { SessionOutput } from '../models/index.js';
 export class CopilotJsonlWatcher extends JsonlWatcherBase {
   protected readonly tag = '[CopilotDetector]';
 
-  protected parseLine(line: string, sessionId: string, seq: number): SessionOutput[] {
-    const output = parseJsonlLine(line, sessionId, seq);
+  protected parseLine(line: string, sessionId: string, seq: number, makeId: (blockIndex: number) => string): SessionOutput[] {
+    const output = parseJsonlLine(line, sessionId, seq, makeId);
     return output ? [output] : [];
   }
 

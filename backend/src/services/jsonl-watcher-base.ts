@@ -1,11 +1,29 @@
 import { existsSync } from 'fs';
 import { open as fsOpen, stat as fsStat } from 'fs/promises';
 import chokidar, { type FSWatcher } from 'chokidar';
+import { getMaxSequenceNumber } from '../db/database.js';
 import { OutputStore } from './output-store.js';
 import { applyActivityUpdate, applyModelUpdate, applySummaryUpdate } from './watcher-session-helpers.js';
 import type { SessionOutput } from '../models/index.js';
 
 export const TAIL_BYTES = 16 * 1024;
+
+/** Splits a buffer into lines with their absolute byte offset in the source file. */
+function splitLinesWithOffsets(buffer: Buffer, baseOffset: number): Array<{ text: string; byteOffset: number }> {
+  const results: Array<{ text: string; byteOffset: number }> = [];
+  let pos = 0;
+  for (const part of buffer.toString('utf-8').split('\n')) {
+    const byteLen = Buffer.byteLength(part, 'utf-8');
+    if (part.trim()) results.push({ text: part, byteOffset: baseOffset + pos });
+    pos += byteLen + 1; // +1 for '\n'
+  }
+  return results;
+}
+
+/** Produces a stable, unique output entry ID from session, file position, and block index. */
+function makeLineId(sessionId: string, byteOffset: number, blockIndex: number): string {
+  return `${sessionId}-${byteOffset}-${blockIndex}`;
+}
 
 /** Extracts the model name from any JSONL line, regardless of format. */
 function parseModelFromLine(line: string): string | null {
@@ -31,7 +49,7 @@ export abstract class JsonlWatcherBase {
   protected readonly outputStore = new OutputStore();
 
   protected abstract readonly tag: string;
-  protected abstract parseLine(line: string, sessionId: string, seq: number): SessionOutput[];
+  protected abstract parseLine(line: string, sessionId: string, seq: number, makeId: (blockIndex: number) => string): SessionOutput[];
 
   protected async attachWatcher(sessionId: string, filePath: string): Promise<void> {
     if (this.watchers.has(sessionId)) return;
@@ -41,8 +59,9 @@ export abstract class JsonlWatcherBase {
     try {
       ({ size: fileSize } = await fsStat(filePath));
     } catch { return; }
+
     this.filePositions.set(sessionId, Math.max(0, fileSize - TAIL_BYTES));
-    this.sequenceCounters.set(sessionId, 0);
+    this.sequenceCounters.set(sessionId, getMaxSequenceNumber(sessionId) + 1);
     await this.readNewLines(sessionId, filePath);
 
     const watcher = chokidar.watch(filePath, { persistent: false, usePolling: false });
@@ -62,21 +81,22 @@ export abstract class JsonlWatcherBase {
       await fh.close();
       this.filePositions.set(sessionId, currentSize);
 
-      const lines = buffer.toString('utf-8').split('\n').filter(l => l.trim());
+      const lines = splitLinesWithOffsets(buffer, lastPos);
       let seq = this.sequenceCounters.get(sessionId) ?? 0;
       const outputs: SessionOutput[] = [];
       let detectedModel: string | null = null;
 
       for (const line of lines) {
         seq++;
-        outputs.push(...this.parseLine(line, sessionId, seq));
-        if (!detectedModel) detectedModel = parseModelFromLine(line);
+        const makeId = (blockIndex: number) => makeLineId(sessionId, line.byteOffset, blockIndex);
+        outputs.push(...this.parseLine(line.text, sessionId, seq, makeId));
+        if (!detectedModel) detectedModel = parseModelFromLine(line.text);
       }
 
       this.sequenceCounters.set(sessionId, seq);
       if (outputs.length > 0) {
-        this.outputStore.insertOutput(sessionId, outputs);
-        applyActivityUpdate(sessionId);
+        const anyNew = this.outputStore.insertOutput(sessionId, outputs);
+        if (anyNew) applyActivityUpdate(sessionId);
       }
       if (detectedModel) applyModelUpdate(sessionId, detectedModel, this.tag);
       applySummaryUpdate(sessionId, outputs, this.tag);

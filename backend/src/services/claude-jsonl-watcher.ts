@@ -11,8 +11,8 @@ function claudeProjectDirName(repoPath: string): string {
 export class ClaudeJsonlWatcher extends JsonlWatcherBase {
   protected readonly tag = '[ClaudeDetector]';
 
-  protected parseLine(line: string, sessionId: string, seq: number): SessionOutput[] {
-    return parseClaudeJsonlLine(line, sessionId, seq);
+  protected parseLine(line: string, sessionId: string, seq: number, makeId: (blockIndex: number) => string): SessionOutput[] {
+    return parseClaudeJsonlLine(line, sessionId, seq, makeId);
   }
 
   async watchFile(sessionId: string, repoPath: string): Promise<void> {

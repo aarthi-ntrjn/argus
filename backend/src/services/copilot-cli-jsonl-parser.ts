@@ -84,7 +84,7 @@ export function parseModel(line: string): string | null {
   } catch { return null; }
 }
 
-export function parseJsonlLine(line: string, sessionId: string, sequenceNumber: number): SessionOutput | null {
+export function parseJsonlLine(line: string, sessionId: string, sequenceNumber: number, makeId?: (blockIndex: number) => string): SessionOutput | null {
   if (!line.trim()) return null;
   try {
     const event = JSON.parse(line) as JsonlEvent;
@@ -98,7 +98,7 @@ export function parseJsonlLine(line: string, sessionId: string, sequenceNumber: 
     // where data.content is null/empty — the tool calls appear as separate TOOL rows).
     if (outputType === 'message' && !content) return null;
     return {
-      id: randomUUID(),
+      id: makeId ? makeId(0) : randomUUID(),
       sessionId,
       timestamp: event.timestamp ?? new Date().toISOString(),
       type: outputType,
