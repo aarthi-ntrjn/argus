@@ -19,14 +19,16 @@ interface PendingLauncher {
   hostPid: number;
   pid: number | null;
   sessionType: SessionType;
+  repoPath: string;
 }
 
 export class PtyRegistry {
   // Claimed connections: claudeSessionId -> ws
   private connections = new Map<string, WebSocket>();
 
-  // Pending connections waiting for Claude's session ID: repoPath -> launcher info
-  private pendingByRepoPath = new Map<string, PendingLauncher>();
+  // Pending connections waiting to be claimed, keyed by ptyLaunchId.
+  // Multiple launchers for the same repo path can coexist here without overwriting each other.
+  private pendingByLaunchId = new Map<string, PendingLauncher>();
 
   // Reverse map so close handlers can look up the claimed session ID by ptyLaunchId
   private ptyLaunchToClaimedId = new Map<string, string>();
@@ -44,17 +46,16 @@ export class PtyRegistry {
   // pid is the initial tool PID: null on Windows (resolved later via update_pid),
   // or the same as hostPid on non-Windows (pty.pid is directly the tool process).
   registerPending(ptyLaunchId: string, ws: WebSocket, repoPath: string, hostPid: number, pid: number | null = null, sessionType: SessionType = 'claude-code'): void {
-    const key = normalizePath(repoPath);
-    logger.info(`[PtyRegistry] registerPending ptyLaunchId=${ptyLaunchId} hostPid=${hostPid} pid=${pid} sessionType=${sessionType} repoPath="${repoPath}" key="${key}"`);
-    this.pendingByRepoPath.set(key, { ptyLaunchId, ws, hostPid, pid, sessionType });
+    logger.info(`[PtyRegistry] registerPending ptyLaunchId=${ptyLaunchId} hostPid=${hostPid} pid=${pid} sessionType=${sessionType} repoPath="${repoPath}"`);
+    this.pendingByLaunchId.set(ptyLaunchId, { ptyLaunchId, ws, hostPid, pid, sessionType, repoPath });
   }
 
   // Update the real tool PID for a pending connection (before claim).
   // Called after the Windows process tree walk resolves the actual CLI exe PID.
-  updatePendingPid(repoPath: string, pid: number): void {
-    const pending = this.pendingByRepoPath.get(normalizePath(repoPath));
+  updatePendingPid(ptyLaunchId: string, pid: number): void {
+    const pending = this.pendingByLaunchId.get(ptyLaunchId);
     if (pending) {
-      logger.info(`[PtyRegistry] updatePendingPid ptyLaunchId=${pending.ptyLaunchId} pid=${pid} repoPath="${repoPath}"`);
+      logger.info(`[PtyRegistry] updatePendingPid ptyLaunchId=${ptyLaunchId} pid=${pid}`);
       pending.pid = pid;
     }
   }
@@ -63,39 +64,40 @@ export class PtyRegistry {
   // after discovering the copilot workspace.yaml. Promotes the pending connection to
   // a claimed connection keyed by sessionId, bypassing repoPath matching entirely.
   claimByPtyLaunchId(ptyLaunchId: string, sessionId: string): { pid: number | null; hostPid: number; ptyLaunchId: string } | null {
-    for (const [key, pending] of this.pendingByRepoPath) {
-      if (pending.ptyLaunchId === ptyLaunchId) {
-        logger.info(`[PtyRegistry] claimByPtyLaunchId ptyLaunchId=${ptyLaunchId} sessionId=${sessionId} hostPid=${pending.hostPid} pid=${pending.pid} key="${key}"`);
-        this.connections.set(sessionId, pending.ws);
-        this.ptyLaunchToClaimedId.set(ptyLaunchId, sessionId);
-        this.pendingByRepoPath.delete(key);
-        return { pid: pending.pid, hostPid: pending.hostPid, ptyLaunchId };
-      }
+    const pending = this.pendingByLaunchId.get(ptyLaunchId);
+    if (!pending) {
+      logger.info(`[PtyRegistry] claimByPtyLaunchId MISS ptyLaunchId=${ptyLaunchId} sessionId=${sessionId} — no pending entry found`);
+      return null;
     }
-    logger.info(`[PtyRegistry] claimByPtyLaunchId MISS ptyLaunchId=${ptyLaunchId} sessionId=${sessionId} — no pending entry found`);
-    return null;
+    logger.info(`[PtyRegistry] claimByPtyLaunchId ptyLaunchId=${ptyLaunchId} sessionId=${sessionId} hostPid=${pending.hostPid} pid=${pending.pid}`);
+    this.connections.set(sessionId, pending.ws);
+    this.ptyLaunchToClaimedId.set(ptyLaunchId, sessionId);
+    this.pendingByLaunchId.delete(ptyLaunchId);
+    return { pid: pending.pid, hostPid: pending.hostPid, ptyLaunchId };
   }
 
   // Called by ClaudeCodeDetector or CopilotCliDetector when a session is matched by repoPath.
-  // Promotes the pending connection to a claimed connection keyed by claudeSessionId.
+  // Scans all pending launchers for one matching both repoPath and sessionType.
+  // If multiple launchers for the same repo are pending (e.g. a reconnecting Copilot launcher
+  // coexists with a new Claude launcher), the correct one is found by sessionType.
   // Returns pid (may be null if update_pid hasn't arrived yet) and hostPid (always set),
-  // or null if no launcher is waiting for this repo.
+  // or null if no launcher with a matching repoPath and sessionType is waiting.
   claimForSession(claudeSessionId: string, repoPath: string, sessionType: SessionType): { pid: number | null; hostPid: number; ptyLaunchId: string } | null {
     const key = normalizePath(repoPath);
-    const pending = this.pendingByRepoPath.get(key);
-    if (!pending) {
-      logger.info(`[PtyRegistry] claimForSession MISS sessionId=${claudeSessionId} repoPath="${repoPath}" key="${key}"`);
-      return null;
+    for (const [id, pending] of this.pendingByLaunchId) {
+      if (normalizePath(pending.repoPath) !== key) continue;
+      if (pending.sessionType !== sessionType) {
+        logger.info(`[PtyRegistry] claimForSession TYPE MISMATCH ptyLaunchId=${id} sessionId=${claudeSessionId} expected=${sessionType} got=${pending.sessionType} repoPath="${repoPath}" — skipping`);
+        continue;
+      }
+      logger.info(`[PtyRegistry] claimForSession OK sessionId=${claudeSessionId} ptyLaunchId=${id} hostPid=${pending.hostPid} pid=${pending.pid} sessionType=${sessionType} repoPath="${repoPath}"`);
+      this.connections.set(claudeSessionId, pending.ws);
+      this.ptyLaunchToClaimedId.set(id, claudeSessionId);
+      this.pendingByLaunchId.delete(id);
+      return { pid: pending.pid, hostPid: pending.hostPid, ptyLaunchId: id };
     }
-    if (pending.sessionType !== sessionType) {
-      logger.info(`[PtyRegistry] claimForSession TYPE MISMATCH sessionId=${claudeSessionId} expected=${sessionType} got=${pending.sessionType} repoPath="${repoPath}" — skipping`);
-      return null;
-    }
-    logger.info(`[PtyRegistry] claimForSession OK sessionId=${claudeSessionId} hostPid=${pending.hostPid} pid=${pending.pid} sessionType=${sessionType} repoPath="${repoPath}"`);
-    this.connections.set(claudeSessionId, pending.ws);
-    this.ptyLaunchToClaimedId.set(pending.ptyLaunchId, claudeSessionId);
-    this.pendingByRepoPath.delete(key);
-    return { pid: pending.pid, hostPid: pending.hostPid, ptyLaunchId: pending.ptyLaunchId };
+    logger.info(`[PtyRegistry] claimForSession MISS sessionId=${claudeSessionId} expected=${sessionType} repoPath="${repoPath}"`);
+    return null;
   }
 
   // Returns the claude session ID that was claimed for this ptyLaunchId,
@@ -127,8 +129,7 @@ export class PtyRegistry {
   // Clean up a pending connection that never got claimed (e.g. claude crashed before first hook).
   unregisterPending(repoPath: string, ptyLaunchId: string): void {
     logger.warn(`[PtyRegistry] unregisterPending ptyLaunchId=${ptyLaunchId} repoPath="${repoPath}"`);
-    this.pendingByRepoPath.delete(normalizePath(repoPath));
-    this.ptyLaunchToClaimedId.delete(ptyLaunchId);
+    this.pendingByLaunchId.delete(ptyLaunchId);
   }
 
   unregister(sessionId: string): void {

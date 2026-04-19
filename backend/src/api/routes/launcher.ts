@@ -155,8 +155,8 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         // The launcher resolved the real tool PID (e.g. claude.exe) from the
         // powershell.exe wrapper process tree. Update the pending registry entry
         // and, if already claimed, update the DB session.
-        if (repoPath) {
-          ptyRegistry.updatePendingPid(repoPath, msg.pid);
+        if (ptyLaunchId) {
+          ptyRegistry.updatePendingPid(ptyLaunchId, msg.pid);
         }
         const claudeSessionId = ptyLaunchId ? ptyRegistry.getClaimedId(ptyLaunchId) : null;
         if (claudeSessionId) {
