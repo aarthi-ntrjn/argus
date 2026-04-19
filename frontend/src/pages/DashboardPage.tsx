@@ -200,7 +200,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Sticky header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-slate-50 border-b border-gray-200">
         <div className="mx-auto max-w-screen-xl px-4 md:px-8 py-3 flex justify-between items-center">
           <h1 data-tour-id="dashboard-header" className="flex items-center gap-2 text-xl font-semibold text-gray-900">
             <ArgusLogo size={28} />
