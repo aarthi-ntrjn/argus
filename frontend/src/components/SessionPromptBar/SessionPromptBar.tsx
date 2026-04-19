@@ -89,7 +89,7 @@ export default function SessionPromptBar({ session }: Props) {
           aria-label={sending ? 'Sending…' : 'Send'}
           onClick={handleSend}
           disabled={sending || isConnecting || !prompt.trim()}
-          className="inline-flex items-center justify-center"
+          className="inline-flex items-center justify-center self-stretch"
         >
           <CornerDownLeft size={13} aria-hidden="true" />
         </Button>
