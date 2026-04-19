@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Bug, Lightbulb } from 'lucide-react';
 import type { DashboardSettings } from '../../types';
 import { useArgusSettings } from '../../hooks/useArgusSettings';
 import { YoloWarningDialog } from '../YoloWarningDialog/YoloWarningDialog';
@@ -225,16 +225,18 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
               href={buildBugReportUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-sm text-gray-700 hover:text-blue-600 py-1 transition-colors"
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 py-1 transition-colors"
             >
+              <Bug size={13} className="text-red-500 shrink-0" aria-hidden="true" />
               Report a Bug
             </a>
             <a
               href={buildFeatureRequestUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-sm text-gray-700 hover:text-blue-600 py-1 transition-colors"
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 py-1 transition-colors"
             >
+              <Lightbulb size={13} className="text-yellow-500 shrink-0" aria-hidden="true" />
               Request a Feature
             </a>
           </div>
