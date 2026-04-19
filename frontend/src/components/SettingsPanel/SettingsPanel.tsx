@@ -83,7 +83,7 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
 
   return (
     <>
-      <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-5">
+      <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-5">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Settings</p>
         <div className="py-1">
           <Checkbox
@@ -237,13 +237,13 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
         </div>
 
         <div className="mt-2 pt-2 border-t border-gray-100">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Feedback</p>
-          <div className="flex flex-col gap-0.5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Feedback</p>
+          <div className="flex flex-col gap-1">
             <a
               href={buildBugReportUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 py-1 transition-colors"
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
             >
               <Bug size={13} className="text-red-500 shrink-0" aria-hidden="true" />
               Report a Bug
@@ -252,7 +252,7 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
               href={buildFeatureRequestUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 py-1 transition-colors"
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
             >
               <Lightbulb size={13} className="text-yellow-500 shrink-0" aria-hidden="true" />
               Request a Feature
