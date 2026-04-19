@@ -69,9 +69,10 @@ function ensureRepository(cwd: string): Repository {
   return repo;
 }
 
-function tryLinkByPid(ptyLaunchId: string, pid: number, sessionType: SessionType): void {
+function tryLinkByPid(ptyLaunchId: string, pid: number, sessionType: SessionType): string | null {
   const sessionId = resolveSessionIdByPid(pid, sessionType);
   if (sessionId) ptyRegistry.linkToSession(ptyLaunchId, sessionId);
+  return sessionId ?? null;
 }
 
 const launcherRoutes: FastifyPluginAsync = async (fastify) => {
@@ -114,7 +115,14 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         fastify.log.info({ ptyLaunchId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending');
 
         // Non-Windows: pid is known at register time — resolve sessionId immediately.
-        if (msg.pid !== null) tryLinkByPid(ptyLaunchId, msg.pid, msg.sessionType);
+        if (msg.pid !== null) {
+          const linkedId = tryLinkByPid(ptyLaunchId, msg.pid, msg.sessionType);
+          if (linkedId) {
+            fastify.log.info({ ptyLaunchId, pid: msg.pid, sessionType: msg.sessionType, sessionId: linkedId }, `[Launcher] ${msg.sessionType === 'claude-code' ? 'Claude Code' : 'Copilot CLI'}: PID resolved at register — pre-linked to sessionId`);
+          } else {
+            fastify.log.info({ ptyLaunchId, pid: msg.pid, sessionType: msg.sessionType }, `[Launcher] ${msg.sessionType === 'claude-code' ? 'Claude Code' : 'Copilot CLI'}: PID resolved at register — session file not yet written, will retry at claim time`);
+          }
+        }
 
         // Server-restart reconnect: if a session with this ptyLaunchId already exists in DB
         // and its process is still alive, immediately re-establish the WS connection for both
@@ -160,9 +168,16 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         // and, if already claimed, update the DB session.
         if (ptyLaunchId) {
           ptyRegistry.updatePendingPid(ptyLaunchId, msg.pid);
-          // Windows: PID resolved now — look up the sessionId from on-disk session files.
+          // Windows: PID resolved now from process tree — look up sessionId from on-disk session files.
           const sessionType = ptyRegistry.getPendingSessionType(ptyLaunchId);
-          if (sessionType) tryLinkByPid(ptyLaunchId, msg.pid, sessionType);
+          if (sessionType) {
+            const linkedId = tryLinkByPid(ptyLaunchId, msg.pid, sessionType);
+            if (linkedId) {
+              fastify.log.info({ ptyLaunchId, pid: msg.pid, sessionType, sessionId: linkedId }, `[Launcher] ${sessionType === 'claude-code' ? 'Claude Code' : 'Copilot CLI'}: update_pid resolved — pre-linked to sessionId`);
+            } else {
+              fastify.log.info({ ptyLaunchId, pid: msg.pid, sessionType }, `[Launcher] ${sessionType === 'claude-code' ? 'Claude Code' : 'Copilot CLI'}: update_pid resolved — session file not yet written, repoPath fallback will apply`);
+            }
+          }
         }
         const claudeSessionId = ptyLaunchId ? ptyRegistry.getClaimedId(ptyLaunchId) : null;
         if (claudeSessionId) {
