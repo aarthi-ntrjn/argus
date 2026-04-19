@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { Send } from 'lucide-react';
 import { sendPrompt, interruptSession } from '../../services/api';
 import type { Session } from '../../types';
 import { Button } from '../Button';
@@ -90,7 +91,7 @@ export default function SessionPromptBar({ session }: Props) {
           disabled={sending || isConnecting || !prompt.trim()}
           className="inline-flex items-center justify-center"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <Send size={13} aria-hidden="true" />
         </Button>
       </div>
       {error && <p role="alert" className="text-xs text-red-600 mt-0.5">{error}</p>}
