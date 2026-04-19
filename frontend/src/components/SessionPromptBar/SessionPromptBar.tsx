@@ -88,7 +88,7 @@ export default function SessionPromptBar({ session }: Props) {
           onClick={handleSend}
           disabled={sending || isConnecting || !prompt.trim()}
         >
-          {sending ? '…' : '↵'}
+          {sending ? 'Sending…' : 'Send'}
         </Button>
       </div>
       {error && <p role="alert" className="text-xs text-red-600 mt-0.5">{error}</p>}
