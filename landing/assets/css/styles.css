@@ -246,6 +246,10 @@ code {
     grid-template-columns: 1fr 1fr;
     gap: 3rem;
   }
+
+  .hero__headline {
+    grid-column: 1 / -1;
+  }
 }
 
 .hero__headline {
