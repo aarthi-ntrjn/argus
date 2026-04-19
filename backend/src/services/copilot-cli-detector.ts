@@ -4,7 +4,7 @@ import { join, normalize } from 'path';
 import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
-import { upsertSession, getRepositoryByPath, getSession } from '../db/database.js';
+import { upsertSession, getRepositoryByPath, getSession, getServerState, setServerState } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { CopilotJsonlWatcher } from './copilot-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
@@ -23,11 +23,14 @@ interface WorkspaceYaml {
 
 export class CopilotCliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
-  private lastScanTime = 0;
+  private lastScanTime: number;
   // Dirs known to have an active session last scan — must be rechecked even if mtime unchanged.
   private activeDirPaths = new Set<string>();
 
-  constructor(private sessionStateDir: string = DEFAULT_SESSION_DIR) {}
+  constructor(private sessionStateDir: string = DEFAULT_SESSION_DIR) {
+    const stored = getServerState('copilot_last_scan_time');
+    this.lastScanTime = stored ? parseInt(stored, 10) : 0;
+  }
 
   async scan(force = false): Promise<Session[]> {
     if (!existsSync(this.sessionStateDir)) return [];
@@ -82,6 +85,7 @@ export class CopilotCliDetector {
 
     this.activeDirPaths = newActiveDirPaths;
     this.lastScanTime = t0;
+    setServerState('copilot_last_scan_time', String(t0));
 
     return sessions;
   }
