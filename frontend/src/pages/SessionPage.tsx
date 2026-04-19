@@ -7,7 +7,6 @@ import SessionPromptBar from '../components/SessionPromptBar/SessionPromptBar';
 import SessionMetaRow from '../components/SessionMetaRow/SessionMetaRow';
 import { useKillSession } from '../hooks/useKillSession';
 import { KillSessionDialog } from '../components/KillSessionDialog/KillSessionDialog';
-import FeedbackDropdown from '../components/FeedbackDropdown/FeedbackDropdown';
 
 
 export default function SessionPage() {
@@ -49,12 +48,9 @@ export default function SessionPage() {
       {/* Always-visible header — shrink-0 sibling of the scrollable area */}
       <div className="shrink-0 px-4 md:px-8 pt-4 md:pt-6">
         <div className="max-w-4xl mx-auto w-full">
-          <div className="flex items-center justify-between mb-2">
-            <button onClick={() => navigate('/')} className="icon-btn text-sm font-medium text-gray-700 hover:text-blue-600 flex items-center gap-1">
-              <ArrowLeft size={14} />Back
-            </button>
-            <FeedbackDropdown />
-          </div>
+          <button onClick={() => navigate('/')} className="icon-btn text-sm font-medium text-gray-700 hover:text-blue-600 mb-2 flex items-center gap-1">
+            <ArrowLeft size={14} />Back
+          </button>
           <div className="bg-white rounded-lg shadow px-3 pt-3 pb-2" data-tour-id="session-status">
             <SessionMetaRow
               session={session}

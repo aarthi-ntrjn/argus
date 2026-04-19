@@ -7,26 +7,9 @@ describe('feedback URL builders', () => {
       expect(buildBugReportUrl()).toMatch(/^https:\/\/github\.com\/aarthi-ntrjn\/argus\/issues\/new/);
     });
 
-    it('includes the bug label', () => {
+    it('uses the bug_report.md template', () => {
       const url = buildBugReportUrl();
-      const params = new URL(url).searchParams;
-      expect(params.get('labels')).toBe('bug');
-    });
-
-    it('pre-fills the title with "Bug: " prefix', () => {
-      const url = buildBugReportUrl();
-      const params = new URL(url).searchParams;
-      expect(params.get('title')).toBe('Bug: ');
-    });
-
-    it('has a non-empty body template containing expected sections', () => {
-      const url = buildBugReportUrl();
-      const params = new URL(url).searchParams;
-      const body = params.get('body') ?? '';
-      expect(body.length).toBeGreaterThan(0);
-      expect(body).toContain('Steps to Reproduce');
-      expect(body).toContain('Expected Behavior');
-      expect(body).toContain('Actual Behavior');
+      expect(new URL(url).searchParams.get('template')).toBe('bug_report.md');
     });
   });
 
@@ -35,26 +18,9 @@ describe('feedback URL builders', () => {
       expect(buildFeatureRequestUrl()).toMatch(/^https:\/\/github\.com\/aarthi-ntrjn\/argus\/issues\/new/);
     });
 
-    it('includes the enhancement label', () => {
+    it('uses the feature_request.md template', () => {
       const url = buildFeatureRequestUrl();
-      const params = new URL(url).searchParams;
-      expect(params.get('labels')).toBe('enhancement');
-    });
-
-    it('pre-fills the title with "Feature: " prefix', () => {
-      const url = buildFeatureRequestUrl();
-      const params = new URL(url).searchParams;
-      expect(params.get('title')).toBe('Feature: ');
-    });
-
-    it('has a non-empty body template containing expected sections', () => {
-      const url = buildFeatureRequestUrl();
-      const params = new URL(url).searchParams;
-      const body = params.get('body') ?? '';
-      expect(body.length).toBeGreaterThan(0);
-      expect(body).toContain('Problem Statement');
-      expect(body).toContain('Proposed Solution');
-      expect(body).toContain('Alternatives Considered');
+      expect(new URL(url).searchParams.get('template')).toBe('feature_request.md');
     });
   });
 

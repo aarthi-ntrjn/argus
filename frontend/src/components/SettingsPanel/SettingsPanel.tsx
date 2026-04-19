@@ -7,6 +7,7 @@ import { YoloWarningDialog } from '../YoloWarningDialog/YoloWarningDialog';
 import { Checkbox } from '../Checkbox';
 import { Button } from '../Button';
 import { rescanRemoteUrls } from '../../services/api';
+import { buildBugReportUrl, buildFeatureRequestUrl } from '../../config/feedback';
 
 const DEFAULT_THRESHOLD = 20;
 const MIN_THRESHOLD = 1;
@@ -216,6 +217,28 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
             </Button>
           </div>
         )}
+
+        <div className="mt-2 pt-2 border-t border-gray-100">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Feedback</p>
+          <div className="flex flex-col gap-0.5">
+            <a
+              href={buildBugReportUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-sm text-gray-700 hover:text-blue-600 py-1 transition-colors"
+            >
+              Report a Bug
+            </a>
+            <a
+              href={buildFeatureRequestUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-sm text-gray-700 hover:text-blue-600 py-1 transition-colors"
+            >
+              Request a Feature
+            </a>
+          </div>
+        </div>
       </div>
 
       <YoloWarningDialog

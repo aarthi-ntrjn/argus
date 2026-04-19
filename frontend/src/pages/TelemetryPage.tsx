@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import ArgusLogo from '../components/ArgusLogo';
-import FeedbackDropdown from '../components/FeedbackDropdown/FeedbackDropdown';
 
 const EVENTS = [
   { name: 'app_started', when: 'The Argus backend server starts and begins listening.' },
@@ -21,12 +20,9 @@ export default function TelemetryPage() {
     <div className="min-h-screen bg-slate-50 p-6 md:p-12">
       <div className="mx-auto max-w-4xl">
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <button onClick={() => navigate('/')} className="icon-btn text-sm font-medium text-gray-700 hover:text-blue-600 flex items-center gap-1">
-              <ArrowLeft size={14} />Back
-            </button>
-            <FeedbackDropdown />
-          </div>
+          <button onClick={() => navigate('/')} className="icon-btn text-sm font-medium text-gray-700 hover:text-blue-600 mb-6 flex items-center gap-1">
+            <ArrowLeft size={14} />Back
+          </button>
           <h1 className="flex items-center gap-2 text-2xl font-semibold text-gray-900 mb-1">
             <ArgusLogo size={28} />
             Telemetry &amp; Privacy
