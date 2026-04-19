@@ -160,24 +160,24 @@ const pushStdin = (buf: Buffer): Promise<void> => {
 client.onSendPrompt(async (actionId: string, prompt: string) => {
   log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length}`);
   try {
-    if (isWin) {
-      log(`win32 focus-in`);
-      await pushStdin(Buffer.from('\x1b[I'));
-      for (const ch of prompt) {
-        for (const buf of win32InputEvents(ch)) {
-          await pushStdin(buf);
-        }
-      }
-      for (const buf of win32InputEvents('\r')) {
-        await pushStdin(buf);
-      }
-      await pushStdin(Buffer.from('\x1b[O'));
-    } else {
+    // if (isWin) {
+    //   log(`win32 focus-in`);
+    //   await pushStdin(Buffer.from('\x1b[I'));
+    //   for (const ch of prompt) {
+    //     for (const buf of win32InputEvents(ch)) {
+    //       await pushStdin(buf);
+    //     }
+    //   }
+    //   for (const buf of win32InputEvents('\r')) {
+    //     await pushStdin(buf);
+    //   }
+    //   await pushStdin(Buffer.from('\x1b[O'));
+    // } else {
       log(`posix pty.write promptLen=${prompt.length}`);
       pty.write('\x1b[I');
       pty.write(prompt + '\r');
       pty.write('\x1b[O');
-    }
+    // }
     client.ackDelivered(actionId);
   } catch (err) {
     log(`prompt delivery failed: ${err}`);
