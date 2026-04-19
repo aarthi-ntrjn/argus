@@ -245,7 +245,7 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
             >
-              <Bug size={13} className="text-red-500 shrink-0" aria-hidden="true" />
+              <Bug size={13} className="shrink-0" aria-hidden="true" />
               Report a Bug
             </a>
             <a
@@ -254,7 +254,7 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
             >
-              <Lightbulb size={13} className="text-yellow-500 shrink-0" aria-hidden="true" />
+              <Lightbulb size={13} className="shrink-0" aria-hidden="true" />
               Request a Feature
             </a>
           </div>
