@@ -1,6 +1,8 @@
 import { normalize } from 'path';
 import WebSocket from 'ws';
 import * as logger from '../utils/logger.js';
+
+const log = logger.createTaggedLogger('[PtyRegistry]', '\x1b[35m'); // magenta
 import type { SessionType } from '../models/index.js';
 
 function normalizePath(p: string): string {

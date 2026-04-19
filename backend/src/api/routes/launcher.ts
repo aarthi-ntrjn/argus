@@ -84,12 +84,12 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
     let repoPath: string | null = null;
 
     if (!ptyLaunchId) {
-      fastify.log.warn('Launcher WebSocket opened without ptyLaunchId, closing');
+      fastify.log.warn('[Launcher] WebSocket opened without ptyLaunchId, closing');
       socket.close();
       return;
     }
 
-    fastify.log.info({ ptyLaunchId }, 'Launcher WebSocket opened');
+    fastify.log.info({ ptyLaunchId }, '[Launcher] WebSocket opened');
     socket.send(JSON.stringify({ type: 'connected' }));
 
     socket.on('message', (raw: Buffer) => {
@@ -97,7 +97,7 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         msg = JSON.parse(raw.toString()) as LauncherMessage;
       } catch {
-        fastify.log.warn('Launcher: received malformed JSON, closing connection');
+        fastify.log.warn('[Launcher] received malformed JSON, closing connection');
         socket.close();
         return;
       }
@@ -112,7 +112,7 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         // The session is created in ClaudeCodeDetector.handleHookPayload once
         // Claude fires its first hook and we learn the real session ID.
         ptyRegistry.registerPending(ptyLaunchId, socket, msg.cwd, msg.hostPid, msg.pid, msg.sessionType);
-        fastify.log.info({ ptyLaunchId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending');
+        fastify.log.info({ ptyLaunchId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, '[Launcher] pending');
 
         // Non-Windows: pid is known at register time — resolve sessionId immediately.
         if (msg.pid !== null) {
@@ -132,13 +132,13 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
           const livePid = existingSession.hostPid ?? existingSession.pid;
           if (livePid !== null && isPidRunning(livePid)) {
             ptyRegistry.promotePendingToSession(ptyLaunchId, existingSession.id);
-            fastify.log.info({ ptyLaunchId, sessionId: existingSession.id, priorStatus: existingSession.status }, 'Launcher reconnected to existing session via ptyLaunchId');
+            fastify.log.info({ ptyLaunchId, sessionId: existingSession.id, priorStatus: existingSession.status }, '[Launcher] reconnected to existing session via ptyLaunchId');
             const now = new Date().toISOString();
             if (existingSession.status === 'ended') {
               const restored = { ...existingSession, status: 'active' as const, endedAt: null, lastActivityAt: now };
               upsertSession(restored);
               broadcast({ type: 'session.updated', timestamp: now, data: { ...restored, ptyConnected: true } as unknown as Record<string, unknown> });
-              fastify.log.info({ ptyLaunchId, sessionId: existingSession.id }, 'Launcher: restored session to active after server restart');
+              fastify.log.info({ ptyLaunchId, sessionId: existingSession.id }, '[Launcher] restored session to active after server restart');
             } else {
               broadcast({ type: 'session.updated', timestamp: now, data: { ...existingSession, ptyConnected: true } as unknown as Record<string, unknown> });
             }
@@ -158,7 +158,7 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       if (msg.type === 'diagnostic') {
-        fastify.log.info({ actionId: msg.actionId, detail: msg.detail }, 'Launcher diagnostic');
+        fastify.log.info({ actionId: msg.actionId, detail: msg.detail }, '[Launcher] diagnostic');
         return;
       }
 
@@ -187,12 +187,12 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
             const updated = { ...session, pid: msg.pid, yoloMode };
             upsertSession(updated);
             broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated as unknown as Record<string, unknown> });
-            fastify.log.info({ claudeSessionId, pid: msg.pid, yoloMode }, 'Updated session with resolved tool PID');
+            fastify.log.info({ claudeSessionId, pid: msg.pid, yoloMode }, '[Launcher] updated session with resolved tool PID');
           } else {
             // Session row not yet inserted (update_pid raced ahead of the first scan).
             // Park the pid in the registry so resolvePtyLinkage can pick it up on first scan.
             ptyRegistry.updateClaimedPid(claudeSessionId, msg.pid);
-            fastify.log.info({ claudeSessionId, pid: msg.pid }, 'Parked resolved pid — session not yet in DB');
+            fastify.log.info({ claudeSessionId, pid: msg.pid }, '[Launcher] parked resolved pid, session not yet in DB');
           }
         }
         return;
@@ -210,14 +210,14 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
             timestamp: now,
             data: (session ?? { id: claudeSessionId }) as unknown as Record<string, unknown>,
           });
-          fastify.log.info({ claudeSessionId, exitCode: msg.exitCode }, 'Launcher session ended');
+          fastify.log.info({ claudeSessionId, exitCode: msg.exitCode }, '[Launcher] session ended');
         }
       }
     });
 
     socket.on('close', (code: number, reason: Buffer) => {
       const reasonStr = reason.length > 0 ? reason.toString() : undefined;
-      fastify.log.info({ ptyLaunchId, code, reason: reasonStr }, 'Launcher WebSocket closed');
+      fastify.log.info({ ptyLaunchId, code, reason: reasonStr }, '[Launcher] WebSocket closed');
 
       if (!ptyLaunchId) return;
 
@@ -231,7 +231,7 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
           if (livePid !== null && isPidRunning(livePid)) {
             // Process is still alive — launcher is reconnecting. Mark as connecting, not ended.
             broadcast({ type: 'session.updated', timestamp: now, data: { ...session, ptyConnected: false } as unknown as Record<string, unknown> });
-            fastify.log.info({ claudeSessionId, code }, 'Launcher disconnected but process alive — marked connecting');
+            fastify.log.info({ claudeSessionId, code }, '[Launcher] disconnected but process alive, marked connecting');
           } else {
             updateSessionStatus(claudeSessionId, 'ended', now);
             broadcast({
@@ -239,15 +239,15 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
               timestamp: now,
               data: { ...session, status: 'ended', endedAt: now } as unknown as Record<string, unknown>,
             });
-            fastify.log.info({ claudeSessionId, code }, 'Launcher disconnected — session marked ended');
+            fastify.log.info({ claudeSessionId, code }, '[Launcher] disconnected, session marked ended');
           }
         } else {
-          fastify.log.info({ claudeSessionId, status: session?.status, code }, 'Launcher disconnected — session already ended, no status change');
+          fastify.log.info({ claudeSessionId, status: session?.status, code }, '[Launcher] disconnected, session already ended, no status change');
         }
       } else if (repoPath) {
         // Never claimed — claude never started or crashed before first hook.
         ptyRegistry.unregisterPending(repoPath, ptyLaunchId);
-        fastify.log.info({ ptyLaunchId, repoPath, code }, 'Launcher disconnected before Claude hook — no session created');
+        fastify.log.info({ ptyLaunchId, repoPath, code }, '[Launcher] disconnected before Claude hook, no session created');
       }
     });
   });
