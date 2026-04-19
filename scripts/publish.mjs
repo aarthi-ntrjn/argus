@@ -33,7 +33,8 @@ function fail(msg) { console.error(`    ERROR: ${msg}`); process.exit(1); }
 
 function run(cmd, opts = {}) {
   try {
-    return execSync(cmd, { encoding: 'utf8', stdio: opts.inherit ? 'inherit' : 'pipe' }).trim();
+    const result = execSync(cmd, { encoding: 'utf8', stdio: opts.inherit ? 'inherit' : 'pipe' });
+    return opts.inherit ? '' : result.trim();
   } catch (err) {
     if (opts.optional) return '';
     throw err;
