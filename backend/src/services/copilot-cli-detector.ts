@@ -24,6 +24,7 @@ interface WorkspaceYaml {
 export class CopilotCliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
   private lastScanTime: number;
+  private isFirstScan = true;
   // Dirs known to have an active session last scan — must be rechecked even if mtime unchanged.
   private activeDirPaths = new Set<string>();
 
@@ -36,10 +37,15 @@ export class CopilotCliDetector {
     if (!existsSync(this.sessionStateDir)) return [];
     const t0 = Date.now();
 
+    // On the first scan after restart, always process all dirs so that active sessions
+    // whose dirs predate the persisted lastScanTime still get their watchers started.
+    const scanAll = force || this.isFirstScan;
+    this.isFirstScan = false;
+
     // Collect dirs to process:
     // 1. Dirs modified since last scan — may contain new sessions.
-    //    When force=true (triggered by repo add) skip the mtime filter so we catch
-    //    sessions whose dir predates the last scan (e.g. after a repo remove+re-add).
+    //    When scanAll=true (first scan after restart, or triggered by repo add) skip the
+    //    mtime filter so we catch sessions whose dir predates the last scan.
     // 2. Dirs that had an active session last scan — detect if they have ended.
     const dirsToProcess = new Set<string>();
     let totalDirs = 0;
@@ -56,7 +62,7 @@ export class CopilotCliDetector {
           continue;
         }
 
-        if (force) {
+        if (scanAll) {
           dirsToProcess.add(dirPath);
           continue;
         }
