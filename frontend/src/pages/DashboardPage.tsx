@@ -22,6 +22,7 @@ import { buildDashboardTourSteps, REPO_CATCH_UP_STEPS } from '../config/dashboar
 import RepoCard from '../components/RepoCard/RepoCard';
 import type { RepoWithSessions } from '../components/RepoCard/RepoCard';
 import FolderInputDialog from '../components/FolderInputDialog/FolderInputDialog';
+import FeedbackDropdown from '../components/FeedbackDropdown/FeedbackDropdown';
 import type { Session } from '../types';
 
 const ENDED_STATUSES = new Set(['completed', 'ended']);
@@ -207,6 +208,7 @@ export default function DashboardPage() {
             Argus
           </h1>
           <div className="flex items-center gap-2">
+            <FeedbackDropdown />
             <div className="relative" ref={settingsRef}>
               <button
                 data-tour-id="dashboard-settings"

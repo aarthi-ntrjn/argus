@@ -59,6 +59,7 @@
 **Purpose**: Wire FeedbackDropdown into SessionPage, update documentation, run final validation.
 
 - [ ] T007 [P] Add `FeedbackDropdown` to `SessionPage` header in `frontend/src/pages/SessionPage.tsx` — insert alongside the back button row so the feedback menu is accessible on the session detail page
+- [ ] T007b [P] Add `FeedbackDropdown` to `TelemetryPage` header in `frontend/src/pages/TelemetryPage.tsx` — insert alongside the existing back button row (same pattern as SessionPage)
 - [ ] T008 [P] Update `README.md` — add a brief note in the Features or Usage section documenting the Feedback dropdown (Report a Bug / Request a Feature links in the nav bar) per §XI
 - [ ] T009 Run `npm run test --workspace=frontend` and confirm all new tests pass with no regressions
 - [ ] T010 Run `npm run build --workspace=frontend` and confirm zero build errors
