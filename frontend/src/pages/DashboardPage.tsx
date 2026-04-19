@@ -268,9 +268,9 @@ export default function DashboardPage() {
 
 
         {addError && (
-          <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm flex justify-between">
+          <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm flex items-start justify-between gap-3">
             <span>{addError}</span>
-            <button onClick={clearAddError} aria-label="Dismiss error" className="icon-btn ml-2">&times;</button>
+            <button onClick={clearAddError} aria-label="Dismiss error" className="icon-btn shrink-0">&times;</button>
           </div>
         )}
 
