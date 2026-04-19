@@ -137,6 +137,40 @@ describe('PtyRegistry', () => {
     expect(claimedB).not.toBeNull();
   });
 
+  it('linkToSession + claimForSession uses pre-linked fast path, skipping repoPath scan', () => {
+    const ws = makeMockWs();
+    registry.registerPending('launch-pre', ws as any, '/repo', 5555, 5555, 'claude-code');
+    registry.linkToSession('launch-pre', 'pre-linked-session-id');
+
+    const claimed = registry.claimForSession('pre-linked-session-id', '/DIFFERENT/PATH', 'claude-code');
+    expect(claimed).not.toBeNull();
+    expect(claimed!.ptyLaunchId).toBe('launch-pre');
+    expect(registry.has('pre-linked-session-id')).toBe(true);
+  });
+
+  it('linkToSession fast path does not claim a different sessionId', () => {
+    const ws = makeMockWs();
+    registry.registerPending('launch-pre2', ws as any, '/repo', 6666, 6666, 'claude-code');
+    registry.linkToSession('launch-pre2', 'correct-session');
+
+    // Claim with WRONG sessionId — should miss pre-link but also miss repoPath (different path)
+    const claimed = registry.claimForSession('wrong-session', '/different', 'claude-code');
+    expect(claimed).toBeNull();
+    // Correct sessionId still claims via pre-link
+    const correct = registry.claimForSession('correct-session', '/repo', 'claude-code');
+    expect(correct).not.toBeNull();
+  });
+
+  it('getPendingSessionType returns sessionType of a pending launcher', () => {
+    const ws = makeMockWs();
+    registry.registerPending('launch-st', ws as any, '/r', 7777, null, 'copilot-cli');
+    expect(registry.getPendingSessionType('launch-st')).toBe('copilot-cli');
+  });
+
+  it('getPendingSessionType returns null for unknown ptyLaunchId', () => {
+    expect(registry.getPendingSessionType('no-such')).toBeNull();
+  });
+
   it('sendPrompt() rejects after timeout when no ack arrives', async () => {
     vi.useFakeTimers();
     registerAndClaim(registry, 'session-1', '/rp4', 4);

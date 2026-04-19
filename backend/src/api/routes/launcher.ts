@@ -2,6 +2,7 @@ import { basename } from 'path';
 import { randomUUID } from 'crypto';
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';import type { WebSocket } from 'ws';
 import { ptyRegistry } from '../../services/pty-registry.js';
+import { resolveSessionIdByPid } from '../../services/session-pid-resolver.js';
 import {
   getSession,
   getSessionByPtyLaunchId,
@@ -68,6 +69,11 @@ function ensureRepository(cwd: string): Repository {
   return repo;
 }
 
+function tryLinkByPid(ptyLaunchId: string, pid: number, sessionType: SessionType): void {
+  const sessionId = resolveSessionIdByPid(pid, sessionType);
+  if (sessionId) ptyRegistry.linkToSession(ptyLaunchId, sessionId);
+}
+
 const launcherRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Querystring: { id: string } }>(
     '/launcher',
@@ -106,6 +112,9 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         // Claude fires its first hook and we learn the real session ID.
         ptyRegistry.registerPending(ptyLaunchId, socket, msg.cwd, msg.hostPid, msg.pid, msg.sessionType);
         fastify.log.info({ ptyLaunchId, hostPid: msg.hostPid, pid: msg.pid, cwd: msg.cwd }, 'Launcher pending');
+
+        // Non-Windows: pid is known at register time — resolve sessionId immediately.
+        if (msg.pid !== null) tryLinkByPid(ptyLaunchId, msg.pid, msg.sessionType);
 
         // Server-restart reconnect: if a session with this ptyLaunchId already exists in DB
         // and its process is still alive, immediately re-establish the WS connection for both
@@ -151,6 +160,9 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
         // and, if already claimed, update the DB session.
         if (ptyLaunchId) {
           ptyRegistry.updatePendingPid(ptyLaunchId, msg.pid);
+          // Windows: PID resolved now — look up the sessionId from on-disk session files.
+          const sessionType = ptyRegistry.getPendingSessionType(ptyLaunchId);
+          if (sessionType) tryLinkByPid(ptyLaunchId, msg.pid, sessionType);
         }
         const claudeSessionId = ptyLaunchId ? ptyRegistry.getClaimedId(ptyLaunchId) : null;
         if (claudeSessionId) {
