@@ -66,6 +66,13 @@ export default function LaunchDropdown({ repoPath }: Props) {
 
   const handleLaunch = async (tool: 'claude' | 'copilot') => {
     setOpen(false);
+    // In headless environments (Codespaces, SSH), skip the terminal launch attempt
+    // and show the manual command immediately using the cmd from the tools response.
+    if (tools?.terminalAvailable === false) {
+      const cmd = tool === 'claude' ? tools.claudeCmd : tools.copilotCmd;
+      if (cmd) setNoTerminalCmd(`${cmd} --cwd ${repoPath}`);
+      return;
+    }
     try {
       const { cmd } = await launchInTerminal(tool, repoPath);
       if (cmd) setNoTerminalCmd(cmd);
