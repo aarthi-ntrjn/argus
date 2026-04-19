@@ -4,7 +4,7 @@ import { join, normalize } from 'path';
 import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
-import { upsertSession, getRepositoryByPath, getSession, getServerState, setServerState } from '../db/database.js';
+import { upsertSession, getRepositoryByPath, getSession, getSessions, getServerState, setServerState } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { CopilotJsonlWatcher } from './copilot-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
@@ -24,28 +24,47 @@ interface WorkspaceYaml {
 export class CopilotCliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
   private lastScanTime: number;
-  private isFirstScan = true;
-  // Dirs known to have an active session last scan — must be rechecked even if mtime unchanged.
+  // Dirs known to have an active session — rechecked on every scan to detect when they end.
   private activeDirPaths = new Set<string>();
 
   constructor(private sessionStateDir: string = DEFAULT_SESSION_DIR) {
     const stored = getServerState('copilot_last_scan_time');
     this.lastScanTime = stored ? parseInt(stored, 10) : 0;
+    // Pre-populate activeDirPaths from DB so sessions that were active when the server
+    // stopped are picked up on the first scan even if their dir mtime predates lastScanTime.
+    this.initActiveDirsFromDb();
+  }
+
+  // Reads active copilot-cli sessions from the DB and finds their on-disk dirs.
+  // This ensures active sessions are always rechecked on startup regardless of mtime.
+  private initActiveDirsFromDb(): void {
+    if (!existsSync(this.sessionStateDir)) return;
+    const activeSessions = getSessions({ type: SessionTypes.COPILOT_CLI, status: 'active' });
+    if (activeSessions.length === 0) return;
+    const activeIds = new Set(activeSessions.map(s => s.id));
+    try {
+      const entries = readdirSync(this.sessionStateDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const dirPath = join(this.sessionStateDir, entry.name);
+        const workspaceFile = join(dirPath, 'workspace.yaml');
+        if (!existsSync(workspaceFile)) continue;
+        try {
+          const workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as WorkspaceYaml;
+          if (workspace.id && activeIds.has(workspace.id)) this.activeDirPaths.add(dirPath);
+        } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
   }
 
   async scan(force = false): Promise<Session[]> {
     if (!existsSync(this.sessionStateDir)) return [];
     const t0 = Date.now();
 
-    // On the first scan after restart, always process all dirs so that active sessions
-    // whose dirs predate the persisted lastScanTime still get their watchers started.
-    const scanAll = force || this.isFirstScan;
-    this.isFirstScan = false;
-
     // Collect dirs to process:
     // 1. Dirs modified since last scan — may contain new sessions.
-    //    When scanAll=true (first scan after restart, or triggered by repo add) skip the
-    //    mtime filter so we catch sessions whose dir predates the last scan.
+    //    When force=true (triggered by repo add) skip the mtime filter so we catch
+    //    sessions whose dir predates the last scan (e.g. after a repo remove+re-add).
     // 2. Dirs that had an active session last scan — detect if they have ended.
     const dirsToProcess = new Set<string>();
     let totalDirs = 0;
@@ -62,7 +81,7 @@ export class CopilotCliDetector {
           continue;
         }
 
-        if (scanAll) {
+        if (force) {
           dirsToProcess.add(dirPath);
           continue;
         }
