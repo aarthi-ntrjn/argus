@@ -26,6 +26,7 @@ export default function PendingChoicePanel({ pendingChoice, session, idx, onAdva
   }, [pendingChoice]);
 
   const canSend = session.launchMode === 'pty' && session.ptyConnected !== false;
+  const showSubmitPanel = questions.length > 1;
   const allSelected = idx >= questions.length;
   const current = questions[Math.min(idx, questions.length - 1)];
 
@@ -82,7 +83,7 @@ export default function PendingChoicePanel({ pendingChoice, session, idx, onAdva
 
       {submitted ? (
         <p className="text-xs text-gray-500 italic mt-1">Answers sent, waiting for Claude...</p>
-      ) : allSelected ? (
+      ) : allSelected && showSubmitPanel ? (
         <>
           <div className="mt-1 text-gray-700">All questions answered. Confirm?</div>
           <div className="mt-1 flex flex-col gap-1">
