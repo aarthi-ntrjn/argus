@@ -1,5 +1,7 @@
 import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Session } from '../../types';
 import { getSessionOutput } from '../../services/api';
 import { isInactive, detectPendingChoice, type PendingChoice } from '../../utils/sessionUtils';
@@ -76,9 +78,17 @@ function SessionCard({ session, selected, onSelect }: Props) {
       )}
 
       {/* Last output preview — fixed 2-line height */}
-      <p className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 whitespace-pre-wrap break-words font-mono min-h-[2.5rem] ${previewContent ? 'text-gray-300' : 'text-gray-500 italic'}`}>
-        {previewContent || 'Waiting for output...'}
-      </p>
+      <div className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 break-words font-mono min-h-[2.5rem] ${previewContent ? 'text-gray-300' : 'text-gray-500 italic'}`}>
+        {previewContent
+          ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+              p: ({ children }) => <span>{children}</span>,
+              code: ({ children }) => <code className="bg-gray-700 rounded px-0.5">{children}</code>,
+              strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+              em: ({ children }) => <em>{children}</em>,
+              a: ({ children }) => <span className="text-blue-400 underline">{children}</span>,
+            }}>{previewContent}</ReactMarkdown>
+          : 'Waiting for output...'}
+      </div>
 
       {session.launchMode === 'pty' && (
         <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
