@@ -267,12 +267,6 @@ export default function DashboardPage() {
       {/* Page content */}
       <div className="mx-auto max-w-screen-xl px-4 py-4 pb-20 md:px-8 md:py-6 md:pb-8">
 
-        {repos.length > 0 && argusSettings?.telemetryPromptSeen === false && (
-          <div className="mb-4">
-            <TelemetryBanner onDismiss={handleTelemetryDismiss} subtle />
-          </div>
-        )}
-
         {addError && (
           <div role="alert" className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm flex items-center justify-between gap-3">
             <span className="leading-snug">{addError}</span>
