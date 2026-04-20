@@ -2,7 +2,7 @@
 
 **Feature Branch**: `051-prompt-history`
 **Created**: 2026-04-20
-**Status**: Draft
+**Status**: Clarified
 **Input**: User description: "when i hit the up arrow i want to see the previous requests in this session. The up arrow key can be anywhere in the input. The currently typed text should also be in list of queries. this should be per session. and some user queries can be sent from claude or copilot terminal. they show as you messages and they should also be in the list."
 
 ## User Scenarios & Testing *(mandatory)*
