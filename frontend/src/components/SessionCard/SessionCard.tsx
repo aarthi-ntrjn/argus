@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Session } from '../../types';
 import { getSessionOutput } from '../../services/api';
-import { isInactive, detectPendingChoice, type PendingChoice } from '../../utils/sessionUtils';
+import { isInactive, type PendingChoice } from '../../utils/sessionUtils';
 import { useArgusSettings } from '../../hooks/useArgusSettings';
 import SessionPromptBar from '../SessionPromptBar/SessionPromptBar';
 import SessionMetaRow from '../SessionMetaRow/SessionMetaRow';
@@ -47,7 +47,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
     null;
   const previewContent = previewItem?.content?.trim() ?? null;
   const isTerminated = session.status === 'ended' || session.status === 'completed';
-  const pendingChoice = isTerminated ? null : (hookPendingChoice ?? detectPendingChoice(items));
+  const pendingChoice = isTerminated ? null : hookPendingChoice;
 
   return (
     <div
