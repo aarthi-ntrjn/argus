@@ -358,3 +358,14 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: The reconnect path was added in T114 and tested for `workspace_id` and `register` replay, but the test used `pid: 1` in `registerInfo` directly — it never exercised the case where `pid` starts as `null` and is resolved later via `updatePid()` while the WS is already open.
 **How to prevent**: Any field that can be updated after initial registration (pid, workspaceSessionId) must be kept in sync in the object used for reconnect replay. Treat `registerInfo` as the source of truth for what the next `register` message will contain, and update it eagerly on every mutation.
 **Fix summary**: Added `if (this.registerInfo) { this.registerInfo = { ...this.registerInfo, pid }; }` at the top of `updatePid()` in `backend/src/cli/argus-launch-client.ts`, before the `isOpen` check.
+
+---
+
+## T125 — @homebridge/node-pty-prebuilt-multiarch dead dependency breaks Node 25
+
+**Date**: 2026-04-20
+**Symptom**: `npm install` emits `npm warn EBADENGINE` for `@homebridge/node-pty-prebuilt-multiarch@0.13.1` on Node 25.x because the package requires `>=18.0.0 <25.0.0`.
+**Root cause**: `@homebridge/node-pty-prebuilt-multiarch` was listed in `dependencies` in both `package.json` (root) and `backend/package.json` but was never imported anywhere. All PTY usage in the codebase imports from `node-pty` directly (`launch.ts:2`). The package is a dead dependency that was never wired up.
+**Why it was missed**: The engine warning is a `warn`, not an error, so `npm install` still succeeds. The package was likely added as a preparatory step for switching from `node-pty` to its prebuilt-binary variant, but the import was never updated.
+**How to prevent**: Add a package hygiene test (see `backend/tests/unit/package-dependencies.test.ts`) that asserts known dead or forbidden packages are absent from both `package.json` files. Run `npm ls <package>` to confirm a listed dependency is actually reachable from source before committing it.
+**Fix summary**: Removed `"@homebridge/node-pty-prebuilt-multiarch": "^0.13.1"` from `dependencies` in `package.json` and `backend/package.json`; ran `npm install` to drop it from the lockfile.
