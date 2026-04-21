@@ -163,8 +163,8 @@ export default function DashboardPage() {
         <div className="flex-1 min-h-0 overflow-hidden">
           <div className={`mx-auto ${dashboardWidthClassName} h-full px-4 py-4 md:px-8 md:py-6 flex flex-col`}>
             <div className="animate-pulse flex gap-6 flex-1 min-h-0">
-              <div className="flex-[13] bg-gray-200 rounded-lg" />
-              <div className="flex-[7] bg-gray-200 rounded-lg" />
+              <div className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[2]' : 'flex-1') : 'flex-[13]'} bg-gray-200 rounded-lg`} />
+              <div className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[3]' : 'flex-1') : 'flex-[7]'} bg-gray-200 rounded-lg`} />
             </div>
           </div>
         </div>
