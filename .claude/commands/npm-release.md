@@ -4,13 +4,13 @@ description: Tag the current version, push to both remotes, and monitor the npm 
 
 ## Invocation rules
 
-**ONLY execute this skill when the user explicitly types `/publish-npm` as a standalone command.**
+**ONLY execute this skill when the user explicitly types `/npm-release` as a standalone command.**
 Do NOT execute it in response to any of the following:
 - Phrases like "publish npm", "release the package", "push to npm", or any paraphrase
 - Being asked to "run the next step" when an npm release is implied
-- Any autonomous or inferred intent — the user must type the exact slash command `/publish-npm`
+- Any autonomous or inferred intent — the user must type the exact slash command `/npm-release`
 
-If this skill was not triggered by the exact command `/publish-npm`, stop immediately without taking any action.
+If this skill was not triggered by the exact command `/npm-release`, stop immediately without taking any action.
 
 ---
 
