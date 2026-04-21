@@ -207,7 +207,7 @@ These settings are saved in your browser (`localStorage`) and restored on every 
 
 ### About
 
-The bottom of the Settings panel has an **About** section with quick links to the Argus website, GitHub repository, and npm package page.
+The bottom of the Settings panel has an **About** section with quick links to the Argus website, GitHub repository, and npm package page. The current Argus version is displayed next to the heading (e.g. `v0.1.9`), sourced from the running server.
 
 ### Rescan Remote URLs
 
