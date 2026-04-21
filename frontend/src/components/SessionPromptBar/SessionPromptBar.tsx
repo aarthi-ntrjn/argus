@@ -98,22 +98,28 @@ export default function SessionPromptBar({ session, onPromptSent }: Props) {
         <p className="text-xs text-amber-600 italic mb-1">Connecting to session…</p>
       )}
       <div className="flex gap-1 items-center">
-        {history.indicator && (
-          <span aria-live="polite" className="text-xs text-gray-500 shrink-0 tabular-nums">
-            {history.indicator}
-          </span>
-        )}
-        <input
-          ref={inputRef}
-          type="text"
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          onKeyDown={handleKeyDown}
-          aria-label="Send a prompt to this session"
-          placeholder={isConnecting ? 'Connecting…' : 'Send a prompt…'}
-          disabled={sending || isConnecting}
-          className="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
-        />
+        <div className="relative flex-1">
+          <input
+            ref={inputRef}
+            type="text"
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
+            aria-label="Send a prompt to this session"
+            placeholder={isConnecting ? 'Connecting…' : 'Send a prompt…'}
+            disabled={sending || isConnecting}
+            className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
+            style={history.indicator ? { paddingRight: '3rem' } : undefined}
+          />
+          {history.indicator && (
+            <span
+              aria-live="polite"
+              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 tabular-nums"
+            >
+              {history.indicator}
+            </span>
+          )}
+        </div>
         <Button
           size="sm"
           aria-label={sending ? 'Sending…' : 'Send'}
