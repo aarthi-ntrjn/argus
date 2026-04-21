@@ -340,7 +340,7 @@ export default function DashboardPage() {
                 {repoList}
               </div>
               {(!settings.hideTodoPanel || selectedSessionId) && (
-                <div className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[3]' : 'flex-1') : 'flex-[7]'} flex flex-col gap-4 min-h-0`}>
+                <div className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[3]' : 'flex-1') : 'flex-[7]'} flex flex-col gap-4 min-h-0 min-w-0`}>
                   {selectedSessionId && (() => {
                     const selectedSession = sessions.find(s => s.id === selectedSessionId);
                     return selectedSession ? (
