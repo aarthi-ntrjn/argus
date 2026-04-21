@@ -48,7 +48,7 @@ Rules:
 - **Name the action that failed.** Start with what the user was trying to do: "Failed to launch session", "Failed to remove repository", not "Error" or "Failed to fetch".
 - **Translate network errors.** When the caught error message is `"Failed to fetch"` or empty, replace it with a sentence that identifies the likely cause: "The Argus server is unreachable." Include a recovery hint when it is obvious (e.g., "Make sure the backend is running.").
 - **Keep it brief.** One or two sentences maximum. Avoid stack traces, HTTP status codes, and internal identifiers in user-visible text.
-- **Surface in a page-level banner, not inline near the trigger.** Errors from actions like launching, removing, or adding should appear in the dismissible red banner at the top of the page content area, not in a `<p>` next to the button that triggered the action. This ensures the error is visible regardless of where the user's attention is.
+- **Surface in a page-level banner, not inline near the trigger.** Errors from actions like launching, removing, or adding should appear in the dismissible red banner at the top of the page content area, not in a `<p>` next to the button that triggered the action. This ensures the error is visible regardless of where the user's attention is. Exception: the send-prompt input in `SessionPromptBar` shows its error directly below the input field, because the user's focus is already there and the error is tightly coupled to that specific input.
 - **Always provide a dismiss action.** Every error banner must have an `×` button with `aria-label="Dismiss error"` and `role="alert"` on the container.
 
 ## Project Context
