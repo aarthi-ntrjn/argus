@@ -209,6 +209,34 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
         </div>
 
         <div className="mt-2 pt-2 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Supported CLIs</p>
+            <div className="flex items-center gap-2">
+              <a
+                href="https://docs.anthropic.com/en/docs/claude-code/getting-started"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="icon-btn text-orange-500 hover:text-orange-600"
+                aria-label="Claude Code"
+                title="Claude Code"
+              >
+                <ClaudeIcon size={14} />
+              </a>
+              <a
+                href="https://github.com/features/copilot/cli/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="icon-btn text-purple-600 hover:text-purple-700"
+                aria-label="GitHub Copilot CLI"
+                title="GitHub Copilot CLI"
+              >
+                <CopilotIcon size={14} />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-baseline justify-between mb-2">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">About</p>
             {healthData?.version && (
@@ -228,31 +256,6 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M0 0v24h24V0H0zm6.672 19.992H3.336V6.664h3.336v13.328zm11.664 0h-3.336v-9.992h-3.336v9.992H8.328V6.664h10.008v13.328z"/></svg>
               npm
             </a>
-            <div className="flex items-center justify-between py-0.5">
-              <span className="text-sm text-gray-600">Supported CLIs</span>
-              <div className="flex items-center gap-2">
-                <a
-                  href="https://docs.anthropic.com/en/docs/claude-code/getting-started"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="icon-btn text-orange-500 hover:text-orange-600"
-                  aria-label="Claude Code"
-                  title="Claude Code"
-                >
-                  <ClaudeIcon size={14} />
-                </a>
-                <a
-                  href="https://github.com/features/copilot/cli/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="icon-btn text-purple-600 hover:text-purple-700"
-                  aria-label="GitHub Copilot CLI"
-                  title="GitHub Copilot CLI"
-                >
-                  <CopilotIcon size={14} />
-                </a>
-              </div>
-            </div>
             {onRestartTour && (
               <button
                 type="button"
