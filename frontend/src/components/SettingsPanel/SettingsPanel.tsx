@@ -210,7 +210,7 @@ export function SettingsPanel({ settings, onToggle, onRestartTour }: SettingsPan
 
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Supported CLIs</p>
+            <p className="text-xs font-semibold text-gray-500 tracking-wide">Supported CLIs</p>
             <div className="flex items-center gap-2">
               <a
                 href="https://docs.anthropic.com/en/docs/claude-code/getting-started"
