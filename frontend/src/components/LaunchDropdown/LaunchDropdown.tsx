@@ -124,7 +124,7 @@ export default function LaunchDropdown({ repoPath, onLaunchError }: Props) {
                 </li>
                 <li>
                   <a
-                    href="https://docs.github.com/en/copilot/how-tos/copilot-individual/using-github-copilot-in-the-command-line"
+                    href="https://github.com/features/copilot/cli/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline"
