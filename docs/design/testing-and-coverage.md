@@ -10,14 +10,14 @@ Argus has four independent test suites. Each targets a different layer of the st
 
 | Suite | Command | Technology | What it covers |
 |---|---|---|---|
-| Backend unit | `npm test` | Vitest + V8 | `backend/src` — services, detectors, API routes, WebSocket handlers |
+| Backend unit | `npm test --workspace=backend` | Vitest + V8 | `backend/src` — services, detectors, API routes, WebSocket handlers |
 | Frontend unit | `npm test --workspace=frontend` | Vitest + jsdom | `frontend/src` — React components, hooks, query logic |
 | E2E mock | `npm run test:e2e` | Playwright + Vite preview | Frontend UI flows with all API calls mocked via `page.route()` |
 | E2E real | `npm run test:e2e:real` | Playwright + live backend | Full stack: real Fastify server on port 7412, real SQLite DB |
 
 ### Backend unit tests (`backend/tests/`)
 
-Three sub-categories, all run together with `npm test`:
+Three sub-categories, all run together with `npm test --workspace=backend`:
 
 - **Unit** (`backend/tests/unit/`): fully isolated with mocks, no I/O
 - **Integration** (`backend/tests/integration/`): real SQLite (temp DB via `ARGUS_DB_PATH`), real file fixtures
