@@ -8,12 +8,12 @@ This document describes the four test suites in the Argus monorepo, how coverage
 
 Argus has four independent test suites. Each targets a different layer of the stack.
 
-| Suite | Command | Test location | Config | Technology | Coverage mechanism | What it covers |
-|---|---|---|---|---|---|---|
-| Backend unit | `npm test --workspace=backend` | `backend/tests/unit/`, `backend/tests/integration/`, `backend/tests/contract/` | `backend/vitest.config.ts` | Vitest + V8 | `@vitest/coverage-v8` | `backend/src` — services, detectors, API routes, WebSocket handlers |
-| Frontend unit | `npm test --workspace=frontend` | `frontend/src/**/*.test.*` | `frontend/vitest.config.ts` | Vitest + jsdom | `@vitest/coverage-v8` | `frontend/src` — React components, hooks, query logic |
-| E2E mock | `npm run test:e2e` | `frontend/tests/e2e/` | `playwright.config.ts` | Playwright + Vite preview | `vite-plugin-istanbul` (build-time instrumentation, `window.__coverage__`) | `frontend/src` — UI flows with all API calls mocked |
-| E2E real | `npm run test:e2e:real` | `frontend/tests/e2e/real-server/` | `playwright.real.config.ts` | Playwright + live backend | `NODE_V8_COVERAGE` + `c8 report` | `backend/src` — full stack with real Fastify server and SQLite DB |
+| Suite | Command | Test location | Config | Technology | Coverage mechanism | Coverage output | What it covers |
+|---|---|---|---|---|---|---|---|
+| Backend unit | `npm test --workspace=backend` | `backend/tests/unit/`, `backend/tests/integration/`, `backend/tests/contract/` | `backend/vitest.config.ts` | Vitest + V8 | `@vitest/coverage-v8` | `backend/coverage/coverage-summary.json` | `backend/src` — services, detectors, API routes, WebSocket handlers |
+| Frontend unit | `npm test --workspace=frontend` | `frontend/src/**/*.test.*` | `frontend/vitest.config.ts` | Vitest + jsdom | `@vitest/coverage-v8` | `frontend/coverage/coverage-summary.json` | `frontend/src` — React components, hooks, query logic |
+| E2E mock | `npm run test:e2e` | `frontend/tests/e2e/` | `playwright.config.ts` | Playwright + Vite preview | `vite-plugin-istanbul` (build-time instrumentation, `window.__coverage__`) | `frontend/coverage-e2e/coverage-summary.json` | `frontend/src` — UI flows with all API calls mocked |
+| E2E real | `npm run test:e2e:real` | `frontend/tests/e2e/real-server/` | `playwright.real.config.ts` | Playwright + live backend | `NODE_V8_COVERAGE` + `c8 report` | `backend/coverage-e2e/coverage-summary.json` | `backend/src` — full stack with real Fastify server and SQLite DB |
 
 ### Backend sub-categories
 
@@ -105,17 +105,6 @@ npm run test:coverage:e2e:real
 ```
 
 Coverage is never run automatically during development. It runs during `/merge` (Step 4), which generates `reports/coverage.md` and commits it before merging to master.
-
----
-
-## Output locations
-
-| Suite | Summary JSON | HTML report |
-|---|---|---|
-| Backend unit | `backend/coverage/coverage-summary.json` | `backend/coverage/index.html` |
-| Frontend unit | `frontend/coverage/coverage-summary.json` | `frontend/coverage/index.html` |
-| E2E mock | `frontend/coverage-e2e/coverage-summary.json` | (none) |
-| E2E real | `backend/coverage-e2e/coverage-summary.json` | (none) |
 
 All `coverage/` directories are gitignored. Only `reports/coverage.md` is committed.
 
