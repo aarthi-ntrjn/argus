@@ -8,12 +8,12 @@ This document describes the four test suites in the Argus monorepo, how coverage
 
 Argus has four independent test suites. Each targets a different layer of the stack.
 
-| Suite | Command | Test location | Config | Technology | What it covers |
-|---|---|---|---|---|---|
-| Backend unit | `npm test --workspace=backend` | `backend/tests/unit/`, `backend/tests/integration/`, `backend/tests/contract/` | `backend/vitest.config.ts` | Vitest + V8 | `backend/src` — services, detectors, API routes, WebSocket handlers |
-| Frontend unit | `npm test --workspace=frontend` | `frontend/src/**/*.test.*` | `frontend/vitest.config.ts` | Vitest + jsdom | `frontend/src` — React components, hooks, query logic |
-| E2E mock | `npm run test:e2e` | `frontend/tests/e2e/` | `playwright.config.ts` | Playwright + Vite preview | Frontend UI flows with all API calls mocked via `page.route()` |
-| E2E real | `npm run test:e2e:real` | `frontend/tests/e2e/real-server/` | `playwright.real.config.ts` | Playwright + live backend | Full stack: real Fastify server on port 7412, real SQLite DB |
+| Suite | Command | Test location | Config | Technology | Coverage mechanism | What it covers |
+|---|---|---|---|---|---|---|
+| Backend unit | `npm test --workspace=backend` | `backend/tests/unit/`, `backend/tests/integration/`, `backend/tests/contract/` | `backend/vitest.config.ts` | Vitest + V8 | `@vitest/coverage-v8` | `backend/src` — services, detectors, API routes, WebSocket handlers |
+| Frontend unit | `npm test --workspace=frontend` | `frontend/src/**/*.test.*` | `frontend/vitest.config.ts` | Vitest + jsdom | `@vitest/coverage-v8` | `frontend/src` — React components, hooks, query logic |
+| E2E mock | `npm run test:e2e` | `frontend/tests/e2e/` | `playwright.config.ts` | Playwright + Vite preview | `vite-plugin-istanbul` (build-time instrumentation, `window.__coverage__`) | `frontend/src` — UI flows with all API calls mocked |
+| E2E real | `npm run test:e2e:real` | `frontend/tests/e2e/real-server/` | `playwright.real.config.ts` | Playwright + live backend | `NODE_V8_COVERAGE` + `c8 report` | `backend/src` — full stack with real Fastify server and SQLite DB |
 
 ### Backend sub-categories
 
