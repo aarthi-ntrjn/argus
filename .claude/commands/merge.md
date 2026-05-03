@@ -101,31 +101,13 @@ npm run test:coverage:e2e:real
 `test:coverage:e2e` builds the frontend with Istanbul instrumentation, runs the mock E2E suite, then merges the per-test coverage files.
 `test:coverage:e2e:real` runs the real-server E2E suite with `NODE_V8_COVERAGE` set so the backend process dumps raw V8 coverage on exit, then runs `c8 report` to generate the summary.
 
-After all three succeed, read these four JSON summary files:
+After all three succeed, run:
 
-- `backend/coverage/coverage-summary.json` — backend unit coverage
-- `frontend/coverage/coverage-summary.json` — frontend unit coverage
-- `frontend/coverage-e2e/coverage-summary.json` — frontend mock E2E coverage
-- `backend/coverage-e2e/coverage-summary.json` — backend real-server E2E coverage
-
-Each file has a `"total"` key with `statements.pct`, `branches.pct`, `functions.pct`, and `lines.pct`.
-
-Write (or overwrite) `reports/coverage.md` with exactly this structure:
-
-```markdown
-# Coverage Report
-
-*Generated: YYYY-MM-DD*
-
-| Suite | Statements | Branches | Functions | Lines | Covers |
-|-------|------------|----------|-----------|-------|--------|
-| backend unit   | XX.XX% | XX.XX% | XX.XX% | XX.XX% | backend/src |
-| frontend unit  | XX.XX% | XX.XX% | XX.XX% | XX.XX% | frontend/src |
-| e2e mock       | XX.XX% | XX.XX% | XX.XX% | XX.XX% | frontend/src |
-| e2e real       | XX.XX% | XX.XX% | XX.XX% | XX.XX% | backend/src |
+```
+node scripts/generate-coverage-report.mjs
 ```
 
-If any coverage script fails (for example `test:coverage:e2e:real` because no test server is available), write `N/A` in the affected row rather than failing the merge.
+This reads the four `coverage-summary.json` files and writes `reports/coverage.md` with a summary table plus a per-file breakdown for each suite. Missing files (e.g. when a suite is skipped) produce `N/A` rows automatically.
 
 Then stage and commit to the feature branch:
 
