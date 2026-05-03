@@ -35,8 +35,9 @@ export class CliManager {
     this.copilotDetector.setSessionCreatedCallback(cb);
   }
 
-  /** Fires when a session's state changes (Copilot only — Claude updates go through reconcileClaudeCodeSessions). Must be called before start(). */
+  /** Fires when a session's state changes. Must be called before start(). */
   setSessionUpdatedCallback(cb: (session: Session) => void): void {
+    this.claudeDetector.setSessionUpdatedCallback(cb);
     this.copilotDetector.setSessionUpdatedCallback(cb);
   }
 

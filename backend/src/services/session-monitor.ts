@@ -27,8 +27,6 @@ export class SessionMonitor extends EventEmitter {
   private scanner: RepositoryScanner;
   private cliManager: CliManager;
   private scanInterval: ReturnType<typeof setInterval> | null = null;
-  // Track last-emitted state per session to suppress no-op session.updated events
-  private lastEmittedSessions = new Map<string, string>();
   // Track sessions for which we have already broadcast the resting transition
   private restingNotifiedSessions = new Set<string>();
 
@@ -38,15 +36,12 @@ export class SessionMonitor extends EventEmitter {
     this.scanner = new RepositoryScanner(config.watchDirectories);
     this.cliManager = new CliManager();
     this.cliManager.setSessionCreatedCallback((session) => {
-      this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
       this.emit('session.created', session);
     });
     this.cliManager.setSessionUpdatedCallback((session) => {
-      this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
       this.emit('session.updated', session);
     });
     this.cliManager.setSessionEndedCallback((session) => {
-      this.lastEmittedSessions.delete(session.id);
       this.restingNotifiedSessions.delete(session.id);
       this.emit('session.ended', session);
     });
@@ -60,7 +55,6 @@ export class SessionMonitor extends EventEmitter {
     // Emit session.created for sessions already active in the DB from a previous run.
     // reconcileStaleSessions() has already ended any dead ones, so what remains is live.
     for (const session of activeSessions) {
-      this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
       this.emit('session.created', session);
     }
 
@@ -158,55 +152,6 @@ export class SessionMonitor extends EventEmitter {
     }
   }
 
-  private reconcileClaudeCodeSessions(): void {
-    try {
-      const liveSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
-      if (liveSessions.length === 0) return;
-
-      const repos = getRepositories();
-      const now = new Date().toISOString();
-
-      for (const session of liveSessions) {
-        const repo = repos.find(r => r.id === session.repositoryId);
-        if (!repo) {
-          logger.info(`[ClaudeReconcile] session ended — repo removed sessionId=${session.id}`);
-          updateSessionStatus(session.id, 'ended', now);
-          this.cliManager.closeClaudeSessionWatcher(session.id);
-          this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
-          continue;
-        }
-
-        if (session.pid != null && !isPidRunning(session.pid)) {
-          logger.info(`[ClaudeReconcile] session ended — process gone sessionId=${session.id} pid=${session.pid}`);
-          updateSessionStatus(session.id, 'ended', now);
-          this.cliManager.closeClaudeSessionWatcher(session.id);
-          this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
-          continue;
-        }
-
-        const sig = this.sessionSignature(session);
-        if (this.lastEmittedSessions.get(session.id) !== sig) {
-          this.lastEmittedSessions.set(session.id, sig);
-          this.emit('session.updated', session);
-        }
-      }
-    } catch { /* ignore — liveness check is best-effort */ }
-  }
-
-  private sessionSignature(session: Session): string {
-    return JSON.stringify({
-      status: session.status,
-      lastActivityAt: session.lastActivityAt,
-      summary: session.summary,
-      model: session.model,
-      pid: session.pid,
-      hostPid: session.hostPid,
-      pidSource: session.pidSource,
-      launchMode: session.launchMode,
-      endedAt: session.endedAt,
-    });
-  }
-
   triggerScan(force = false): void {
     this.runScan(force).catch((err) => this.emit('error', err));
   }
@@ -246,7 +191,6 @@ export class SessionMonitor extends EventEmitter {
       await this.scanner.scan();
       await this.refreshRepositoryBranches();
       await this.cliManager.scan(force);
-      this.reconcileClaudeCodeSessions();
       logger.debug(`[SessionMonitor] runScan total — ${Date.now() - tRun}ms`);
 
       // Broadcast a session.updated for any active session that just crossed the resting

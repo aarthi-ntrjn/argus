@@ -76,6 +76,7 @@ vi.mock('../../src/services/claude-code-detector.js', () => ({
       stop: vi.fn(),
       closeSessionWatcher: vi.fn(),
       setSessionCreatedCallback: vi.fn(),
+      setSessionUpdatedCallback: vi.fn(),
       setSessionEndedCallback: vi.fn(),
       getRegistryEntries: vi.fn(() => []),
       getPendingChoice: vi.fn(() => null),

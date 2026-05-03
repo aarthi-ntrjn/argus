@@ -1,7 +1,7 @@
 import * as logger from '../utils/logger.js';
 import { normalize } from 'path';
 
-import { getSession, getSessions, upsertSession, updateSessionStatus, getRepositoryByPath } from '../db/database.js';
+import { getSession, getSessions, upsertSession, updateSessionStatus, getRepositoryByPath, getRepositories } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { ClaudeSessionRegistry } from './claude-code-session-registry.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
@@ -18,12 +18,19 @@ export class ClaudeCodeDetector implements CliDetector {
   private jsonlWatcher = new ClaudeJsonlWatcher();
   private pendingChoices = new Map<string, PendingChoice>();
   private sessionCreatedCallback?: (session: Session) => void;
+  private sessionUpdatedCallback?: (session: Session) => void;
   private sessionEndedCallback?: (session: Session) => void;
   private registry = new ClaudeSessionRegistry();
   private previousRegistryPids = new Set<number>();
+  // Dedup map: last-emitted signature per session, used by reconcileActiveSessions().
+  private lastEmittedSigs = new Map<string, string>();
 
   setSessionCreatedCallback(cb: (session: Session) => void): void {
     this.sessionCreatedCallback = cb;
+  }
+
+  setSessionUpdatedCallback(cb: (session: Session) => void): void {
+    this.sessionUpdatedCallback = cb;
   }
 
   /** Wires the callback fired when a session ends due to a disappeared registry file. */
@@ -99,13 +106,72 @@ export class ClaudeCodeDetector implements CliDetector {
           logger.info(`[ClaudeDetector] session ended, registry file gone sessionId=${session.id} pid=${oldPid}`);
           updateSessionStatus(session.id, 'ended', now);
           this.jsonlWatcher.closeWatcher(session.id);
-          this.sessionEndedCallback?.({ ...session, status: 'ended', endedAt: now });
+          const ended = { ...session, status: 'ended' as const, endedAt: now };
+          this.lastEmittedSigs.delete(session.id);
+          this.sessionEndedCallback?.(ended);
         }
       }
     }
     this.previousRegistryPids = currentPids;
 
+    this.reconcileActiveSessions();
     return [];
+  }
+
+  private reconcileActiveSessions(): void {
+    try {
+      const liveSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
+      if (liveSessions.length === 0) return;
+
+      const repos = getRepositories();
+      const now = new Date().toISOString();
+
+      for (const session of liveSessions) {
+        const repo = repos.find(r => r.id === session.repositoryId);
+        if (!repo) {
+          logger.info(`[ClaudeDetector] session ended, repo removed sessionId=${session.id}`);
+          updateSessionStatus(session.id, 'ended', now);
+          this.jsonlWatcher.closeWatcher(session.id);
+          const ended = { ...session, status: 'ended' as const, endedAt: now };
+          this.lastEmittedSigs.delete(session.id);
+          this.sessionEndedCallback?.(ended);
+          continue;
+        }
+
+        if (session.pid != null && !isPidRunning(session.pid)) {
+          logger.info(`[ClaudeDetector] session ended, process gone sessionId=${session.id} pid=${session.pid}`);
+          updateSessionStatus(session.id, 'ended', now);
+          this.jsonlWatcher.closeWatcher(session.id);
+          const ended = { ...session, status: 'ended' as const, endedAt: now };
+          this.lastEmittedSigs.delete(session.id);
+          this.sessionEndedCallback?.(ended);
+          continue;
+        }
+
+        const sig = this.sessionSignature(session);
+        if (!this.lastEmittedSigs.has(session.id)) {
+          // First time seeing this session in the reconcile loop — seed without firing updated.
+          this.lastEmittedSigs.set(session.id, sig);
+        } else if (this.lastEmittedSigs.get(session.id) !== sig) {
+          this.lastEmittedSigs.set(session.id, sig);
+          this.sessionUpdatedCallback?.(session);
+        }
+      }
+    } catch { /* best-effort */ }
+  }
+
+  private sessionSignature(session: Session): string {
+    return JSON.stringify({
+      status: session.status,
+      lastActivityAt: session.lastActivityAt,
+      summary: session.summary,
+      model: session.model,
+      pid: session.pid,
+      hostPid: session.hostPid,
+      pidSource: session.pidSource,
+      launchMode: session.launchMode,
+      endedAt: session.endedAt,
+    });
   }
 
   async handleHookPayload(payload: CliHookPayload): Promise<void> {
@@ -191,6 +257,7 @@ export class ClaudeCodeDetector implements CliDetector {
       ptyLaunchId: claimed.ptyLaunchId,
     };
     upsertSession(session);
+    this.lastEmittedSigs.set(session.id, this.sessionSignature(session));
     this.sessionCreatedCallback?.(session);
     await this.jsonlWatcher.watchFile(sessionId, repo.path);
   }
@@ -220,6 +287,7 @@ export class ClaudeCodeDetector implements CliDetector {
     if (existing) {
       broadcast({ type: 'session.updated', timestamp: now, data: session });
     } else {
+      this.lastEmittedSigs.set(session.id, this.sessionSignature(session));
       this.sessionCreatedCallback?.(session);
     }
   }
@@ -273,6 +341,7 @@ export class ClaudeCodeDetector implements CliDetector {
     logger.info(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
     upsertSession(activated);
     if (isNewSession) {
+      this.lastEmittedSigs.set(activated.id, this.sessionSignature(activated));
       this.sessionCreatedCallback?.(activated);
     }
     await this.jsonlWatcher.watchFile(sessionId, repo.path);
