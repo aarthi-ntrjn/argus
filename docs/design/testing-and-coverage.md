@@ -8,12 +8,16 @@ This document describes the four test suites in the Argus monorepo, how coverage
 
 Argus has four independent test suites. Each targets a different layer of the stack.
 
-| Suite | Command | Coverage command | Test location | Config | Technology | Coverage mechanism | Coverage output | What it covers |
-|---|---|---|---|---|---|---|---|---|
-| Backend unit | `npm test --workspace=backend` | `npm run test:coverage --workspace=backend` | `backend/tests/unit/`, `backend/tests/integration/`, `backend/tests/contract/` | `backend/vitest.config.ts` | Vitest + V8 | `@vitest/coverage-v8` | `backend/coverage/coverage-summary.json` | `backend/src` — services, detectors, API routes, WebSocket handlers |
-| Frontend unit | `npm test --workspace=frontend` | `npm run test:coverage --workspace=frontend` | `frontend/src/**/*.test.*` | `frontend/vitest.config.ts` | Vitest + jsdom | `@vitest/coverage-v8` | `frontend/coverage/coverage-summary.json` | `frontend/src` — React components, hooks, query logic |
-| E2E mock | `npm run test:e2e` | `npm run test:coverage:e2e` | `frontend/tests/e2e/` | `playwright.config.ts` | Playwright + Vite preview | `vite-plugin-istanbul` (build-time instrumentation, `window.__coverage__`) | `frontend/coverage-e2e/coverage-summary.json` | `frontend/src` — UI flows with all API calls mocked |
-| E2E real | `npm run test:e2e:real` | `npm run test:coverage:e2e:real` | `frontend/tests/e2e/real-server/` | `playwright.real.config.ts` | Playwright + live backend | `NODE_V8_COVERAGE` + `c8 report` | `backend/coverage-e2e/coverage-summary.json` | `backend/src` — full stack with real Fastify server and SQLite DB |
+| | Backend unit | Frontend unit | E2E mock | E2E real |
+|---|---|---|---|---|
+| **Command** | `npm test --workspace=backend` | `npm test --workspace=frontend` | `npm run test:e2e` | `npm run test:e2e:real` |
+| **Coverage command** | `npm run test:coverage --workspace=backend` | `npm run test:coverage --workspace=frontend` | `npm run test:coverage:e2e` | `npm run test:coverage:e2e:real` |
+| **Test location** | `backend/tests/unit/` `backend/tests/integration/` `backend/tests/contract/` | `frontend/src/**/*.test.*` | `frontend/tests/e2e/` | `frontend/tests/e2e/real-server/` |
+| **Config** | `backend/vitest.config.ts` | `frontend/vitest.config.ts` | `playwright.config.ts` | `playwright.real.config.ts` |
+| **Technology** | Vitest + V8 | Vitest + jsdom | Playwright + Vite preview | Playwright + live backend |
+| **Coverage mechanism** | `@vitest/coverage-v8` | `@vitest/coverage-v8` | `vite-plugin-istanbul` (build-time instrumentation, `window.__coverage__`) | `NODE_V8_COVERAGE` + `c8 report` |
+| **Coverage output** | `backend/coverage/coverage-summary.json` | `frontend/coverage/coverage-summary.json` | `frontend/coverage-e2e/coverage-summary.json` | `backend/coverage-e2e/coverage-summary.json` |
+| **What it covers** | `backend/src` — services, detectors, API routes, WebSocket handlers | `frontend/src` — React components, hooks, query logic | `frontend/src` — UI flows with all API calls mocked | `backend/src` — full stack with real Fastify server and SQLite DB |
 
 ### Backend sub-categories
 
