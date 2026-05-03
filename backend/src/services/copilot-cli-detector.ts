@@ -4,12 +4,15 @@ import { join, normalize } from 'path';
 import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
-import { upsertSession, getRepositoryByPath, getSession, getSessions, getServerState, setServerState } from '../db/database.js';
+import { upsertSession, getRepositoryByPath, getSession, getSessions, updateSessionStatus, getServerState, setServerState } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { CopilotJsonlWatcher } from './copilot-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
-import type { Session, PidSource } from '../models/index.js';
+import type { Session, PidSource, PendingChoice } from '../models/index.js';
+import { broadcast } from '../api/ws/event-dispatcher.js';
+import { pendingChoiceEvents } from './pending-choice-events.js';
+import { parsePendingChoicePayload } from './pending-choice-utils.js';
 
 const DEFAULT_SESSION_DIR = join(homedir(), '.copilot', 'session-state');
 
@@ -21,11 +24,20 @@ interface WorkspaceYaml {
   updated_at?: string | Date;
 }
 
+interface HookPayload {
+  hook_event_name: string;
+  session_id: string;
+  cwd?: string;
+  tool_name?: string;
+  tool_input?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export class CopilotCliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
   private lastScanTime: number;
-  // Dirs known to have an active session — rechecked on every scan to detect when they end.
   private activeDirPaths = new Set<string>();
+  private readonly pendingChoices = new Map<string, PendingChoice>();
 
   constructor(private sessionStateDir: string = DEFAULT_SESSION_DIR) {
     const stored = getServerState('copilot_last_scan_time');
@@ -293,6 +305,78 @@ export class CopilotCliDetector {
 
   stopWatchers(): void {
     this.jsonlWatcher.stopWatchers();
+  }
+
+  getPendingChoice(sessionId: string): PendingChoice | null {
+    return this.pendingChoices.get(sessionId) ?? null;
+  }
+
+  async handleHookPayload(payload: HookPayload): Promise<void> {
+    const { hook_event_name, session_id, cwd } = payload;
+    if (!session_id) return;
+
+    const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
+    const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
+    if (!repo) {
+      logger.warn(`[CopilotDetector] no repo for cwd="${normalizedCwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`);
+      return;
+    }
+
+    const existing = getSession(session_id);
+    const now = new Date().toISOString();
+
+    if (hook_event_name === 'SessionEnd') {
+      if (!existing) return;
+      updateSessionStatus(session_id, 'ended', now);
+      const ended = { ...existing, status: 'ended' as const, endedAt: now };
+      broadcast({ type: 'session.ended', timestamp: now, data: ended });
+      return;
+    }
+
+    if (hook_event_name === 'PreToolUse' && payload.tool_name === 'ask_user') {
+      if (!existing) return;
+      const { question, choices, allQuestions } = parsePendingChoicePayload(payload.tool_input ?? {});
+      this.pendingChoices.set(session_id, { question, choices, allQuestions });
+      broadcast({ type: 'session.pending_choice', timestamp: now, data: { sessionId: session_id, question, choices, allQuestions } });
+      pendingChoiceEvents.emit('session.pending_choice', { sessionId: session_id, question, choices, allQuestions });
+      return;
+    }
+
+    if (hook_event_name === 'PostToolUse' && payload.tool_name === 'ask_user') {
+      if (!existing) return;
+      this.pendingChoices.delete(session_id);
+      broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId: session_id } });
+      pendingChoiceEvents.emit('session.pending_choice.resolved', session_id);
+      return;
+    }
+
+    // SessionStart or other events: create/update session
+    const session: Session = existing ?? {
+      id: session_id,
+      repositoryId: repo.id,
+      type: SessionTypes.COPILOT_CLI,
+      launchMode: null,
+      pid: null,
+      hostPid: null,
+      pidSource: null,
+      status: 'active',
+      startedAt: now,
+      endedAt: null,
+      lastActivityAt: now,
+      summary: null,
+      expiresAt: null,
+      model: null,
+      reconciled: true,
+      yoloMode: null,
+    };
+
+    const updated = { ...session, lastActivityAt: now };
+    upsertSession(updated);
+
+    const eventType = existing ? 'session.updated' : 'session.created';
+    broadcast({ type: eventType, timestamp: now, data: updated });
+
+    await this.jsonlWatcher.watchFile(session_id, repo.path);
   }
 
   private findLockFile(dirPath: string): string | null {
