@@ -3,7 +3,7 @@ import { join, dirname } from 'path';
 import { createTaggedLogger } from '../utils/logger.js';
 import { loadConfig } from '../config/config-loader.js';
 import { getRepositories } from '../db/database.js';
-import type { HooksInjector } from './hooks-injector.js';
+import type { CliHooksInjector } from './cli-hooks-injector.js';
 
 const log = createTaggedLogger('[CopilotHooksInjector]', '\x1b[33m');
 
@@ -58,7 +58,7 @@ function readHooksJson(filePath: string): HooksJson {
  * clean across server restarts and port changes. If a repo's hooks file becomes empty
  * after removal, the file is deleted entirely.
  */
-export class CopilotHooksInjector implements HooksInjector {
+export class CopilotHooksInjector implements CliHooksInjector {
   /** Writes Argus hook entries into the hooks.json for a single repository. */
   injectForRepo(repoPath: string): void {
     try {

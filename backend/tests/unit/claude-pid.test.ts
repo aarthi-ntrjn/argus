@@ -83,7 +83,7 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
     vi.resetModules();
   });
 
-  it('scan() creates session with pid=null (registry handles PID)', async () => {
+  it('scan() creates session with pid from registry', async () => {
     fakeJsonlFiles = ['new-pid-session.jsonl'];
     fakeRegistryEntries = { 'new-pid-session': { pid: 5555, sessionId: 'new-pid-session', cwd: FAKE_REPO_PATH } };
 
@@ -92,11 +92,11 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
 
     const sessions = dbModule.getSessions({ repositoryId: 'repo-pid-test', type: 'claude-code' });
     expect(sessions.length).toBeGreaterThan(0);
-    expect(sessions[0].pid).toBeNull();
-    expect(sessions[0].pidSource).toBeNull();
+    expect(sessions[0].pid).toBe(5555);
+    expect(sessions[0].pidSource).toBe('session_registry');
   });
 
-  it('scan() re-activates an ended session with pid=null', async () => {
+  it('scan() re-activates an ended session with pid from registry', async () => {
     const now = new Date().toISOString();
     const sessionId = 'pid-reactivate-session';
     fakeJsonlFiles = [`${sessionId}.jsonl`];
@@ -122,7 +122,7 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
 
     const session = dbModule.getSession(sessionId);
     expect(session?.status).toBe('active');
-    expect(session?.pid).toBeNull();
+    expect(session?.pid).toBe(7777);
   });
 
   it('scan() does not overwrite a PTY-assigned PID', async () => {

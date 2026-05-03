@@ -1,12 +1,14 @@
 import * as logger from '../utils/logger.js';
 import { normalize } from 'path';
-import { getSession, upsertSession, updateSessionStatus, getRepositoryByPath } from '../db/database.js';
+
+import { getSession, getSessions, upsertSession, updateSessionStatus, getRepositoryByPath } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { ClaudeSessionRegistry } from './claude-code-session-registry.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
-import type { Session, Repository, PendingChoice } from '../models/index.js';
+import { SessionTypes } from '../models/index.js';
+import type { Session, Repository, PendingChoice, ClaudeSessionRegistryEntry } from '../models/index.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
@@ -16,9 +18,22 @@ export class ClaudeCodeDetector implements CliDetector {
   private jsonlWatcher = new ClaudeJsonlWatcher();
   private pendingChoices = new Map<string, PendingChoice>();
   private sessionCreatedCallback?: (session: Session) => void;
+  private sessionEndedCallback?: (session: Session) => void;
+  private registry = new ClaudeSessionRegistry();
+  private previousRegistryPids = new Set<number>();
 
   setSessionCreatedCallback(cb: (session: Session) => void): void {
     this.sessionCreatedCallback = cb;
+  }
+
+  /** Wires the callback fired when a session ends due to a disappeared registry file. */
+  setSessionEndedCallback(cb: (session: Session) => void): void {
+    this.sessionEndedCallback = cb;
+  }
+
+  /** Returns raw registry entries for startup stale-session reconciliation only. */
+  getRegistryEntries(): ClaudeSessionRegistryEntry[] {
+    return this.registry.scanEntries();
   }
 
   getPendingChoice(sessionId: string): PendingChoice | null {
@@ -38,26 +53,58 @@ export class ClaudeCodeDetector implements CliDetector {
   async start(): Promise<void> {}
 
   async scan(): Promise<Session[]> {
-    const registry = new ClaudeSessionRegistry();
-    const registryEntries = registry.scanEntries();
+    const registryEntries = this.registry.scanEntries();
+    const currentPids = new Set<number>();
+    const now = new Date().toISOString();
 
     for (const entry of registryEntries) {
       // Guard 1: process is running (cheap signal-0 check)
-      // Guard 2: verify the process at this PID is actually the expected AI tool — catches
-      //   stale registry entries pointing to recycled PIDs (PID reuse by an unrelated process).
-      const existingSession = getSession(entry.sessionId);
+      // Guard 2: verify the process is actually the expected AI tool (catches recycled PIDs)
       if (!isPidRunning(entry.pid)) continue;
       if (!isExpectedProcess(entry.pid, 'claude-code')) {
-        logger.info(`[ClaudeDetector] PID reuse detected: pid ${entry.pid} is running with wrong name, skipping (sessionId=${entry.sessionId} existingStatus=${existingSession?.status ?? 'new'})`);
+        logger.info(`[ClaudeDetector] PID reuse detected: pid ${entry.pid} is running with wrong name, skipping (sessionId=${entry.sessionId})`);
         continue;
       }
+
+      currentPids.add(entry.pid);
 
       const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
       const repo = getRepositoryByPath(normalizedCwd);
       if (!repo) { logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`); continue; }
 
-      await this.activateFoundSession(entry.sessionId, repo, null);
+      // Backfill PID from registry if the session was created via hooks without a PID.
+      // Skip PTY-sourced PIDs — the PTY registry is more authoritative.
+      const existing = getSession(entry.sessionId);
+      if (existing && existing.pidSource !== 'pty_registry') {
+        const pidChanged = existing.pid !== entry.pid || existing.pidSource !== 'session_registry';
+        const yoloMode = existing.yoloMode !== null ? existing.yoloMode : detectYoloModeFromPids(entry.pid, null, 'claude-code');
+        const yoloResolved = existing.yoloMode === null && yoloMode !== null;
+        if (pidChanged || yoloResolved) {
+          logger.info(`[ClaudeDetector] pid assigned sessionId=${entry.sessionId} pid=${entry.pid} (was ${existing.pid}) yoloMode=${yoloMode}`);
+          const updated = { ...existing, pid: entry.pid, pidSource: 'session_registry' as const, yoloMode };
+          upsertSession(updated);
+          broadcast({ type: 'session.updated', timestamp: now, data: updated });
+        }
+      }
+
+      await this.activateFoundSession(entry.sessionId, repo, entry.pid);
     }
+
+    // Detect sessions whose registry file disappeared (unclean shutdown, SessionEnd hook not fired).
+    for (const oldPid of this.previousRegistryPids) {
+      if (currentPids.has(oldPid)) continue;
+      const activeSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
+      for (const session of activeSessions) {
+        if (session.pid === oldPid && session.pidSource === 'session_registry') {
+          logger.info(`[ClaudeDetector] session ended, registry file gone sessionId=${session.id} pid=${oldPid}`);
+          updateSessionStatus(session.id, 'ended', now);
+          this.jsonlWatcher.closeWatcher(session.id);
+          this.sessionEndedCallback?.({ ...session, status: 'ended', endedAt: now });
+        }
+      }
+    }
+    this.previousRegistryPids = currentPids;
+
     return [];
   }
 
@@ -210,7 +257,7 @@ export class ClaudeCodeDetector implements CliDetector {
       launchMode: null,
       pid: claudePid,
       hostPid: null,
-      pidSource: null,
+      pidSource: claudePid !== null ? 'session_registry' as const : null,
       status: 'active',
       startedAt: now,
       endedAt: null,

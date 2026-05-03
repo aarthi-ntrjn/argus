@@ -8,7 +8,7 @@
  *
  * The asymmetry is intentional and visible here by design.
  */
-export interface HooksInjector {
+export interface CliHooksInjector {
   /** Write/refresh hooks for all registered repositories. */
   injectForAll(): void;
   /**

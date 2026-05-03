@@ -8,7 +8,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --reporter=verbose --reporter=json --outputFile.json=coverage/test-results.json",
     "test:contract": "vitest run tests/contract",
     "launch": "tsx src/cli/launch.ts"
   },

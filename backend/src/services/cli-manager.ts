@@ -1,6 +1,5 @@
 import { ClaudeCodeDetector } from './claude-code-detector.js';
 import { CopilotCliDetector } from './copilot-cli-detector.js';
-import { ClaudeSessionRegistry } from './claude-code-session-registry.js';
 import { ClaudeCodeHooksInjector } from './claude-code-hooks-injector.js';
 import { CopilotHooksInjector } from './copilot-cli-hooks-injector.js';
 import { getSession, updateSessionStatus } from '../db/database.js';
@@ -24,7 +23,6 @@ export interface CopilotSessionCallbacks {
 export class CliManager {
   private claudeDetector: ClaudeCodeDetector;
   private copilotDetector: CopilotCliDetector;
-  private sessionRegistry: ClaudeSessionRegistry;
   private claudeInjector: ClaudeCodeHooksInjector;
   private copilotInjector: CopilotHooksInjector;
 
@@ -37,7 +35,6 @@ export class CliManager {
   constructor() {
     this.claudeDetector = new ClaudeCodeDetector();
     this.copilotDetector = new CopilotCliDetector();
-    this.sessionRegistry = new ClaudeSessionRegistry();
     this.claudeInjector = new ClaudeCodeHooksInjector();
     this.copilotInjector = new CopilotHooksInjector();
   }
@@ -48,6 +45,14 @@ export class CliManager {
    */
   setSessionCreatedCallback(cb: (session: Session) => void): void {
     this.claudeDetector.setSessionCreatedCallback(cb);
+  }
+
+  /**
+   * Wires the callback that fires when a Claude session ends (registry file disappeared).
+   * Must be called before start().
+   */
+  setClaudeSessionEndedCallback(cb: (session: Session) => void): void {
+    this.claudeDetector.setSessionEndedCallback(cb);
   }
 
   /**
@@ -98,7 +103,7 @@ export class CliManager {
 
   /** Returns the current Claude session registry entries (used at startup to reconcile stale sessions). */
   claudeRegistryEntries(): ClaudeSessionRegistryEntry[] {
-    return this.sessionRegistry.scanEntries();
+    return this.claudeDetector.getRegistryEntries();
   }
 
   /** Returns the Copilot lock-file registry (session ID to PID) for startup reconciliation. */

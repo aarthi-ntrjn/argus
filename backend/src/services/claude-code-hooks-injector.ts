@@ -3,7 +3,7 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { createTaggedLogger } from '../utils/logger.js';
 import { loadConfig } from '../config/config-loader.js';
-import type { HooksInjector } from './hooks-injector.js';
+import type { CliHooksInjector } from './cli-hooks-injector.js';
 
 const log = createTaggedLogger('[ClaudeCodeHooksInjector]', '\x1b[34m');
 
@@ -36,7 +36,7 @@ function isArgusEntry(entry: { hooks?: Array<{ command?: string }> }): boolean {
  * Argus entries (from any previous port) are removed before the current ones are
  * written, keeping the file clean across server restarts and port changes.
  */
-export class ClaudeCodeHooksInjector implements HooksInjector {
+export class ClaudeCodeHooksInjector implements CliHooksInjector {
   /** Rewrites the global ~/.claude/settings.json with all required Argus hooks. */
   injectForAll(): void {
     try {

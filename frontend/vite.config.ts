@@ -1,8 +1,22 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import istanbul from 'vite-plugin-istanbul';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    ...(process.env.VITE_COVERAGE
+      ? [
+          istanbul({
+            include: 'src/**',
+            exclude: ['node_modules', 'tests/**', '**/*.test.*', '**/*.spec.*', '**/*.d.ts'],
+            extension: ['.ts', '.tsx'],
+            requireEnv: false,
+            forceBuildInstrument: true,
+          }),
+        ]
+      : []),
+  ],
   server: {
     fs: { allow: ['..'] },
     proxy: {
@@ -12,7 +26,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: process.env.VITE_COVERAGE ? 'dist-coverage' : 'dist',
     rollupOptions: {
       output: {
         manualChunks: (id) => {

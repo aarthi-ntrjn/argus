@@ -8,7 +8,10 @@ vi.mock('react-router-dom', () => ({
   Link: ({ children, ...props }: React.PropsWithChildren<{ to: string }>) => <a {...props}>{children}</a>,
 }));
 
-vi.mock('../services/api');
+vi.mock('../services/api', () => ({
+  getArgusSettings: vi.fn().mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
+  getSessionOutput: vi.fn(),
+}));
 
 import SessionCard from '../components/SessionCard/SessionCard';
 import * as api from '../services/api';

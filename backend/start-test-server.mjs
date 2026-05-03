@@ -6,8 +6,15 @@
  * Usage: node backend/start-test-server.mjs <port> <db-path>
  */
 import { execSync } from 'child_process';
+import { resolve } from 'path';
 
 const [port, dbPath] = process.argv.slice(2);
+
+// Resolve NODE_V8_COVERAGE to an absolute path so V8 writes coverage to the
+// correct directory even if process.cwd() differs from the project root.
+if (process.env.NODE_V8_COVERAGE) {
+  process.env.NODE_V8_COVERAGE = resolve(process.env.NODE_V8_COVERAGE);
+}
 if (port) process.env.ARGUS_PORT = port;
 if (dbPath) process.env.ARGUS_DB_PATH = dbPath;
 // Suppress telemetry during test runs so tests don't fire real events to PostHog
