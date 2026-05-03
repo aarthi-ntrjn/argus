@@ -2,7 +2,7 @@
 
 **Feature Branch**: `064-code-coverage`
 **Created**: 2026-05-02
-**Status**: Draft
+**Status**: Clarified
 **Input**: User description: "work on generating code coverage numbers for the different tests"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -90,3 +90,4 @@ A developer wants to run one command at the repo root to get coverage numbers fo
 - The existing `@vitest/coverage-v8` package installed in both workspaces is sufficient. No new testing packages are needed.
 - The `backend/vitest.config.ts` already has a `coverage` block configured; it may need minor adjustments (e.g., ensuring all-files reporting) but the infrastructure exists.
 - The `frontend/vitest.config.ts` does not yet have a `coverage` block and will need one added.
+
