@@ -15,7 +15,17 @@ Argus has four independent test suites. Each targets a different layer of the st
 | E2E mock | `npm run test:e2e` | `frontend/tests/e2e/` | `playwright.config.ts` | Playwright + Vite preview | Frontend UI flows with all API calls mocked via `page.route()` |
 | E2E real | `npm run test:e2e:real` | `frontend/tests/e2e/real-server/` | `playwright.real.config.ts` | Playwright + live backend | Full stack: real Fastify server on port 7412, real SQLite DB |
 
-The backend unit suite has three sub-categories run together: **unit** (mocks only, no I/O), **integration** (real SQLite via `ARGUS_DB_PATH`), and **contract/WebSocket** (real Fastify server, actual HTTP and WebSocket calls). The E2E real suite starts and stops the backend automatically; the dev server on port 7411 is never touched.
+### Backend sub-categories
+
+The backend suite (`npm test --workspace=backend`) contains three sub-categories that all run together under Vitest. None of them use a browser.
+
+| Sub-category | Location | What makes it different |
+|---|---|---|
+| Unit | `backend/tests/unit/` | Everything mocked. No real DB, no real server, no file I/O. Fastest. |
+| Integration | `backend/tests/integration/` | Real SQLite DB (temp file via `ARGUS_DB_PATH`) and real file fixtures. Tests the full parse-to-persist pipeline for detectors and stores. No HTTP server. |
+| Contract | `backend/tests/contract/` | Real Fastify server started in-process. Makes actual HTTP and WebSocket calls. Tests that API endpoints return the correct status codes, response shapes, and error structures. |
+
+These are unrelated to the E2E suites. The key difference: contract tests call the HTTP API directly from Node with no browser, while the E2E real suite drives a real browser through the full stack. They overlap in scope but serve different purposes — contract tests are faster and pinpoint API regressions; E2E real tests verify the complete user-facing flow.
 
 ---
 
