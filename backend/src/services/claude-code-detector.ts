@@ -2,8 +2,8 @@ import * as logger from '../utils/logger.js';
 import { normalize } from 'path';
 import { getSession, upsertSession, updateSessionStatus, getRepositoryByPath } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
-import { ClaudeSessionRegistry } from './claude-session-registry.js';
-import { ClaudeJsonlWatcher } from './claude-jsonl-watcher.js';
+import { ClaudeSessionRegistry } from './claude-code-session-registry.js';
+import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import type { Session, Repository, PendingChoice } from '../models/index.js';

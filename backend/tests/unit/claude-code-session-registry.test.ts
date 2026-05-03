@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ClaudeSessionRegistry } from '../../src/services/claude-session-registry.js';
+import { ClaudeSessionRegistry } from '../../src/services/claude-code-session-registry.js';
 
 // Mock fs
 vi.mock('fs', () => ({

@@ -1,6 +1,6 @@
 /**
  * Unit tests for CopilotHooksInjector (T005 — TDD first).
- * These tests should FAIL until T006 (copilot-hooks-injector.ts) is implemented.
+ * These tests should FAIL until T006 (copilot-cli-hooks-injector.ts) is implemented.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { tmpdir } from 'os';
@@ -38,7 +38,7 @@ function isArgusEntry(entry: { bash?: string; powershell?: string }) {
 
 describe('CopilotHooksInjector', () => {
   let dbModule: typeof import('../../src/db/database.js');
-  let InjectorClass: typeof import('../../src/services/copilot-hooks-injector.js').CopilotHooksInjector;
+  let InjectorClass: typeof import('../../src/services/copilot-cli-hooks-injector.js').CopilotHooksInjector;
 
   beforeEach(async () => {
     process.env.ARGUS_DB_PATH = join(tmpdir(), `argus-injector-test-${randomUUID()}.db`);
@@ -48,7 +48,7 @@ describe('CopilotHooksInjector', () => {
     mkdirSync(join(TEST_REPO_B, '.git'), { recursive: true });
 
     dbModule = await import('../../src/db/database.js');
-    const mod = await import('../../src/services/copilot-hooks-injector.js');
+    const mod = await import('../../src/services/copilot-cli-hooks-injector.js');
     InjectorClass = mod.CopilotHooksInjector;
   });
 

@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 import { upsertSession, getRepositoryByPath, getSession, getSessions, updateSessionStatus, getServerState, setServerState } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { telemetryService } from './telemetry-service.js';
-import { CopilotJsonlWatcher } from './copilot-jsonl-watcher.js';
+import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
 import type { Session, PidSource, PendingChoice } from '../models/index.js';

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "curl -sf -X POST 'http://127.0.0.1:7411/hooks/copilot?event=sessionStart' -H \"Content-Type: application/json\" -d @- 2>/dev/null || true",
+        "powershell": "$input | Invoke-RestMethod -Uri 'http://127.0.0.1:7411/hooks/copilot?event=sessionStart' -Method POST -ContentType 'application/json' -ErrorAction SilentlyContinue"
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "curl -sf -X POST 'http://127.0.0.1:7411/hooks/copilot?event=sessionEnd' -H \"Content-Type: application/json\" -d @- 2>/dev/null || true",
+        "powershell": "$input | Invoke-RestMethod -Uri 'http://127.0.0.1:7411/hooks/copilot?event=sessionEnd' -Method POST -ContentType 'application/json' -ErrorAction SilentlyContinue"
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "curl -sf -X POST 'http://127.0.0.1:7411/hooks/copilot?event=preToolUse' -H \"Content-Type: application/json\" -d @- 2>/dev/null || true",
+        "powershell": "$input | Invoke-RestMethod -Uri 'http://127.0.0.1:7411/hooks/copilot?event=preToolUse' -Method POST -ContentType 'application/json' -ErrorAction SilentlyContinue"
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "curl -sf -X POST 'http://127.0.0.1:7411/hooks/copilot?event=postToolUse' -H \"Content-Type: application/json\" -d @- 2>/dev/null || true",
+        "powershell": "$input | Invoke-RestMethod -Uri 'http://127.0.0.1:7411/hooks/copilot?event=postToolUse' -Method POST -ContentType 'application/json' -ErrorAction SilentlyContinue"
+      }
+    ]
+  }
+}

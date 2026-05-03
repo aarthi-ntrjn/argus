@@ -15,7 +15,7 @@ import {
 } from '../../db/database.js';
 import { broadcast } from '../ws/event-dispatcher.js';
 import { ClaudeCodeHooksInjector } from '../../services/claude-code-hooks-injector.js';
-import { CopilotHooksInjector } from '../../services/copilot-hooks-injector.js';
+import { CopilotHooksInjector } from '../../services/copilot-cli-hooks-injector.js';
 import { getCurrentBranch, getRemoteUrl } from '../../services/repository-scanner.js';
 
 let _monitor: { triggerScan(): void; triggerCopilotScan(): void } | null = null;
