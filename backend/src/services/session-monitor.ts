@@ -27,8 +27,6 @@ export class SessionMonitor extends EventEmitter {
   private scanner: RepositoryScanner;
   private cliManager: CliManager;
   private scanInterval: ReturnType<typeof setInterval> | null = null;
-  private knownSessionIds = new Set<string>();
-  private activeSessionMap = new Map<string, Session>();
   // Track registry PIDs seen on the previous cycle to detect disappearances
   private previousRegistryPids = new Set<number>();
   // Track last-emitted state per session to suppress no-op session.updated events
@@ -45,18 +43,38 @@ export class SessionMonitor extends EventEmitter {
       this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
       this.emit('session.created', session);
     });
+    this.cliManager.setCopilotSessionCallbacks({
+      onCreated: (session) => {
+        this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
+        this.emit('session.created', session);
+      },
+      onUpdated: (session) => {
+        this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
+        this.emit('session.updated', session);
+      },
+      onEnded: (session) => {
+        this.lastEmittedSessions.delete(session.id);
+        this.restingNotifiedSessions.delete(session.id);
+        this.emit('session.ended', session);
+      },
+    });
   }
 
   async start(): Promise<void> {
     await this.reconcileStaleSessions();
 
+    const activeSessions = getSessions({ status: 'active' });
+
     // Emit session.created for sessions already active in the DB from a previous run.
     // reconcileStaleSessions() has already ended any dead ones, so what remains is live.
-    for (const session of getSessions({ status: 'active' })) {
-      this.knownSessionIds.add(session.id);
+    for (const session of activeSessions) {
       this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
       this.emit('session.created', session);
     }
+
+    // Seed CliManager's Copilot tracking state so the first scan doesn't fire duplicate
+    // session.created events for sessions that survived from the previous run.
+    this.cliManager.seedCopilotState(activeSessions.filter(s => s.type === SessionTypes.COPILOT_CLI));
 
     await this.cliManager.start();
     await this.runScan();
@@ -318,54 +336,9 @@ export class SessionMonitor extends EventEmitter {
       await this.scanner.scan();
       await this.refreshRepositoryBranches();
       this.reconcileClaudeSessionRegistry();
-      const sessions = await this.cliManager.scan();
+      await this.cliManager.scan();
       this.reconcileClaudeCodeSessions();
       logger.debug(`[SessionMonitor] runScan total — ${Date.now() - tRun}ms`);
-      const currentScanIds = new Set<string>(sessions.map((s) => s.id));
-
-      // Detect sessions that were active but are no longer returned (process exited + dir cleaned up)
-      for (const [id, session] of this.activeSessionMap) {
-        if (!currentScanIds.has(id)) {
-          const now = new Date().toISOString();
-          // Another path (launcher WS, dismiss, etc.) may have already marked the session
-          // ended and fired telemetry. Only emit session.ended if the DB still shows active.
-          const currentSession = getSession(id);
-          if (currentSession?.status !== 'ended') {
-            updateSessionStatus(id, 'ended', now);
-            const endedSession: Session = { ...session, status: 'ended', endedAt: now };
-            this.emit('session.ended', endedSession);
-          }
-          this.activeSessionMap.delete(id);
-          this.lastEmittedSessions.delete(id);
-          this.restingNotifiedSessions.delete(id);
-        }
-      }
-
-      for (const session of sessions) {
-        if (!this.knownSessionIds.has(session.id)) {
-          this.knownSessionIds.add(session.id);
-          this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
-          this.emit('session.created', session);
-        } else {
-          const sig = this.sessionSignature(session);
-          if (this.lastEmittedSessions.get(session.id) !== sig) {
-            this.lastEmittedSessions.set(session.id, sig);
-            this.emit('session.updated', session);
-          }
-        }
-        if (session.status === 'ended') {
-          // Only emit session.ended once: when the session was previously tracked as active.
-          // Ended sessions remain on disk and would re-trigger this on every scan otherwise.
-          if (this.activeSessionMap.has(session.id)) {
-            this.emit('session.ended', session);
-            this.activeSessionMap.delete(session.id);
-            this.lastEmittedSessions.delete(session.id);
-            this.restingNotifiedSessions.delete(session.id);
-          }
-        } else if (session.status === 'active') {
-          this.activeSessionMap.set(session.id, session);
-        }
-      }
 
       // Broadcast a session.updated for any active session that just crossed the resting
       // threshold, so already-connected clients flip the badge without a page refresh.
@@ -391,4 +364,3 @@ export class SessionMonitor extends EventEmitter {
     }
   }
 }
-
