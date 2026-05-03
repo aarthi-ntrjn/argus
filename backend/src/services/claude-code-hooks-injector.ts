@@ -28,6 +28,14 @@ function isArgusEntry(entry: { hooks?: Array<{ command?: string }> }): boolean {
   return entry.hooks?.some((h) => (h.command ?? '').includes('/hooks/claude')) ?? false;
 }
 
+/**
+ * Ensures Argus hooks are registered in Claude Code's global settings file.
+ *
+ * Claude Code uses a single settings.json for all repos, so there is no per-repo
+ * injection — every method ultimately touches the same file. On each inject, stale
+ * Argus entries (from any previous port) are removed before the current ones are
+ * written, keeping the file clean across server restarts and port changes.
+ */
 export class ClaudeCodeHooksInjector implements HooksInjector {
   /** Rewrites the global ~/.claude/settings.json with all required Argus hooks. */
   injectForAll(): void {

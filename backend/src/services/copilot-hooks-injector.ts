@@ -48,7 +48,18 @@ function readHooksJson(filePath: string): HooksJson {
   }
 }
 
+/**
+ * Ensures Argus hooks are registered in each repository's Copilot hooks file.
+ *
+ * Unlike Claude Code (which has a single global config), Copilot CLI reads hooks
+ * from a per-repo file at .github/hooks/hooks.json. Injection must happen for every
+ * registered repository individually. On each inject, stale Argus entries (from any
+ * previous port) are stripped before the current ones are written, so the file stays
+ * clean across server restarts and port changes. If a repo's hooks file becomes empty
+ * after removal, the file is deleted entirely.
+ */
 export class CopilotHooksInjector implements HooksInjector {
+  /** Writes Argus hook entries into the hooks.json for a single repository. */
   injectForRepo(repoPath: string): void {
     try {
       const port = loadConfig().port;
@@ -74,6 +85,7 @@ export class CopilotHooksInjector implements HooksInjector {
     }
   }
 
+  /** Removes Argus hook entries from the hooks.json for a single repository. Deletes the file if nothing else remains. */
   removeForRepo(repoPath: string): void {
     try {
       const filePath = hooksJsonPath(repoPath);
@@ -103,6 +115,7 @@ export class CopilotHooksInjector implements HooksInjector {
     }
   }
 
+  /** Injects hooks into every registered repository. Called on server startup. */
   injectForAll(): void {
     const repos = getRepositories();
     for (const repo of repos) {
@@ -110,6 +123,7 @@ export class CopilotHooksInjector implements HooksInjector {
     }
   }
 
+  /** Removes Argus hooks from every registered repository. */
   removeAll(): void {
     const repos = getRepositories();
     for (const repo of repos) {
