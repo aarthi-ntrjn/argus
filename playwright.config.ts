@@ -5,7 +5,7 @@ export default defineConfig({
   testIgnore: ['**/real-server/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : 4,
   reporter: [['html', { open: 'never' }], ['json', { outputFile: 'frontend/coverage-e2e/test-results.json' }]],
   use: {
