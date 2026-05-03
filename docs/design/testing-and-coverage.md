@@ -57,8 +57,10 @@ Tests run automatically during `/merge` (Step 3) as a gate — the merge is bloc
 # Unit tests only (backend + frontend)
 npm run test:coverage
 
-# All four suites (run in sequence)
-npm run test:coverage
+# All four suites + regenerate reports/coverage.md
+npm run test:coverage:all
+
+# Individual suites
 npm run test:coverage:e2e
 npm run test:coverage:e2e:real
 ```
