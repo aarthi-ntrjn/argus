@@ -53,6 +53,8 @@ npm run test:e2e
 npm run test:e2e:real
 ```
 
+Tests run automatically during `/merge` (Step 3) as a gate — the merge is blocked if any suite fails. `playwright-report/` and `test-results/` are gitignored. There is no committed test results snapshot.
+
 ### Coverage
 
 ```
