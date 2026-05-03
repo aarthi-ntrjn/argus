@@ -16,10 +16,10 @@ import {
 import { broadcast } from '../ws/event-dispatcher.js';
 import { getCurrentBranch, getRemoteUrl } from '../../services/repository-scanner.js';
 
-let _monitor: { triggerScan(): void; triggerCopilotScan(): void } | null = null;
+let _monitor: { triggerScan(force?: boolean): void } | null = null;
 let _cliManager: { reinjectClaudeHooks(): void; removeAllClaudeHooks(): void; injectHooksForRepo(path: string): void; removeHooksForRepo(path: string): void } | null = null;
 
-export function setMonitor(monitor: { triggerScan(): void; triggerCopilotScan(): void }): void {
+export function setMonitor(monitor: { triggerScan(force?: boolean): void }): void {
   _monitor = monitor;
 }
 
@@ -73,8 +73,7 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
 
     broadcast({ type: 'repository.added', timestamp: new Date().toISOString(), data: repo });
     logger.debug(`[Repositories] POST handler total before triggers — ${Date.now() - tRepo}ms`);
-    _monitor?.triggerScan();
-    _monitor?.triggerCopilotScan();
+    _monitor?.triggerScan(true);
     return reply.status(201).send(repo);
   });
 

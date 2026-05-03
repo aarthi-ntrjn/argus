@@ -215,12 +215,8 @@ export class SessionMonitor extends EventEmitter {
     });
   }
 
-  triggerScan(): void {
-    this.runScan().catch((err) => this.emit('error', err));
-  }
-
-  triggerCopilotScan(): void {
-    this.cliManager.triggerCopilotScan().catch((err) => this.emit('error', err));
+  triggerScan(force = false): void {
+    this.runScan(force).catch((err) => this.emit('error', err));
   }
 
   stop(): void {
@@ -330,13 +326,13 @@ export class SessionMonitor extends EventEmitter {
     }
   }
 
-  private async runScan(): Promise<void> {
+  private async runScan(force = false): Promise<void> {
     try {
       const tRun = Date.now();
       await this.scanner.scan();
       await this.refreshRepositoryBranches();
       this.reconcileClaudeSessionRegistry();
-      await this.cliManager.scan();
+      await this.cliManager.scan(force);
       this.reconcileClaudeCodeSessions();
       logger.debug(`[SessionMonitor] runScan total — ${Date.now() - tRun}ms`);
 

@@ -89,14 +89,9 @@ export class CliManager {
   // --- Per-cycle scan ---
 
   /** Runs all CLI detector scans and fires Copilot session lifecycle callbacks for any changes. */
-  async scan(): Promise<void> {
+  async scan(force = false): Promise<void> {
     await this.claudeDetector.scan();
-    this.processCopilotSessions(await this.copilotDetector.scan());
-  }
-
-  /** Forces an immediate Copilot-only scan (used when a new repo is registered). */
-  async triggerCopilotScan(): Promise<void> {
-    this.processCopilotSessions(await this.copilotDetector.scan(true));
+    this.processCopilotSessions(await this.copilotDetector.scan(force));
   }
 
   // --- Startup reconciliation data ---
