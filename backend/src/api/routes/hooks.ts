@@ -1,8 +1,22 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { getSession } from '../../db/database.js';
+import { getRepositoryByPath, getSession } from '../../db/database.js';
+import { normalize } from 'path';
 
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HOOK_BODY_LIMIT = 64 * 1024; // 64 KB
+
+const VALID_COPILOT_EVENTS = new Set(['sessionStart', 'sessionEnd', 'preToolUse', 'postToolUse']);
+
+const EVENT_TO_PASCAL: Record<string, string> = {
+  sessionStart: 'SessionStart',
+  sessionEnd: 'SessionEnd',
+  preToolUse: 'PreToolUse',
+  postToolUse: 'PostToolUse',
+};
+
+const TOOL_NAME_MAP: Record<string, string> = {
+  ask_user: 'ask_user',
+};
 
 interface HookPayload {
   hook_event_name: string;
@@ -14,10 +28,23 @@ interface HookPayload {
   [key: string]: unknown;
 }
 
+interface CopilotRawPayload {
+  sessionId?: string;
+  cwd?: string;
+  toolName?: string;
+  toolArgs?: string;
+  [key: string]: unknown;
+}
+
 let _claudeDetector: { handleHookPayload(p: HookPayload): Promise<void> } | null = null;
+let _copilotDetector: { handleHookPayload(p: HookPayload): Promise<void> } | null = null;
 
 export function setClaudeDetector(detector: { handleHookPayload(p: HookPayload): Promise<void> }): void {
   _claudeDetector = detector;
+}
+
+export function setCopilotDetector(detector: { handleHookPayload(p: HookPayload): Promise<void> }): void {
+  _copilotDetector = detector;
 }
 
 const hooksRoutes: FastifyPluginAsync = async (app) => {
@@ -57,7 +84,74 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
       return reply.send({ ok: true });
     },
   );
+
+  app.post<{ Querystring: { event?: string }; Body: CopilotRawPayload }>(
+    '/hooks/copilot',
+    { bodyLimit: HOOK_BODY_LIMIT },
+    async (req, reply) => {
+      const event = req.query.event;
+
+      if (!event || !VALID_COPILOT_EVENTS.has(event)) {
+        return reply.status(400).send({
+          error: 'INVALID_HOOK_EVENT',
+          message: 'event query parameter must be one of: sessionStart, sessionEnd, preToolUse, postToolUse',
+          requestId: req.id,
+        });
+      }
+
+      const body = req.body ?? {};
+      const rawSessionId = body.sessionId;
+      const cwd = typeof body.cwd === 'string' ? body.cwd : undefined;
+
+      // Validate sessionId: if present, must be UUID v4; if absent, cwd must match a repo
+      if (rawSessionId !== undefined) {
+        if (typeof rawSessionId !== 'string' || !UUID_V4_RE.test(rawSessionId)) {
+          return reply.status(400).send({
+            error: 'INVALID_SESSION_ID',
+            message: 'sessionId must be a valid UUID v4, or cwd must match a registered repository',
+            requestId: req.id,
+          });
+        }
+      } else {
+        // No sessionId — require cwd to match a repo
+        const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
+        const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
+        if (!repo) {
+          return reply.status(400).send({
+            error: 'INVALID_SESSION_ID',
+            message: 'sessionId must be a valid UUID v4, or cwd must match a registered repository',
+            requestId: req.id,
+          });
+        }
+      }
+
+      // Parse toolArgs JSON string into tool_input object
+      let toolInput: Record<string, unknown> | undefined;
+      if (typeof body.toolArgs === 'string') {
+        try {
+          toolInput = JSON.parse(body.toolArgs) as Record<string, unknown>;
+        } catch {
+          toolInput = undefined;
+        }
+      }
+
+      // Normalize to HookPayload (internal format matching ClaudeCodeDetector)
+      const normalized: HookPayload = {
+        hook_event_name: EVENT_TO_PASCAL[event]!,
+        session_id: typeof rawSessionId === 'string' ? rawSessionId : '',
+        cwd,
+        tool_name: typeof body.toolName === 'string' ? (TOOL_NAME_MAP[body.toolName] ?? body.toolName) : undefined,
+        tool_input: toolInput,
+      };
+
+      req.log.info({ hookEvent: normalized.hook_event_name, sessionId: normalized.session_id }, 'copilot hook received');
+
+      if (_copilotDetector) {
+        await _copilotDetector.handleHookPayload(normalized);
+      }
+      return reply.send({ ok: true });
+    },
+  );
 };
 
 export default hooksRoutes;
-
