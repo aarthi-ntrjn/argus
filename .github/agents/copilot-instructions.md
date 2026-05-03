@@ -53,11 +53,8 @@ npm test; npm run lint
 TypeScript 5.9 (frontend + backend): Follow standard conventions
 
 ## Recent Changes
-<<<<<<< HEAD
 - 063-copilot-hooks: Added TypeScript, Node.js 18+ (same as existing backend) + Fastify (existing), `fs` (built-in), SQLite via `better-sqlite3` (existing)
-=======
 - 064-code-coverage: Added TypeScript 5.9, Node.js >= 22 + Vitest 3.1.1, @vitest/coverage-v8 3.1.1 (installed in both workspaces)
->>>>>>> origin/master
 - 057-telemetry-location: Added TypeScript 5.9, Node.js ESM (tsx/tsc) + Fastify 5, Node.js built-in `net` module (outbound IP probe), PostHog via HTTP fetch
 - 051-prompt-history: Added TypeScript 5.x, React 18 + React Query (`@tanstack/react-query`) for session output data; existing `sendPrompt` API
 
