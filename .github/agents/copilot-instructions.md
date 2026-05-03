@@ -1,6 +1,6 @@
 # argus2 Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-25
+Auto-generated from all feature plans. Last updated: 2026-05-02
 
 ## Active Technologies
 - TypeScript 5.9, Node.js 22 + node-pty (new), Fastify 5, better-sqlite3, ws, @fastify/websocket (020-fix-send-prompts)
@@ -29,6 +29,8 @@ Auto-generated from all feature plans. Last updated: 2026-04-25
 - In-memory only — history is not persisted across page reloads (051-prompt-history)
 - TypeScript 5.9, Node.js ESM (tsx/tsc) + Fastify 5, Node.js built-in `net` module (outbound IP probe), PostHog via HTTP fetch (057-telemetry-location)
 - N/A (masked IP cached in-memory only; no new persistence) (057-telemetry-location)
+- TypeScript, Node.js 18+ (same as existing backend) + Fastify (existing), `fs` (built-in), SQLite via `better-sqlite3` (existing) (063-copilot-hooks)
+- SQLite (shared DB), `hooks.json` files per repository on disk (063-copilot-hooks)
 
 - TypeScript 5.9 (frontend + backend) + Fastify 5.x (backend), React 18 + TailwindCSS 3 + React Query (frontend), better-sqlite3 (storage), pino (logging), vitest + Playwright (testing) (014-engineer-todo-list)
 
@@ -49,9 +51,9 @@ npm test; npm run lint
 TypeScript 5.9 (frontend + backend): Follow standard conventions
 
 ## Recent Changes
+- 063-copilot-hooks: Added TypeScript, Node.js 18+ (same as existing backend) + Fastify (existing), `fs` (built-in), SQLite via `better-sqlite3` (existing)
 - 057-telemetry-location: Added TypeScript 5.9, Node.js ESM (tsx/tsc) + Fastify 5, Node.js built-in `net` module (outbound IP probe), PostHog via HTTP fetch
 - 051-prompt-history: Added TypeScript 5.x, React 18 + React Query (`@tanstack/react-query`) for session output data; existing `sendPrompt` API
-- 046-github-feedback: Added TypeScript 5.x + React 18, lucide-react (icons), Tailwind CSS
 
 
 <!-- MANUAL ADDITIONS START -->
