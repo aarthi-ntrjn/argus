@@ -8,38 +8,14 @@ This document describes the four test suites in the Argus monorepo, how coverage
 
 Argus has four independent test suites. Each targets a different layer of the stack.
 
-| Suite | Command | Technology | What it covers |
-|---|---|---|---|
-| Backend unit | `npm test --workspace=backend` | Vitest + V8 | `backend/src` — services, detectors, API routes, WebSocket handlers |
-| Frontend unit | `npm test --workspace=frontend` | Vitest + jsdom | `frontend/src` — React components, hooks, query logic |
-| E2E mock | `npm run test:e2e` | Playwright + Vite preview | Frontend UI flows with all API calls mocked via `page.route()` |
-| E2E real | `npm run test:e2e:real` | Playwright + live backend | Full stack: real Fastify server on port 7412, real SQLite DB |
+| Suite | Command | Test location | Config | Technology | What it covers |
+|---|---|---|---|---|---|
+| Backend unit | `npm test --workspace=backend` | `backend/tests/unit/`, `backend/tests/integration/`, `backend/tests/contract/` | `backend/vitest.config.ts` | Vitest + V8 | `backend/src` — services, detectors, API routes, WebSocket handlers |
+| Frontend unit | `npm test --workspace=frontend` | `frontend/src/**/*.test.*` | `frontend/vitest.config.ts` | Vitest + jsdom | `frontend/src` — React components, hooks, query logic |
+| E2E mock | `npm run test:e2e` | `frontend/tests/e2e/` | `playwright.config.ts` | Playwright + Vite preview | Frontend UI flows with all API calls mocked via `page.route()` |
+| E2E real | `npm run test:e2e:real` | `frontend/tests/e2e/real-server/` | `playwright.real.config.ts` | Playwright + live backend | Full stack: real Fastify server on port 7412, real SQLite DB |
 
-### Backend unit tests (`backend/tests/`)
-
-Three sub-categories, all run together with `npm test --workspace=backend`:
-
-- **Unit** (`backend/tests/unit/`): fully isolated with mocks, no I/O
-- **Integration** (`backend/tests/integration/`): real SQLite (temp DB via `ARGUS_DB_PATH`), real file fixtures
-- **Contract/WebSocket** (`backend/tests/contract/`, `backend/tests/`): real Fastify server, actual HTTP and WebSocket calls
-
-### Frontend unit tests (`frontend/src/**/*.test.*`)
-
-Run via Vitest with a jsdom environment. Tests are colocated with source files or in `frontend/src/__tests__/`.
-
-### E2E mock (`frontend/tests/e2e/`)
-
-Playwright tests served by `vite preview` from the built `frontend/dist/`. Every API and WebSocket call is intercepted with `page.route()`. No backend process is required. Fast smoke tests for UI logic and component integration.
-
-Config: `playwright.config.ts`
-
-### E2E real (`frontend/tests/e2e/real-server/`)
-
-Playwright tests against a live Fastify backend on port 7412 with an isolated SQLite database. No mocking anywhere. Exercises the full HTTP contract.
-
-Config: `playwright.real.config.ts`
-
-Isolation: `globalSetup` creates two temp git repos for seeding; `globalTeardown` deletes the DB and temp dirs. The dev server on port 7411 is never touched.
+The backend unit suite has three sub-categories run together: **unit** (mocks only, no I/O), **integration** (real SQLite via `ARGUS_DB_PATH`), and **contract/WebSocket** (real Fastify server, actual HTTP and WebSocket calls). The E2E real suite starts and stops the backend automatically; the dev server on port 7411 is never touched.
 
 ---
 
