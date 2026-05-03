@@ -61,10 +61,9 @@ function colorPct(val) {
   return typeof val === 'number' ? `${badge(val)} ${val.toFixed(2)}%` : 'N/A';
 }
 
-function colorTests(tests) {
+function colorTests(tests, failed) {
   if (tests === 'N/A') return 'N/A';
-  const [passed, total] = tests.split('/').map(Number);
-  const icon = passed === total ? '🟢' : '🔴';
+  const icon = failed === 0 ? '🟢' : '🔴';
   return `${icon} ${tests}`;
 }
 
@@ -79,32 +78,34 @@ function readJSON(relPath) {
 }
 
 function parseResults(data, format) {
-  if (!data) return { files: 'N/A', tests: 'N/A' };
+  if (!data) return { files: 'N/A', tests: 'N/A', failed: 0 };
   if (format === 'vitest') {
     const total = data.numTotalTests ?? 0;
     const passed = data.numPassedTests ?? 0;
+    const failed = data.numFailedTests ?? 0;
     const files = data.numTotalTestSuites ?? 'N/A';
-    return { files, tests: `${passed}/${total}` };
+    return { files, tests: `${passed}/${total}`, failed };
   }
   if (format === 'playwright') {
     const s = data.stats ?? {};
     const passed = s.expected ?? 0;
     const failed = s.unexpected ?? 0;
     const skipped = s.skipped ?? 0;
-    const total = passed + failed + skipped;
+    const run = passed + failed;
     const files = Array.isArray(data.suites) ? data.suites.length : 'N/A';
-    return { files, tests: `${passed}/${total}` };
+    const skipNote = skipped > 0 ? ` (${skipped} skipped)` : '';
+    return { files, tests: `${passed}/${run}${skipNote}`, failed };
   }
-  return { files: 'N/A', tests: 'N/A' };
+  return { files: 'N/A', tests: 'N/A', failed: 0 };
 }
 
 function summaryRow(suite, coverage, results) {
-  const { files, tests } = results;
+  const { files, tests, failed } = results;
   if (!coverage) {
-    return `| ${suite.name.padEnd(14)} | ${files} | ${colorTests(tests)} | N/A | N/A | N/A | N/A | ${suite.covers} |`;
+    return `| ${suite.name.padEnd(14)} | ${files} | ${colorTests(tests, failed)} | N/A | N/A | N/A | N/A | ${suite.covers} |`;
   }
   const t = coverage.total;
-  return `| ${suite.name.padEnd(14)} | ${files} | ${colorTests(tests)} | ${colorPct(t.statements?.pct)} | ${colorPct(t.branches?.pct)} | ${colorPct(t.functions?.pct)} | ${colorPct(t.lines?.pct)} | ${suite.covers} |`;
+  return `| ${suite.name.padEnd(14)} | ${files} | ${colorTests(tests, failed)} | ${colorPct(t.statements?.pct)} | ${colorPct(t.branches?.pct)} | ${colorPct(t.functions?.pct)} | ${colorPct(t.lines?.pct)} | ${suite.covers} |`;
 }
 
 function perFileTable(data) {

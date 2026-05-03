@@ -1,6 +1,6 @@
 # Coverage Report
 
-*Generated: May 3, 2026, 11:33 AM*
+*Generated: May 3, 2026, 2:17 PM*
 
 ## Summary
 
@@ -8,7 +8,7 @@
 |-------|-------|-------|------------|----------|-----------|-------|--------|
 | backend unit   | 167 | 🟢 454/454 | 🟡 62.43% | 🟡 75.72% | 🟡 69.74% | 🟡 62.43% | backend/src |
 | frontend unit  | 120 | 🟢 345/345 | 🟢 89.90% | 🟡 77.93% | 🔴 50.14% | 🟢 89.90% | frontend/src |
-| e2e mock       | 14 | 🔴 152/154 | 🔴 55.33% | 🔴 49.37% | 🔴 49.60% | 🔴 56.79% | frontend/src |
+| e2e mock       | 14 | 🟢 152/152 (2 skipped) | 🔴 55.33% | 🔴 49.37% | 🔴 49.60% | 🔴 56.79% | frontend/src |
 | e2e real       | 7 | 🟢 48/48 | 🔴 59.78% | 🟡 64.34% | 🟡 62.59% | 🔴 59.78% | backend/src |
 
 ## Backend unit - per file
