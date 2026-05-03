@@ -312,6 +312,10 @@ export class CopilotCliDetector implements CliDetector {
     return this.pendingChoices.get(sessionId) ?? null;
   }
 
+  clearPendingChoice(sessionId: string): void {
+    this.pendingChoices.delete(sessionId);
+  }
+
   async handleHookPayload(payload: CliHookPayload): Promise<void> {
     const { hook_event_name, session_id, cwd } = payload;
     if (!session_id) return;

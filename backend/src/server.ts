@@ -15,9 +15,9 @@ import * as logger from './utils/logger.js';
 import { SlackNotifier } from './integration/slack/slack-notifier.js';
 import { SlackListener } from './integration/slack/slack-listener.js';
 import { addClient, removeClient, broadcast } from './api/ws/event-dispatcher.js';
-import repositoriesRoutes, { setMonitor } from './api/routes/repositories.js';
-import sessionsRoutes, { setSessionClaudeDetector } from './api/routes/sessions.js';
-import hooksRoutes, { setClaudeDetector, setCopilotDetector } from './api/routes/hooks.js';
+import repositoriesRoutes, { setMonitor, setCliManager as setRepositoriesCliManager } from './api/routes/repositories.js';
+import sessionsRoutes, { setCliManager as setSessionsCliManager } from './api/routes/sessions.js';
+import hooksRoutes, { setCliManager as setHooksCliManager } from './api/routes/hooks.js';
 import healthRoutes, { setSlackServices } from './api/routes/health.js';
 import integrationsRoutes, { setIntegrationServices } from './api/routes/integrations.js';
 import metricsRoutes from './api/routes/metrics.js';
@@ -171,10 +171,10 @@ export async function startServer(): Promise<FastifyInstance> {
   const { app, config, teamsApp } = await buildServer();
 
   monitor = new SessionMonitor();
-  const claudeDetector = monitor.getClaudeCodeDetector();
-  setClaudeDetector(claudeDetector);
-  setCopilotDetector(monitor.getCopilotCliDetector());
-  setSessionClaudeDetector(claudeDetector);
+  const cliManager = monitor.getCliManager();
+  setHooksCliManager(cliManager);
+  setSessionsCliManager(cliManager);
+  setRepositoriesCliManager(cliManager);
   setMonitor(monitor);
 
   monitor.on('session.created', (session: Session) => {

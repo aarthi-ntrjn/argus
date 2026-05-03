@@ -6,10 +6,10 @@ import { ptyRegistry } from '../../services/pty-registry.js';
 import { telemetryService } from '../../services/telemetry-service.js';
 import { broadcast } from '../ws/event-dispatcher.js';
 
-let _claudeDetector: { getPendingChoice(sessionId: string): unknown; clearPendingChoice(sessionId: string): void } | null = null;
+let _cliManager: { getPendingChoice(sessionId: string): unknown; clearPendingChoice(sessionId: string): void } | null = null;
 
-export function setSessionClaudeDetector(detector: { getPendingChoice(sessionId: string): unknown; clearPendingChoice(sessionId: string): void }): void {
-  _claudeDetector = detector;
+export function setCliManager(manager: { getPendingChoice(sessionId: string): unknown; clearPendingChoice(sessionId: string): void }): void {
+  _cliManager = manager;
 }
 
 function withPtyConnected<T extends { id: string; launchMode?: string | null }>(session: T): T & { ptyConnected: boolean | null } {
@@ -72,7 +72,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       try {
         const action = await sessionController.interruptSession(req.params.id);
-        _claudeDetector?.clearPendingChoice(req.params.id);
+        _cliManager?.clearPendingChoice(req.params.id);
         broadcast({ type: 'session.pending_choice.resolved', timestamp: new Date().toISOString(), data: { sessionId: req.params.id } });
         return reply.status(202).send({ actionId: action.id, status: action.status });
       } catch (err: unknown) {
@@ -122,7 +122,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
         const session = getSession(req.params.id);
         if (!session) return reply.status(404).send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
 
-        const skipEnter = raw ? true : !!_claudeDetector?.getPendingChoice(req.params.id);
+        const skipEnter = raw ? true : !!_cliManager?.getPendingChoice(req.params.id);
         const action = await sessionController.sendPrompt(req.params.id, prompt, skipEnter);
         return reply.status(202).send({ actionId: action.id, status: action.status });
       } catch (err: unknown) {
@@ -167,7 +167,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
         await sessionController.sendPrompt(req.params.id, '\x03', true);
       } catch { /* best effort — clear the pending choice regardless */ }
 
-      _claudeDetector?.clearPendingChoice(req.params.id);
+      _cliManager?.clearPendingChoice(req.params.id);
       broadcast({ type: 'session.pending_choice.resolved', timestamp: new Date().toISOString(), data: { sessionId: req.params.id } });
       return reply.send({ status: 'rejected' });
     }

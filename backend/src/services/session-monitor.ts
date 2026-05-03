@@ -1,11 +1,7 @@
 import { EventEmitter } from 'events';
 import psList from 'ps-list';
 import { RepositoryScanner } from './repository-scanner.js';
-import { CopilotCliDetector } from './copilot-cli-detector.js';
-import { ClaudeCodeDetector } from './claude-code-detector.js';
-import { ClaudeSessionRegistry } from './claude-code-session-registry.js';
-import { CopilotHooksInjector } from './copilot-cli-hooks-injector.js';
-import { ClaudeCodeHooksInjector } from './claude-code-hooks-injector.js';
+import { CliManager } from './cli-manager.js';
 import { loadConfig } from '../config/config-loader.js';
 import { getSessions, getSession, getRepository, upsertSession, updateSessionStatus, getRepositories, getRepositoryByPath, updateRepositoryBranch } from '../db/database.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
@@ -29,9 +25,7 @@ const INACTIVE_THRESHOLD_MS = 20 * 60 * 1000;
 
 export class SessionMonitor extends EventEmitter {
   private scanner: RepositoryScanner;
-  private cliDetector: CopilotCliDetector;
-  private claudeDetector: ClaudeCodeDetector;
-  private sessionRegistry: ClaudeSessionRegistry;
+  private cliManager: CliManager;
   private scanInterval: ReturnType<typeof setInterval> | null = null;
   private knownSessionIds = new Set<string>();
   private activeSessionMap = new Map<string, Session>();
@@ -46,18 +40,14 @@ export class SessionMonitor extends EventEmitter {
     super();
     const config = loadConfig();
     this.scanner = new RepositoryScanner(config.watchDirectories);
-    this.cliDetector = new CopilotCliDetector();
-    this.claudeDetector = new ClaudeCodeDetector();
-    this.claudeDetector.setSessionCreatedCallback((session) => {
+    this.cliManager = new CliManager();
+    this.cliManager.setSessionCreatedCallback((session) => {
       this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
       this.emit('session.created', session);
     });
-    this.sessionRegistry = new ClaudeSessionRegistry();
   }
 
   async start(): Promise<void> {
-    new ClaudeCodeHooksInjector().injectForAll();
-    new CopilotHooksInjector().injectForAll();
     await this.reconcileStaleSessions();
 
     // Emit session.created for sessions already active in the DB from a previous run.
@@ -68,8 +58,7 @@ export class SessionMonitor extends EventEmitter {
       this.emit('session.created', session);
     }
 
-    await this.claudeDetector.start();
-    await this.cliDetector.start();
+    await this.cliManager.start();
     await this.runScan();
     this.scanInterval = setInterval(() => this.runScan(), 5000);
   }
@@ -99,11 +88,11 @@ export class SessionMonitor extends EventEmitter {
       if (sessions.length === 0) return;
 
       // Source 2a: Claude session registry (session ID → registry entry with PID)
-      const claudeRegistryEntries = this.sessionRegistry.scanEntries();
+      const claudeRegistryEntries = this.cliManager.claudeRegistryEntries();
       const claudeRegistryBySessionId = new Map(claudeRegistryEntries.map(e => [e.sessionId, e.pid]));
 
       // Source 2b: Copilot lock file registry (session ID → PID)
-      const copilotLockEntries = this.cliDetector.scanLockEntries();
+      const copilotLockEntries = this.cliManager.scanLockEntries();
 
       // Source 3: Running OS processes (filtered to AI tools only to avoid PID reuse false-positives).
       // On Linux/Mac the copilot binary is often a Node.js script: ps-list name is "node" but
@@ -172,7 +161,7 @@ export class SessionMonitor extends EventEmitter {
         if (!repo) {
           logger.info(`[ClaudeReconcile] session ended — repo removed sessionId=${session.id}`);
           updateSessionStatus(session.id, 'ended', now);
-          this.claudeDetector.closeSessionWatcher(session.id);
+          this.cliManager.closeClaudeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
           continue;
         }
@@ -180,7 +169,7 @@ export class SessionMonitor extends EventEmitter {
         if (session.pid != null && !isPidRunning(session.pid)) {
           logger.info(`[ClaudeReconcile] session ended — process gone sessionId=${session.id} pid=${session.pid}`);
           updateSessionStatus(session.id, 'ended', now);
-          this.claudeDetector.closeSessionWatcher(session.id);
+          this.cliManager.closeClaudeSessionWatcher(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
           continue;
         }
@@ -213,7 +202,7 @@ export class SessionMonitor extends EventEmitter {
   }
 
   triggerCopilotScan(): void {
-    this.cliDetector.scan(true).catch((err) => this.emit('error', err));
+    this.cliManager.scanCopilot(true).catch((err) => this.emit('error', err));
   }
 
   stop(): void {
@@ -221,16 +210,11 @@ export class SessionMonitor extends EventEmitter {
       clearInterval(this.scanInterval);
       this.scanInterval = null;
     }
-    this.cliDetector.stop();
-    this.claudeDetector.stop();
+    this.cliManager.stop();
   }
 
-  getClaudeCodeDetector(): ClaudeCodeDetector {
-    return this.claudeDetector;
-  }
-
-  getCopilotCliDetector(): CopilotCliDetector {
-    return this.cliDetector;
+  getCliManager(): CliManager {
+    return this.cliManager;
   }
   private async refreshRepositoryBranches(): Promise<void> {
     const repos = getRepositories();
@@ -251,7 +235,7 @@ export class SessionMonitor extends EventEmitter {
   }
 
   private reconcileClaudeSessionRegistry(): void {
-    const entries = this.sessionRegistry.scanEntries();
+    const entries = this.cliManager.claudeRegistryEntries();
     const currentPids = new Set<number>();
     const now = new Date().toISOString();
 
@@ -320,7 +304,7 @@ export class SessionMonitor extends EventEmitter {
         if (session.pid === oldPid && session.pidSource === 'session_registry') {
           logger.info(`[ClaudeRegistry] session ended — registry file gone sessionId=${session.id} pid=${oldPid}`);
           updateSessionStatus(session.id, 'ended', now);
-          this.claudeDetector.closeSessionWatcher(session.id);
+          this.cliManager.closeClaudeSessionWatcher(session.id);
           this.restingNotifiedSessions.delete(session.id);
           this.emit('session.ended', { ...session, status: 'ended', endedAt: now });
         }
@@ -334,9 +318,9 @@ export class SessionMonitor extends EventEmitter {
       await this.scanner.scan();
       await this.refreshRepositoryBranches();
       this.reconcileClaudeSessionRegistry();
-      await this.claudeDetector.scan();
+      await this.cliManager.scanClaude();
       this.reconcileClaudeCodeSessions();
-      const sessions = await this.cliDetector.scan();
+      const sessions = await this.cliManager.scanCopilot();
       logger.debug(`[SessionMonitor] runScan total — ${Date.now() - tRun}ms`);
       const currentScanIds = new Set<string>(sessions.map((s) => s.id));
 

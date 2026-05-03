@@ -36,15 +36,10 @@ interface CopilotRawPayload {
   [key: string]: unknown;
 }
 
-let _claudeDetector: { handleHookPayload(p: HookPayload): Promise<void> } | null = null;
-let _copilotDetector: { handleHookPayload(p: HookPayload): Promise<void> } | null = null;
+let _cliManager: { handleClaudeHookPayload(p: HookPayload): Promise<void>; handleCopilotHookPayload(p: HookPayload): Promise<void> } | null = null;
 
-export function setClaudeDetector(detector: { handleHookPayload(p: HookPayload): Promise<void> }): void {
-  _claudeDetector = detector;
-}
-
-export function setCopilotDetector(detector: { handleHookPayload(p: HookPayload): Promise<void> }): void {
-  _copilotDetector = detector;
+export function setCliManager(manager: { handleClaudeHookPayload(p: HookPayload): Promise<void>; handleCopilotHookPayload(p: HookPayload): Promise<void> }): void {
+  _cliManager = manager;
 }
 
 const hooksRoutes: FastifyPluginAsync = async (app) => {
@@ -78,8 +73,8 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
 
       req.log.info({ hookEvent: payload.hook_event_name, payload }, 'hook received');
 
-      if (_claudeDetector) {
-        await _claudeDetector.handleHookPayload(payload);
+      if (_cliManager) {
+        await _cliManager.handleClaudeHookPayload(payload);
       }
       return reply.send({ ok: true });
     },
@@ -146,8 +141,8 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
 
       req.log.info({ hookEvent: normalized.hook_event_name, sessionId: normalized.session_id }, 'copilot hook received');
 
-      if (_copilotDetector) {
-        await _copilotDetector.handleHookPayload(normalized);
+      if (_cliManager) {
+        await _cliManager.handleCopilotHookPayload(normalized);
       }
       return reply.send({ ok: true });
     },
