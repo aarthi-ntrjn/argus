@@ -202,7 +202,7 @@ export class SessionMonitor extends EventEmitter {
   }
 
   triggerCopilotScan(): void {
-    this.cliManager.scanCopilot(true).catch((err) => this.emit('error', err));
+    this.cliManager.triggerCopilotScan().catch((err) => this.emit('error', err));
   }
 
   stop(): void {
@@ -318,9 +318,8 @@ export class SessionMonitor extends EventEmitter {
       await this.scanner.scan();
       await this.refreshRepositoryBranches();
       this.reconcileClaudeSessionRegistry();
-      await this.cliManager.scanClaude();
+      const sessions = await this.cliManager.scan();
       this.reconcileClaudeCodeSessions();
-      const sessions = await this.cliManager.scanCopilot();
       logger.debug(`[SessionMonitor] runScan total — ${Date.now() - tRun}ms`);
       const currentScanIds = new Set<string>(sessions.map((s) => s.id));
 

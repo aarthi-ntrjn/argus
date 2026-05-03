@@ -55,14 +55,18 @@ export class CliManager {
 
   // --- Per-cycle scan ---
 
-  /** Runs the Claude detector's scan (registry reconciliation + file watching). */
-  async scanClaude(): Promise<void> {
+  /**
+   * Runs both detectors' scans and returns the current Copilot session list.
+   * Claude results are delivered via the session-created callback, not the return value.
+   */
+  async scan(): Promise<Session[]> {
     await this.claudeDetector.scan();
+    return this.copilotDetector.scan();
   }
 
-  /** Runs the Copilot detector's scan and returns the current session list. */
-  async scanCopilot(force?: boolean): Promise<Session[]> {
-    return this.copilotDetector.scan(force);
+  /** Forces an immediate Copilot-only scan (used when a new repo is registered). */
+  async triggerCopilotScan(): Promise<void> {
+    await this.copilotDetector.scan(true);
   }
 
   // --- Startup reconciliation data ---
