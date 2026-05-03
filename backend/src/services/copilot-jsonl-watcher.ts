@@ -48,6 +48,14 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
     await this.attachWatcher(sessionId, join(dirPath, 'events.jsonl'));
   }
 
+  closeWatcher(sessionId: string): void {
+    this.watchers.get(sessionId)?.close().catch(() => {});
+    this.watchers.delete(sessionId);
+    this.filePositions.delete(sessionId);
+    this.sequenceCounters.delete(sessionId);
+    this.pendingAskUserCallIds.delete(sessionId);
+  }
+
   stopWatchers(): void {
     super.stopWatchers();
     this.pendingAskUserCallIds.clear();

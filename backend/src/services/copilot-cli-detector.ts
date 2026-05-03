@@ -6,6 +6,7 @@ import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
 import { upsertSession, getRepositoryByPath, getSession, getSessions, updateSessionStatus, getServerState, setServerState } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
+import { telemetryService } from './telemetry-service.js';
 import { CopilotJsonlWatcher } from './copilot-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
@@ -328,8 +329,16 @@ export class CopilotCliDetector implements CliDetector {
     if (hook_event_name === 'SessionEnd') {
       if (!existing) return;
       updateSessionStatus(session_id, 'ended', now);
+      this.jsonlWatcher.closeWatcher(session_id);
       const ended = { ...existing, status: 'ended' as const, endedAt: now };
       broadcast({ type: 'session.ended', timestamp: now, data: ended });
+      this.pendingChoices.delete(session_id);
+      telemetryService.sendEvent('session_ended', {
+        sessionType: existing.type,
+        sessionId: existing.id,
+        launchMode: existing.launchMode === 'pty' ? 'connected' : 'readonly',
+        yoloMode: existing.yoloMode,
+      });
       return;
     }
 
@@ -351,6 +360,35 @@ export class CopilotCliDetector implements CliDetector {
     }
 
     // SessionStart or other events: create/update session
+    if (!existing) {
+      const claimed = normalizedCwd ? ptyRegistry.claimForSession(session_id, normalizedCwd, 'copilot-cli') : null;
+      if (claimed) {
+        const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'copilot-cli');
+        const ptySession: Session = {
+          id: session_id,
+          repositoryId: repo.id,
+          type: SessionTypes.COPILOT_CLI,
+          launchMode: 'pty',
+          pid: claimed.pid,
+          hostPid: claimed.hostPid,
+          pidSource: 'pty_registry' as PidSource,
+          status: 'active',
+          startedAt: now,
+          endedAt: null,
+          lastActivityAt: now,
+          summary: null,
+          expiresAt: null,
+          model: null,
+          reconciled: true,
+          yoloMode,
+        };
+        upsertSession(ptySession);
+        broadcast({ type: 'session.created', timestamp: now, data: ptySession });
+        await this.jsonlWatcher.watchFile(session_id, repo.path);
+        return;
+      }
+    }
+
     const session: Session = existing ?? {
       id: session_id,
       repositoryId: repo.id,
