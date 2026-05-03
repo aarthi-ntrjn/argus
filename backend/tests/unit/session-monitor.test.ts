@@ -61,6 +61,10 @@ vi.mock('../../src/services/copilot-cli-detector.js', () => ({
     closeSessionWatcher: vi.fn(),
     getPendingChoice: vi.fn(() => null),
     handleHookPayload: vi.fn(async () => {}),
+    setSessionCreatedCallback: vi.fn(),
+    setSessionUpdatedCallback: vi.fn(),
+    setSessionEndedCallback: vi.fn(),
+    seedState: vi.fn(),
   })),
 }));
 

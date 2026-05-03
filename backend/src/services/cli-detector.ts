@@ -17,19 +17,9 @@ export interface CliHookPayload {
 /**
  * Common lifecycle and protocol contract for all CLI session detectors.
  *
- * Each AI CLI tool has its own detection mechanism:
- *   - Claude Code: pushes sessions via sessionCreatedCallback from hook payloads and a
- *     registry scanner; scan() returns [].
- *   - Copilot CLI: discovers sessions by polling workspace.yaml files on disk;
- *     scan() returns the full discovered Session[].
- *
- * Despite these differences, SessionMonitor interacts with both via this interface
- * for lifecycle management (start/stop) and per-cycle scanning.
- *
- * Asymmetries intentionally preserved:
- *   - scan() return type: Claude pushes via callback so returns []; Copilot returns Session[].
- *   - closeSessionWatcher(): Claude requires explicit watcher teardown per session;
- *     Copilot manages watchers internally in scan(), so this is a no-op.
+ * Both detectors are push-based: scan() fires session lifecycle callbacks internally
+ * and returns the discovered sessions. Callers that only care about callbacks can
+ * ignore the return value.
  */
 export interface CliDetector {
   /**

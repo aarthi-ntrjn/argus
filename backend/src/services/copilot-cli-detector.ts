@@ -32,9 +32,41 @@ export class CopilotCliDetector implements CliDetector {
   private activeDirPaths = new Set<string>();
   private readonly pendingChoices = new Map<string, PendingChoice>();
 
+  // Push-based session lifecycle tracking — fires callbacks after each scan().
+  private knownIds = new Set<string>();
+  private sigCache = new Map<string, string>();
+  private activeMap = new Map<string, Session>();
+  private sessionCreatedCallback?: (session: Session) => void;
+  private sessionUpdatedCallback?: (session: Session) => void;
+  private sessionEndedCallback?: (session: Session) => void;
+
   constructor(private sessionStateDir: string = DEFAULT_SESSION_DIR) {
     const stored = getServerState('copilot_last_scan_time');
     this.lastScanTime = stored ? parseInt(stored, 10) : 0;
+  }
+
+  setSessionCreatedCallback(cb: (session: Session) => void): void {
+    this.sessionCreatedCallback = cb;
+  }
+
+  setSessionUpdatedCallback(cb: (session: Session) => void): void {
+    this.sessionUpdatedCallback = cb;
+  }
+
+  setSessionEndedCallback(cb: (session: Session) => void): void {
+    this.sessionEndedCallback = cb;
+  }
+
+  /**
+   * Seeds tracking state with sessions that survived from a previous run.
+   * Call before the first scan() to prevent duplicate session.created events.
+   */
+  seedState(sessions: Session[]): void {
+    for (const session of sessions) {
+      this.knownIds.add(session.id);
+      this.sigCache.set(session.id, this.sessionSignature(session));
+      if (session.status === 'active') this.activeMap.set(session.id, session);
+    }
   }
 
   /**
@@ -122,6 +154,7 @@ export class CopilotCliDetector implements CliDetector {
     this.lastScanTime = t0;
     setServerState('copilot_last_scan_time', String(t0));
 
+    this.processSessionEvents(sessions);
     return sessions;
   }
 
@@ -431,6 +464,63 @@ export class CopilotCliDetector implements CliDetector {
   private extractPid(lockFile: string): number | null {
     const match = lockFile.match(/inuse\.(\d+)\.lock/);
     return match ? parseInt(match[1], 10) : null;
+  }
+
+  private sessionSignature(session: Session): string {
+    return JSON.stringify({
+      status: session.status,
+      lastActivityAt: session.lastActivityAt,
+      summary: session.summary,
+      model: session.model,
+      pid: session.pid,
+      hostPid: session.hostPid,
+      pidSource: session.pidSource,
+      launchMode: session.launchMode,
+      endedAt: session.endedAt,
+    });
+  }
+
+  private processSessionEvents(sessions: Session[]): void {
+    const currentIds = new Set(sessions.map(s => s.id));
+    const now = new Date().toISOString();
+
+    // Detect sessions that dropped off the scan (process exited and workspace dir cleaned up).
+    for (const [id, session] of this.activeMap) {
+      if (!currentIds.has(id)) {
+        const stored = getSession(id);
+        if (stored?.status !== 'ended') {
+          updateSessionStatus(id, 'ended', now);
+          this.sessionEndedCallback?.({ ...session, status: 'ended', endedAt: now });
+        }
+        this.activeMap.delete(id);
+        this.sigCache.delete(id);
+      }
+    }
+
+    for (const session of sessions) {
+      if (!this.knownIds.has(session.id)) {
+        this.knownIds.add(session.id);
+        this.sigCache.set(session.id, this.sessionSignature(session));
+        this.sessionCreatedCallback?.(session);
+      } else {
+        const sig = this.sessionSignature(session);
+        if (this.sigCache.get(session.id) !== sig) {
+          this.sigCache.set(session.id, sig);
+          this.sessionUpdatedCallback?.(session);
+        }
+      }
+
+      if (session.status === 'ended') {
+        // Only fire once — ended sessions remain on disk and re-appear on every scan.
+        if (this.activeMap.has(session.id)) {
+          this.sessionEndedCallback?.(session);
+          this.activeMap.delete(session.id);
+          this.sigCache.delete(session.id);
+        }
+      } else if (session.status === 'active') {
+        this.activeMap.set(session.id, session);
+      }
+    }
   }
 
 }

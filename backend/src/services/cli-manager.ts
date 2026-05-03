@@ -2,7 +2,6 @@ import { ClaudeCodeDetector } from './claude-code-detector.js';
 import { CopilotCliDetector } from './copilot-cli-detector.js';
 import { ClaudeCodeHooksInjector } from './claude-code-hooks-injector.js';
 import { CopilotHooksInjector } from './copilot-cli-hooks-injector.js';
-import { getSession, updateSessionStatus } from '../db/database.js';
 import type { Session, ClaudeSessionRegistryEntry } from '../models/index.js';
 import type { CliHookPayload } from './cli-detector.js';
 
@@ -13,22 +12,15 @@ import type { CliHookPayload } from './cli-detector.js';
  * and the Claude session registry. It provides a unified API so that SessionMonitor,
  * route handlers, and the server startup code never need to reference individual
  * detectors directly.
+ *
+ * Both detectors are push-based: scan() fires session lifecycle callbacks internally.
+ * CliManager's three setters wire the same callback to both detectors.
  */
 export class CliManager {
   private claudeDetector: ClaudeCodeDetector;
   private copilotDetector: CopilotCliDetector;
   private claudeInjector: ClaudeCodeHooksInjector;
   private copilotInjector: CopilotHooksInjector;
-
-  // Copilot session tracking state (mirrors what was in SessionMonitor's runScan loop)
-  private copilotKnownIds = new Set<string>();
-  private copilotSigCache = new Map<string, string>();
-  private copilotActiveMap = new Map<string, Session>();
-
-  // Unified session lifecycle callbacks — wired to both detectors where applicable.
-  private onCreated?: (session: Session) => void;
-  private onUpdated?: (session: Session) => void;
-  private onEnded?: (session: Session) => void;
 
   constructor() {
     this.claudeDetector = new ClaudeCodeDetector();
@@ -37,30 +29,21 @@ export class CliManager {
     this.copilotInjector = new CopilotHooksInjector();
   }
 
-  /**
-   * Fires when either detector creates a new session.
-   * Must be called before start().
-   */
+  /** Fires when either detector creates a new session. Must be called before start(). */
   setSessionCreatedCallback(cb: (session: Session) => void): void {
-    this.onCreated = cb;
     this.claudeDetector.setSessionCreatedCallback(cb);
+    this.copilotDetector.setSessionCreatedCallback(cb);
   }
 
-  /**
-   * Fires when a session's state changes (Copilot only — Claude updates go through reconcileClaudeCodeSessions).
-   * Must be called before start().
-   */
+  /** Fires when a session's state changes (Copilot only — Claude updates go through reconcileClaudeCodeSessions). Must be called before start(). */
   setSessionUpdatedCallback(cb: (session: Session) => void): void {
-    this.onUpdated = cb;
+    this.copilotDetector.setSessionUpdatedCallback(cb);
   }
 
-  /**
-   * Fires when either detector ends a session.
-   * Must be called before start().
-   */
+  /** Fires when either detector ends a session. Must be called before start(). */
   setSessionEndedCallback(cb: (session: Session) => void): void {
-    this.onEnded = cb;
     this.claudeDetector.setSessionEndedCallback(cb);
+    this.copilotDetector.setSessionEndedCallback(cb);
   }
 
   /**
@@ -68,11 +51,7 @@ export class CliManager {
    * Call before the first scan() to prevent duplicate session.created events for survivors.
    */
   seedCopilotState(sessions: Session[]): void {
-    for (const session of sessions) {
-      this.copilotKnownIds.add(session.id);
-      this.copilotSigCache.set(session.id, this.sessionSignature(session));
-      if (session.status === 'active') this.copilotActiveMap.set(session.id, session);
-    }
+    this.copilotDetector.seedState(sessions);
   }
 
   // --- Lifecycle ---
@@ -93,10 +72,10 @@ export class CliManager {
 
   // --- Per-cycle scan ---
 
-  /** Runs all CLI detector scans and fires Copilot session lifecycle callbacks for any changes. */
+  /** Runs both CLI detector scans; each detector fires session lifecycle callbacks internally. */
   async scan(force = false): Promise<void> {
     await this.claudeDetector.scan();
-    this.processCopilotSessions(await this.copilotDetector.scan(force));
+    await this.copilotDetector.scan(force);
   }
 
   // --- Startup reconciliation data ---
@@ -165,63 +144,4 @@ export class CliManager {
     this.claudeInjector.removeAll();
   }
 
-  // --- Internal: Copilot session lifecycle processing ---
-
-  private sessionSignature(session: Session): string {
-    return JSON.stringify({
-      status: session.status,
-      lastActivityAt: session.lastActivityAt,
-      summary: session.summary,
-      model: session.model,
-      pid: session.pid,
-      hostPid: session.hostPid,
-      pidSource: session.pidSource,
-      launchMode: session.launchMode,
-      endedAt: session.endedAt,
-    });
-  }
-
-  private processCopilotSessions(sessions: Session[]): void {
-    const currentIds = new Set(sessions.map(s => s.id));
-    const now = new Date().toISOString();
-
-    // Detect sessions that dropped off the scan (process exited and workspace dir cleaned up)
-    for (const [id, session] of this.copilotActiveMap) {
-      if (!currentIds.has(id)) {
-        // Another code path (PTY dismiss, etc.) may have already marked it ended.
-        const stored = getSession(id);
-        if (stored?.status !== 'ended') {
-          updateSessionStatus(id, 'ended', now);
-          this.onEnded?.({ ...session, status: 'ended', endedAt: now });
-        }
-        this.copilotActiveMap.delete(id);
-        this.copilotSigCache.delete(id);
-      }
-    }
-
-    for (const session of sessions) {
-      if (!this.copilotKnownIds.has(session.id)) {
-        this.copilotKnownIds.add(session.id);
-        this.copilotSigCache.set(session.id, this.sessionSignature(session));
-        this.onCreated?.(session);
-      } else {
-        const sig = this.sessionSignature(session);
-        if (this.copilotSigCache.get(session.id) !== sig) {
-          this.copilotSigCache.set(session.id, sig);
-          this.onUpdated?.(session);
-        }
-      }
-
-      if (session.status === 'ended') {
-        // Only fire onEnded once — ended sessions remain on disk and re-appear on every scan.
-        if (this.copilotActiveMap.has(session.id)) {
-          this.onEnded?.(session);
-          this.copilotActiveMap.delete(session.id);
-          this.copilotSigCache.delete(session.id);
-        }
-      } else if (session.status === 'active') {
-        this.copilotActiveMap.set(session.id, session);
-      }
-    }
-  }
 }
