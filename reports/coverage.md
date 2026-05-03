@@ -4,14 +4,14 @@
 
 ## Summary
 
-| Suite | Statements | Branches | Functions | Lines | Covers |
-|-------|------------|----------|-----------|-------|--------|
-| backend unit   | 62.43% | 75.78% | 69.74% | 62.43% | backend/src |
-| frontend unit  | 89.90% | 77.79% | 50.14% | 89.90% | frontend/src |
-| e2e mock       | 55.26% | 49.10% | 49.40% | 56.72% | frontend/src |
-| e2e real       | 59.78% | 64.21% | 62.59% | 59.78% | backend/src |
+| Suite | Files | Tests | Statements | Branches | Functions | Lines | Covers |
+|-------|-------|-------|------------|----------|-----------|-------|--------|
+| backend unit   | 167 | 454/454 | 62.43% | 75.78% | 69.74% | 62.43% | backend/src |
+| frontend unit  | 120 | 345/345 | 89.90% | 77.93% | 50.14% | 89.90% | frontend/src |
+| e2e mock       | N/A | N/A | 55.26% | 49.10% | 49.40% | 56.72% | frontend/src |
+| e2e real       | N/A | N/A | 59.78% | 64.21% | 62.59% | 59.78% | backend/src |
 
-## Backend unit — per file
+## Backend unit - per file
 
 | File | Stmts | Branch | Funcs | Lines |
 |------|-------|--------|-------|-------|
@@ -76,7 +76,7 @@
 | `backend/src/utils/path-sandbox.ts` | 76.47% | 57.14% | 100.00% | 76.47% |
 | `backend/start-test-server.mjs` | 0.00% | 0.00% | 0.00% | 0.00% |
 
-## Frontend unit — per file
+## Frontend unit - per file
 
 | File | Stmts | Branch | Funcs | Lines |
 |------|-------|--------|-------|-------|
@@ -102,7 +102,7 @@
 | `frontend/src/components/RepoCard/RepoCard.tsx` | 8.10% | 100.00% | 0.00% | 8.10% |
 | `frontend/src/components/RepoContextBar/RepoContextBar.tsx` | 11.11% | 100.00% | 0.00% | 11.11% |
 | `frontend/src/components/SectionHeading.tsx` | 100.00% | 100.00% | 100.00% | 100.00% |
-| `frontend/src/components/SessionCard/SessionCard.tsx` | 100.00% | 87.50% | 29.41% | 100.00% |
+| `frontend/src/components/SessionCard/SessionCard.tsx` | 100.00% | 90.24% | 29.41% | 100.00% |
 | `frontend/src/components/SessionDetail/SessionDetail.tsx` | 83.13% | 71.00% | 56.00% | 83.13% |
 | `frontend/src/components/SessionDetail/sessionDetailUtils.ts` | 91.34% | 90.47% | 100.00% | 91.34% |
 | `frontend/src/components/SessionMetaRow/SessionMetaRow.tsx` | 92.59% | 70.37% | 80.00% | 92.59% |
@@ -453,7 +453,7 @@
 | `node_modules/vfile/lib/minurl.browser.js` | 100.00% | 100.00% | 100.00% | 100.00% |
 | `node_modules/vfile/lib/minurl.shared.js` | 100.00% | 100.00% | 100.00% | 100.00% |
 
-## E2e mock — per file
+## E2e mock - per file
 
 | File | Stmts | Branch | Funcs | Lines |
 |------|-------|--------|-------|-------|
@@ -520,7 +520,7 @@
 | `frontend/src/utils/repoUtils.ts` | 21.42% | 16.66% | 100.00% | 16.66% |
 | `frontend/src/utils/sessionUtils.ts` | 100.00% | 80.00% | 100.00% | 100.00% |
 
-## E2e real — per file
+## E2e real - per file
 
 | File | Stmts | Branch | Funcs | Lines |
 |------|-------|--------|-------|-------|

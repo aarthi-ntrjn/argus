@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --reporter=verbose --reporter=json --outputFile.json=coverage/test-results.json",
     "test:watch": "vitest",
     "test:e2e": "playwright test --config ../playwright.config.ts",
     "pretest:e2e:real": "node ../scripts/kill-port.mjs 7412",

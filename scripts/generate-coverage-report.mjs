@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
  * Reads the four coverage-summary.json files produced by the coverage scripts
- * and writes reports/coverage.md with a summary table and per-file tables for
- * each suite.
+ * and writes reports/coverage.md with a summary table plus a per-file breakdown
+ * for each suite.
  *
- * Missing summary files (e.g. when a suite is skipped) produce N/A rows.
+ * Also reads test result JSON files (vitest JSON reporter / Playwright JSON
+ * reporter) to include file count and pass/total in the summary table.
+ * Missing files produce N/A values.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
@@ -14,17 +16,41 @@ const root = resolve(import.meta.dirname, '..');
 const today = new Date().toISOString().split('T')[0];
 
 const SUITES = [
-  { name: 'backend unit',  covers: 'backend/src',  file: 'backend/coverage/coverage-summary.json' },
-  { name: 'frontend unit', covers: 'frontend/src',  file: 'frontend/coverage/coverage-summary.json' },
-  { name: 'e2e mock',      covers: 'frontend/src',  file: 'frontend/coverage-e2e/coverage-summary.json' },
-  { name: 'e2e real',      covers: 'backend/src',   file: 'backend/coverage-e2e/coverage-summary.json' },
+  {
+    name: 'backend unit',
+    covers: 'backend/src',
+    coverageFile: 'backend/coverage/coverage-summary.json',
+    resultsFile: 'backend/coverage/test-results.json',
+    resultsFormat: 'vitest',
+  },
+  {
+    name: 'frontend unit',
+    covers: 'frontend/src',
+    coverageFile: 'frontend/coverage/coverage-summary.json',
+    resultsFile: 'frontend/coverage/test-results.json',
+    resultsFormat: 'vitest',
+  },
+  {
+    name: 'e2e mock',
+    covers: 'frontend/src',
+    coverageFile: 'frontend/coverage-e2e/coverage-summary.json',
+    resultsFile: 'test-results/e2e-mock-results.json',
+    resultsFormat: 'playwright',
+  },
+  {
+    name: 'e2e real',
+    covers: 'backend/src',
+    coverageFile: 'backend/coverage-e2e/coverage-summary.json',
+    resultsFile: 'test-results/e2e-real-results.json',
+    resultsFormat: 'playwright',
+  },
 ];
 
 function pct(val) {
   return typeof val === 'number' ? `${val.toFixed(2)}%` : 'N/A';
 }
 
-function readSummary(relPath) {
+function readJSON(relPath) {
   const abs = resolve(root, relPath);
   if (!existsSync(abs)) return null;
   try {
@@ -34,12 +60,33 @@ function readSummary(relPath) {
   }
 }
 
-function summaryRow(suite, data) {
-  if (!data) {
-    return `| ${suite.name.padEnd(14)} | N/A | N/A | N/A | N/A | ${suite.covers} |`;
+function parseResults(data, format) {
+  if (!data) return { files: 'N/A', tests: 'N/A' };
+  if (format === 'vitest') {
+    const total = data.numTotalTests ?? 0;
+    const passed = data.numPassedTests ?? 0;
+    const files = data.numTotalTestSuites ?? 'N/A';
+    return { files, tests: `${passed}/${total}` };
   }
-  const t = data.total;
-  return `| ${suite.name.padEnd(14)} | ${pct(t.statements?.pct)} | ${pct(t.branches?.pct)} | ${pct(t.functions?.pct)} | ${pct(t.lines?.pct)} | ${suite.covers} |`;
+  if (format === 'playwright') {
+    const s = data.stats ?? {};
+    const passed = s.expected ?? 0;
+    const failed = s.unexpected ?? 0;
+    const skipped = s.skipped ?? 0;
+    const total = passed + failed + skipped;
+    const files = Array.isArray(data.suites) ? data.suites.length : 'N/A';
+    return { files, tests: `${passed}/${total}` };
+  }
+  return { files: 'N/A', tests: 'N/A' };
+}
+
+function summaryRow(suite, coverage, results) {
+  const { files, tests } = results;
+  if (!coverage) {
+    return `| ${suite.name.padEnd(14)} | ${files} | ${tests} | N/A | N/A | N/A | N/A | ${suite.covers} |`;
+  }
+  const t = coverage.total;
+  return `| ${suite.name.padEnd(14)} | ${files} | ${tests} | ${pct(t.statements?.pct)} | ${pct(t.branches?.pct)} | ${pct(t.functions?.pct)} | ${pct(t.lines?.pct)} | ${suite.covers} |`;
 }
 
 function perFileTable(data) {
@@ -64,17 +111,21 @@ function perFileTable(data) {
   ].join('\n');
 }
 
-const loaded = SUITES.map(s => ({ suite: s, data: readSummary(s.file) }));
+const loaded = SUITES.map(s => ({
+  suite: s,
+  coverage: readJSON(s.coverageFile),
+  results: parseResults(readJSON(s.resultsFile), s.resultsFormat),
+}));
 
 const summaryTable = [
-  '| Suite | Statements | Branches | Functions | Lines | Covers |',
-  '|-------|------------|----------|-----------|-------|--------|',
-  ...loaded.map(({ suite, data }) => summaryRow(suite, data)),
+  '| Suite | Files | Tests | Statements | Branches | Functions | Lines | Covers |',
+  '|-------|-------|-------|------------|----------|-----------|-------|--------|',
+  ...loaded.map(({ suite, coverage, results }) => summaryRow(suite, coverage, results)),
 ].join('\n');
 
-const perFileSections = loaded.map(({ suite, data }) => {
+const perFileSections = loaded.map(({ suite, coverage }) => {
   const heading = suite.name.charAt(0).toUpperCase() + suite.name.slice(1);
-  return `## ${heading} — per file\n\n${perFileTable(data)}`;
+  return `## ${heading} - per file\n\n${perFileTable(coverage)}`;
 }).join('\n\n');
 
 const report = `# Coverage Report

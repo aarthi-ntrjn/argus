@@ -19,7 +19,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: 1,
-  reporter: 'html',
+  reporter: [['html'], ['json', { outputFile: 'test-results/e2e-real-results.json' }]],
   globalSetup: './frontend/tests/e2e/real-server/global-setup.ts',
   globalTeardown: './frontend/tests/e2e/real-server/global-teardown.ts',
   use: {
