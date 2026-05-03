@@ -47,6 +47,8 @@
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
     "test:coverage": "npm run test:coverage --workspace=backend && npm run test:coverage --workspace=frontend",
+    "test:coverage:e2e": "cross-env VITE_COVERAGE=true npm run build --workspace=frontend && cross-env VITE_COVERAGE=true npm run test:e2e --workspace=frontend && node scripts/merge-e2e-coverage.mjs",
+    "test:coverage:e2e:real": "cross-env NODE_V8_COVERAGE=./backend/coverage-e2e/raw npm run test:e2e:real --workspace=frontend && npx c8 report --reporter=json-summary --reporter=text --src=backend/src --temp-directory=backend/coverage-e2e/raw --reports-dir=backend/coverage-e2e --all",
     "postinstall": "node ./scripts/fix-node-pty-helper.mjs",
     "prepublishOnly": "npm run build",
     "test:e2e": "npm run test:e2e --workspace=frontend",
@@ -72,6 +74,11 @@
     "ws": "8.20.0"
   },
   "devDependencies": {
+    "c8": "^11.0.0",
+    "cross-env": "^10.1.0",
+    "istanbul-lib-coverage": "^3.2.2",
+    "istanbul-lib-report": "^3.0.1",
+    "istanbul-reports": "^3.2.0",
     "vitest": "3.1.1"
   },
   "overrides": {

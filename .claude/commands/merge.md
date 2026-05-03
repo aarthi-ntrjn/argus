@@ -87,7 +87,59 @@ Perform each check below. Record findings as `PASS`, `FAIL`, or `N/A` with evide
 
 ---
 
-### Step 4 — Fix all FAIL items
+### Step 4 — Generate coverage snapshot
+
+After all tests pass in Step 3, run all four coverage passes in sequence:
+
+```
+npm run test:coverage
+npm run test:coverage:e2e
+npm run test:coverage:e2e:real
+```
+
+`test:coverage` runs both unit test suites (backend + frontend vitest).
+`test:coverage:e2e` builds the frontend with Istanbul instrumentation, runs the mock E2E suite, then merges the per-test coverage files.
+`test:coverage:e2e:real` runs the real-server E2E suite with `NODE_V8_COVERAGE` set so the backend process dumps raw V8 coverage on exit, then runs `c8 report` to generate the summary.
+
+After all three succeed, read these four JSON summary files:
+
+- `backend/coverage/coverage-summary.json` — backend unit coverage
+- `frontend/coverage/coverage-summary.json` — frontend unit coverage
+- `frontend/coverage-e2e/coverage-summary.json` — frontend mock E2E coverage
+- `backend/coverage-e2e/coverage-summary.json` — backend real-server E2E coverage
+
+Each file has a `"total"` key with `statements.pct`, `branches.pct`, `functions.pct`, and `lines.pct`.
+
+Write (or overwrite) `reports/coverage.md` with exactly this structure:
+
+```markdown
+# Coverage Report
+
+*Generated: YYYY-MM-DD | Branch: <FEATURE_BRANCH>*
+
+| Suite | Statements | Branches | Functions | Lines | Covers |
+|-------|------------|----------|-----------|-------|--------|
+| backend unit   | XX.XX% | XX.XX% | XX.XX% | XX.XX% | backend/src |
+| frontend unit  | XX.XX% | XX.XX% | XX.XX% | XX.XX% | frontend/src |
+| e2e mock       | XX.XX% | XX.XX% | XX.XX% | XX.XX% | frontend/src |
+| e2e real       | XX.XX% | XX.XX% | XX.XX% | XX.XX% | backend/src |
+```
+
+If any coverage script fails (for example `test:coverage:e2e:real` because no test server is available), write `N/A` in the affected row rather than failing the merge.
+
+Then stage and commit to the feature branch:
+
+```
+git add reports/coverage.md
+git commit -m "chore: update coverage report
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+git push
+```
+
+---
+
+### Step 5 — Fix all FAIL items
 
 For each **FAIL** finding:
 
@@ -104,11 +156,11 @@ For each **FAIL** finding:
 
 For **WARN** items (style, non-blocking): report them but do not block the merge.
 
-Do not proceed to Step 5 until all **FAIL** items are resolved.
+Do not proceed to Step 6 until all **FAIL** items are resolved.
 
 ---
 
-### Step 5 — Final pre-merge summary
+### Step 6 — Final pre-merge summary
 
 Output a pre-merge report:
 
@@ -132,7 +184,7 @@ Output a pre-merge report:
 
 ---
 
-### Step 6 — Merge into main
+### Step 7 — Merge into main
 
 Before merging, generate a clear PR/merge description by running:
 ```
@@ -160,23 +212,23 @@ git push origin <MAIN_BRANCH>
 
 If the merge has conflicts, stop and report: list the conflicting files and ask the user to resolve them manually, then re-run `/merge`.
 
-**Do NOT delete the feature branch yet** — that happens in Step 8 after CI passes.
+**Do NOT delete the feature branch yet** — that happens in Step 9 after CI passes.
 
 ---
 
-### Step 7 — Report
+### Step 8 — Report
 
 Output a final merge summary:
 
 - **Branch merged**: `<FEATURE_BRANCH>` → `<MAIN_BRANCH>`
-- **Branch deletion**: pending CI result (see Step 8)
+- **Branch deletion**: pending CI result (see Step 9)
 - **Constitution gaps fixed**: list any items that were fixed (or "None")
 - **Warnings**: list any WARN items for follow-up
 - **Tests**: pass count
 
 ---
 
-### Step 8 — Monitor CI workflow
+### Step 9 — Monitor CI workflow
 
 After pushing to the main branch, find the triggered GitHub Actions workflow run and monitor it to completion.
 

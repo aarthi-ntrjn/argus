@@ -1,6 +1,7 @@
 # Agent credential folders
 
 .github/copilot/
+.github/hooks/
 
 node_modules/
 dist/
@@ -19,3 +20,7 @@ backend/dist/
 # Test-generated files
 backend/*.db
 backend/teams-config-*.json
+# E2E coverage raw output (intermediate files only — reports/coverage.md is committed)
+frontend/.nyc_output/
+frontend/coverage-e2e/
+backend/coverage-e2e/
