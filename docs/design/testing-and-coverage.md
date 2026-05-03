@@ -37,6 +37,24 @@ These are unrelated to the E2E suites. The key difference: contract tests call t
 
 ## Running all suites at once
 
+### Tests
+
+```
+# All backend tests (unit + integration + contract)
+npm test --workspace=backend
+
+# All frontend unit tests
+npm test --workspace=frontend
+
+# All four suites (run in sequence)
+npm test --workspace=backend
+npm test --workspace=frontend
+npm run test:e2e
+npm run test:e2e:real
+```
+
+### Coverage
+
 ```
 # Unit tests only (backend + frontend)
 npm run test:coverage
