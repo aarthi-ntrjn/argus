@@ -10,19 +10,9 @@ import type { Session, Repository, PendingChoice } from '../models/index.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
+import type { CliDetector, CliHookPayload } from './cli-detector.js';
 
-
-interface HookPayload {
-  hook_event_name: string;
-  session_id: string;
-  cwd?: string;
-  tool_name?: string;
-  tool_input?: Record<string, unknown>;
-  tool_result?: unknown;
-  [key: string]: unknown;
-}
-
-export class ClaudeCodeDetector {
+export class ClaudeCodeDetector implements CliDetector {
   private jsonlWatcher = new ClaudeJsonlWatcher();
   private pendingChoices = new Map<string, PendingChoice>();
   private sessionCreatedCallback?: (session: Session) => void;
@@ -44,7 +34,12 @@ export class ClaudeCodeDetector {
   }
 
 
-  async scanExistingSessions(): Promise<void> {
+  /** One-time startup: runs the initial session scan before the scan loop begins. */
+  async start(): Promise<void> {
+    await this.scan();
+  }
+
+  async scan(): Promise<Session[]> {
     const registry = new ClaudeSessionRegistry();
     const registryEntries = registry.scanEntries();
 
@@ -65,10 +60,10 @@ export class ClaudeCodeDetector {
 
       await this.activateFoundSession(entry.sessionId, repo, null);
     }
-
+    return [];
   }
 
-  async handleHookPayload(payload: HookPayload): Promise<void> {
+  async handleHookPayload(payload: CliHookPayload): Promise<void> {
     const { hook_event_name, session_id, cwd } = payload;
     if (!session_id) return;
 
@@ -114,7 +109,7 @@ export class ClaudeCodeDetector {
     });
   }
 
-  private handlePreAskQuestion(sessionId: string, existing: Session | null | undefined, payload: HookPayload, now: string): void {
+  private handlePreAskQuestion(sessionId: string, existing: Session | null | undefined, payload: CliHookPayload, now: string): void {
     if (!existing) return;
     const { question, choices, allQuestions } = parsePendingChoicePayload(payload.tool_input ?? {});
     this.pendingChoices.set(sessionId, { question, choices, allQuestions });
@@ -242,7 +237,7 @@ export class ClaudeCodeDetector {
     this.jsonlWatcher.closeWatcher(sessionId);
   }
 
-  stopWatchers(): void {
+  stop(): void {
     this.jsonlWatcher.stopAll();
   }
 }

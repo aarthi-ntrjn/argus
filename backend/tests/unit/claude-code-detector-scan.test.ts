@@ -35,7 +35,7 @@ let mockMtime = new Date(); // recent by default
 let fakeJsonlFiles: string[] = ['test-session-abc123.jsonl'];
 
 // Fake session registry: maps session IDs to registry JSON content.
-// scanExistingSessions now cross-references ~/.claude/sessions/ to filter dead sessions.
+// scan() now cross-references ~/.claude/sessions/ to filter dead sessions.
 let fakeRegistryEntries: Record<string, { pid: number; sessionId: string; cwd: string }> = {};
 
 // Mock fs: readdirSync returns project-dir entries when called with withFileTypes,
@@ -70,7 +70,7 @@ vi.mock('fs', async (importOriginal) => {
   };
 });
 
-describe('ClaudeCodeDetector.scanExistingSessions', () => {
+describe('ClaudeCodeDetector.scan', () => {
   let dbModule: typeof import('../../src/db/database.js');
 
   beforeEach(async () => {
@@ -126,7 +126,7 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession(sessionId);
     expect(session?.status).toBe('active');
@@ -157,7 +157,7 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession(sessionId);
     expect(session?.status).toBe('active');
@@ -182,7 +182,7 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession(sessionId);
     expect(session?.status).toBe('ended');
@@ -193,7 +193,7 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     fakeRegistryEntries = { 'brand-new-session-xyz': { pid: 4242, sessionId: 'brand-new-session-xyz', cwd: FAKE_REPO_PATH } };
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession('brand-new-session-xyz');
     expect(session).not.toBeUndefined();
@@ -223,10 +223,10 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession(sessionId);
-    // scanExistingSessions no longer checks psList — it activates JSONL sessions
+    // scan() no longer checks psList — it activates JSONL sessions
     // and leaves PID assignment to the session registry scanner
     expect(session?.status).toBe('active');
     expect(session?.pid).toBeNull();
@@ -238,7 +238,7 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     mockIsExpectedProcessResult = false;
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession('test-session-abc123');
     expect(session).toBeUndefined(); // never activated
@@ -267,7 +267,7 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     // Session stays active (scanExistingSessions doesn't end sessions; reconcile does)
     // but the key check is that activateFoundSession was NOT called again (no upsert with new timestamp)
@@ -299,7 +299,7 @@ describe('ClaudeCodeDetector.scanExistingSessions', () => {
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     // The new session MUST be created with the real JSONL-derived ID
     const newSession = dbModule.getSession(realSessionId);
@@ -474,3 +474,4 @@ describe('ClaudeCodeDetector — PTY claim on first hook (T029 redesign)', () =>
     expect(ptyRegistryModule.ptyRegistry.has(claudeSessionId)).toBe(false);
   });
 });
+

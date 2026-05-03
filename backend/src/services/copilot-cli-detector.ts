@@ -13,6 +13,7 @@ import type { Session, PidSource, PendingChoice } from '../models/index.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
+import type { CliDetector, CliHookPayload } from './cli-detector.js';
 
 const DEFAULT_SESSION_DIR = join(homedir(), '.copilot', 'session-state');
 
@@ -24,16 +25,7 @@ interface WorkspaceYaml {
   updated_at?: string | Date;
 }
 
-interface HookPayload {
-  hook_event_name: string;
-  session_id: string;
-  cwd?: string;
-  tool_name?: string;
-  tool_input?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-export class CopilotCliDetector {
+export class CopilotCliDetector implements CliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
   private lastScanTime: number;
   private activeDirPaths = new Set<string>();
@@ -46,6 +38,9 @@ export class CopilotCliDetector {
     // stopped are picked up on the first scan even if their dir mtime predates lastScanTime.
     this.initActiveDirsFromDb();
   }
+
+  /** One-time startup: state is already seeded in the constructor; no further action needed. */
+  async start(): Promise<void> {}
 
   // Reads active copilot-cli sessions from the DB and finds their on-disk dirs.
   // This ensures active sessions are always rechecked on startup regardless of mtime.
@@ -303,15 +298,18 @@ export class CopilotCliDetector {
     return result;
   }
 
-  stopWatchers(): void {
+  stop(): void {
     this.jsonlWatcher.stopWatchers();
   }
+
+  /** No-op: Copilot manages JSONL watchers internally in scan(). */
+  closeSessionWatcher(_sessionId: string): void {}
 
   getPendingChoice(sessionId: string): PendingChoice | null {
     return this.pendingChoices.get(sessionId) ?? null;
   }
 
-  async handleHookPayload(payload: HookPayload): Promise<void> {
+  async handleHookPayload(payload: CliHookPayload): Promise<void> {
     const { hook_event_name, session_id, cwd } = payload;
     if (!session_id) return;
 

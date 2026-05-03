@@ -54,20 +54,26 @@ vi.mock('../../src/services/repository-scanner.js', () => ({
 
 vi.mock('../../src/services/copilot-cli-detector.js', () => ({
   CopilotCliDetector: vi.fn().mockImplementation(() => ({
+    start: vi.fn(async () => {}),
     scan: vi.fn(async () => []),
+    stop: vi.fn(),
     scanLockEntries: vi.fn(() => new Map()),
-    stopWatchers: vi.fn(),
+    closeSessionWatcher: vi.fn(),
+    getPendingChoice: vi.fn(() => null),
+    handleHookPayload: vi.fn(async () => {}),
   })),
 }));
 
 vi.mock('../../src/services/claude-code-detector.js', () => ({
   ClaudeCodeDetector: Object.assign(
     vi.fn().mockImplementation(() => ({
-      injectHooks: vi.fn(),
-      scanExistingSessions: vi.fn(async () => {}),
-      stopWatchers: vi.fn(),
+      start: vi.fn(async () => {}),
+      scan: vi.fn(async () => []),
+      stop: vi.fn(),
       closeSessionWatcher: vi.fn(),
       setSessionCreatedCallback: vi.fn(),
+      getPendingChoice: vi.fn(() => null),
+      handleHookPayload: vi.fn(async () => {}),
     })),
     { projectDirName: (p: string) => p.replace(/[:\\/\s]/g, '-') }
   ),

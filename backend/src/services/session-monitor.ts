@@ -68,7 +68,7 @@ export class SessionMonitor extends EventEmitter {
       this.emit('session.created', session);
     }
 
-    await this.claudeDetector.scanExistingSessions();
+    await this.claudeDetector.start();
     await this.runScan();
     this.scanInterval = setInterval(() => this.runScan(), 5000);
   }
@@ -220,8 +220,8 @@ export class SessionMonitor extends EventEmitter {
       clearInterval(this.scanInterval);
       this.scanInterval = null;
     }
-    this.cliDetector.stopWatchers();
-    this.claudeDetector.stopWatchers();
+    this.cliDetector.stop();
+    this.claudeDetector.stop();
   }
 
   getClaudeCodeDetector(): ClaudeCodeDetector {
@@ -333,7 +333,7 @@ export class SessionMonitor extends EventEmitter {
       await this.scanner.scan();
       await this.refreshRepositoryBranches();
       this.reconcileClaudeSessionRegistry();
-      await this.claudeDetector.scanExistingSessions();
+      await this.claudeDetector.scan();
       this.reconcileClaudeCodeSessions();
       const sessions = await this.cliDetector.scan();
       logger.debug(`[SessionMonitor] runScan total — ${Date.now() - tRun}ms`);
