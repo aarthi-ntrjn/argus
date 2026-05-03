@@ -106,6 +106,11 @@ Quick summary:
 | `npm test` | All backend tests (unit + integration + contract) |
 | `npm run test:e2e` | Mocked E2E suite (no server needed) |
 | `npm run test:e2e:real` | Real-server E2E suite (live backend, isolated DB) |
+| `npm run test:coverage --workspace=backend` | Backend tests with V8 coverage report |
+| `npm run test:coverage --workspace=frontend` | Frontend unit tests with V8 coverage report |
+| `npm run test:coverage` | Both backend and frontend coverage in sequence |
+
+HTML reports are written to `backend/coverage/` and `frontend/coverage/` respectively. Open `index.html` in either directory to browse per-file and per-line coverage.
 
 ## How-tos
 

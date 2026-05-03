@@ -19,6 +19,7 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.ts'],
       exclude: ['node_modules', 'dist', 'src/**/*.d.ts'],
+      all: true,
     },
   },
 });

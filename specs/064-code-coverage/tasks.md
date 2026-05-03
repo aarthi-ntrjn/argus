@@ -11,8 +11,8 @@
 
 **Purpose**: Verify existing tooling and confirm no package installations are needed.
 
-- [ ] T001 [P] Verify `@vitest/coverage-v8` is present in `backend/package.json` devDependencies
-- [ ] T002 [P] Verify `@vitest/coverage-v8` is present in `frontend/package.json` devDependencies
+- [x] T001 [P] Verify `@vitest/coverage-v8` is present in `backend/package.json` devDependencies
+- [x] T002 [P] Verify `@vitest/coverage-v8` is present in `frontend/package.json` devDependencies
 
 **Checkpoint**: Both workspaces have coverage-v8 installed — no `npm install` required.
 
@@ -34,8 +34,8 @@
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Add `all: true` to the `coverage` block in `backend/vitest.config.ts` so zero-coverage source files are included in the report
-- [ ] T004 [US1] Run `npm run test:coverage --workspace=backend` and confirm it exits 0 and prints coverage table; fix any config issues found
+- [x] T003 [US1] Add `all: true` to the `coverage` block in `backend/vitest.config.ts` so zero-coverage source files are included in the report
+- [x] T004 [US1] Run `npm run test:coverage --workspace=backend` and confirm it exits 0 and prints coverage table; fix any config issues found
 
 **Checkpoint**: Backend coverage command works end-to-end. HTML report at `backend/coverage/index.html` is populated.
 
@@ -49,9 +49,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T005 [US2] Add `coverage` block to `frontend/vitest.config.ts` with `provider: 'v8'`, `reporter: ['text', 'json', 'html']`, `include: ['src/**/*.ts', 'src/**/*.tsx']`, `exclude` for test/setup/d.ts files, and `all: true`
-- [ ] T006 [US2] Add `"test:coverage": "vitest run --coverage"` script to `frontend/package.json`
-- [ ] T007 [US2] Run `npm run test:coverage --workspace=frontend` and confirm it exits 0 and prints coverage table; fix any config issues found
+- [x] T005 [US2] Add `coverage` block to `frontend/vitest.config.ts` with `provider: 'v8'`, `reporter: ['text', 'json', 'html']`, `include: ['src/**/*.ts', 'src/**/*.tsx']`, `exclude` for test/setup/d.ts files, and `all: true`
+- [x] T006 [US2] Add `"test:coverage": "vitest run --coverage"` script to `frontend/package.json`
+- [x] T007 [US2] Run `npm run test:coverage --workspace=frontend` and confirm it exits 0 and prints coverage table; fix any config issues found
 
 **Checkpoint**: Frontend coverage command works end-to-end. HTML report at `frontend/coverage/index.html` is populated.
 
@@ -65,8 +65,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] Add `"test:coverage": "npm run test:coverage --workspace=backend && npm run test:coverage --workspace=frontend"` to root `package.json`
-- [ ] T009 [US3] Run `npm run test:coverage` from repo root and confirm both summaries print in sequence
+- [x] T008 [US3] Add `"test:coverage": "npm run test:coverage --workspace=backend && npm run test:coverage --workspace=frontend"` to root `package.json`
+- [x] T009 [US3] Run `npm run test:coverage` from repo root and confirm both summaries print in sequence
 
 **Checkpoint**: Root-level coverage command runs both workspaces end-to-end.
 
@@ -76,9 +76,9 @@
 
 **Purpose**: Documentation update and final validation.
 
-- [ ] T010 [P] Update `docs/README-CONTRIBUTORS.md` to document the three coverage commands (`npm run test:coverage --workspace=backend`, `npm run test:coverage --workspace=frontend`, `npm run test:coverage`) with a brief explanation of where HTML reports are written
-- [ ] T011 Verify `coverage/` directories are in `.gitignore` for both workspaces; add entries if missing
-- [ ] T012 Run `npm run test:coverage` from repo root one final time to confirm full green run and all tasks complete
+- [x] T010 [P] Update `docs/README-CONTRIBUTORS.md` to document the three coverage commands (`npm run test:coverage --workspace=backend`, `npm run test:coverage --workspace=frontend`, `npm run test:coverage`) with a brief explanation of where HTML reports are written
+- [x] T011 Verify `coverage/` directories are in `.gitignore` for both workspaces; add entries if missing
+- [x] T012 Run `npm run test:coverage` from repo root one final time to confirm full green run and all tasks complete
 
 ---
 
@@ -95,3 +95,4 @@
 - T001 and T002 can run in parallel (different files)
 - T003/T004 (Phase 3) and T005/T006/T007 (Phase 4) can run in parallel (different workspaces, different files)
 - T010 and T011 can run in parallel (different files)
+
