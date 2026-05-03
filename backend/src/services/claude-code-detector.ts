@@ -34,10 +34,8 @@ export class ClaudeCodeDetector implements CliDetector {
   }
 
 
-  /** One-time startup: runs the initial session scan before the scan loop begins. */
-  async start(): Promise<void> {
-    await this.scan();
-  }
+  /** One-time startup: nothing to initialize for Claude Code before the first scan. */
+  async start(): Promise<void> {}
 
   async scan(): Promise<Session[]> {
     const registry = new ClaudeSessionRegistry();

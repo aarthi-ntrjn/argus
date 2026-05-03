@@ -34,16 +34,18 @@ export class CopilotCliDetector implements CliDetector {
   constructor(private sessionStateDir: string = DEFAULT_SESSION_DIR) {
     const stored = getServerState('copilot_last_scan_time');
     this.lastScanTime = stored ? parseInt(stored, 10) : 0;
-    // Pre-populate activeDirPaths from DB so sessions that were active when the server
-    // stopped are picked up on the first scan even if their dir mtime predates lastScanTime.
+  }
+
+  /**
+   * One-time startup: seed activeDirPaths from the DB so sessions that were active
+   * when the server stopped are re-checked on the first scan, even if their directory
+   * mtime predates lastScanTime.
+   */
+  async start(): Promise<void> {
     this.initActiveDirsFromDb();
   }
 
-  /** One-time startup: state is already seeded in the constructor; no further action needed. */
-  async start(): Promise<void> {}
-
   // Reads active copilot-cli sessions from the DB and finds their on-disk dirs.
-  // This ensures active sessions are always rechecked on startup regardless of mtime.
   private initActiveDirsFromDb(): void {
     if (!existsSync(this.sessionStateDir)) return;
     const activeSessions = getSessions({ type: SessionTypes.COPILOT_CLI, status: 'active' });

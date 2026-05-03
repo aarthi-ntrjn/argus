@@ -69,6 +69,7 @@ export class SessionMonitor extends EventEmitter {
     }
 
     await this.claudeDetector.start();
+    await this.cliDetector.start();
     await this.runScan();
     this.scanInterval = setInterval(() => this.runScan(), 5000);
   }

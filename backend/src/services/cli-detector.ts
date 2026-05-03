@@ -33,8 +33,9 @@ export interface CliHookPayload {
  */
 export interface CliDetector {
   /**
-   * One-time startup: warm up internal state and seed caches before the scan loop begins.
-   * Called once by SessionMonitor.start() before the first scan cycle.
+   * One-time startup: initialize internal state before the scan loop begins.
+   * Must be called before the first scan(). Must NOT trigger a scan itself —
+   * the first runScan() cycle is the uniform entry point for both detectors.
    */
   start(): Promise<void>;
 
