@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve, relative } from 'path';
 
 const root = resolve(import.meta.dirname, '..');
-const today = new Date().toISOString().split('T')[0];
+const today = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
 const SUITES = [
   {
