@@ -50,6 +50,24 @@ function pct(val) {
   return typeof val === 'number' ? `${val.toFixed(2)}%` : 'N/A';
 }
 
+function badge(val) {
+  if (typeof val !== 'number') return '⬜';
+  if (val >= 80) return '🟢';
+  if (val >= 60) return '🟡';
+  return '🔴';
+}
+
+function colorPct(val) {
+  return typeof val === 'number' ? `${badge(val)} ${val.toFixed(2)}%` : 'N/A';
+}
+
+function colorTests(tests) {
+  if (tests === 'N/A') return 'N/A';
+  const [passed, total] = tests.split('/').map(Number);
+  const icon = passed === total ? '🟢' : '🔴';
+  return `${icon} ${tests}`;
+}
+
 function readJSON(relPath) {
   const abs = resolve(root, relPath);
   if (!existsSync(abs)) return null;
@@ -83,10 +101,10 @@ function parseResults(data, format) {
 function summaryRow(suite, coverage, results) {
   const { files, tests } = results;
   if (!coverage) {
-    return `| ${suite.name.padEnd(14)} | ${files} | ${tests} | N/A | N/A | N/A | N/A | ${suite.covers} |`;
+    return `| ${suite.name.padEnd(14)} | ${files} | ${colorTests(tests)} | N/A | N/A | N/A | N/A | ${suite.covers} |`;
   }
   const t = coverage.total;
-  return `| ${suite.name.padEnd(14)} | ${files} | ${tests} | ${pct(t.statements?.pct)} | ${pct(t.branches?.pct)} | ${pct(t.functions?.pct)} | ${pct(t.lines?.pct)} | ${suite.covers} |`;
+  return `| ${suite.name.padEnd(14)} | ${files} | ${colorTests(tests)} | ${colorPct(t.statements?.pct)} | ${colorPct(t.branches?.pct)} | ${colorPct(t.functions?.pct)} | ${colorPct(t.lines?.pct)} | ${suite.covers} |`;
 }
 
 function perFileTable(data) {
@@ -101,7 +119,7 @@ function perFileTable(data) {
   if (files.length === 0) return '*No file-level data available.*';
 
   const rows = files.map(({ rel, m }) =>
-    `| \`${rel}\` | ${pct(m.statements?.pct)} | ${pct(m.branches?.pct)} | ${pct(m.functions?.pct)} | ${pct(m.lines?.pct)} |`
+    `| \`${rel}\` | ${colorPct(m.statements?.pct)} | ${colorPct(m.branches?.pct)} | ${colorPct(m.functions?.pct)} | ${colorPct(m.lines?.pct)} |`
   );
 
   return [
