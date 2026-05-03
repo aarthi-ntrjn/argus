@@ -17,6 +17,7 @@ Argus has four independent test suites. Each targets a different layer of the st
 | **Technology** | Vitest + V8 | Vitest + jsdom | Playwright + Vite preview | Playwright + live backend |
 | **Coverage mechanism** | `@vitest/coverage-v8` | `@vitest/coverage-v8` | `vite-plugin-istanbul` (build-time instrumentation, `window.__coverage__`) | `NODE_V8_COVERAGE` + `c8 report` |
 | **Coverage output** | `backend/coverage/coverage-summary.json` | `frontend/coverage/coverage-summary.json` | `frontend/coverage-e2e/coverage-summary.json` | `backend/coverage-e2e/coverage-summary.json` |
+| **Coverage notes** | Covers all `backend/src` files including those not imported, via `all: true`. | Covers all `frontend/src` files including those not imported, via `all: true`. | Build step (`VITE_COVERAGE=true`) instruments `frontend/src` at compile time and writes to `frontend/dist-coverage/` (separate from the clean `dist/`). Each Playwright test writes `window.__coverage__` to `frontend/.nyc_output/`. `scripts/merge-e2e-coverage.mjs` merges them into the final summary. | Backend is started with `NODE_V8_COVERAGE` pointing to `backend/coverage-e2e/raw/`. Teardown calls `POST /api/v1/test/shutdown` to trigger a clean `process.exit(0)`, which flushes V8 buffers. A hard kill would lose coverage. `c8 report` converts the raw profiles into the summary. |
 | **What it covers** | `backend/src` — services, detectors, API routes, WebSocket handlers | `frontend/src` — React components, hooks, query logic | `frontend/src` — UI flows with all API calls mocked | `backend/src` — full stack with real Fastify server and SQLite DB |
 
 ### Backend sub-categories
@@ -30,69 +31,6 @@ The backend suite (`npm test --workspace=backend`) contains three sub-categories
 | Contract | `backend/tests/contract/` | Real Fastify server started in-process. Makes actual HTTP and WebSocket calls. Tests that API endpoints return the correct status codes, response shapes, and error structures. |
 
 These are unrelated to the E2E suites. The key difference: contract tests call the HTTP API directly from Node with no browser, while the E2E real suite drives a real browser through the full stack. They overlap in scope but serve different purposes — contract tests are faster and pinpoint API regressions; E2E real tests verify the complete user-facing flow.
-
----
-
-## Coverage collection
-
-Each suite uses a different coverage mechanism suited to its runtime environment.
-
-### Backend unit: V8 via Vitest
-
-Vitest runs with `@vitest/coverage-v8`. Coverage is collected across all `backend/src` files (including those not imported during the run, via `all: true`).
-
-```
-npm run test:coverage --workspace=backend
-```
-
-Output: `backend/coverage/coverage-summary.json`
-
-### Frontend unit: V8 via Vitest
-
-Same mechanism as backend. Coverage is collected across all `frontend/src` files.
-
-```
-npm run test:coverage --workspace=frontend
-```
-
-Output: `frontend/coverage/coverage-summary.json`
-
-### E2E mock: Istanbul via `vite-plugin-istanbul`
-
-The frontend is built with `VITE_COVERAGE=true`, which activates `vite-plugin-istanbul` in `vite.config.ts`. This instruments every `frontend/src` file at build time so `window.__coverage__` is populated in-browser as Playwright tests run.
-
-After each test, the fixture (`frontend/tests/e2e/fixtures.ts`) reads `window.__coverage__` from the page and writes a per-test JSON file to `frontend/.nyc_output/`.
-
-After all tests finish, `scripts/merge-e2e-coverage.mjs` merges those files using `istanbul-lib-coverage` and writes the combined summary.
-
-```
-npm run test:coverage:e2e
-```
-
-This script runs three steps in sequence:
-1. `VITE_COVERAGE=true npm run build --workspace=frontend` (instruments and writes to `frontend/dist-coverage/`)
-2. `VITE_COVERAGE=true npm run test:e2e --workspace=frontend` (Playwright serves from `dist-coverage/`)
-3. `node scripts/merge-e2e-coverage.mjs` (merges per-test JSONs)
-
-Output: `frontend/coverage-e2e/coverage-summary.json`
-
-### E2E real: V8 via `NODE_V8_COVERAGE` and `c8`
-
-The real-server Playwright config starts the backend (`backend/start-test-server.mjs`) with `NODE_V8_COVERAGE` set to an absolute path. Node's V8 engine writes raw coverage profiles to that directory while the server runs.
-
-When the test suite finishes, `global-teardown.ts` calls `POST /api/v1/test/shutdown` to trigger a clean `process.exit(0)`, which flushes the V8 coverage buffers. A hard process kill would not flush them.
-
-After the server exits, `c8 report` converts the raw V8 profiles into a JSON summary.
-
-```
-npm run test:coverage:e2e:real
-```
-
-This script:
-1. Sets `NODE_V8_COVERAGE=./backend/coverage-e2e/raw` and runs the real-server E2E suite
-2. Runs `c8 report --reporter=json-summary --reporter=text --src=backend/src --temp-directory=backend/coverage-e2e/raw --reports-dir=backend/coverage-e2e --all`
-
-Output: `backend/coverage-e2e/coverage-summary.json`
 
 ---
 
