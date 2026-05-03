@@ -157,6 +157,11 @@ export async function buildServer(): Promise<{ app: FastifyInstance; config: Arg
   await app.register(telemetryRoutes);
   await app.register(integrationsRoutes);
 
+  if (process.env.NODE_V8_COVERAGE) {
+    const { registerTestRoutes } = await import('./api/routes/test-utils.js');
+    registerTestRoutes(app);
+  }
+
   app.register(async (fastify) => {
     fastify.get('/ws', { websocket: true }, (socket) => {
       addClient(socket);
