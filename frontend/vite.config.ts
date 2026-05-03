@@ -26,7 +26,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: process.env.VITE_COVERAGE ? 'dist-coverage' : 'dist',
     rollupOptions: {
       output: {
         manualChunks: (id) => {
