@@ -13,6 +13,15 @@ GitHub Copilot CLI supports a hooks system via a `hooks.json` file in `.github/h
 
 This feature adds a Copilot hooks adapter that injects hooks into each registered repository, receives payloads via a new endpoint, and processes them through shared interfaces that are already used by the Claude Code hooks path.
 
+## Clarifications
+
+### Session 2026-05-03
+
+- Q: How should Argus identify its own entries in `hooks.json` for safe removal? → A: Match by command string pattern — the same approach used for Claude Code. Any entry whose `bash` or `powershell` field contains the Argus endpoint URL (`127.0.0.1:{PORT}/hooks/copilot`) is considered Argus-owned and may be removed on unregister.
+- Q: How should stale hook entries (wrong port from a previous Argus instance) be handled? → A: Always remove and re-inject all Argus-owned entries on startup, identical to how Claude Code's `injectHooks()` works. Any entry matching the `*/hooks/copilot` URL pattern is removed and replaced with the current port.
+- Q: What should Argus do when a hook payload arrives for an unknown session ID (hook fires before lock file scan)? → A: Create a provisional session record immediately from hook data. The lock file scan reconciles PID and full metadata on its next cycle. Mirrors how Claude Code handles hook-first session creation.
+- Q: Should both `bash` and `powershell` variants be written into every injected hook entry, or only the platform-detected one? → A: Always write both variants in every entry. Copilot's `hooks.json` has dedicated `bash` and `powershell` fields for this purpose, and writing both ensures a committed `hooks.json` works on any OS.
+
 ## User Scenarios & Testing
 
 ### User Story 1 - Immediate Attention Needed Detection (Priority: P1)
@@ -84,7 +93,7 @@ If hook injection fails (repository is read-only, Copilot version does not suppo
 
 - What happens when two Copilot sessions start simultaneously in different repositories and both fire `sessionStart` hooks at the same time?
 - What happens when `hooks.json` is corrupted or contains invalid JSON before Argus tries to inject?
-- What happens when a hook payload arrives for a session ID that Argus has not yet seen in the lock file scan?
+- When a hook payload arrives for a session ID not yet in the lock file scan, Argus creates a provisional session record immediately; the next lock file scan reconciles PID and full metadata.
 - What happens when the Argus server port changes between the time Copilot reads `hooks.json` and the time it fires a hook?
 - What happens if Copilot fires a `preToolUse` hook for a tool other than `ask_user`?
 - What happens when two Argus instances are running and both inject hooks into the same repository?
@@ -95,25 +104,25 @@ If hook injection fails (repository is read-only, Copilot version does not suppo
 
 - **FR-001**: Argus MUST inject Copilot hook entries into `<repo-path>/.github/hooks/hooks.json` for every registered repository when the repository is added and on server startup.
 - **FR-002**: Injected hooks MUST cover at minimum `sessionStart`, `sessionEnd`, `preToolUse` (for `ask_user`), and `postToolUse` (for `ask_user`) events.
-- **FR-003**: Hook injection MUST be idempotent: injecting hooks into a repository that already has Argus hooks must produce the same result as injecting for the first time.
+- **FR-003**: Hook injection MUST be idempotent and self-healing: on every startup, all existing Argus-owned entries (identified by URL pattern) are removed and re-injected with the current port, so stale entries from a previous Argus instance are automatically corrected.
 - **FR-004**: Hook injection MUST preserve any existing non-Argus hooks already present in `hooks.json`.
 - **FR-005**: Argus MUST expose a new HTTP endpoint to receive Copilot hook payloads, distinct from the existing Claude Code hook endpoint (`POST /hooks/claude`).
 - **FR-006**: The Copilot hook endpoint MUST accept the hook payload forwarded from Copilot's stdin and process it using the same shared interfaces used by the Claude Code hook path (shared pending choice event bus, shared session upsert logic).
 - **FR-007**: On receiving a `preToolUse` payload for `ask_user`, Argus MUST broadcast the pending choice event immediately using the same `pendingChoiceEvents` bus used by Claude Code.
 - **FR-008**: On receiving a `postToolUse` payload for `ask_user`, Argus MUST dismiss the pending choice immediately.
-- **FR-009**: On receiving a `sessionStart` payload, Argus MUST create or update the session record immediately without waiting for the next polling cycle.
+- **FR-009**: On receiving any hook payload for an unknown session ID, Argus MUST create a provisional session record immediately from the hook data without waiting for the next polling cycle. The lock file scan reconciles PID and full metadata on its next run.
 - **FR-010**: On receiving a `sessionEnd` payload, Argus MUST mark the session as ended immediately.
 - **FR-011**: No duplicate pending choice broadcasting logic may be introduced: the Copilot hooks path MUST reuse the same interfaces as `ClaudeCodeDetector`.
 - **FR-012**: When a repository is removed from Argus, the Argus-managed hook entries MUST be removed from `hooks.json`.
 - **FR-013**: If hook injection fails for a repository, Argus MUST log a warning and continue operating with polling-based detection for that repository.
-- **FR-014**: The injected hook commands MUST include both a bash variant (for Linux and macOS) and a PowerShell variant (for Windows), so hooks fire on all supported platforms.
+- **FR-014**: Every injected hook entry MUST include both a `bash` field (Linux/macOS) and a `powershell` field (Windows) regardless of the platform Argus is running on, so a committed `hooks.json` works correctly on any OS.
 - **FR-015**: JSONL-based watching and polling MUST remain as a fallback for repositories where hook injection is unavailable or hooks are not fired.
 
 ### Key Entities
 
 - **CopilotHookPayload**: The JSON object received from Copilot via stdin, containing the event name (equivalent to `hook_event_name` in Claude Code), session ID, working directory, tool name, and tool arguments. Normalized to the same shape as the Claude Code `HookPayload` interface after parsing.
 - **HooksJson**: The structure of `.github/hooks/hooks.json` as read and written by Argus. Includes a version field and a hooks map keyed by event name, each containing an array of command entries.
-- **ArgusHookEntry**: A command entry written by Argus into `hooks.json`. Must carry a marker (comment or sentinel field) so it can be identified and removed when the repository is unregistered.
+- **ArgusHookEntry**: A command entry written by Argus into `hooks.json`. Identified by the presence of the Argus endpoint URL in its `bash` or `powershell` command string (e.g., `127.0.0.1:{PORT}/hooks/copilot`), matching the same pattern used for Claude Code hook identification. No custom metadata field required.
 
 ## Success Criteria
 
