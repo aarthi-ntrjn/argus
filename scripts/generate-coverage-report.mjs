@@ -34,14 +34,14 @@ const SUITES = [
     name: 'e2e mock',
     covers: 'frontend/src',
     coverageFile: 'frontend/coverage-e2e/coverage-summary.json',
-    resultsFile: 'test-results/e2e-mock-results.json',
+    resultsFile: 'frontend/coverage-e2e/test-results.json',
     resultsFormat: 'playwright',
   },
   {
     name: 'e2e real',
     covers: 'backend/src',
     coverageFile: 'backend/coverage-e2e/coverage-summary.json',
-    resultsFile: 'test-results/e2e-real-results.json',
+    resultsFile: 'backend/coverage-e2e/test-results.json',
     resultsFormat: 'playwright',
   },
 ];

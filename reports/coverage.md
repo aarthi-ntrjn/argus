@@ -8,8 +8,8 @@
 |-------|-------|-------|------------|----------|-----------|-------|--------|
 | backend unit   | 167 | 454/454 | 62.43% | 75.78% | 69.74% | 62.43% | backend/src |
 | frontend unit  | 120 | 345/345 | 89.90% | 77.93% | 50.14% | 89.90% | frontend/src |
-| e2e mock       | N/A | N/A | 55.26% | 49.10% | 49.40% | 56.72% | frontend/src |
-| e2e real       | N/A | N/A | 59.78% | 64.21% | 62.59% | 59.78% | backend/src |
+| e2e mock       | 14 | 152/154 | 55.33% | 49.37% | 49.60% | 56.79% | frontend/src |
+| e2e real       | N/A | N/A | 59.78% | 64.34% | 62.59% | 59.78% | backend/src |
 
 ## Backend unit - per file
 
@@ -474,7 +474,7 @@
 | `frontend/src/components/PendingChoicePanel/PendingChoicePanel.tsx` | 32.00% | 38.88% | 27.27% | 32.65% |
 | `frontend/src/components/RemoveConfirmDialog.tsx` | 0.00% | 0.00% | 0.00% | 0.00% |
 | `frontend/src/components/RepoCard/RepoCard.tsx` | 22.22% | 78.57% | 50.00% | 22.22% |
-| `frontend/src/components/RepoContextBar/RepoContextBar.tsx` | 0.00% | 0.00% | 0.00% | 0.00% |
+| `frontend/src/components/RepoContextBar/RepoContextBar.tsx` | 50.00% | 50.00% | 50.00% | 50.00% |
 | `frontend/src/components/SectionHeading.tsx` | 100.00% | 100.00% | 100.00% | 100.00% |
 | `frontend/src/components/SessionCard/SessionCard.tsx` | 66.66% | 90.19% | 47.61% | 69.23% |
 | `frontend/src/components/SessionDetail/SessionDetail.tsx` | 47.12% | 29.49% | 33.33% | 48.14% |
@@ -510,7 +510,7 @@
 | `frontend/src/main.tsx` | 100.00% | 100.00% | 100.00% | 100.00% |
 | `frontend/src/pages/DashboardPage.tsx` | 74.65% | 65.71% | 62.74% | 76.19% |
 | `frontend/src/pages/IntegrationsSetupPage.tsx` | 44.44% | 0.00% | 7.69% | 46.15% |
-| `frontend/src/pages/SessionPage.tsx` | 83.33% | 88.23% | 57.14% | 87.50% |
+| `frontend/src/pages/SessionPage.tsx` | 83.33% | 94.11% | 57.14% | 87.50% |
 | `frontend/src/pages/TelemetryPage.tsx` | 20.00% | 100.00% | 0.00% | 20.00% |
 | `frontend/src/services/api.ts` | 54.83% | 54.16% | 50.00% | 55.93% |
 | `frontend/src/services/onboardingEvents.ts` | 100.00% | 100.00% | 25.00% | 100.00% |
@@ -574,9 +574,9 @@
 | `backend/src/services/repository-scanner.ts` | 64.95% | 58.33% | 63.63% | 64.95% |
 | `backend/src/services/session-controller.ts` | 33.96% | 57.14% | 55.55% | 33.96% |
 | `backend/src/services/session-diff-tracker.ts` | 75.72% | 100.00% | 55.55% | 75.72% |
-| `backend/src/services/session-monitor.ts` | 56.32% | 61.36% | 94.44% | 56.32% |
+| `backend/src/services/session-monitor.ts` | 56.32% | 62.22% | 94.44% | 56.32% |
 | `backend/src/services/session-pid-resolver.ts` | 36.06% | 100.00% | 25.00% | 36.06% |
-| `backend/src/services/telemetry-service.ts` | 50.00% | 64.28% | 66.66% | 50.00% |
+| `backend/src/services/telemetry-service.ts` | 50.00% | 69.23% | 66.66% | 50.00% |
 | `backend/src/services/watcher-session-helpers.ts` | 27.02% | 100.00% | 25.00% | 27.02% |
 | `backend/src/utils/logger.ts` | 95.55% | 76.47% | 100.00% | 95.55% |
 | `backend/src/utils/path-sandbox.ts` | 40.90% | 66.66% | 66.66% | 40.90% |
