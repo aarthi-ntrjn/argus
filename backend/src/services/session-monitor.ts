@@ -41,25 +41,14 @@ export class SessionMonitor extends EventEmitter {
       this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
       this.emit('session.created', session);
     });
-    this.cliManager.setClaudeSessionEndedCallback((session) => {
+    this.cliManager.setSessionUpdatedCallback((session) => {
+      this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
+      this.emit('session.updated', session);
+    });
+    this.cliManager.setSessionEndedCallback((session) => {
       this.lastEmittedSessions.delete(session.id);
       this.restingNotifiedSessions.delete(session.id);
       this.emit('session.ended', session);
-    });
-    this.cliManager.setCopilotSessionCallbacks({
-      onCreated: (session) => {
-        this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
-        this.emit('session.created', session);
-      },
-      onUpdated: (session) => {
-        this.lastEmittedSessions.set(session.id, this.sessionSignature(session));
-        this.emit('session.updated', session);
-      },
-      onEnded: (session) => {
-        this.lastEmittedSessions.delete(session.id);
-        this.restingNotifiedSessions.delete(session.id);
-        this.emit('session.ended', session);
-      },
     });
   }
 

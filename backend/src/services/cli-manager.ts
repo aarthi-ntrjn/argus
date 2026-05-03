@@ -6,12 +6,6 @@ import { getSession, updateSessionStatus } from '../db/database.js';
 import type { Session, ClaudeSessionRegistryEntry } from '../models/index.js';
 import type { CliHookPayload } from './cli-detector.js';
 
-export interface CopilotSessionCallbacks {
-  onCreated: (session: Session) => void;
-  onUpdated: (session: Session) => void;
-  onEnded: (session: Session) => void;
-}
-
 /**
  * Single point of ownership for all CLI session detectors and their lifecycle.
  *
@@ -30,7 +24,11 @@ export class CliManager {
   private copilotKnownIds = new Set<string>();
   private copilotSigCache = new Map<string, string>();
   private copilotActiveMap = new Map<string, Session>();
-  private copilotCallbacks: CopilotSessionCallbacks | null = null;
+
+  // Unified session lifecycle callbacks — wired to both detectors where applicable.
+  private onCreated?: (session: Session) => void;
+  private onUpdated?: (session: Session) => void;
+  private onEnded?: (session: Session) => void;
 
   constructor() {
     this.claudeDetector = new ClaudeCodeDetector();
@@ -40,27 +38,29 @@ export class CliManager {
   }
 
   /**
-   * Wires the callback that fires when Claude creates a new session via a hook event.
+   * Fires when either detector creates a new session.
    * Must be called before start().
    */
   setSessionCreatedCallback(cb: (session: Session) => void): void {
+    this.onCreated = cb;
     this.claudeDetector.setSessionCreatedCallback(cb);
   }
 
   /**
-   * Wires the callback that fires when a Claude session ends (registry file disappeared).
+   * Fires when a session's state changes (Copilot only — Claude updates go through reconcileClaudeCodeSessions).
    * Must be called before start().
    */
-  setClaudeSessionEndedCallback(cb: (session: Session) => void): void {
-    this.claudeDetector.setSessionEndedCallback(cb);
+  setSessionUpdatedCallback(cb: (session: Session) => void): void {
+    this.onUpdated = cb;
   }
 
   /**
-   * Registers callbacks for Copilot session lifecycle events fired during scan().
+   * Fires when either detector ends a session.
    * Must be called before start().
    */
-  setCopilotSessionCallbacks(cbs: CopilotSessionCallbacks): void {
-    this.copilotCallbacks = cbs;
+  setSessionEndedCallback(cb: (session: Session) => void): void {
+    this.onEnded = cb;
+    this.claudeDetector.setSessionEndedCallback(cb);
   }
 
   /**
@@ -192,7 +192,7 @@ export class CliManager {
         const stored = getSession(id);
         if (stored?.status !== 'ended') {
           updateSessionStatus(id, 'ended', now);
-          this.copilotCallbacks?.onEnded({ ...session, status: 'ended', endedAt: now });
+          this.onEnded?.({ ...session, status: 'ended', endedAt: now });
         }
         this.copilotActiveMap.delete(id);
         this.copilotSigCache.delete(id);
@@ -203,19 +203,19 @@ export class CliManager {
       if (!this.copilotKnownIds.has(session.id)) {
         this.copilotKnownIds.add(session.id);
         this.copilotSigCache.set(session.id, this.sessionSignature(session));
-        this.copilotCallbacks?.onCreated(session);
+        this.onCreated?.(session);
       } else {
         const sig = this.sessionSignature(session);
         if (this.copilotSigCache.get(session.id) !== sig) {
           this.copilotSigCache.set(session.id, sig);
-          this.copilotCallbacks?.onUpdated(session);
+          this.onUpdated?.(session);
         }
       }
 
       if (session.status === 'ended') {
         // Only fire onEnded once — ended sessions remain on disk and re-appear on every scan.
         if (this.copilotActiveMap.has(session.id)) {
-          this.copilotCallbacks?.onEnded(session);
+          this.onEnded?.(session);
           this.copilotActiveMap.delete(session.id);
           this.copilotSigCache.delete(session.id);
         }
