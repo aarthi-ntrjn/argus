@@ -5,6 +5,7 @@ import { CopilotCliDetector } from './copilot-cli-detector.js';
 import { ClaudeCodeDetector } from './claude-code-detector.js';
 import { ClaudeSessionRegistry } from './claude-session-registry.js';
 import { CopilotHooksInjector } from './copilot-hooks-injector.js';
+import { ClaudeCodeHooksInjector } from './claude-code-hooks-injector.js';
 import { loadConfig } from '../config/config-loader.js';
 import { getSessions, getSession, getRepository, upsertSession, updateSessionStatus, getRepositories, getRepositoryByPath, updateRepositoryBranch } from '../db/database.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
@@ -55,7 +56,7 @@ export class SessionMonitor extends EventEmitter {
   }
 
   async start(): Promise<void> {
-    this.claudeDetector.injectHooks();
+    new ClaudeCodeHooksInjector().injectForAll();
     new CopilotHooksInjector().injectForAll();
     await this.reconcileStaleSessions();
 

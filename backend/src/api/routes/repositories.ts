@@ -14,7 +14,7 @@ import {
   updateRepositoryRemoteUrl,
 } from '../../db/database.js';
 import { broadcast } from '../ws/event-dispatcher.js';
-import { ClaudeCodeDetector } from '../../services/claude-code-detector.js';
+import { ClaudeCodeHooksInjector } from '../../services/claude-code-hooks-injector.js';
 import { CopilotHooksInjector } from '../../services/copilot-hooks-injector.js';
 import { getCurrentBranch, getRemoteUrl } from '../../services/repository-scanner.js';
 
@@ -64,7 +64,7 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
 
     // Re-inject Claude hooks in case they were removed when the last repo was deleted
     const tHooks = Date.now();
-    new ClaudeCodeDetector().injectHooks();
+    new ClaudeCodeHooksInjector().injectForAll();
     new CopilotHooksInjector().injectForRepo(repoPath);
     logger.debug(`[Repositories] injectHooks — ${Date.now() - tHooks}ms`);
 
@@ -107,7 +107,7 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
     // Remove Claude hooks if no repositories remain
     const remaining = getRepositories();
     if (remaining.length === 0) {
-      new ClaudeCodeDetector().removeAllHooks();
+      new ClaudeCodeHooksInjector().removeAll();
     }
     new CopilotHooksInjector().removeForRepo(existing.path);
 

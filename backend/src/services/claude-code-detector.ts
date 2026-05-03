@@ -1,7 +1,5 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import * as logger from '../utils/logger.js';
-import { join, dirname, normalize } from 'path';
-import { homedir } from 'os';
+import { normalize } from 'path';
 import { getSession, upsertSession, updateSessionStatus, getRepositoryByPath } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { ClaudeSessionRegistry } from './claude-session-registry.js';
@@ -13,19 +11,6 @@ import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
 
-const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json');
-const HOOK_COMMAND = 'curl -sf -X POST http://127.0.0.1:7411/hooks/claude -H "Content-Type: application/json" -d @- 2>/dev/null || true';
-const HOOK_EVENTS: Array<{ event: string; matcher: string }> = [
-  { event: 'SessionStart', matcher: '' },
-  { event: 'SessionEnd', matcher: '' },
-  { event: 'PreToolUse', matcher: 'AskUserQuestion' },
-  { event: 'PostToolUse', matcher: 'AskUserQuestion' },
-];
-
-interface ClaudeSettings {
-  hooks?: Record<string, Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>>;
-  [key: string]: unknown;
-}
 
 interface HookPayload {
   hook_event_name: string;
@@ -58,75 +43,6 @@ export class ClaudeCodeDetector {
     pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
   }
 
-  injectHooks(): void {
-    try {
-      mkdirSync(dirname(CLAUDE_SETTINGS_PATH), { recursive: true });
-      let settings: ClaudeSettings = {};
-      if (existsSync(CLAUDE_SETTINGS_PATH)) {
-        settings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
-      }
-      if (!settings.hooks) settings.hooks = {};
-      let changed = false;
-
-      // Remove Argus hook entries whose (event, matcher) pair is no longer in HOOK_EVENTS.
-      // Also delete any malformed keys (e.g. '[object Object]' from object-as-key coercion).
-      for (const event of Object.keys(settings.hooks)) {
-        if (!/^\w+$/.test(event)) {
-          delete settings.hooks[event];
-          changed = true;
-          continue;
-        }
-        const before = settings.hooks[event];
-        const after = before.filter((entry) => {
-          const isArgusEntry = entry.hooks?.some((h) => h.command === HOOK_COMMAND);
-          if (!isArgusEntry) return true;
-          return HOOK_EVENTS.some((he) => he.event === event && he.matcher === entry.matcher);
-        });
-        if (after.length !== before.length) {
-          settings.hooks[event] = after;
-          changed = true;
-        }
-      }
-
-      for (const { event, matcher } of HOOK_EVENTS) {
-        if (!this.hasHook(settings, event, matcher)) {
-          if (!settings.hooks[event]) settings.hooks[event] = [];
-          settings.hooks[event].push({ matcher, hooks: [{ type: 'command', command: HOOK_COMMAND }] });
-          changed = true;
-        }
-      }
-      if (changed) writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
-    } catch { /* ignore if settings file inaccessible */ }
-  }
-
-  removeAllHooks(): void {
-    try {
-      if (!existsSync(CLAUDE_SETTINGS_PATH)) return;
-      const settings: ClaudeSettings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
-      if (!settings.hooks) return;
-      let changed = false;
-      for (const { event } of HOOK_EVENTS) {
-        const entries = settings.hooks[event];
-        if (!entries) continue;
-        const filtered = entries.filter(
-          (entry) => !entry.hooks?.some((h) => h.command === HOOK_COMMAND)
-        );
-        if (filtered.length !== entries.length) {
-          settings.hooks[event] = filtered;
-          changed = true;
-        }
-      }
-      if (changed) writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
-    } catch { /* ignore */ }
-  }
-
-  private hasHook(settings: ClaudeSettings, event: string, matcher: string): boolean {
-    const eventHooks = settings.hooks?.[event];
-    if (!eventHooks) return false;
-    return eventHooks.some((entry) =>
-      entry.matcher === matcher && entry.hooks?.some((h) => h.command === HOOK_COMMAND)
-    );
-  }
 
   async scanExistingSessions(): Promise<void> {
     const registry = new ClaudeSessionRegistry();

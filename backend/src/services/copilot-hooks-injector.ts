@@ -3,6 +3,7 @@ import { join, dirname } from 'path';
 import { createTaggedLogger } from '../utils/logger.js';
 import { loadConfig } from '../config/config-loader.js';
 import { getRepositories } from '../db/database.js';
+import type { HooksInjector } from './hooks-injector.js';
 
 const log = createTaggedLogger('[CopilotHooksInjector]', '\x1b[33m');
 
@@ -47,7 +48,7 @@ function readHooksJson(filePath: string): HooksJson {
   }
 }
 
-export class CopilotHooksInjector {
+export class CopilotHooksInjector implements HooksInjector {
   injectForRepo(repoPath: string): void {
     try {
       const port = loadConfig().port;
@@ -108,6 +109,13 @@ export class CopilotHooksInjector {
     const repos = getRepositories();
     for (const repo of repos) {
       this.injectForRepo(repo.path);
+    }
+  }
+
+  removeAll(): void {
+    const repos = getRepositories();
+    for (const repo of repos) {
+      this.removeForRepo(repo.path);
     }
   }
 }
