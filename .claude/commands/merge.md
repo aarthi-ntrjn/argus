@@ -115,7 +115,7 @@ Write (or overwrite) `reports/coverage.md` with exactly this structure:
 ```markdown
 # Coverage Report
 
-*Generated: YYYY-MM-DD | Branch: <FEATURE_BRANCH>*
+*Generated: YYYY-MM-DD*
 
 | Suite | Statements | Branches | Functions | Lines | Covers |
 |-------|------------|----------|-----------|-------|--------|

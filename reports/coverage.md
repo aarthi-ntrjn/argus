@@ -1,6 +1,6 @@
 # Coverage Report
 
-*Generated: 2026-05-02 | Branch: 064-code-coverage | Commit: 9f7fa01b*
+*Generated: 2026-05-02*
 
 | Suite | Statements | Branches | Functions | Lines | Covers |
 |-------|------------|----------|-----------|-------|--------|

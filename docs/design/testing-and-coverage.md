@@ -76,7 +76,7 @@ The committed coverage snapshot. Updated automatically on every `/merge`. Format
 ```markdown
 # Coverage Report
 
-*Generated: YYYY-MM-DD | Branch: <branch>*
+*Generated: YYYY-MM-DD*
 
 | Suite | Statements | Branches | Functions | Lines | Covers |
 |-------|------------|----------|-----------|-------|--------|
