@@ -40,11 +40,11 @@ These are unrelated to the E2E suites. The key difference: contract tests call t
 ### Tests
 
 ```
-# Backend + frontend unit tests
-npm test
-
 # All four suites
 npm run test:all
+
+# Backend + frontend unit tests only
+npm test
 
 # Individual E2E suites
 npm run test:e2e
