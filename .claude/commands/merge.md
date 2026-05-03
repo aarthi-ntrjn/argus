@@ -242,7 +242,7 @@ Immediately output the workflow run URL in this format:
 
 #### 8d — Monitor to completion
 
-Poll every 10–15 seconds using `github-mcp-server-actions_get`:
+Poll every 30 seconds using `github-mcp-server-actions_get`:
 ```
 method: get_workflow_run
 owner: <owner>
@@ -271,8 +271,8 @@ Continue polling until `status === "completed"`. Then report:
   **Do NOT delete the feature branch** — leave it so the user can investigate and fix.
   Output: `⚠️ Branch <FEATURE_BRANCH> NOT deleted — CI failed. Fix the failure and re-run /merge.`
 
-If the workflow is still `in_progress` after 5 minutes of polling, stop and output:
+If the workflow is still `in_progress` after 10 minutes of polling, stop and output:
 ```
-⏳ CI still running after 5 minutes. Check manually: <url>
+⏳ CI still running after 10 minutes. Check manually: <url>
 Branch <FEATURE_BRANCH> NOT deleted — delete it manually once CI passes.
 ```
