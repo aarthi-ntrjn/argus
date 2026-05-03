@@ -23,6 +23,12 @@ export interface HooksInjector {
    * Copilot: removes Argus entries from <repoPath>/.github/hooks/hooks.json.
    */
   removeForRepo(repoPath: string): void;
-  /** Remove all Argus hooks across all repositories. */
+  /**
+   * Remove all Argus hooks across all repositories.
+   * Claude Code: removes Argus entries from ~/.claude/settings.json.
+   * Copilot: iterates all currently registered repos and calls removeForRepo on each.
+   * Use for bulk cleanup (e.g., last repo deleted, uninstalling Argus).
+   * Note: for per-repo deletion during normal repo management, prefer removeForRepo.
+   */
   removeAll(): void;
 }

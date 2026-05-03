@@ -82,15 +82,14 @@ export class CopilotHooksInjector implements HooksInjector {
       const data = readHooksJson(filePath);
       if (!data.hooks) return;
 
-      let hasNonArgus = false;
+      let changed = false;
       for (const event of Object.keys(data.hooks)) {
         const entries = (data.hooks[event] ?? []) as HookEntry[];
         const filtered = entries.filter((e) => !isArgusEntry(e));
         data.hooks[event] = filtered;
-        if (filtered.length > 0) hasNonArgus = true;
+        if (filtered.length > 0) changed = true;
       }
 
-      // Delete file if all event arrays are now empty
       const allEmpty = Object.values(data.hooks).every((arr) => !arr || (arr as HookEntry[]).length === 0);
       if (allEmpty) {
         unlinkSync(filePath);
@@ -99,7 +98,6 @@ export class CopilotHooksInjector implements HooksInjector {
         writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
         log.info(`Removed Argus entries from hooks.json in ${repoPath}`);
       }
-      void hasNonArgus;
     } catch (err) {
       log.warn(`Failed to remove Copilot hooks from ${repoPath}: ${String(err)}`);
     }
