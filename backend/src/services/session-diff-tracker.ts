@@ -36,7 +36,9 @@ function extract(session: Session): TrackedState {
 }
 
 function format(key: keyof TrackedState, value: unknown): string {
-  if (value == null) return 'none';
+  if (value == null) {
+return 'none';
+}
   switch (key) {
     case 'yoloMode':   return value ? 'yes' : 'no';
     case 'launchMode': return value === 'pty' ? 'connected' : 'readonly';

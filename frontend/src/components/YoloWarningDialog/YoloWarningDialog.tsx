@@ -7,7 +7,9 @@ interface YoloWarningDialogProps {
 }
 
 export function YoloWarningDialog({ open, onConfirm, onCancel }: YoloWarningDialogProps) {
-  if (!open) return null;
+  if (!open) {
+return null;
+}
 
   return (
     <div

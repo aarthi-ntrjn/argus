@@ -47,14 +47,18 @@ export class SlackListener implements NotificationListener {
     this.socketClient.on('app_mention', async ({ event, ack }: { event: AppMentionEvent; ack: () => Promise<void> }) => {
       await ack();
       // Skip DMs: the 'message' handler covers those, avoid double-processing
-      if (event.channel.startsWith('D')) return;
+      if (event.channel.startsWith('D')) {
+return;
+}
       await this.handleIncoming(event.text, event.channel, event.ts, event.user, event.thread_ts);
     });
 
     this.socketClient.on('message', async ({ event, ack }: { event: MessageEvent & { channel_type?: string }; ack: () => Promise<void> }) => {
       await ack();
       // Only handle direct messages (channel type 'im')
-      if (event.channel_type !== 'im') return;
+      if (event.channel_type !== 'im') {
+return;
+}
       await this.handleIncoming(event.text ?? '', event.channel, event.ts, event.user, event.thread_ts);
     });
 

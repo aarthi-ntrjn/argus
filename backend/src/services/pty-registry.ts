@@ -86,9 +86,13 @@ export class PtyRegistry {
   claimForSession(sessionId: string, repoPath: string, sessionType: SessionType): { pid: number | null; hostPid: number; ptyLaunchId: string } | null {
     // Fast path: pre-linked via PID resolution
     for (const [id, preSessionId] of this.preLinked) {
-      if (preSessionId !== sessionId) continue;
+      if (preSessionId !== sessionId) {
+continue;
+}
       const pending = this.pendingByLaunchId.get(id);
-      if (!pending) { this.preLinked.delete(id); continue; }
+      if (!pending) {
+ this.preLinked.delete(id); continue; 
+}
       log.info(` claimForSession PRE-LINKED sessionId=${sessionId} ptyLaunchId=${id} hostPid=${pending.hostPid} pid=${pending.pid}`);
       this.connections.set(sessionId, pending.ws);
       this.ptyLaunchToClaimedId.set(id, sessionId);
@@ -100,7 +104,9 @@ export class PtyRegistry {
     // Fallback: repoPath scan (handles race where session file not yet written at link time)
     const key = normalizePath(repoPath);
     for (const [id, pending] of this.pendingByLaunchId) {
-      if (normalizePath(pending.repoPath) !== key) continue;
+      if (normalizePath(pending.repoPath) !== key) {
+continue;
+}
       if (pending.sessionType !== sessionType) {
         log.info(` claimForSession TYPE MISMATCH ptyLaunchId=${id} sessionId=${sessionId} expected=${sessionType} got=${pending.sessionType} repoPath="${repoPath}", skipping`);
         continue;
@@ -140,7 +146,9 @@ export class PtyRegistry {
   // Returns the ptyLaunchId that claimed this session, or undefined if not found.
   getPtyLaunchIdForSession(sessionId: string): string | undefined {
     for (const [ptyLaunchId, claimedId] of this.ptyLaunchToClaimedId) {
-      if (claimedId === sessionId) return ptyLaunchId;
+      if (claimedId === sessionId) {
+return ptyLaunchId;
+}
     }
     return undefined;
   }
@@ -231,7 +239,9 @@ export class PtyRegistry {
   handleAck(actionId: string, success: boolean, error?: string): void {
     const entry = this.pending.get(actionId);
     log.info(`handleAck: actionId=${actionId} success=${success} found=${!!entry} error=${error ?? ''}`);
-    if (!entry) return;
+    if (!entry) {
+return;
+}
 
     clearTimeout(entry.timeout);
     this.pending.delete(actionId);

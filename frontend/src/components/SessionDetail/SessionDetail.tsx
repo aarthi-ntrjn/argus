@@ -58,7 +58,9 @@ function renderBadgeCol(item: SessionOutput, dark: boolean) {
 }
 
 function renderToolNameBadge(toolName: string | null | undefined, dark: boolean) {
-  if (!toolName) return null;
+  if (!toolName) {
+return null;
+}
   const badgeColor = dark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700';
   return (
     <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap shrink-0 ${badgeColor}`}>
@@ -150,7 +152,11 @@ export default function SessionDetail({ items, dark = false, className, displayM
   function toggleExpand(id: string) {
     setExpandedIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      if (next.has(id)) {
+ next.delete(id); 
+} else {
+ next.add(id); 
+}
       return next;
     });
   }

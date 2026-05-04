@@ -20,7 +20,9 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
         let choices: string[] = [];
         try {
           const parsed = JSON.parse(output.content) as Record<string, unknown>;
-          if (typeof parsed.question === 'string') question = parsed.question;
+          if (typeof parsed.question === 'string') {
+question = parsed.question;
+}
           if (Array.isArray(parsed.choices)) {
             choices = (parsed.choices as unknown[]).filter((c): c is string => typeof c === 'string');
           }

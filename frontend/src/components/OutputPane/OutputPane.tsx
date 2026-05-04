@@ -25,8 +25,14 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
   });
 
   useEffect(() => {
-    if (!onClose) return;
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    if (!onClose) {
+return;
+}
+    const handleKey = (e: KeyboardEvent) => {
+ if (e.key === 'Escape') {
+onClose();
+} 
+};
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
@@ -34,13 +40,17 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
   // Scroll to bottom on new data only when pinned.
   useEffect(() => {
     const el = scrollContainerRef.current;
-    if (el && pinnedToBottom.current) el.scrollTop = el.scrollHeight;
+    if (el && pinnedToBottom.current) {
+el.scrollTop = el.scrollHeight;
+}
   }, [data]);
 
   // Track whether the user is scrolled near the bottom (within 8px = pinned).
   function handleScroll() {
     const el = scrollContainerRef.current;
-    if (!el) return;
+    if (!el) {
+return;
+}
     pinnedToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 8;
   }
 

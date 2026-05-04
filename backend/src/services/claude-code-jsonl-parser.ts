@@ -26,7 +26,9 @@ interface ClaudeEntry {
 }
 
 function stringifyContent(content: unknown): string {
-  if (typeof content === 'string') return content;
+  if (typeof content === 'string') {
+return content;
+}
   return JSON.stringify(content);
 }
 
@@ -82,7 +84,9 @@ function parseAssistantEntry(entry: ClaudeEntry, sessionId: string, sequenceNumb
   let blockIndex = 0;
   const nextId = () => makeId ? makeId(blockIndex++) : randomUUID();
 
-  if (!Array.isArray(content)) return results;
+  if (!Array.isArray(content)) {
+return results;
+}
 
   for (const block of content) {
     if (block.type === 'text') {
@@ -110,12 +114,20 @@ function parseAssistantEntry(entry: ClaudeEntry, sessionId: string, sequenceNumb
  * Returns an array because one entry (e.g. assistant with text + tool_use) can yield multiple outputs.
  */
 export function parseClaudeJsonlLine(line: string, sessionId: string, sequenceNumber: number, makeId?: (blockIndex: number) => string): SessionOutput[] {
-  if (!line.trim()) return [];
+  if (!line.trim()) {
+return [];
+}
   try {
     const entry = JSON.parse(line) as ClaudeEntry;
-    if (entry.type === 'file-history-snapshot') return [];
-    if (entry.type === 'user') return parseUserEntry(entry, sessionId, sequenceNumber, makeId);
-    if (entry.type === 'assistant') return parseAssistantEntry(entry, sessionId, sequenceNumber, makeId);
+    if (entry.type === 'file-history-snapshot') {
+return [];
+}
+    if (entry.type === 'user') {
+return parseUserEntry(entry, sessionId, sequenceNumber, makeId);
+}
+    if (entry.type === 'assistant') {
+return parseAssistantEntry(entry, sessionId, sequenceNumber, makeId);
+}
     return [];
   } catch {
     return [];
@@ -127,10 +139,14 @@ export function parseClaudeJsonlLine(line: string, sessionId: string, sequenceNu
  * or null if this line is not an assistant entry or has no model.
  */
 export function parseModel(line: string): string | null {
-  if (!line.trim()) return null;
+  if (!line.trim()) {
+return null;
+}
   try {
     const entry = JSON.parse(line) as ClaudeEntry;
-    if (entry.type === 'assistant' && entry.message?.model) return entry.message.model;
+    if (entry.type === 'assistant' && entry.message?.model) {
+return entry.message.model;
+}
     return null;
   } catch {
     return null;

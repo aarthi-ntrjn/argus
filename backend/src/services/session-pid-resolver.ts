@@ -28,13 +28,19 @@ export function resolveSessionIdByPid(pid: number, sessionType: SessionType, dir
 }
 
 function resolveClaudeSessionId(pid: number, sessionsDir: string): string | null {
-  if (!existsSync(sessionsDir)) return null;
+  if (!existsSync(sessionsDir)) {
+return null;
+}
   try {
     for (const file of readdirSync(sessionsDir)) {
-      if (!file.endsWith('.json')) continue;
+      if (!file.endsWith('.json')) {
+continue;
+}
       try {
         const data = JSON.parse(readFileSync(join(sessionsDir, file), 'utf-8'));
-        if (data.pid === pid && typeof data.sessionId === 'string') return data.sessionId as string;
+        if (data.pid === pid && typeof data.sessionId === 'string') {
+return data.sessionId as string;
+}
       } catch { /* skip malformed */ }
     }
   } catch { /* sessionsDir unreadable */ }
@@ -42,18 +48,28 @@ function resolveClaudeSessionId(pid: number, sessionsDir: string): string | null
 }
 
 function resolveCopilotSessionId(pid: number, sessionStateDir: string): string | null {
-  if (!existsSync(sessionStateDir)) return null;
+  if (!existsSync(sessionStateDir)) {
+return null;
+}
   try {
     for (const entry of readdirSync(sessionStateDir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
+      if (!entry.isDirectory()) {
+continue;
+}
       const dirPath = join(sessionStateDir, entry.name);
       try {
         const files = readdirSync(dirPath);
-        if (!files.includes(`inuse.${pid}.lock`)) continue;
+        if (!files.includes(`inuse.${pid}.lock`)) {
+continue;
+}
         const workspaceFile = join(dirPath, 'workspace.yaml');
-        if (!existsSync(workspaceFile)) continue;
+        if (!existsSync(workspaceFile)) {
+continue;
+}
         const workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as { id?: string };
-        if (workspace.id) return workspace.id;
+        if (workspace.id) {
+return workspace.id;
+}
       } catch { /* skip */ }
     }
   } catch { /* sessionStateDir unreadable */ }

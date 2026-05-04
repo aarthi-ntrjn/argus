@@ -16,13 +16,19 @@ export async function findGitRepos(dirPath: string, results: Array<{ path: strin
     return results;
   }
   for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    if (entry.name === 'node_modules' || entry.name === '.git') continue;
+    if (!entry.isDirectory()) {
+continue;
+}
+    if (entry.name === 'node_modules' || entry.name === '.git') {
+continue;
+}
     const fullPath = join(dirPath, entry.name);
     try {
       const stat = await fsPromises.lstat(fullPath);
       // FR-010: skip symlinks to avoid loops
-      if (stat.isSymbolicLink() || !stat.isDirectory()) continue;
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+continue;
+}
     } catch {
       continue;
     }

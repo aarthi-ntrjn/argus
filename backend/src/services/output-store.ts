@@ -35,7 +35,9 @@ export class OutputStore {
         data: { sessionId, outputs: inserted },
       });
       outputEvents.emit('session.output.batch', sessionId, outputs);
-      for (const fn of this.listeners) fn(sessionId, inserted);
+      for (const fn of this.listeners) {
+fn(sessionId, inserted);
+}
     }
     return inserted.length > 0;
   }
@@ -57,7 +59,9 @@ export class OutputStore {
       .prepare('SELECT SUM(length(content)) as total FROM session_output WHERE session_id = ?')
       .get(sessionId) as { total: number | null };
     const total = totalRow?.total ?? 0;
-    if (total <= maxBytes) return;
+    if (total <= maxBytes) {
+return;
+}
 
     const rows = db
       .prepare('SELECT id, length(content) as size FROM session_output WHERE session_id = ? ORDER BY sequence_number ASC')
@@ -67,7 +71,9 @@ export class OutputStore {
     const toDelete: string[] = [];
 
     for (const row of rows) {
-      if (remaining <= maxBytes) break;
+      if (remaining <= maxBytes) {
+break;
+}
       toDelete.push(row.id);
       remaining -= row.size;
     }

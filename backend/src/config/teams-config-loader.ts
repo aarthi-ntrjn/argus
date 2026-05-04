@@ -35,7 +35,9 @@ export function saveTeamsConfig(config: Partial<TeamsConfig>): void {
   mkdirSync(getTeamsConfigDir(), { recursive: true });
   let existing: Partial<TeamsConfig> = {};
   if (existsSync(filePath)) {
-    try { existing = JSON.parse(readFileSync(filePath, 'utf-8')); } catch { /* use empty */ }
+    try {
+ existing = JSON.parse(readFileSync(filePath, 'utf-8')); 
+} catch { /* use empty */ }
   }
   writeFileSync(filePath, JSON.stringify({ ...existing, ...config }, null, 2), 'utf-8');
 }

@@ -67,7 +67,9 @@ function renderCard(session: Session, items: SessionOutput[] = [], pendingChoice
 }
 
 describe('SessionCard — prompt bar keyboard isolation', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+ vi.clearAllMocks(); 
+});
 
   it('space key inside prompt input does not bubble up and toggle card selection', async () => {
     const onSelect = vi.fn();
@@ -85,7 +87,9 @@ describe('SessionCard — prompt bar keyboard isolation', () => {
 });
 
 describe('SessionCard — launchMode badge', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+ vi.clearAllMocks(); 
+});
 
   it('shows "connected" badge when launchMode is "pty"', () => {
     renderCard(makeSession({ launchMode: 'pty' }));
@@ -104,7 +108,9 @@ describe('SessionCard — launchMode badge', () => {
 });
 
 describe('SessionCard — ATTENTION NEEDED alert', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+ vi.clearAllMocks(); 
+});
 
   it('shows ATTENTION NEEDED when session has a pending choice (readonly)', async () => {
     renderCard(
@@ -175,7 +181,9 @@ describe('SessionCard — ATTENTION NEEDED alert', () => {
 });
 
 describe('SessionCard — last output preview', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+ vi.clearAllMocks(); 
+});
 
   it('shows assistant message content in the preview', async () => {
     renderCard(makeSession(), [
@@ -210,7 +218,9 @@ describe('SessionCard — last output preview', () => {
 });
 
 describe('SessionCard — hook-aware pending choice (T016)', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+ vi.clearAllMocks(); 
+});
 
   it('shows ATTENTION NEEDED from hook cache even when getSessionOutput returns no pending tool_use', async () => {
     const session = makeSession({ status: 'active' });

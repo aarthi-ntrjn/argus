@@ -58,7 +58,9 @@ export class TeamsNotifier implements NotificationIntegration {
 
   async onSessionCreated(session: Session): Promise<void> {
     this.log.info(`teams.session.created.received: session=${session.id} type=${session.type} status=${session.status}`);
-    if (!this.active) return;
+    if (!this.active) {
+return;
+}
     const config = loadTeamsConfig();
     if (!this.isConfigured()) {
       this.log.warn(`teams.session.created.skipped: not configured session=${session.id}`);
@@ -128,7 +130,9 @@ export class TeamsNotifier implements NotificationIntegration {
 
   async onSessionUpdated(session: Session): Promise<void> {
     this.log.info(`teams.session.updated.received: session=${session.id} status=${session.status} model=${session.model} pid=${session.pid}`);
-    if (!this.active) return;
+    if (!this.active) {
+return;
+}
     if (!this.isConfigured()) {
       this.log.warn(`teams.session.updated.skipped: not configured session=${session.id}`);
       return;
@@ -170,12 +174,18 @@ export class TeamsNotifier implements NotificationIntegration {
   }
 
   async onSessionOutput(sessionId: string, outputs: SessionOutput[]): Promise<void> {
-    if (!this.active) return;
+    if (!this.active) {
+return;
+}
     const config = loadTeamsConfig();
-    if (!config.enabled) return;
+    if (!config.enabled) {
+return;
+}
     const relevant = outputs.filter(o => o.type === 'message' && o.content.trim() && !o.isMeta &&
       (o.role === 'assistant' || o.role === 'user'));
-    if (relevant.length === 0) return;
+    if (relevant.length === 0) {
+return;
+}
     const text = relevant.map(o =>
       o.role === 'user' ? `**You said:** ${o.content}` : o.content
     ).join('\n\n');
@@ -183,7 +193,9 @@ export class TeamsNotifier implements NotificationIntegration {
 
     this.queue.enqueue(async () => {
       const thread = getTeamsThread(sessionId);
-      if (!thread) return;
+      if (!thread) {
+return;
+}
       try {
         const threadConvId = `${channelId};messageid=${thread.teamsThreadId}`;
         await this.teamsApp.api.conversations.activities(threadConvId).create(new MessageActivity(text));
@@ -195,13 +207,19 @@ export class TeamsNotifier implements NotificationIntegration {
   }
 
   async onPendingChoice(choice: PendingChoice): Promise<void> {
-    if (!this.active) return;
+    if (!this.active) {
+return;
+}
     const config = loadTeamsConfig();
-    if (!config.enabled) return;
+    if (!config.enabled) {
+return;
+}
     const { channelId } = config as { channelId: string };
 
     const thread = getTeamsThread(choice.sessionId);
-    if (!thread) return;
+    if (!thread) {
+return;
+}
 
     const activity = this._buildPendingChoiceMessage(choice);
     this.queue.enqueue(async () => {
@@ -217,7 +235,9 @@ export class TeamsNotifier implements NotificationIntegration {
 
   async onSessionEnded(session: Session): Promise<void> {
     this.log.info(`teams.session.ended.received: session=${session.id} status=${session.status}`);
-    if (!this.active) return;
+    if (!this.active) {
+return;
+}
     const config = loadTeamsConfig();
     if (!this.isConfigured()) {
       this.log.warn(`teams.session.ended.skipped: not configured session=${session.id}`);
@@ -333,7 +353,9 @@ export class TeamsNotifier implements NotificationIntegration {
 
 function isTeamsThreadNotFound(err: unknown): boolean {
   const status = (err as any)?.statusCode ?? (err as any)?.status ?? (err as any)?.response?.status;
-  if (status === 404) return true;
+  if (status === 404) {
+return true;
+}
   if (err instanceof Error) {
     const msg = err.message.toLowerCase();
     return msg.includes('not found') || msg.includes('404') || msg.includes('does not exist');

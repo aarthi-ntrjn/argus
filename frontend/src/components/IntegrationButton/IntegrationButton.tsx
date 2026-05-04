@@ -26,22 +26,34 @@ function IntegrationDropdown({ type, label, status, onToggle, disabled, onOpenSe
   const src = type === 'teams' ? teamsUrl : slackUrl;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+return;
+}
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+setOpen(false);
+}
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    if (!open) {
+return;
+}
+    const handler = (e: KeyboardEvent) => {
+ if (e.key === 'Escape') {
+setOpen(false);
+} 
+};
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [open]);
 
-  const handleOpenSettings = () => { setOpen(false); onOpenSettings(); };
+  const handleOpenSettings = () => {
+ setOpen(false); onOpenSettings(); 
+};
 
   const iconOpacity = status === 'not-configured' ? 'opacity-30' : 'opacity-90';
   const toggleTitle =

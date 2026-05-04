@@ -6,7 +6,9 @@ function extractJsonPreview(json: string): string | null {
   try {
     const parsed = JSON.parse(json) as Record<string, unknown>;
     for (const key of ['path', 'file_path', 'command']) {
-      if (typeof parsed[key] === 'string') return parsed[key] as string;
+      if (typeof parsed[key] === 'string') {
+return parsed[key] as string;
+}
     }
     return null;
   } catch {
@@ -15,7 +17,9 @@ function extractJsonPreview(json: string): string | null {
 }
 
 function truncate(text: string, max: number): string {
-  if (text.length <= max) return text;
+  if (text.length <= max) {
+return text;
+}
   return text.slice(0, max - 3) + '...';
 }
 
@@ -23,11 +27,15 @@ export function summariseToolUse(item: SessionOutput): string {
   const { toolName, content } = item;
   const prefix = toolName ? `${toolName}: ` : '';
 
-  if (!content) return toolName ?? '';
+  if (!content) {
+return toolName ?? '';
+}
 
   if (content.trimStart().startsWith('{')) {
     const preview = extractJsonPreview(content);
-    if (preview) return truncate(`${prefix}${preview}`, MAX_SUMMARY_LENGTH);
+    if (preview) {
+return truncate(`${prefix}${preview}`, MAX_SUMMARY_LENGTH);
+}
     return truncate(`${prefix}${content}`, MAX_SUMMARY_LENGTH);
   }
 
@@ -38,11 +46,15 @@ export function fullToolUseText(item: SessionOutput): string {
   const { toolName, content } = item;
   const prefix = toolName ? `${toolName}: ` : '';
 
-  if (!content) return toolName ?? '';
+  if (!content) {
+return toolName ?? '';
+}
 
   if (content.trimStart().startsWith('{')) {
     const preview = extractJsonPreview(content);
-    if (preview) return `${prefix}${preview}`;
+    if (preview) {
+return `${prefix}${preview}`;
+}
     return `${prefix}${content}`;
   }
 

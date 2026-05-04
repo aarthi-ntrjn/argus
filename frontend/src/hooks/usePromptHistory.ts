@@ -46,7 +46,9 @@ export function usePromptHistory(
       .filter((item) => item.sequenceNumber > lastSeenSequence.current)
       .sort((a, b) => a.sequenceNumber - b.sequenceNumber);
 
-    if (newItems.length === 0) return;
+    if (newItems.length === 0) {
+return;
+}
 
     lastSeenSequence.current = newItems.reduce(
       (max, item) => Math.max(max, item.sequenceNumber),
@@ -84,7 +86,9 @@ export function usePromptHistory(
     const current = entriesRef.current;
     const currentIndex = historyIndexRef.current;
 
-    if (current.length === 0) return currentInput;
+    if (current.length === 0) {
+return currentInput;
+}
 
     let nextIndex: number;
     if (currentIndex === null) {
@@ -104,7 +108,9 @@ export function usePromptHistory(
     const currentIndex = historyIndexRef.current;
     const savedDraft = draftRef.current;
 
-    if (currentIndex === null) return savedDraft;
+    if (currentIndex === null) {
+return savedDraft;
+}
 
     if (currentIndex === 0) {
       historyIndexRef.current = null;
@@ -120,7 +126,9 @@ export function usePromptHistory(
 
   function addEntry(text: string): void {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+return;
+}
 
     pendingBarSends.current.set(
       trimmed,

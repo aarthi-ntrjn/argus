@@ -40,7 +40,9 @@ function SessionCard({ session, selected, onSelect }: Props) {
 
   const [questionIdx, setQuestionIdx] = useState(0);
   const [customChoiceNumber, setCustomChoiceNumber] = useState<string | null>(null);
-  useEffect(() => { setQuestionIdx(0); setCustomChoiceNumber(null); }, [hookPendingChoice]);
+  useEffect(() => {
+ setQuestionIdx(0); setCustomChoiceNumber(null); 
+}, [hookPendingChoice]);
 
   const pendingQuestions = hookPendingChoice?.allQuestions ?? (hookPendingChoice ? [{ question: hookPendingChoice.question, choices: hookPendingChoice.choices }] : []);
   const currentQuestion = pendingQuestions[Math.min(questionIdx, pendingQuestions.length - 1)];
@@ -66,14 +68,20 @@ function SessionCard({ session, selected, onSelect }: Props) {
       aria-label={`Session ${session.id.slice(0, 8)} — ${session.status}. Press Enter to ${selected ? 'close' : 'view'} output.`}
       className={`interactive-card p-4 ${selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-neutral-400 hover:bg-neutral-100'} ${isInactive(session, thresholdMs) && !selected ? 'opacity-75' : ''}`}
       onClick={() => onSelect?.(session.id)}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect?.(session.id); } }}
+      onKeyDown={e => {
+ if (e.key === 'Enter' || e.key === ' ') {
+ e.preventDefault(); onSelect?.(session.id); 
+} 
+}}
     >
       {/* Header row */}
       <SessionMetaRow session={session} showLink onKill={kill.requestKill} killPending={kill.isPending} />
 
       {/* Summary / topic */}
       {pendingChoice !== null ? (
-        <PendingChoicePanel pendingChoice={pendingChoice} session={session} idx={questionIdx} onAdvance={() => setQuestionIdx(i => i + 1)} onFocusPromptBar={() => promptBarRef.current?.focusInput()} onTypeAnswer={(n) => { setCustomChoiceNumber(n); promptBarRef.current?.focusInput(); }} />
+        <PendingChoicePanel pendingChoice={pendingChoice} session={session} idx={questionIdx} onAdvance={() => setQuestionIdx(i => i + 1)} onFocusPromptBar={() => promptBarRef.current?.focusInput()} onTypeAnswer={(n) => {
+ setCustomChoiceNumber(n); promptBarRef.current?.focusInput(); 
+}} />
       ) : (
         <p className={`text-sm mt-2 truncate ${session.summary ? 'text-gray-600' : 'text-gray-500 italic'}`}>
           {session.summary || 'Nothing sent yet'}

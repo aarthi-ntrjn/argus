@@ -14,10 +14,14 @@ interface RemoveConfirmDialogProps {
 export function RemoveConfirmDialog({ repoName, removing, skipConfirm, onSkipConfirmChange, onCancel, onConfirm }: RemoveConfirmDialogProps) {
   const cancelRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => { cancelRef.current?.focus(); }, []);
+  useEffect(() => {
+ cancelRef.current?.focus(); 
+}, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape' && !removing) onCancel();
+    if (e.key === 'Escape' && !removing) {
+onCancel();
+}
   }, [onCancel, removing]);
 
   return (

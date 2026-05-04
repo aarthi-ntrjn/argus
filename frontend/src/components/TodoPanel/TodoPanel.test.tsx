@@ -267,7 +267,9 @@ describe('TodoPanel', () => {
       const input = screen.getByRole('textbox', { name: /edit task: First task/i });
       await userEvent.clear(input);
       await userEvent.type(input, 'Updated text');
-      act(() => { input.blur(); });
+      act(() => {
+ input.blur(); 
+});
       expect(mutate).toHaveBeenCalledWith({ id: '1', text: 'Updated text' });
     });
 
@@ -278,7 +280,9 @@ describe('TodoPanel', () => {
       renderPanel();
       const input = screen.getByRole('textbox', { name: /edit task: First task/i });
       await userEvent.clear(input);
-      act(() => { input.blur(); });
+      act(() => {
+ input.blur(); 
+});
       expect(mutate).toHaveBeenCalledWith('1');
     });
 
@@ -288,7 +292,9 @@ describe('TodoPanel', () => {
       mockUseUpdateTodoText.mockReturnValue(makeMutation({ mutate }) as unknown as ReturnType<typeof useUpdateTodoText>);
       renderPanel();
       const input = screen.getByRole('textbox', { name: /edit task: First task/i });
-      act(() => { input.blur(); });
+      act(() => {
+ input.blur(); 
+});
       expect(mutate).not.toHaveBeenCalled();
     });
   });

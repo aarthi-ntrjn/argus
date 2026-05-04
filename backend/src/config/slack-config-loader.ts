@@ -19,7 +19,9 @@ export function loadSlackConfig(): SlackConfig | null {
       const botToken = parsed.botToken ?? '';
       const channelId = parsed.channelId ?? '';
       const ownerSenderId = parsed.ownerSenderId ?? '';
-      if (!botToken && !channelId) return null;
+      if (!botToken && !channelId) {
+return null;
+}
       return {
         botToken,
         appToken: parsed.appToken,
@@ -38,7 +40,9 @@ export function saveSlackConfig(config: Partial<SlackConfig>): void {
   mkdirSync(getSlackConfigDir(), { recursive: true });
   let existing: Partial<SlackConfig> = {};
   if (existsSync(filePath)) {
-    try { existing = JSON.parse(readFileSync(filePath, 'utf-8')); } catch { /* use empty */ }
+    try {
+ existing = JSON.parse(readFileSync(filePath, 'utf-8')); 
+} catch { /* use empty */ }
   }
   writeFileSync(filePath, JSON.stringify({ ...existing, ...config }, null, 2), 'utf-8');
 }

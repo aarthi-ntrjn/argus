@@ -56,8 +56,11 @@ export default function DashboardPage() {
 
   const selectSession = (id: string | null) => {
     setSelectedSessionId(id);
-    if (id) localStorage.setItem('selectedSessionId', id);
-    else localStorage.removeItem('selectedSessionId');
+    if (id) {
+localStorage.setItem('selectedSessionId', id);
+} else {
+localStorage.removeItem('selectedSessionId');
+}
   };
   const [activeMobileTab, setActiveMobileTab] = useState<MobileTab>('sessions');
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -84,7 +87,11 @@ export default function DashboardPage() {
   const [launchError, setLaunchError] = useState<string | null>(null);
 
   const [infoSnapshot, setInfoSnapshot] = useState<string | null>(null);
-  useEffect(() => { if (addInfo) setInfoSnapshot(addInfo); }, [addInfo]);
+  useEffect(() => {
+ if (addInfo) {
+setInfoSnapshot(addInfo);
+} 
+}, [addInfo]);
 
   // Auto-launch for first-time users
   useEffect(() => {
@@ -97,14 +104,24 @@ export default function DashboardPage() {
 
   // Close settings panel on outside click or Escape
   useEffect(() => {
-    if (!settingsOpen) return;
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSettingsOpen(false); };
+    if (!settingsOpen) {
+return;
+}
+    const handleKey = (e: KeyboardEvent) => {
+ if (e.key === 'Escape') {
+setSettingsOpen(false);
+} 
+};
     const handleClick = (e: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setSettingsOpen(false);
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+setSettingsOpen(false);
+}
     };
     document.addEventListener('keydown', handleKey);
     document.addEventListener('mousedown', handleClick);
-    return () => { document.removeEventListener('keydown', handleKey); document.removeEventListener('mousedown', handleClick); };
+    return () => {
+ document.removeEventListener('keydown', handleKey); document.removeEventListener('mousedown', handleClick); 
+};
   }, [settingsOpen]);
 
   const { data: repos = [], isLoading: reposLoading, isError: reposError } = useQuery({
@@ -120,14 +137,16 @@ export default function DashboardPage() {
   // When the selected session ends, auto-switch to the first still-active session
   // or close the output pane if none is available.
   useEffect(() => {
-    if (!selectedSessionId || sessions.length === 0) return;
+    if (!selectedSessionId || sessions.length === 0) {
+return;
+}
     const selected = sessions.find(s => s.id === selectedSessionId);
     if (!selected || ENDED_STATUSES.has(selected.status)) {
       const next = sessions.find(s => ACTIVE_STATUSES.has(s.status));
       selectSession(next?.id ?? null);
     }
   // selectSession is stable (defined once); sessions and selectedSessionId are the reactive deps.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [sessions, selectedSessionId]);
 
   const dashboardWidthClassName = isDashboardExpanded
@@ -156,13 +175,19 @@ export default function DashboardPage() {
   const reposWithSessions = useMemo<RepoWithSessions[]>(() => repos.map((repo) => {
     const repoSessions = sessionsByRepo.get(repo.id) ?? [];
     const visibleSessions = repoSessions.filter(s => {
-      if (settings.hideEndedSessions && ENDED_STATUSES.has(s.status)) return false;
-      if (settings.hideInactiveSessions && isInactive(s, (argusSettings?.restingThresholdMinutes ?? 20) * 60_000)) return false;
+      if (settings.hideEndedSessions && ENDED_STATUSES.has(s.status)) {
+return false;
+}
+      if (settings.hideInactiveSessions && isInactive(s, (argusSettings?.restingThresholdMinutes ?? 20) * 60_000)) {
+return false;
+}
       return true;
     });
     return { ...repo, sessions: visibleSessions, hasHiddenSessions: visibleSessions.length < repoSessions.length };
   }).filter((repo) => {
-    if (!settings.hideReposWithNoActiveSessions) return true;
+    if (!settings.hideReposWithNoActiveSessions) {
+return true;
+}
     return (sessionsByRepo.get(repo.id) ?? []).some(s => ACTIVE_STATUSES.has(s.status));
   }), [repos, sessionsByRepo, settings]);
 
@@ -436,16 +461,28 @@ export default function DashboardPage() {
       <OnboardingTour
         run={tourRun}
         steps={tourSteps}
-        onComplete={() => { completeTour(); if (repos.length > 0) markRepoStepsSeen(); setTourRun(false); }}
-        onSkip={(reason) => { skipTour(reason); if (repos.length > 0) markRepoStepsSeen(); setTourRun(false); }}
+        onComplete={() => {
+ completeTour(); if (repos.length > 0) {
+markRepoStepsSeen();
+} setTourRun(false); 
+}}
+        onSkip={(reason) => {
+ skipTour(reason); if (repos.length > 0) {
+markRepoStepsSeen();
+} setTourRun(false); 
+}}
       />
 
       {catchUpRun && (
         <OnboardingTour
           run={catchUpRun}
           steps={REPO_CATCH_UP_STEPS}
-          onComplete={() => { markRepoStepsSeen(); setCatchUpRun(false); }}
-          onSkip={() => { markRepoStepsSeen(); setCatchUpRun(false); }}
+          onComplete={() => {
+ markRepoStepsSeen(); setCatchUpRun(false); 
+}}
+          onSkip={() => {
+ markRepoStepsSeen(); setCatchUpRun(false); 
+}}
         />
       )}
 

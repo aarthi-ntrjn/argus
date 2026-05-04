@@ -40,7 +40,9 @@ export function loadConfig(): ArgusConfig {
     }
   }
   const config = { ...DEFAULTS, ...fileConfig };
-  if (process.env.ARGUS_PORT) config.port = parseInt(process.env.ARGUS_PORT, 10);
+  if (process.env.ARGUS_PORT) {
+config.port = parseInt(process.env.ARGUS_PORT, 10);
+}
   return config;
 }
 

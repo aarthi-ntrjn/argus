@@ -99,7 +99,9 @@ export class SlackNotifier implements NotificationIntegration {
 
   getSessionIdByThreadTs(threadTs: string): string | undefined {
     for (const [sessionId, ts] of this.threadAnchors) {
-      if (ts === threadTs) return sessionId;
+      if (ts === threadTs) {
+return sessionId;
+}
     }
     // Fall back to DB for sessions not yet loaded into the in-memory map
     const thread = getSlackThreadByTs(threadTs);
@@ -116,7 +118,9 @@ export class SlackNotifier implements NotificationIntegration {
 
   async onSessionCreated(session: Session): Promise<void> {
     log.info(`slack.session.created.received: session=${session.id} status=${session.status}`);
-    if (!this.active || !this.client) return;
+    if (!this.active || !this.client) {
+return;
+}
     if (!this.isEventEnabled(SESSION_CREATED)) {
       log.info(`slack.session.created.skipped: event not enabled`);
       return;
@@ -190,7 +194,9 @@ export class SlackNotifier implements NotificationIntegration {
 
   async onSessionEnded(session: Session): Promise<void> {
     log.info(`slack.session.ended.received: session=${session.id} status=${session.status}`);
-    if (!this.active || !this.client) return;
+    if (!this.active || !this.client) {
+return;
+}
     if (!this.isEventEnabled(SESSION_ENDED)) {
       log.info(`slack.session.ended.skipped: event not enabled`);
       return;
@@ -221,8 +227,12 @@ export class SlackNotifier implements NotificationIntegration {
 
   async onSessionUpdated(session: Session): Promise<void> {
     log.debug(`slack.session.updated.received: session=${session.id} status=${session.status}`);
-    if (!this.active || !this.client) return;
-    if (!this.isEventEnabled(SESSION_UPDATED)) return;
+    if (!this.active || !this.client) {
+return;
+}
+    if (!this.isEventEnabled(SESSION_UPDATED)) {
+return;
+}
 
     const changes = this.diffTracker.update(session);
     if (changes === null) {
@@ -266,19 +276,27 @@ export class SlackNotifier implements NotificationIntegration {
   }
 
   async onSessionOutput(sessionId: string, outputs: SessionOutput[]): Promise<void> {
-    if (!this.active || !this.client) return;
-    if (!this.isEventEnabled(SESSION_AI_RESPONSE)) return;
+    if (!this.active || !this.client) {
+return;
+}
+    if (!this.isEventEnabled(SESSION_AI_RESPONSE)) {
+return;
+}
 
     const relevant = outputs.filter((o) => o.type === 'message' && o.content.trim() && !o.isMeta &&
       (o.role === 'assistant' || o.role === 'user'));
-    if (relevant.length === 0) return;
+    if (relevant.length === 0) {
+return;
+}
 
     const text = relevant.map((o) =>
       o.role === 'user' ? `*You said:* ${o.content}` : o.content
     ).join('\n\n');
     this.queue.enqueue(async () => {
       const threadTs = this.threadAnchors.get(sessionId);
-      if (!threadTs) return;
+      if (!threadTs) {
+return;
+}
       try {
         await this.client!.chat.postMessage({
           channel: this.config.channelId,
@@ -293,13 +311,19 @@ export class SlackNotifier implements NotificationIntegration {
   }
 
   async onPendingChoice(choice: PendingChoice): Promise<void> {
-    if (!this.active || !this.client) return;
-    if (!this.isEventEnabled(SESSION_PENDING_CHOICE)) return;
+    if (!this.active || !this.client) {
+return;
+}
+    if (!this.isEventEnabled(SESSION_PENDING_CHOICE)) {
+return;
+}
 
     const blocks = buildPendingChoiceBlocks(choice);
     this.queue.enqueue(async () => {
       const threadTs = this.threadAnchors.get(choice.sessionId);
-      if (!threadTs) return;
+      if (!threadTs) {
+return;
+}
       try {
         await this.client!.chat.postMessage({
           channel: this.config.channelId,
@@ -319,8 +343,12 @@ export class SlackNotifier implements NotificationIntegration {
   // -------------------------------------------------------------------------
 
   async postEvent(sessionId: string, eventType: string, payload: Session | Repository): Promise<void> {
-    if (!this.active || !this.client) return;
-    if (!this.isEventEnabled(eventType)) return;
+    if (!this.active || !this.client) {
+return;
+}
+    if (!this.isEventEnabled(eventType)) {
+return;
+}
 
     const blocks = buildEventBlocks(eventType, payload);
     this.queue.enqueue(async () => {
@@ -349,12 +377,16 @@ export class SlackNotifier implements NotificationIntegration {
   // -------------------------------------------------------------------------
 
   private isEventEnabled(eventType: string): boolean {
-    if (!this.config.enabledEventTypes) return true;
+    if (!this.config.enabledEventTypes) {
+return true;
+}
     return this.config.enabledEventTypes.includes(eventType);
   }
 
   private subscribeToEvents(): void {
-    if (this.subscribed) return;
+    if (this.subscribed) {
+return;
+}
     this.subscribed = true;
     this.sessionMonitor.on(SESSION_CREATED, (session: Session) => {
       this.onSessionCreated(session).catch((err) => {
@@ -489,7 +521,9 @@ function buildEventBlocks(eventType: string, payload: Session | Repository) {
 
 function formatDuration(start: Date, end: Date): string {
   const seconds = Math.floor((end.getTime() - start.getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) {
+return `${seconds}s`;
+}
   const minutes = Math.floor(seconds / 60);
   const remaining = seconds % 60;
   return remaining > 0 ? `${minutes}m ${remaining}s` : `${minutes}m`;

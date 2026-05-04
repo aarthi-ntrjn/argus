@@ -71,13 +71,21 @@ export function SettingsDialog({ open, tab, onTabChange, onClose, settings, onTo
   const { data: healthData } = useQuery({ queryKey: ['health'], queryFn: getHealth, staleTime: Infinity });
 
   useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    if (!open) {
+return;
+}
+    const handler = (e: KeyboardEvent) => {
+ if (e.key === 'Escape') {
+onClose();
+} 
+};
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open) {
+return null;
+}
 
   return (
     <div
@@ -141,7 +149,9 @@ export function SettingsDialog({ open, tab, onTabChange, onClose, settings, onTo
                 <DialogLinkItem href="https://www.npmjs.com/package/argus-ai-hub" icon={<NpmIcon />}>npm</DialogLinkItem>
                 {onRestartTour && (
                   <DialogLinkItem
-                    onClick={() => { onClose(); onRestartTour(); }}
+                    onClick={() => {
+ onClose(); onRestartTour(); 
+}}
                     icon={<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>}
                   >
                     Restart Tour

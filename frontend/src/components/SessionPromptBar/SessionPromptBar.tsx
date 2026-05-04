@@ -30,7 +30,9 @@ const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function Sess
   const inputRef = useRef<HTMLInputElement>(null);
 
   useImperativeHandle(ref, () => ({
-    focusInput() { inputRef.current?.focus(); },
+    focusInput() {
+ inputRef.current?.focus(); 
+},
   }));
 
   const { data: outputData } = useQuery({
@@ -43,7 +45,9 @@ const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function Sess
 
   const handleSend = async () => {
     const text = prompt.trim();
-    if (!text) return;
+    if (!text) {
+return;
+}
     setError(null);
     setSending(true);
     try {

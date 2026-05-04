@@ -27,10 +27,14 @@ export class TeamsListener implements NotificationListener {
 
   async initialize(): Promise<boolean> {
     this.active = true;
-    if (this.handlerRegistered) return true;
+    if (this.handlerRegistered) {
+return true;
+}
     this.handlerRegistered = true;
     this.teamsApp.on('message', async ({ activity, send }) => {
-      if (!this.active) return;
+      if (!this.active) {
+return;
+}
       const teamsConfig = loadTeamsConfig();
       const senderAadObjectId = (activity.from as Record<string, unknown>)?.['aadObjectId'] as string | undefined;
       log.info(`teams.listener.message.received: senderAadObjectId=${senderAadObjectId}`);
@@ -43,7 +47,9 @@ export class TeamsListener implements NotificationListener {
       const conversationId = activity.conversation?.id;
       const raw = activity.text ?? '';
       const text = raw.replace(/<at>[^<]*<\/at>/g, '').trim();
-      if (!text) return;
+      if (!text) {
+return;
+}
 
       log.info(`teams.listener.message.command.received: text=${text}`);
 
@@ -58,9 +64,13 @@ export class TeamsListener implements NotificationListener {
     });
 
     this.teamsApp.on('card.action', async ({ activity, send }) => {
-      if (!this.active) return;
+      if (!this.active) {
+return;
+}
       const data = activity.value?.action?.data as Record<string, unknown> | undefined;
-      if (data?.action !== 'pending_choice') return;
+      if (data?.action !== 'pending_choice') {
+return;
+}
 
       const teamsConfig = loadTeamsConfig();
       const senderAadObjectId = (activity.from as Record<string, unknown>)?.['aadObjectId'] as string | undefined;
@@ -194,7 +204,9 @@ export class TeamsListener implements NotificationListener {
 }
 
 function extractThreadId(conversationId: string | undefined): string | null {
-  if (!conversationId) return null;
+  if (!conversationId) {
+return null;
+}
   const match = conversationId.match(/messageid=([^;]+)/);
   return match ? match[1] : null;
 }

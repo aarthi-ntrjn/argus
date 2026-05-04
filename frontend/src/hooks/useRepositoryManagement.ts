@@ -51,7 +51,9 @@ export function useRepositoryManagement(): RepositoryManagement {
 
   const handleFolderSubmit = async (repos: Repository[]) => {
     const folderPath = folderInputPath.trim();
-    if (!folderPath) return;
+    if (!folderPath) {
+return;
+}
     setShowFolderInput(false);
     setAddError(null);
     setAddInfo(null);
@@ -123,7 +125,9 @@ export function useRepositoryManagement(): RepositoryManagement {
     handleFolderSubmit,
     handleRemoveRepoById,
     handleRemoveRepo: () => handleRemoveRepoById(removeConfirmId!),
-    cancelFolderInput: () => { setShowFolderInput(false); setFolderInputPath(''); },
+    cancelFolderInput: () => {
+ setShowFolderInput(false); setFolderInputPath(''); 
+},
     clearAddError: () => setAddError(null),
     clearAddInfo: () => setAddInfo(null),
   };

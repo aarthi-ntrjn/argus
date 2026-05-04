@@ -62,7 +62,9 @@ type LauncherMessage =
 
 function ensureRepository(cwd: string): Repository {
   const existing = getRepositoryByPath(cwd);
-  if (existing) return existing;
+  if (existing) {
+return existing;
+}
   const id = randomUUID();
   const now = new Date().toISOString();
   const repo = { id, path: cwd, name: basename(cwd), source: 'ui' as const, addedAt: now, lastScannedAt: null, branch: null, remoteUrl: null };
@@ -72,7 +74,9 @@ function ensureRepository(cwd: string): Repository {
 
 function tryLinkByPid(ptyLaunchId: string, pid: number, sessionType: SessionType): string | null {
   const sessionId = resolveSessionIdByPid(pid, sessionType);
-  if (sessionId) ptyRegistry.linkToSession(ptyLaunchId, sessionId);
+  if (sessionId) {
+ptyRegistry.linkToSession(ptyLaunchId, sessionId);
+}
   return sessionId ?? null;
 }
 
@@ -229,7 +233,9 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
       const reasonStr = reason.length > 0 ? reason.toString() : undefined;
       fastify.log.info({ ptyLaunchId, code, reason: reasonStr }, '[Launcher] WebSocket closed');
 
-      if (!ptyLaunchId) return;
+      if (!ptyLaunchId) {
+return;
+}
 
       const claudeSessionId = ptyRegistry.getClaimedId(ptyLaunchId);
       if (claudeSessionId) {

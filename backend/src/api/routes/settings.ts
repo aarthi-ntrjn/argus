@@ -36,7 +36,9 @@ const settingsRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/api/v1/settings/slack', async (_req, reply) => {
     const config = loadSlackConfig();
-    if (!config) return reply.status(404).send({ error: 'NOT_CONFIGURED', message: 'Slack integration is not configured' });
+    if (!config) {
+return reply.status(404).send({ error: 'NOT_CONFIGURED', message: 'Slack integration is not configured' });
+}
     return reply.send({ ...config, connectionStatus: getSlackConnectionStatus(config, false) });
   });
 
@@ -45,7 +47,9 @@ const settingsRoutes: FastifyPluginAsync = async (app) => {
     const current = loadSlackConfig() ?? { botToken: '', channelId: '', ownerSenderId: '', enabled: true };
     const update: Partial<SlackConfig> = {};
     for (const key of SLACK_EDITABLE_KEYS) {
-      if (key in body) (update as Record<string, unknown>)[key] = body[key];
+      if (key in body) {
+(update as Record<string, unknown>)[key] = body[key];
+}
     }
     const saved = { ...current, ...update };
     saveSlackConfig(saved);

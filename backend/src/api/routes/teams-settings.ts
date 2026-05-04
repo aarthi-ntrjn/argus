@@ -19,7 +19,9 @@ const teamsSettingsRoutes: FastifyPluginAsync = async (app) => {
     const current = loadTeamsConfig();
     const update: Partial<TeamsConfig> = {};
     for (const key of EDITABLE_KEYS) {
-      if (key in body) (update as Record<string, unknown>)[key] = body[key];
+      if (key in body) {
+(update as Record<string, unknown>)[key] = body[key];
+}
     }
     const saved = { ...current, ...update };
     saveTeamsConfig(saved);

@@ -28,7 +28,9 @@ export class MessageQueue {
   }
 
   private process(): void {
-    if (this.isSending || this.queue.length === 0) return;
+    if (this.isSending || this.queue.length === 0) {
+return;
+}
     const job = this.queue.shift()!;
     this.isSending = true;
     const start = Date.now();

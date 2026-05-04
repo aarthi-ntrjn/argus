@@ -10,7 +10,9 @@ interface CheckboxProps {
 
 export function Checkbox({ checked = false, onChange, label, className = '', 'aria-label': ariaLabel }: CheckboxProps) {
   const handleClick = () => {
-    if (!onChange) return;
+    if (!onChange) {
+return;
+}
     const syntheticEvent = { target: { checked: !checked } } as ChangeEvent<HTMLInputElement>;
     onChange(syntheticEvent);
   };
@@ -35,7 +37,9 @@ export function Checkbox({ checked = false, onChange, label, className = '', 'ar
     </button>
   );
 
-  if (!label) return checkbox;
+  if (!label) {
+return checkbox;
+}
 
   return (
     <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none" onClick={e => e.preventDefault()}>

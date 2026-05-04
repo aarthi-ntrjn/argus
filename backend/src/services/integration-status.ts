@@ -17,17 +17,29 @@ const SLACK_REQUIRED: (keyof SlackConfig)[] = [
 
 export function getTeamsConnectionStatus(config: Partial<TeamsConfig>, isRunning: boolean): ConnectionStatus {
   const hasAny = TEAMS_REQUIRED.some(k => Boolean(config[k]));
-  if (!hasAny) return 'unconfigured';
+  if (!hasAny) {
+return 'unconfigured';
+}
   const complete = TEAMS_REQUIRED.every(k => Boolean(config[k]));
-  if (!complete) return 'unconfigured';
-  if (!isRunning) return 'stopped';
+  if (!complete) {
+return 'unconfigured';
+}
+  if (!isRunning) {
+return 'stopped';
+}
   return 'connected';
 }
 
 export function getSlackConnectionStatus(config: SlackConfig | null, isRunning: boolean): ConnectionStatus {
-  if (!config) return 'unconfigured';
+  if (!config) {
+return 'unconfigured';
+}
   const complete = SLACK_REQUIRED.every(k => Boolean(config[k as keyof SlackConfig]));
-  if (!complete) return 'unconfigured';
-  if (!isRunning) return 'stopped';
+  if (!complete) {
+return 'unconfigured';
+}
+  if (!isRunning) {
+return 'stopped';
+}
   return 'connected';
 }

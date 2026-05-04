@@ -22,8 +22,12 @@ function pruneAllOutputs(): void {
 
 export function startPruningJob(intervalMs = 60000): ReturnType<typeof setInterval> {
   return setInterval(() => {
-    try { pruneExpiredSessions(); } catch { /* ignore */ }
-    try { pruneAllOutputs(); } catch { /* ignore */ }
+    try {
+ pruneExpiredSessions(); 
+} catch { /* ignore */ }
+    try {
+ pruneAllOutputs(); 
+} catch { /* ignore */ }
   }, intervalMs);
 }
 

@@ -18,7 +18,9 @@ const YOLO_FLAGS: Record<SessionType, string> = {
 function detectYoloMode(pid: number, type: SessionType): boolean | null {
   try {
     const cmdLine = getProcessCommandLine(pid);
-    if (!cmdLine) return null;
+    if (!cmdLine) {
+return null;
+}
     return cmdLine.includes(YOLO_FLAGS[type]);
   } catch {
     return null;
@@ -63,7 +65,9 @@ let _win32GetName: Win32Fn<string | null> | null | undefined = undefined;
 let _win32GetCmdLine: Win32Fn<string | null> | null | undefined = undefined;
 
 function initWin32GetName(): Win32Fn<string | null> | null {
-  if (PLATFORM !== 'win32') return null;
+  if (PLATFORM !== 'win32') {
+return null;
+}
   try {
     // Use createRequire so the load is synchronous and any failure is caught here.
     const _require = createRequire(import.meta.url);
@@ -83,12 +87,16 @@ function initWin32GetName(): Win32Fn<string | null> | null {
 
     return (pid: number): string | null => {
       const handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
-      if (!handle) return null;
+      if (!handle) {
+return null;
+}
       try {
         const buf = Buffer.alloc(WCHAR_BUFSIZE * 2); // 2 bytes per UTF-16 char
         const size = [WCHAR_BUFSIZE]; // in: capacity; out: chars written (excluding NUL)
         const ok = QueryFullProcessImageNameW(handle, 0, buf, size);
-        if (!ok || size[0] === 0) return null;
+        if (!ok || size[0] === 0) {
+return null;
+}
         const fullPath = buf.toString('utf16le', 0, size[0] * 2);
         // QueryFullProcessImageNameW returns the current on-disk path. During a Copilot CLI
         // auto-update, the updater renames the running binary from copilot.exe to copilot.exe.old
@@ -107,7 +115,9 @@ function initWin32GetName(): Win32Fn<string | null> | null {
 }
 
 function initWin32GetCmdLine(): Win32Fn<string | null> | null {
-  if (PLATFORM !== 'win32') return null;
+  if (PLATFORM !== 'win32') {
+return null;
+}
   try {
     const _require = createRequire(import.meta.url);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -125,23 +135,31 @@ function initWin32GetCmdLine(): Win32Fn<string | null> | null {
 
     return (pid: number): string | null => {
       const handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
-      if (!handle) return null;
+      if (!handle) {
+return null;
+}
       try {
         // Probe call: passing length 0 causes STATUS_INFO_LENGTH_MISMATCH and writes the
         // required buffer size into retLen. A zero retLen means class 60 is unsupported.
         const retLen = [0];
         NtQueryInformationProcess(handle, PROCESS_CMDLINE_INFO, null, 0, retLen);
         const needed = retLen[0];
-        if (needed < UNICODE_STRING_HEADER) return null;
+        if (needed < UNICODE_STRING_HEADER) {
+return null;
+}
 
         const buf = Buffer.alloc(needed);
         const status = NtQueryInformationProcess(handle, PROCESS_CMDLINE_INFO, buf, needed, retLen);
-        if (status !== STATUS_SUCCESS) return null;
+        if (status !== STATUS_SUCCESS) {
+return null;
+}
 
         // UNICODE_STRING.Length (offset 0) is the byte length of the string, excluding NUL.
         // The string data starts immediately after the struct header.
         const strBytes = buf.readUInt16LE(0);
-        if (strBytes === 0 || UNICODE_STRING_HEADER + strBytes > needed) return null;
+        if (strBytes === 0 || UNICODE_STRING_HEADER + strBytes > needed) {
+return null;
+}
         return buf.toString('utf16le', UNICODE_STRING_HEADER, UNICODE_STRING_HEADER + strBytes);
       } finally {
         CloseHandle(handle);
@@ -153,13 +171,19 @@ function initWin32GetCmdLine(): Win32Fn<string | null> | null {
 }
 
 function getProcessNameWin32(pid: number): string | null {
-  if (_win32GetName === undefined) _win32GetName = initWin32GetName();
+  if (_win32GetName === undefined) {
+_win32GetName = initWin32GetName();
+}
   return _win32GetName ? _win32GetName(pid) : null;
 }
 
 function getProcessCmdLineWin32(pid: number): string | null {
-  if (_win32GetCmdLine === undefined) _win32GetCmdLine = initWin32GetCmdLine();
-  if (_win32GetCmdLine) return _win32GetCmdLine(pid);
+  if (_win32GetCmdLine === undefined) {
+_win32GetCmdLine = initWin32GetCmdLine();
+}
+  if (_win32GetCmdLine) {
+return _win32GetCmdLine(pid);
+}
   // Fall back to PowerShell WMI if koffi/ntdll is unavailable.
   const out = execSync(
     `powershell -NoProfile -Command "(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}' -ErrorAction SilentlyContinue).CommandLine"`,
@@ -170,7 +194,9 @@ function getProcessCmdLineWin32(pid: number): string | null {
 
 function isAiToolCmdLine(cmdLine: string, type: SessionType): boolean {
   const lower = cmdLine.toLowerCase();
-  if (type === 'claude-code') return lower.includes('claude');
+  if (type === 'claude-code') {
+return lower.includes('claude');
+}
   // Match the copilot path segment to avoid false positives from strings like
   // "github-copilot-extension". Accepts /usr/local/bin/copilot and C:\...\copilot.exe.
   return /[/\\]copilot(\.exe)?(\s|$)/.test(lower);
@@ -178,7 +204,9 @@ function isAiToolCmdLine(cmdLine: string, type: SessionType): boolean {
 
 function isAiToolName(name: string, type: SessionType): boolean {
   const lower = name.toLowerCase();
-  if (type === 'claude-code') return lower === 'claude' || lower === 'claude.exe';
+  if (type === 'claude-code') {
+return lower === 'claude' || lower === 'claude.exe';
+}
   return lower === 'copilot' || lower === 'copilot.exe';
 }
 
@@ -198,12 +226,16 @@ function isAiToolName(name: string, type: SessionType): boolean {
 export function isExpectedProcess(pid: number, type: SessionType): boolean {
   if (PLATFORM === 'win32') {
     const name = getProcessNameWin32(pid);
-    if (!name) return true; // cannot verify — fail open
+    if (!name) {
+return true;
+} // cannot verify — fail open
     return isAiToolName(name, type);
   }
   // Linux/Mac: use the full command line — handles node-wrapped binaries like copilot.
   const cmdLine = getProcessCommandLine(pid);
-  if (!cmdLine) return true; // cannot verify — fail open
+  if (!cmdLine) {
+return true;
+} // cannot verify — fail open
   return isAiToolCmdLine(cmdLine, type);
 }
 
@@ -235,13 +267,21 @@ export function detectYoloModeFromPids(
   let anyFound = false;
   if (hostPid != null) {
     const r = detectYoloMode(hostPid, type);
-    if (r === true) return true;
-    if (r === false) anyFound = true;
+    if (r === true) {
+return true;
+}
+    if (r === false) {
+anyFound = true;
+}
   }
   if (pid != null && pid !== hostPid) {
     const r = detectYoloMode(pid, type);
-    if (r === true) return true;
-    if (r === false) anyFound = true;
+    if (r === true) {
+return true;
+}
+    if (r === false) {
+anyFound = true;
+}
   }
   return anyFound ? false : null;
 }

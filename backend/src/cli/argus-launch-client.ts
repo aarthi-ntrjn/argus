@@ -81,10 +81,14 @@ export class ArgusLaunchClient {
   notifySessionEnded(sessionId: string, exitCode: number | null): Promise<void> {
     this.isClosing = true;
     return new Promise<void>((resolve) => {
-      const done = () => { clearTimeout(timer); resolve(); };
+      const done = () => {
+ clearTimeout(timer); resolve(); 
+};
       // Safety timeout so the launcher never hangs if the server is unresponsive
       const timer = setTimeout(done, 2000);
-      if (this.ws.readyState !== WebSocket.OPEN) { done(); return; }
+      if (this.ws.readyState !== WebSocket.OPEN) {
+ done(); return; 
+}
       // Use the send callback to know when data is flushed, then close
       this.ws.send(JSON.stringify({ type: 'session_ended', sessionId, exitCode }), () => {
         this.ws.once('close', done);

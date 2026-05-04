@@ -18,7 +18,13 @@ export default function FolderInputDialog({ folderInputPath, onPathChange, onSub
           type="text"
           value={folderInputPath}
           onChange={e => onPathChange(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') onSubmit(); if (e.key === 'Escape') onCancel(); }}
+          onKeyDown={e => {
+ if (e.key === 'Enter') {
+onSubmit();
+} if (e.key === 'Escape') {
+onCancel();
+} 
+}}
           placeholder="e.g. C:\source or /home/user/projects"
           aria-label="Repository folder path"
           className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"

@@ -27,7 +27,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     } catch { /* not JSON, use raw text */ }
     throw new Error(message);
   }
-  if (res.status === 204) return undefined as T;
+  if (res.status === 204) {
+return undefined as T;
+}
   return res.json() as Promise<T>;
 }
 
@@ -138,14 +140,18 @@ export async function launchInTerminal(tool: ToolCommand, repoPath?: string): Pr
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tool, repoPath }),
   });
-  if (res.status === 202) return {};
+  if (res.status === 202) {
+return {};
+}
   if (res.status === 422) {
     const body = await res.json() as { cmd?: string };
     return { cmd: body.cmd };
   }
   const text = await res.text();
   let message = text;
-  try { message = (JSON.parse(text) as { message?: string }).message ?? text; } catch { /* use raw text */ }
+  try {
+ message = (JSON.parse(text) as { message?: string }).message ?? text; 
+} catch { /* use raw text */ }
   throw new Error(message);
 }
 
@@ -219,7 +225,9 @@ export async function stopIntegration(platform: 'slack' | 'teams'): Promise<void
 
 export async function getHealth(): Promise<{ status: string; version: string; uptime: number }> {
   const res = await fetch('/api/health');
-  if (!res.ok) throw new Error('Health check failed');
+  if (!res.ok) {
+throw new Error('Health check failed');
+}
   return res.json() as Promise<{ status: string; version: string; uptime: number }>;
 }
 

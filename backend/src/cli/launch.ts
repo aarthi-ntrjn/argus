@@ -323,7 +323,9 @@ if (isWin) {
       outer: while (stack.length > 0) {
         const current = stack.pop()!;
         for (const p of all) {
-          if (p.ParentProcessId !== current) continue;
+          if (p.ParentProcessId !== current) {
+continue;
+}
           const name = p.Name.trim().toLowerCase();
           log(`pid resolver: visiting ${name} PID=${p.ProcessId}`);
           if (name === targetExe) {

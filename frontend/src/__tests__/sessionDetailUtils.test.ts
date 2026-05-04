@@ -127,7 +127,9 @@ describe('buildDisplayItems', () => {
     const result = buildDisplayItems(items, true);
     expect(result).toHaveLength(1);
     expect(result[0].kind).toBe('single');
-    if (result[0].kind === 'single') expect(result[0].item.id).toBe('1');
+    if (result[0].kind === 'single') {
+expect(result[0].item.id).toBe('1');
+}
   });
 
   it('focused mode emits unpaired tool_use (result not yet arrived) as single', () => {
@@ -174,8 +176,12 @@ describe('buildDisplayItems', () => {
     if (result[0].kind === 'tool_group') {
       const pairs = result[0].groupItems.filter(gi => gi.kind === 'tool_pair');
       expect(pairs).toHaveLength(2);
-      if (pairs[0].kind === 'tool_pair') expect(pairs[0].toolUse.id).toBe('1');
-      if (pairs[1].kind === 'tool_pair') expect(pairs[1].toolUse.id).toBe('3');
+      if (pairs[0].kind === 'tool_pair') {
+expect(pairs[0].toolUse.id).toBe('1');
+}
+      if (pairs[1].kind === 'tool_pair') {
+expect(pairs[1].toolUse.id).toBe('3');
+}
     }
   });
 
@@ -191,7 +197,9 @@ describe('buildDisplayItems', () => {
     expect(result).toHaveLength(3);
     expect(result[0].kind).toBe('tool_group');
     expect(result[1].kind).toBe('single');
-    if (result[1].kind === 'single') expect(result[1].item.id).toBe('3');
+    if (result[1].kind === 'single') {
+expect(result[1].item.id).toBe('3');
+}
     expect(result[2].kind).toBe('tool_group');
   });
 

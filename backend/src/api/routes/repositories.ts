@@ -31,7 +31,9 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Body: { path?: string } }>('/api/v1/repositories', async (req, reply) => {
     const { path: rawPath } = req.body ?? {};
-    if (!rawPath) return reply.status(400).send({ error: 'MISSING_PATH', message: 'path is required', requestId: req.id });
+    if (!rawPath) {
+return reply.status(400).send({ error: 'MISSING_PATH', message: 'path is required', requestId: req.id });
+}
     const repoPath = expandTilde(rawPath);
 
     if (!existsSync(join(repoPath, '.git'))) {
@@ -39,7 +41,9 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const existing = getRepositoryByPath(repoPath);
-    if (existing) return reply.status(409).send({ error: 'DUPLICATE', message: 'Repository already registered', repository: existing, requestId: req.id });
+    if (existing) {
+return reply.status(409).send({ error: 'DUPLICATE', message: 'Repository already registered', repository: existing, requestId: req.id });
+}
 
     const tRepo = Date.now();
     const t1 = Date.now();
@@ -93,7 +97,9 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
   app.delete<{ Params: { id: string } }>('/api/v1/repositories/:id', async (req, reply) => {
     const { id } = req.params;
     const existing = getRepository(id);
-    if (!existing) return reply.status(404).send({ error: 'NOT_FOUND', message: `Repository ${id} not found`, requestId: req.id });
+    if (!existing) {
+return reply.status(404).send({ error: 'NOT_FOUND', message: `Repository ${id} not found`, requestId: req.id });
+}
 
     try {
       deleteRepository(id);

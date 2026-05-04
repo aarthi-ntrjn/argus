@@ -12,7 +12,9 @@ interface Props {
 
 function toLaunchErrorMessage(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
-  if (!raw || raw === 'Failed to fetch') return 'Failed to launch session. The Argus server is unreachable.';
+  if (!raw || raw === 'Failed to fetch') {
+return 'Failed to launch session. The Argus server is unreachable.';
+}
   return `Failed to launch session: ${raw}`;
 }
 
@@ -29,9 +31,13 @@ export default function LaunchDropdown({ repoPath, onLaunchError }: Props) {
 
   // Close on outside click
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+return;
+}
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+setOpen(false);
+}
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -39,8 +45,14 @@ export default function LaunchDropdown({ repoPath, onLaunchError }: Props) {
 
   // Close on Escape
   useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    if (!open) {
+return;
+}
+    const handler = (e: KeyboardEvent) => {
+ if (e.key === 'Escape') {
+setOpen(false);
+} 
+};
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [open]);
@@ -48,7 +60,9 @@ export default function LaunchDropdown({ repoPath, onLaunchError }: Props) {
   const copyCommand = async (tool: 'claude' | 'copilot') => {
     const base = tool === 'claude' ? tools?.claudeCmd : tools?.copilotCmd;
     const cmd = base ? `${base} --cwd "${repoPath}"` : undefined;
-    if (!cmd) return;
+    if (!cmd) {
+return;
+}
     try {
       await navigator.clipboard.writeText(cmd);
     } catch {
@@ -92,7 +106,9 @@ export default function LaunchDropdown({ repoPath, onLaunchError }: Props) {
         variant="outline"
         size="sm"
         data-tour-id="dashboard-launch"
-        onClick={() => { setOpen(o => !o); }}
+        onClick={() => {
+ setOpen(o => !o); 
+}}
         title="Launch a new session with Argus"
         aria-label="Launch with Argus"
         aria-expanded={open}

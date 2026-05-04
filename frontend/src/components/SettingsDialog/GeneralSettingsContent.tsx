@@ -69,7 +69,9 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
       return;
     }
     setThresholdError(null);
-    if (normalizeInput) setThresholdInput(String(rounded));
+    if (normalizeInput) {
+setThresholdInput(String(rounded));
+}
     patchSetting({ restingThresholdMinutes: rounded });
   };
 

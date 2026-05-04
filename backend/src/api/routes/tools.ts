@@ -47,13 +47,17 @@ function isCopilotInstalled(): boolean {
 // Returns false in headless environments (Codespaces, SSH-only, no display server).
 function canLaunchTerminal(): boolean {
   const os = platform();
-  if (os === 'win32') return true;
+  if (os === 'win32') {
+return true;
+}
   if (os === 'darwin') {
     // SSH session without a local display = no GUI terminal
     return !process.env.SSH_CLIENT && !process.env.SSH_TTY;
   }
   // Linux: need a display server; Codespaces is always headless
-  if (process.env.CODESPACES === 'true') return false;
+  if (process.env.CODESPACES === 'true') {
+return false;
+}
   return !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
 }
 

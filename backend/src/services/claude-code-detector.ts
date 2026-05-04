@@ -50,7 +50,9 @@ export class ClaudeCodeDetector {
   }
 
   clearPendingChoice(sessionId: string): void {
-    if (!this.pendingChoices.has(sessionId)) return;
+    if (!this.pendingChoices.has(sessionId)) {
+return;
+}
     this.pendingChoices.delete(sessionId);
     const now = new Date().toISOString();
     broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
@@ -64,7 +66,9 @@ export class ClaudeCodeDetector {
       if (existsSync(CLAUDE_SETTINGS_PATH)) {
         settings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
       }
-      if (!settings.hooks) settings.hooks = {};
+      if (!settings.hooks) {
+settings.hooks = {};
+}
       let changed = false;
 
       // Remove Argus hook entries whose (event, matcher) pair is no longer in HOOK_EVENTS.
@@ -78,7 +82,9 @@ export class ClaudeCodeDetector {
         const before = settings.hooks[event];
         const after = before.filter((entry) => {
           const isArgusEntry = entry.hooks?.some((h) => h.command === HOOK_COMMAND);
-          if (!isArgusEntry) return true;
+          if (!isArgusEntry) {
+return true;
+}
           return HOOK_EVENTS.some((he) => he.event === event && he.matcher === entry.matcher);
         });
         if (after.length !== before.length) {
@@ -89,24 +95,34 @@ export class ClaudeCodeDetector {
 
       for (const { event, matcher } of HOOK_EVENTS) {
         if (!this.hasHook(settings, event, matcher)) {
-          if (!settings.hooks[event]) settings.hooks[event] = [];
+          if (!settings.hooks[event]) {
+settings.hooks[event] = [];
+}
           settings.hooks[event].push({ matcher, hooks: [{ type: 'command', command: HOOK_COMMAND }] });
           changed = true;
         }
       }
-      if (changed) writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
+      if (changed) {
+writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
+}
     } catch { /* ignore if settings file inaccessible */ }
   }
 
   removeAllHooks(): void {
     try {
-      if (!existsSync(CLAUDE_SETTINGS_PATH)) return;
+      if (!existsSync(CLAUDE_SETTINGS_PATH)) {
+return;
+}
       const settings: ClaudeSettings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
-      if (!settings.hooks) return;
+      if (!settings.hooks) {
+return;
+}
       let changed = false;
       for (const { event } of HOOK_EVENTS) {
         const entries = settings.hooks[event];
-        if (!entries) continue;
+        if (!entries) {
+continue;
+}
         const filtered = entries.filter(
           (entry) => !entry.hooks?.some((h) => h.command === HOOK_COMMAND)
         );
@@ -115,13 +131,17 @@ export class ClaudeCodeDetector {
           changed = true;
         }
       }
-      if (changed) writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
+      if (changed) {
+writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
+}
     } catch { /* ignore */ }
   }
 
   private hasHook(settings: ClaudeSettings, event: string, matcher: string): boolean {
     const eventHooks = settings.hooks?.[event];
-    if (!eventHooks) return false;
+    if (!eventHooks) {
+return false;
+}
     return eventHooks.some((entry) =>
       entry.matcher === matcher && entry.hooks?.some((h) => h.command === HOOK_COMMAND)
     );
@@ -136,7 +156,9 @@ export class ClaudeCodeDetector {
       // Guard 2: verify the process at this PID is actually the expected AI tool — catches
       //   stale registry entries pointing to recycled PIDs (PID reuse by an unrelated process).
       const existingSession = getSession(entry.sessionId);
-      if (!isPidRunning(entry.pid)) continue;
+      if (!isPidRunning(entry.pid)) {
+continue;
+}
       if (!isExpectedProcess(entry.pid, 'claude-code')) {
         logger.info(`[ClaudeDetector] PID reuse detected: pid ${entry.pid} is running with wrong name, skipping (sessionId=${entry.sessionId} existingStatus=${existingSession?.status ?? 'new'})`);
         continue;
@@ -144,7 +166,9 @@ export class ClaudeCodeDetector {
 
       const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
       const repo = getRepositoryByPath(normalizedCwd);
-      if (!repo) { logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`); continue; }
+      if (!repo) {
+ logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`); continue; 
+}
 
       await this.activateFoundSession(entry.sessionId, repo, null);
     }
@@ -153,11 +177,15 @@ export class ClaudeCodeDetector {
 
   async handleHookPayload(payload: HookPayload): Promise<void> {
     const { hook_event_name, session_id, cwd } = payload;
-    if (!session_id) return;
+    if (!session_id) {
+return;
+}
 
     const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
     const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
-    if (!repo) { logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`); return; }
+    if (!repo) {
+ logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`); return; 
+}
 
     const existing = getSession(session_id);
     const now = new Date().toISOString();
@@ -184,7 +212,9 @@ export class ClaudeCodeDetector {
   }
 
   private handleSessionEnd(existing: Session | null | undefined, sessionId: string, now: string): void {
-    if (!existing) return;
+    if (!existing) {
+return;
+}
     updateSessionStatus(sessionId, 'ended', now);
     this.jsonlWatcher.closeWatcher(sessionId);
     const ended = { ...existing, status: 'ended' as const, endedAt: now };
@@ -198,7 +228,9 @@ export class ClaudeCodeDetector {
   }
 
   private handlePreAskQuestion(sessionId: string, existing: Session | null | undefined, payload: HookPayload, now: string): void {
-    if (!existing) return;
+    if (!existing) {
+return;
+}
     const toolInput = payload.tool_input ?? {};
 
     const rawQs = Array.isArray(toolInput.questions) ? toolInput.questions as Record<string, unknown>[] : [];
@@ -233,7 +265,9 @@ export class ClaudeCodeDetector {
       const question = typeof toolInput.question === 'string' ? toolInput.question : '';
       const rawChoices: unknown[] = Array.isArray(toolInput.choices) ? toolInput.choices : [];
       const choices = rawChoices.map((c) => {
-        if (typeof c === 'string') return c;
+        if (typeof c === 'string') {
+return c;
+}
         if (c && typeof c === 'object' && typeof (c as Record<string, unknown>).label === 'string') {
           return (c as Record<string, unknown>).label as string;
         }
@@ -249,7 +283,9 @@ export class ClaudeCodeDetector {
   }
 
   private handlePostAskQuestion(sessionId: string, existing: Session | null | undefined, now: string): void {
-    if (!existing) return;
+    if (!existing) {
+return;
+}
     this.pendingChoices.delete(sessionId);
     broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
     pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);

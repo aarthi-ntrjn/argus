@@ -17,12 +17,20 @@ function isDraft(id: RowId) {
 function formatRelativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'now';
-  if (mins < 60) return `${mins}m`;
+  if (mins < 1) {
+return 'now';
+}
+  if (mins < 60) {
+return `${mins}m`;
+}
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
+  if (hrs < 24) {
+return `${hrs}h`;
+}
   const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d`;
+  if (days < 7) {
+return `${days}d`;
+}
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
@@ -132,9 +140,15 @@ export default function TodoPanel() {
     return v === null ? false : v === 'true';
   });
 
-  useEffect(() => { localStorage.setItem('argus.todo.showDone', String(showDone)); }, [showDone]);
-  useEffect(() => { localStorage.setItem('argus.todo.showTimestamps', String(showTimestamps)); }, [showTimestamps]);
-  useEffect(() => { localStorage.setItem('argus.todo.wrapText', String(wrapText)); }, [wrapText]);
+  useEffect(() => {
+ localStorage.setItem('argus.todo.showDone', String(showDone)); 
+}, [showDone]);
+  useEffect(() => {
+ localStorage.setItem('argus.todo.showTimestamps', String(showTimestamps)); 
+}, [showTimestamps]);
+  useEffect(() => {
+ localStorage.setItem('argus.todo.wrapText', String(wrapText)); 
+}, [wrapText]);
 
   const reversedTodos = useMemo(
     () => [...todos].reverse().filter(todo => showDone || !todo.done),
@@ -148,27 +162,39 @@ export default function TodoPanel() {
   const todoRefsMap = useRef<Map<string, HTMLTextAreaElement | null>>(new Map());
 
   const focusAddRow = useCallback(() => {
-    setTimeout(() => { addRowRef.current?.focus(); }, 0);
+    setTimeout(() => {
+ addRowRef.current?.focus(); 
+}, 0);
   }, []);
 
   const focusRow = useCallback((index: number, reversedTodos: typeof todos) => {
     if (index === 0) {
-      setTimeout(() => { addRowRef.current?.focus(); }, 0);
+      setTimeout(() => {
+ addRowRef.current?.focus(); 
+}, 0);
     } else {
       const target = reversedTodos[index - 1];
-      if (target) setTimeout(() => { todoRefsMap.current.get(target.id)?.focus(); }, 0);
+      if (target) {
+setTimeout(() => {
+ todoRefsMap.current.get(target.id)?.focus(); 
+}, 0);
+}
     }
   }, []);
 
   const handleBlur = useCallback((id: RowId, value: string) => {
-    if (savingIds.current.has(id)) return;
+    if (savingIds.current.has(id)) {
+return;
+}
     const text = value.trim();
 
     if (isDraft(id)) {
       if (text.length > 0) {
         savingIds.current.add(id);
         createTodo.mutate(text, {
-          onSuccess: () => { savingIds.current.delete(id); resetAddRow(); },
+          onSuccess: () => {
+ savingIds.current.delete(id); resetAddRow(); 
+},
           onError: () => savingIds.current.delete(id),
         });
       }
@@ -176,7 +202,9 @@ export default function TodoPanel() {
     }
 
     const todo = todos.find(t => t.id === id);
-    if (!todo) return;
+    if (!todo) {
+return;
+}
     if (text.length === 0) {
       deleteTodo.mutate(id);
     } else if (text !== todo.text) {
@@ -195,7 +223,9 @@ export default function TodoPanel() {
         if (text.length > 0) {
           savingIds.current.add(id);
           createTodo.mutate(text, {
-            onSuccess: () => { savingIds.current.delete(id); resetAddRow(); },
+            onSuccess: () => {
+ savingIds.current.delete(id); resetAddRow(); 
+},
             onError: () => savingIds.current.delete(id),
           });
         }
@@ -212,7 +242,9 @@ export default function TodoPanel() {
       if (!isDraft(id)) {
         deleteTodo.mutate(id);
       }
-      if (index > 0) focusRow(index - 1, reversedTodos);
+      if (index > 0) {
+focusRow(index - 1, reversedTodos);
+}
     }
   }, [todos, createTodo, updateTodoText, deleteTodo, resetAddRow, focusAddRow, focusRow]);
 

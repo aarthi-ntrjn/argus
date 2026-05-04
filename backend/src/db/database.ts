@@ -26,14 +26,26 @@ export function getDb(): Database.Database {
     db.exec(SCHEMA_SQL);
     // Runtime migrations for existing databases (SQLite has no ADD COLUMN IF NOT EXISTS)
     const repoCols = (db.pragma('table_info(repositories)') as Array<{ name: string }>).map(c => c.name);
-    if (!repoCols.includes('branch')) db.exec('ALTER TABLE repositories ADD COLUMN branch TEXT');
-    if (!repoCols.includes('remote_url')) db.exec('ALTER TABLE repositories ADD COLUMN remote_url TEXT');
+    if (!repoCols.includes('branch')) {
+db.exec('ALTER TABLE repositories ADD COLUMN branch TEXT');
+}
+    if (!repoCols.includes('remote_url')) {
+db.exec('ALTER TABLE repositories ADD COLUMN remote_url TEXT');
+}
     const sessionCols = (db.pragma('table_info(sessions)') as Array<{ name: string }>).map(c => c.name);
-    if (!sessionCols.includes('model')) db.exec('ALTER TABLE sessions ADD COLUMN model TEXT');
+    if (!sessionCols.includes('model')) {
+db.exec('ALTER TABLE sessions ADD COLUMN model TEXT');
+}
     const outputCols = (db.pragma('table_info(session_output)') as Array<{ name: string }>).map(c => c.name);
-    if (!outputCols.includes('role')) db.exec('ALTER TABLE session_output ADD COLUMN role TEXT');
-    if (!outputCols.includes('tool_call_id')) db.exec('ALTER TABLE session_output ADD COLUMN tool_call_id TEXT');
-    if (!sessionCols.includes('launch_mode')) db.exec("ALTER TABLE sessions ADD COLUMN launch_mode TEXT CHECK(launch_mode IN ('pty','detected'))");
+    if (!outputCols.includes('role')) {
+db.exec('ALTER TABLE session_output ADD COLUMN role TEXT');
+}
+    if (!outputCols.includes('tool_call_id')) {
+db.exec('ALTER TABLE session_output ADD COLUMN tool_call_id TEXT');
+}
+    if (!sessionCols.includes('launch_mode')) {
+db.exec("ALTER TABLE sessions ADD COLUMN launch_mode TEXT CHECK(launch_mode IN ('pty','detected'))");
+}
     if (!sessionCols.includes('pid_source')) {
       db.exec('ALTER TABLE sessions ADD COLUMN pid_source TEXT');
       db.exec("UPDATE sessions SET pid_source = 'pty_registry' WHERE launch_mode = 'pty' AND pid IS NOT NULL");
@@ -60,11 +72,17 @@ export function getDb(): Database.Database {
       db.exec('ALTER TABLE sessions RENAME COLUMN yolo_mode_new TO yolo_mode');
     }
     const teamsCols = (db.pragma('table_info(teams_threads)') as Array<{ name: string }>).map(c => c.name);
-    if (!teamsCols.includes('tenant_id')) db.exec("ALTER TABLE teams_threads ADD COLUMN tenant_id TEXT NOT NULL DEFAULT ''");
+    if (!teamsCols.includes('tenant_id')) {
+db.exec("ALTER TABLE teams_threads ADD COLUMN tenant_id TEXT NOT NULL DEFAULT ''");
+}
     const slackThreadsCols = (db.pragma('table_info(slack_threads)') as Array<{ name: string }>).map(c => c.name);
-    if (!slackThreadsCols.includes('workspace_id')) db.exec("ALTER TABLE slack_threads ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''");
+    if (!slackThreadsCols.includes('workspace_id')) {
+db.exec("ALTER TABLE slack_threads ADD COLUMN workspace_id TEXT NOT NULL DEFAULT ''");
+}
     const controlCols = (db.pragma('table_info(control_actions)') as Array<{ name: string }>).map(c => c.name);
-    if (!controlCols.includes('source')) db.exec('ALTER TABLE control_actions ADD COLUMN source TEXT');
+    if (!controlCols.includes('source')) {
+db.exec('ALTER TABLE control_actions ADD COLUMN source TEXT');
+}
     if (sessionCols.includes('slack_thread_ts')) {
       // Migrate existing slack thread data into the new slack_threads table then drop the column
       db.prepare(`
@@ -164,9 +182,15 @@ export interface SessionFilters { repositoryId?: string; status?: string; type?:
 export function getSessions(filters: SessionFilters = {}): Session[] {
   let sql = 'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, host_pid as hostPid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled, yolo_mode as yoloMode, pty_launch_id as ptyLaunchId FROM sessions WHERE 1=1';
   const params: unknown[] = [];
-  if (filters.repositoryId) { sql += ' AND repository_id = ?'; params.push(filters.repositoryId); }
-  if (filters.status) { sql += ' AND status = ?'; params.push(filters.status); }
-  if (filters.type) { sql += ' AND type = ?'; params.push(filters.type); }
+  if (filters.repositoryId) {
+ sql += ' AND repository_id = ?'; params.push(filters.repositoryId); 
+}
+  if (filters.status) {
+ sql += ' AND status = ?'; params.push(filters.status); 
+}
+  if (filters.type) {
+ sql += ' AND type = ?'; params.push(filters.type); 
+}
   sql += ' ORDER BY started_at DESC';
   sql += ' LIMIT ?'; params.push(filters.limit ?? 500);
   return (getDb().prepare(sql).all(...params) as Array<Omit<Session, 'reconciled' | 'yoloMode'> & { reconciled: number; yoloMode: number | null }>).map(
@@ -178,7 +202,9 @@ export function getSession(id: string): Session | undefined {
   const row = getDb().prepare(
     'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, host_pid as hostPid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled, yolo_mode as yoloMode, pty_launch_id as ptyLaunchId FROM sessions WHERE id = ?'
   ).get(id) as (Omit<Session, 'reconciled' | 'yoloMode'> & { reconciled: number; yoloMode: number | null }) | undefined;
-  if (!row) return undefined;
+  if (!row) {
+return undefined;
+}
   return { ...row, reconciled: row.reconciled === 1, yoloMode: row.yoloMode === null ? null : row.yoloMode === 1 };
 }
 
@@ -186,7 +212,9 @@ export function getSessionByPtyLaunchId(ptyLaunchId: string): Session | undefine
   const row = getDb().prepare(
     'SELECT id, repository_id as repositoryId, type, launch_mode as launchMode, pid, host_pid as hostPid, pid_source as pidSource, status, started_at as startedAt, ended_at as endedAt, last_activity_at as lastActivityAt, summary, expires_at as expiresAt, model, reconciled, yolo_mode as yoloMode, pty_launch_id as ptyLaunchId FROM sessions WHERE pty_launch_id = ?'
   ).get(ptyLaunchId) as (Omit<Session, 'reconciled' | 'yoloMode'> & { reconciled: number; yoloMode: number | null }) | undefined;
-  if (!row) return undefined;
+  if (!row) {
+return undefined;
+}
   return { ...row, reconciled: row.reconciled === 1, yoloMode: row.yoloMode === null ? null : row.yoloMode === 1 };
 }
 
@@ -226,7 +254,9 @@ export function upsertSession(session: Session): void {
 export function getOutputForSession(sessionId: string, limit = 100, before?: string): SessionOutput[] {
   let sql = 'SELECT id, session_id as sessionId, timestamp, type, content, tool_name as toolName, tool_call_id as toolCallId, role, sequence_number as sequenceNumber FROM session_output WHERE session_id = ?';
   const params: unknown[] = [sessionId];
-  if (before) { sql += ' AND sequence_number < ?'; params.push(parseInt(before, 10)); }
+  if (before) {
+ sql += ' AND sequence_number < ?'; params.push(parseInt(before, 10)); 
+}
   sql += ' ORDER BY sequence_number DESC LIMIT ?';
   params.push(limit);
   const rows = getDb().prepare(sql).all(...params) as SessionOutput[];
@@ -287,9 +317,15 @@ export function insertTodo(todo: TodoItem): void {
 export function updateTodo(id: string, patch: { done?: boolean; text?: string }, updatedAt: string): TodoItem | undefined {
   const sets: string[] = [];
   const params: unknown[] = [];
-  if (patch.done !== undefined) { sets.push('done = ?'); params.push(patch.done ? 1 : 0); }
-  if (patch.text !== undefined) { sets.push('text = ?'); params.push(patch.text); }
-  if (sets.length === 0) return undefined;
+  if (patch.done !== undefined) {
+ sets.push('done = ?'); params.push(patch.done ? 1 : 0); 
+}
+  if (patch.text !== undefined) {
+ sets.push('text = ?'); params.push(patch.text); 
+}
+  if (sets.length === 0) {
+return undefined;
+}
   sets.push('updated_at = ?');
   params.push(updatedAt, id);
   getDb().prepare(`UPDATE todos SET ${sets.join(', ')} WHERE id = ?`).run(...params);
@@ -349,7 +385,9 @@ export function deleteSlackThread(sessionId: string): void {
 
 export function getIntegrationEnabled(id: string): boolean | null {
   const row = getDb().prepare('SELECT enabled FROM integrations WHERE id = ?').get(id) as { enabled: number } | undefined;
-  if (!row) return null; // never explicitly set — use default (initialize normally)
+  if (!row) {
+return null;
+} // never explicitly set — use default (initialize normally)
   return row.enabled === 1;
 }
 

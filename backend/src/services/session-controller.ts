@@ -70,7 +70,9 @@ export class SessionController {
 
   async sendPrompt(sessionId: string, prompt: string, skipEnter = false): Promise<ControlAction> {
     const session = getSession(sessionId);
-    if (!session) throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
+    if (!session) {
+throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
+}
     if (session.status === 'ended' || session.status === 'completed') {
       throw Object.assign(new Error('Session already ended'), { code: 'CONFLICT' });
     }
@@ -147,7 +149,9 @@ export class SessionController {
 
   async sendChoiceWithPrompt(sessionId: string, choiceNumber: string, prompt: string): Promise<ControlAction> {
     const session = getSession(sessionId);
-    if (!session) throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
+    if (!session) {
+throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
+}
     if (session.status === 'ended' || session.status === 'completed') {
       throw Object.assign(new Error('Session already ended'), { code: 'CONFLICT' });
     }
@@ -188,7 +192,9 @@ export class SessionController {
 
   async interruptSession(sessionId: string): Promise<ControlAction> {
     const session = getSession(sessionId);
-    if (!session) throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
+    if (!session) {
+throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
+}
     if (session.status === 'ended' || session.status === 'completed') {
       throw Object.assign(new Error('Session already ended'), { code: 'CONFLICT' });
     }

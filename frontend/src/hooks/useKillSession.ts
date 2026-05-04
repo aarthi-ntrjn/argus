@@ -65,7 +65,9 @@ export function useKillSession(options?: { onKilled?: () => void }) {
   }
 
   function cancelKill() {
-    if (isWaitingForExit) return; // can't cancel while killing
+    if (isWaitingForExit) {
+return;
+} // can't cancel while killing
     clearPoll();
     setDialogOpen(false);
     setTargetSessionId(null);

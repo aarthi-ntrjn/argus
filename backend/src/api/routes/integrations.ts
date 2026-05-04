@@ -56,7 +56,9 @@ const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/api/v1/integrations/slack/start', async (_request, reply) => {
-    if (!slackNotifier) return reply.status(503).send({ error: 'Slack integration not available. Enable integrations in settings.' });
+    if (!slackNotifier) {
+return reply.status(503).send({ error: 'Slack integration not available. Enable integrations in settings.' });
+}
     const started = await slackNotifier.initialize();
     // Create listener on demand if not yet created and notifier is now connected
     if (started && !slackListener && slackNotifier.webClient) {
@@ -66,7 +68,9 @@ const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
         setSlackServices(slackNotifier, slackListener);
       }
     }
-    if (slackListener) await slackListener.initialize();
+    if (slackListener) {
+await slackListener.initialize();
+}
     setIntegrationEnabled('slack', true);
     telemetryService.setIntegrationStatus('slack', 'on');
     telemetryService.sendEvent('integration_started', { integration_platform: 'slack' });
@@ -74,7 +78,9 @@ const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/api/v1/integrations/slack/stop', async (_request, reply) => {
-    if (!slackNotifier) return reply.status(503).send({ error: 'Slack not configured' });
+    if (!slackNotifier) {
+return reply.status(503).send({ error: 'Slack not configured' });
+}
     slackListener?.shutdown();
     slackNotifier.shutdown();
     setIntegrationEnabled('slack', false);
@@ -84,7 +90,9 @@ const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/api/v1/integrations/teams/start', async (_request, reply) => {
-    if (!teamsNotifier) return reply.status(503).send({ error: 'Teams not configured' });
+    if (!teamsNotifier) {
+return reply.status(503).send({ error: 'Teams not configured' });
+}
     const started = await teamsNotifier.initialize();
     teamsListener?.initialize();
     setIntegrationEnabled('teams', true);
@@ -94,7 +102,9 @@ const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/api/v1/integrations/teams/stop', async (_request, reply) => {
-    if (!teamsNotifier) return reply.status(503).send({ error: 'Teams not configured' });
+    if (!teamsNotifier) {
+return reply.status(503).send({ error: 'Teams not configured' });
+}
     teamsListener?.shutdown();
     teamsNotifier.shutdown();
     setIntegrationEnabled('teams', false);

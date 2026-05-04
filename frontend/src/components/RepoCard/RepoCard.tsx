@@ -71,7 +71,9 @@ export default function RepoCard({
               title="View diff on GitHub"
               aria-label="View diff on GitHub"
               className="inline-flex items-center text-gray-400 hover:text-gray-700"
-              onClick={e => { e.stopPropagation(); postTelemetryEvent('repo_diff_opened'); }}
+              onClick={e => {
+ e.stopPropagation(); postTelemetryEvent('repo_diff_opened'); 
+}}
             >
               <GitCompare size={14} aria-hidden="true" />
             </a>

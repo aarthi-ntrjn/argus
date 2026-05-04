@@ -43,7 +43,9 @@ export class TelemetryService {
   }
 
   loadOrCreateInstallationId(): string {
-    if (this.installationId) return this.installationId;
+    if (this.installationId) {
+return this.installationId;
+}
     const idPath = getIdPath();
     try {
       const existing = readFileSync(idPath, 'utf-8').trim();
@@ -67,7 +69,9 @@ export class TelemetryService {
   }
 
   readAppVersion(): string {
-    if (this.appVersion) return this.appVersion;
+    if (this.appVersion) {
+return this.appVersion;
+}
     try {
       const pkgPath = fileURLToPath(new URL('../../../package.json', import.meta.url));
       const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
@@ -79,9 +83,13 @@ export class TelemetryService {
   }
 
   sendEvent(type: TelemetryEventType, extra?: Record<string, string | boolean | null>): void {
-    if (!this.isTelemetryEnabled()) return;
+    if (!this.isTelemetryEnabled()) {
+return;
+}
     const url = process.env.TELEMETRY_URL ?? POSTHOG_URL;
-    if (!url) return;
+    if (!url) {
+return;
+}
 
     const installationId = this.loadOrCreateInstallationId();
     const appVersion = this.readAppVersion();

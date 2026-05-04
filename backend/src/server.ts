@@ -61,7 +61,9 @@ function sanitizeForTelemetry(value: string): string {
 }
 
 function extractOrigin(stack: string | undefined): string {
-  if (!stack) return 'unknown';
+  if (!stack) {
+return 'unknown';
+}
   const frame = stack.split('\n').find(line => line.includes(' at ') && !line.includes('node_modules'));
   return frame ? sanitizeForTelemetry(frame.trim()) : 'unknown';
 }
@@ -237,8 +239,12 @@ export async function startServer(): Promise<FastifyInstance> {
 
   setIntegrationServices(slackNotifier, slackListener, teamsNotifier, teamsListener, config.integrationsEnabled, monitor);
 
-  process.on('SIGTERM', async () => { telemetryService.sendEvent('app_ended'); teamsNotifier?.shutdown(); teamsListener?.shutdown(); slackListener?.shutdown(); slackNotifier?.shutdown(); monitor?.stop(); await app.close(); process.exit(0); });
-  process.on('SIGINT', async () => { telemetryService.sendEvent('app_ended'); teamsNotifier?.shutdown(); teamsListener?.shutdown(); slackListener?.shutdown(); slackNotifier?.shutdown(); monitor?.stop(); await app.close(); process.exit(0); });
+  process.on('SIGTERM', async () => {
+ telemetryService.sendEvent('app_ended'); teamsNotifier?.shutdown(); teamsListener?.shutdown(); slackListener?.shutdown(); slackNotifier?.shutdown(); monitor?.stop(); await app.close(); process.exit(0); 
+});
+  process.on('SIGINT', async () => {
+ telemetryService.sendEvent('app_ended'); teamsNotifier?.shutdown(); teamsListener?.shutdown(); slackListener?.shutdown(); slackNotifier?.shutdown(); monitor?.stop(); await app.close(); process.exit(0); 
+});
 
   await app.listen({ port: config.port, host: '127.0.0.1' });
   app.log.info({ port: config.port }, 'Argus server started');

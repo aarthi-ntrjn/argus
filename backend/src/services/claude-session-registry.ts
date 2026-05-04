@@ -13,7 +13,9 @@ export class ClaudeSessionRegistry {
   }
 
   scanEntries(): ClaudeSessionRegistryEntry[] {
-    if (!existsSync(this.sessionsDir)) return [];
+    if (!existsSync(this.sessionsDir)) {
+return [];
+}
 
     const files = readdirSync(this.sessionsDir).filter(f => f.endsWith('.json'));
     const entries: ClaudeSessionRegistryEntry[] = [];
