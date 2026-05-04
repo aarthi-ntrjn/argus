@@ -1,6 +1,6 @@
 import * as logger from '../utils/logger.js';
 import { readdirSync, readFileSync } from 'fs';
-import { join, normalize } from 'path';
+import { join } from 'path';
 import { homedir } from 'os';
 import { getSession, getSessions, upsertSession, getRepositoryByPath, getRepositories } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
@@ -133,10 +133,9 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
    * handles created/updated firing).
    */
   private async buildSessionFromEntry(entry: ClaudeSessionEntry): Promise<Session | null> {
-    const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
-    const repo = getRepositoryByPath(normalizedCwd);
+    const repo = getRepositoryByPath(entry.cwd);
     if (!repo) {
-      this.warnNoRepo(normalizedCwd, entry.sessionId);
+      this.warnNoRepo(entry.cwd, entry.sessionId);
       return null;
     }
 

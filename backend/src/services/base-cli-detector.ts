@@ -16,7 +16,6 @@ import { pendingChoiceEvents } from './pending-choice-events.js';
 import { updateSessionStatus, upsertSession, getRepositoryByPath, getSession } from '../db/database.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
-import { normalize } from 'path';
 import { ptyRegistry } from './pty-registry.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import * as logger from '../utils/logger.js';
@@ -163,7 +162,7 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
         : null;
       const entryMs = Date.now() - entryStart;
       if (entryMs > 50) {
-        logger.info(`${this.logTag} slow processSessionEntry (${entryMs}ms): sessionType=${this.toolTypeId} sessionId=${entry.sessionId} pid=${entry.pid}`);
+        logger.warn(`${this.logTag} slow processSessionEntry (${entryMs}ms): sessionType=${this.toolTypeId} sessionId=${entry.sessionId} pid=${entry.pid}`);
       }
       if (session !== null) sessions.push(session);
     }
@@ -390,10 +389,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     const { hook_event_name, session_id, cwd } = payload;
     if (!session_id) return;
 
-    const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
-    const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
+    const repo = cwd ? getRepositoryByPath(cwd) : null;
     if (!repo) {
-      logger.warn(`${this.logTag} no repo for cwd="${normalizedCwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`);
+      logger.warn(`${this.logTag} no repo for cwd="${cwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`);
       return;
     }
 
@@ -411,7 +409,7 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     }
 
     if (!existing) {
-      const claimed = normalizedCwd ? ptyRegistry.claimForSession(session_id, normalizedCwd, this.toolTypeId) : null;
+      const claimed = cwd ? ptyRegistry.claimForSession(session_id, cwd, this.toolTypeId) : null;
       if (claimed) {
         const session = await this.createPtySession(session_id, repo, claimed, now);
         this.sigCache.set(session.id, this.sessionSignature(session));

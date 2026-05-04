@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
-import { join, normalize } from 'path';
+import { join } from 'path';
 import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
@@ -181,7 +181,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
 
     const existingSession = getSession(sessionId);
 
-    const repo = getRepositoryByPath(normalize(cwd));
+    const repo = getRepositoryByPath(cwd);
     if (!repo) {
       this.warnNoRepo(cwd, sessionId);
       return null;

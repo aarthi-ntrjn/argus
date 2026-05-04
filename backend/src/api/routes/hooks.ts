@@ -1,6 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { getRepositoryByPath, getSession } from '../../db/database.js';
-import { normalize } from 'path';
 
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HOOK_BODY_LIMIT = 64 * 1024; // 64 KB
@@ -109,8 +108,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         }
       } else {
         // No sessionId — require cwd to match a repo
-        const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
-        const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
+        const repo = cwd ? getRepositoryByPath(cwd) : null;
         if (!repo) {
           return reply.status(400).send({
             error: 'INVALID_SESSION_ID',
