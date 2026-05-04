@@ -15,6 +15,7 @@ import { broadcast } from '../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import type { CliDetector, CliHookPayload } from './cli-detector.js';
+import { BaseCliDetector } from './base-cli-detector.js';
 
 /**
  * Copilot CLI writes one subdirectory per session under ~/.copilot/session-state/.
@@ -26,7 +27,7 @@ import type { CliDetector, CliHookPayload } from './cli-detector.js';
  * workspace.yaml:
  * {
  *   "id": "0f63ac9c-1cdf-47fe-abb1-d6b3bef059a1",
- *   "cwd": "C:\\source\\github\\aarthi-ntrjn\\argus",
+ *   "cwd": "C:\\source\\github\\argus",
  *   "summary": "...",
  *   "created_at": "2026-05-03T18:00:00.000Z",
  *   "updated_at": "2026-05-03T18:05:00.000Z"
@@ -63,36 +64,20 @@ interface WorkspaceYaml {
  * sessionEndedCallback exactly once per transition. Hook-created sessions are pre-seeded
  * into these maps so the next scan cycle does not re-fire the same event.
  */
-export class CopilotCliDetector implements CliDetector {
+export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
   private readonly sessionsDir: string;
   private lastScanTime: number;
   private activeDirPaths = new Set<string>();
   // Session tracking maps — seeded on startup and updated by hooks and scan().
   private readonly knownIds = new Set<string>();
-  private readonly sigCache = new Map<string, string>();
   private readonly activeMap = new Map<string, Session>();
-  private readonly pendingChoices = new Map<string, PendingChoice>();
-  private sessionCreatedCallback?: (session: Session) => void;
-  private sessionUpdatedCallback?: (session: Session) => void;
-  private sessionEndedCallback?: (session: Session) => void;
 
   constructor(sessionsDir: string = DEFAULT_SESSIONS_DIR) {
+    super();
     this.sessionsDir = sessionsDir;
     const stored = getServerState('copilot_last_scan_time');
     this.lastScanTime = stored ? parseInt(stored, 10) : 0;
-  }
-
-  setSessionCreatedCallback(cb: (session: Session) => void): void {
-    this.sessionCreatedCallback = cb;
-  }
-
-  setSessionUpdatedCallback(cb: (session: Session) => void): void {
-    this.sessionUpdatedCallback = cb;
-  }
-
-  setSessionEndedCallback(cb: (session: Session) => void): void {
-    this.sessionEndedCallback = cb;
   }
 
   /**
@@ -417,10 +402,6 @@ export class CopilotCliDetector implements CliDetector {
   /** No-op: Copilot manages JSONL watchers internally in scan(). */
   closeSessionWatcher(_sessionId: string): void {}
 
-  getPendingChoice(sessionId: string): PendingChoice | null {
-    return this.pendingChoices.get(sessionId) ?? null;
-  }
-
   clearPendingChoice(sessionId: string): void {
     this.pendingChoices.delete(sessionId);
   }
@@ -565,20 +546,6 @@ export class CopilotCliDetector implements CliDetector {
   private extractPid(lockFile: string): number | null {
     const match = lockFile.match(/inuse\.(\d+)\.lock/);
     return match ? parseInt(match[1], 10) : null;
-  }
-
-  private sessionSignature(session: Session): string {
-    return JSON.stringify({
-      status: session.status,
-      lastActivityAt: session.lastActivityAt,
-      summary: session.summary,
-      model: session.model,
-      pid: session.pid,
-      hostPid: session.hostPid,
-      pidSource: session.pidSource,
-      launchMode: session.launchMode,
-      endedAt: session.endedAt,
-    });
   }
 
   /**

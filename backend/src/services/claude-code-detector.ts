@@ -14,6 +14,7 @@ import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
 import type { CliDetector, CliHookPayload } from './cli-detector.js';
+import { BaseCliDetector } from './base-cli-detector.js';
 
 
 /**
@@ -59,41 +60,24 @@ const DEFAULT_SESSIONS_DIR= join(homedir(), '.claude', 'sessions');
  * all active DB sessions for liveness (process dead, repo removed) and fires
  * sessionEndedCallback on failure or sessionUpdatedCallback when a tracked field changes.
  */
-export class ClaudeCodeDetector implements CliDetector {
+export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
   private readonly jsonlWatcher = new ClaudeJsonlWatcher();
   private readonly sessionsDir: string;
   private previousRegistryPids = new Set<number>();
-  // Dedup map: last-emitted signature per session, used by reconcileActiveSessions().
-  private readonly lastEmittedSigs = new Map<string, string>();
-  private readonly pendingChoices = new Map<string, PendingChoice>();
-  private sessionCreatedCallback?: (session: Session) => void;
-  private sessionUpdatedCallback?: (session: Session) => void;
-  private sessionEndedCallback?: (session: Session) => void;
 
   constructor(sessionsDir: string = DEFAULT_SESSIONS_DIR) {
+    super();
     this.sessionsDir = sessionsDir;
   }
 
-  setSessionCreatedCallback(cb: (session: Session) => void): void {
-    this.sessionCreatedCallback = cb;
-  }
-
-  setSessionUpdatedCallback(cb: (session: Session) => void): void {
-    this.sessionUpdatedCallback = cb;
-  }
-
-  setSessionEndedCallback(cb: (session: Session) => void): void {
-    this.sessionEndedCallback = cb;
-  }
-
   /**
-   * Seeds tracking state with sessions that survived from a previous run.
+   * Seeds tracking statewith sessions that survived from a previous run.
    * Call before the first scan() to prevent spurious session.updated events on startup.
    */
   seedState(sessions: Session[]): void {
     for (const session of sessions) {
       if (session.type !== SessionTypes.CLAUDE_CODE) continue;
-      this.lastEmittedSigs.set(session.id, this.sessionSignature(session));
+      this.sigCache.set(session.id, this.sessionSignature(session));
     }
   }
 
@@ -104,10 +88,6 @@ export class ClaudeCodeDetector implements CliDetector {
       result.set(entry.sessionId, entry.pid);
     }
     return result;
-  }
-
-  getPendingChoice(sessionId: string): PendingChoice | null {
-    return this.pendingChoices.get(sessionId) ?? null;
   }
 
   clearPendingChoice(sessionId: string): void {
@@ -199,7 +179,7 @@ export class ClaudeCodeDetector implements CliDetector {
           updateSessionStatus(session.id, 'ended', now);
           this.jsonlWatcher.closeWatcher(session.id);
           const ended = { ...session, status: 'ended' as const, endedAt: now };
-          this.lastEmittedSigs.delete(session.id);
+          this.sigCache.delete(session.id);
           this.sessionEndedCallback?.(ended);
         }
       }
@@ -216,7 +196,7 @@ export class ClaudeCodeDetector implements CliDetector {
    *
    * - Repo removed: end the session immediately.
    * - Process dead: end the session (catches crashes not covered by SessionEnd hook).
-   * - Field change: fire sessionUpdatedCallback (deduped via lastEmittedSigs).
+   * - Field change: fire sessionUpdatedCallback (deduped via sigCache).
    *
    * First time a session is seen here its sig is seeded without firing updated,
    * preventing a spurious update event on the cycle right after creation.
@@ -236,7 +216,7 @@ export class ClaudeCodeDetector implements CliDetector {
           updateSessionStatus(session.id, 'ended', now);
           this.jsonlWatcher.closeWatcher(session.id);
           const ended = { ...session, status: 'ended' as const, endedAt: now };
-          this.lastEmittedSigs.delete(session.id);
+          this.sigCache.delete(session.id);
           this.sessionEndedCallback?.(ended);
           continue;
         }
@@ -246,35 +226,21 @@ export class ClaudeCodeDetector implements CliDetector {
           updateSessionStatus(session.id, 'ended', now);
           this.jsonlWatcher.closeWatcher(session.id);
           const ended = { ...session, status: 'ended' as const, endedAt: now };
-          this.lastEmittedSigs.delete(session.id);
+          this.sigCache.delete(session.id);
           this.sessionEndedCallback?.(ended);
           continue;
         }
 
         const sig = this.sessionSignature(session);
-        if (!this.lastEmittedSigs.has(session.id)) {
+        if (!this.sigCache.has(session.id)) {
           // First time seeing this session in the reconcile loop — seed without firing updated.
-          this.lastEmittedSigs.set(session.id, sig);
-        } else if (this.lastEmittedSigs.get(session.id) !== sig) {
-          this.lastEmittedSigs.set(session.id, sig);
+          this.sigCache.set(session.id, sig);
+        } else if (this.sigCache.get(session.id) !== sig) {
+          this.sigCache.set(session.id, sig);
           this.sessionUpdatedCallback?.(session);
         }
       }
     } catch { /* best-effort */ }
-  }
-
-  private sessionSignature(session: Session): string {
-    return JSON.stringify({
-      status: session.status,
-      lastActivityAt: session.lastActivityAt,
-      summary: session.summary,
-      model: session.model,
-      pid: session.pid,
-      hostPid: session.hostPid,
-      pidSource: session.pidSource,
-      launchMode: session.launchMode,
-      endedAt: session.endedAt,
-    });
   }
 
   /**
@@ -375,14 +341,14 @@ export class ClaudeCodeDetector implements CliDetector {
       ptyLaunchId: claimed.ptyLaunchId,
     };
     upsertSession(session);
-    this.lastEmittedSigs.set(session.id, this.sessionSignature(session));
+    this.sigCache.set(session.id, this.sessionSignature(session));
     this.sessionCreatedCallback?.(session);
     await this.jsonlWatcher.watchFile(sessionId, repo.path);
   }
 
   /**
    * Creates or updates a session in response to a hook event.
-   * On first event: fires sessionCreatedCallback (seeds lastEmittedSigs).
+   * On first event: fires sessionCreatedCallback (seeds sigCache).
    * On subsequent events: broadcasts session.updated directly (hooks are
    * the authoritative update source — reconcileActiveSessions handles dedup
    * for poll-sourced updates, not hook-sourced ones).
@@ -412,7 +378,7 @@ export class ClaudeCodeDetector implements CliDetector {
     if (existing) {
       broadcast({ type: 'session.updated', timestamp: now, data: session });
     } else {
-      this.lastEmittedSigs.set(session.id, this.sessionSignature(session));
+      this.sigCache.set(session.id, this.sessionSignature(session));
       this.sessionCreatedCallback?.(session);
     }
   }
@@ -471,7 +437,7 @@ export class ClaudeCodeDetector implements CliDetector {
     logger.info(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
     upsertSession(activated);
     if (isNewSession) {
-      this.lastEmittedSigs.set(activated.id, this.sessionSignature(activated));
+      this.sigCache.set(activated.id, this.sessionSignature(activated));
       this.sessionCreatedCallback?.(activated);
     }
     await this.jsonlWatcher.watchFile(sessionId, repo.path);
