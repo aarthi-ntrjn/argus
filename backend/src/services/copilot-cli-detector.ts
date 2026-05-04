@@ -93,6 +93,38 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
+   * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
+   * Equivalent of ClaudeCodeDetector.getRegistryEntries() — scans inuse.<PID>.lock files.
+   */
+  getRegistryEntries(): Map<string, number> {
+    const result = new Map<string, number>();
+    if (!existsSync(this.sessionsDir)) return result;
+
+    try {
+      const entries = readdirSync(this.sessionsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const dirPath = join(this.sessionsDir, entry.name);
+        const workspaceFile = join(dirPath, 'workspace.yaml');
+        if (!existsSync(workspaceFile)) continue;
+
+        try {
+          const workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as WorkspaceYaml;
+          if (!workspace.id) continue;
+
+          const lockFile = this.findLockFile(dirPath);
+          const pid = lockFile ? this.extractPid(lockFile) : null;
+          if (pid != null) {
+            result.set(workspace.id, pid);
+          }
+        } catch { /* skip malformed */ }
+      }
+    } catch { /* ignore */ }
+
+    return result;
+  }
+
+  /**
    * One-time startup: seed activeDirPaths from the DB so sessions that were active
    * when the server stopped are re-checked on the first scan, even if their directory
    * mtime predates lastScanTime.
@@ -362,45 +394,71 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     return { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource, resolvedPtyLaunchId };
   }
 
+  private findLockFile(dirPath: string): string | null {
+    try {
+      const files = readdirSync(dirPath);
+      return files.find((f) => f.startsWith('inuse.') && f.endsWith('.lock')) ?? null;
+    } catch { return null; }
+  }
+
+  private extractPid(lockFile: string): number | null {
+    const match = lockFile.match(/inuse\.(\d+)\.lock/);
+    return match ? parseInt(match[1], 10) : null;
+  }
 
   /**
-   * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
-   * Equivalent of ClaudeCodeDetector.getRegistryEntries() — scans inuse.<PID>.lock files.
+   * Diff-based event dispatch. Called after every scan() with the full set of
+   * sessions found in that cycle.
+   *
+   * - Sessions absent from the scan but present in activeMap: fire sessionEndedCallback
+   *   (process exited cleanly — workspace dir was cleaned up).
+   * - Sessions seen for the first time (not in knownIds): fire sessionCreatedCallback.
+   * - Sessions with a changed signature: fire sessionUpdatedCallback.
+   * - Sessions with status 'ended' that are still in activeMap: fire sessionEndedCallback
+   *   once, then remove from activeMap (ended sessions remain on disk — only fire once).
    */
-  getRegistryEntries(): Map<string, number> {
-    const result = new Map<string, number>();
-    if (!existsSync(this.sessionsDir)) return result;
+  private processSessionEvents(sessions: Session[]): void {
+    const currentIds = new Set(sessions.map(s => s.id));
+    const now = new Date().toISOString();
 
-    try {
-      const entries = readdirSync(this.sessionsDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        const dirPath = join(this.sessionsDir, entry.name);
-        const workspaceFile = join(dirPath, 'workspace.yaml');
-        if (!existsSync(workspaceFile)) continue;
-
-        try {
-          const workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as WorkspaceYaml;
-          if (!workspace.id) continue;
-
-          const lockFile = this.findLockFile(dirPath);
-          const pid = lockFile ? this.extractPid(lockFile) : null;
-          if (pid != null) {
-            result.set(workspace.id, pid);
-          }
-        } catch { /* skip malformed */ }
+    // Detect sessions that dropped off the scan (process exited and workspace dir cleaned up).
+    for (const [id, session] of this.activeMap) {
+      if (!currentIds.has(id)) {
+        const stored = getSession(id);
+        if (stored?.status !== 'ended') {
+          updateSessionStatus(id, 'ended', now);
+          this.sessionEndedCallback?.({ ...session, status: 'ended', endedAt: now });
+        }
+        this.activeMap.delete(id);
+        this.sigCache.delete(id);
       }
-    } catch { /* ignore */ }
+    }
 
-    return result;
+    for (const session of sessions) {
+      if (!this.knownIds.has(session.id)) {
+        this.knownIds.add(session.id);
+        this.sigCache.set(session.id, this.sessionSignature(session));
+        this.sessionCreatedCallback?.(session);
+      } else {
+        const sig = this.sessionSignature(session);
+        if (this.sigCache.get(session.id) !== sig) {
+          this.sigCache.set(session.id, sig);
+          this.sessionUpdatedCallback?.(session);
+        }
+      }
+
+      if (session.status === 'ended') {
+        // Only fire once — ended sessions remain on disk and re-appear on every scan.
+        if (this.activeMap.has(session.id)) {
+          this.sessionEndedCallback?.(session);
+          this.activeMap.delete(session.id);
+          this.sigCache.delete(session.id);
+        }
+      } else if (session.status === 'active') {
+        this.activeMap.set(session.id, session);
+      }
+    }
   }
-
-  stop(): void {
-    this.jsonlWatcher.stopWatchers();
-  }
-
-  /** No-op: Copilot manages JSONL watchers internally in scan(). */
-  closeSessionWatcher(_sessionId: string): void {}
 
   /**
    * Primary real-time update path. Called for every hook event Copilot fires.
@@ -532,70 +590,12 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     await this.jsonlWatcher.watchFile(session_id, repo.path);
   }
 
-  private findLockFile(dirPath: string): string | null {
-    try {
-      const files = readdirSync(dirPath);
-      return files.find((f) => f.startsWith('inuse.') && f.endsWith('.lock')) ?? null;
-    } catch { return null; }
-  }
+  /** No-op: Copilot manages JSONL watchers internally in scan(). */
+  closeSessionWatcher(_sessionId: string): void {}
 
-  private extractPid(lockFile: string): number | null {
-    const match = lockFile.match(/inuse\.(\d+)\.lock/);
-    return match ? parseInt(match[1], 10) : null;
-  }
-
-  /**
-   * Diff-based event dispatch. Called after every scan() with the full set of
-   * sessions found in that cycle.
-   *
-   * - Sessions absent from the scan but present in activeMap: fire sessionEndedCallback
-   *   (process exited cleanly — workspace dir was cleaned up).
-   * - Sessions seen for the first time (not in knownIds): fire sessionCreatedCallback.
-   * - Sessions with a changed signature: fire sessionUpdatedCallback.
-   * - Sessions with status 'ended' that are still in activeMap: fire sessionEndedCallback
-   *   once, then remove from activeMap (ended sessions remain on disk — only fire once).
-   */
-  private processSessionEvents(sessions: Session[]): void {
-    const currentIds = new Set(sessions.map(s => s.id));
-    const now = new Date().toISOString();
-
-    // Detect sessions that dropped off the scan (process exited and workspace dir cleaned up).
-    for (const [id, session] of this.activeMap) {
-      if (!currentIds.has(id)) {
-        const stored = getSession(id);
-        if (stored?.status !== 'ended') {
-          updateSessionStatus(id, 'ended', now);
-          this.sessionEndedCallback?.({ ...session, status: 'ended', endedAt: now });
-        }
-        this.activeMap.delete(id);
-        this.sigCache.delete(id);
-      }
-    }
-
-    for (const session of sessions) {
-      if (!this.knownIds.has(session.id)) {
-        this.knownIds.add(session.id);
-        this.sigCache.set(session.id, this.sessionSignature(session));
-        this.sessionCreatedCallback?.(session);
-      } else {
-        const sig = this.sessionSignature(session);
-        if (this.sigCache.get(session.id) !== sig) {
-          this.sigCache.set(session.id, sig);
-          this.sessionUpdatedCallback?.(session);
-        }
-      }
-
-      if (session.status === 'ended') {
-        // Only fire once — ended sessions remain on disk and re-appear on every scan.
-        if (this.activeMap.has(session.id)) {
-          this.sessionEndedCallback?.(session);
-          this.activeMap.delete(session.id);
-          this.sigCache.delete(session.id);
-        }
-      } else if (session.status === 'active') {
-        this.activeMap.set(session.id, session);
-      }
-    }
+  stop(): void {
+    this.jsonlWatcher.stopWatchers();
   }
 
 }
+
