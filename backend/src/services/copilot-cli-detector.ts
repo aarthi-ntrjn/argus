@@ -56,19 +56,16 @@ interface WorkspaceYaml {
  * Mtime filtering skips unchanged directories; directories with active sessions are always
  * re-checked to detect process exit.
  *
- * Change detection: processSessionEvents() diffs the scan result against sigCache /
- * knownIds / activeMap and fires sessionCreatedCallback, sessionUpdatedCallback, or
- * sessionEndedCallback exactly once per transition. Hook-created sessions are pre-seeded
- * into these maps so the next scan cycle does not re-fire the same event.
+ * Change detection: processSessionEvents() diffs the scan result against sigCache
+ * and fires sessionCreatedCallback, sessionUpdatedCallback, or sessionEndedCallback
+ * exactly once per transition. Hook-created sessions are pre-seeded into sigCache
+ * so the next scan cycle does not re-fire the same event.
  */
 export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
   private readonly sessionsDir: string;
   private lastScanTime: number;
   private activeDirPaths = new Set<string>();
-  // Session tracking maps — seeded on startup and updated by hooks and scan().
-  private readonly knownIds = new Set<string>();
-  private readonly activeMap = new Map<string, Session>();
 
   protected readonly logTag = '[CopilotDetector]';
   protected readonly askUserToolName = 'ask_user';
@@ -87,9 +84,7 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
    */
   seedState(sessions: Session[]): void {
     for (const session of sessions) {
-      this.knownIds.add(session.id);
       this.sigCache.set(session.id, this.sessionSignature(session));
-      if (session.status === 'active') this.activeMap.set(session.id, session);
     }
   }
 
@@ -411,33 +406,30 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
    * Diff-based event dispatch. Called after every scan() with the full set of
    * sessions found in that cycle.
    *
-   * - Sessions absent from the scan but present in activeMap: fire sessionEndedCallback
+   * - Sessions active in the DB but absent from the scan: fire sessionEndedCallback
    *   (process exited cleanly — workspace dir was cleaned up).
-   * - Sessions seen for the first time (not in knownIds): fire sessionCreatedCallback.
+   * - Sessions seen for the first time (not in sigCache): fire sessionCreatedCallback.
    * - Sessions with a changed signature: fire sessionUpdatedCallback.
-   * - Sessions with status 'ended' that are still in activeMap: fire sessionEndedCallback
-   *   once, then remove from activeMap (ended sessions remain on disk — only fire once).
+   * - Sessions with status 'ended' still tracked in sigCache: fire sessionEndedCallback
+   *   once, then clear from sigCache (ended sessions remain on disk — only fire once).
    */
   private processSessionEvents(sessions: Session[]): void {
     const currentIds = new Set(sessions.map(s => s.id));
     const now = new Date().toISOString();
 
-    // Detect sessions that dropped off the scan (process exited and workspace dir cleaned up).
-    for (const [id, session] of this.activeMap) {
-      if (!currentIds.has(id)) {
-        const stored = getSession(id);
-        if (stored?.status !== 'ended') {
-          updateSessionStatus(id, 'ended', now);
-          this.sessionEndedCallback?.({ ...session, status: 'ended', endedAt: now });
-        }
-        this.activeMap.delete(id);
-        this.sigCache.delete(id);
+    // Detect sessions that dropped off the scan (workspace dir cleaned up by the OS).
+    // Query DB directly — no need for a separate in-memory map.
+    const dbActiveSessions = getSessions().filter(s => s.type === 'copilot-cli' && s.status === 'active');
+    for (const session of dbActiveSessions) {
+      if (!currentIds.has(session.id)) {
+        updateSessionStatus(session.id, 'ended', now);
+        this.sessionEndedCallback?.({ ...session, status: 'ended', endedAt: now });
+        this.sigCache.delete(session.id);
       }
     }
 
     for (const session of sessions) {
-      if (!this.knownIds.has(session.id)) {
-        this.knownIds.add(session.id);
+      if (!this.sigCache.has(session.id)) {
         this.sigCache.set(session.id, this.sessionSignature(session));
         this.sessionCreatedCallback?.(session);
       } else {
@@ -449,24 +441,18 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
       }
 
       if (session.status === 'ended') {
-        // Only fire once — ended sessions remain on disk and re-appear on every scan.
-        if (this.activeMap.has(session.id)) {
+        // sigCache.has() gates the one-shot fire: cleared here and in handleSessionEnd.
+        // If a SessionEnd hook already fired, sigCache is already cleared — no double fire.
+        if (this.sigCache.has(session.id)) {
           this.sessionEndedCallback?.(session);
-          this.activeMap.delete(session.id);
           this.sigCache.delete(session.id);
         }
-      } else if (session.status === 'active') {
-        this.activeMap.set(session.id, session);
       }
     }
   }
 
   protected closeJsonlWatcher(sessionId: string): void {
     this.jsonlWatcher.closeWatcher(sessionId);
-  }
-
-  protected onSessionEndedCleanup(sessionId: string): void {
-    this.activeMap.delete(sessionId);
   }
 
   /**
@@ -495,9 +481,7 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
       ptyLaunchId: claimed.ptyLaunchId,
     };
     upsertSession(session);
-    this.knownIds.add(sessionId);
     this.sigCache.set(sessionId, this.sessionSignature(session));
-    this.activeMap.set(sessionId, session);
     this.sessionCreatedCallback?.(session);
     await this.jsonlWatcher.watchFile(sessionId, repo.path);
   }
@@ -532,9 +516,7 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
       this.sigCache.set(sessionId, this.sessionSignature(updated));
       broadcast({ type: 'session.updated', timestamp: now, data: updated });
     } else {
-      this.knownIds.add(sessionId);
       this.sigCache.set(sessionId, this.sessionSignature(updated));
-      this.activeMap.set(sessionId, updated);
       this.sessionCreatedCallback?.(updated);
     }
     await this.jsonlWatcher.watchFile(sessionId, repo.path);

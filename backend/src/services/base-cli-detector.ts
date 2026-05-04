@@ -32,12 +32,6 @@ export abstract class BaseCliDetector {
   /** Close the JSONL output watcher for the given session. */
   protected abstract closeJsonlWatcher(sessionId: string): void;
 
-  /**
-   * Called at the end of handleSessionEnd() for subclass-specific cleanup.
-   * Override to remove the session from any local tracking maps.
-   */
-  protected onSessionEndedCleanup(_sessionId: string): void {}
-
   /** Log tag prefix for this detector, e.g. '[ClaudeDetector]'. */
   protected abstract readonly logTag: string;
   /** Hook tool name used for AskUser events, e.g. 'AskUserQuestion' or 'ask_user'. */
@@ -143,7 +137,6 @@ export abstract class BaseCliDetector {
       launchMode: existing.launchMode === 'pty' ? 'connected' : 'readonly',
       yoloMode: existing.yoloMode,
     });
-    this.onSessionEndedCleanup(sessionId);
   }
 
   protected handlePreAskQuestion(sessionId: string, existing: Session | null | undefined, payload: CliHookPayload, now: string): void {
