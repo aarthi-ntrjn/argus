@@ -82,16 +82,9 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
    * Reads workspace.yaml (session id) and inuse.<PID>.lock (pid) from each dir.
    */
   protected readSessionPidEntries(): Array<{ sessionId: string; pid: number }> {
-    if (!existsSync(this.sessionsDir)) return [];
-    const result: Array<{ sessionId: string; pid: number }> = [];
-    try {
-      for (const entry of readdirSync(this.sessionsDir, { withFileTypes: true })) {
-        if (!entry.isDirectory()) continue;
-        const data = this.readDirEntry(join(this.sessionsDir, entry.name));
-        if (data?.workspace.id && data.pid != null) result.push({ sessionId: data.workspace.id, pid: data.pid });
-      }
-    } catch { /* ignore */ }
-    return result;
+    return this.readAllDirEntries()
+      .filter(e => e.pid != null)
+      .map(e => ({ sessionId: e.workspace.id!, pid: e.pid! }));
   }
 
   /**
@@ -105,18 +98,12 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
 
   // Reads active copilot-cli sessions from the DB and finds their on-disk dirs.
   private initActiveDirsFromDb(): void {
-    if (!existsSync(this.sessionsDir)) return;
     const activeSessions = getSessions({ type: SessionTypes.COPILOT_CLI, status: 'active' });
     if (activeSessions.length === 0) return;
     const activeIds = new Set(activeSessions.map(s => s.id));
-    try {
-      for (const entry of readdirSync(this.sessionsDir, { withFileTypes: true })) {
-        if (!entry.isDirectory()) continue;
-        const dirPath = join(this.sessionsDir, entry.name);
-        const data = this.readDirEntry(dirPath);
-        if (data?.workspace.id && activeIds.has(data.workspace.id)) this.activeDirPaths.add(dirPath);
-      }
-    } catch { /* ignore */ }
+    for (const { dirPath, workspace } of this.readAllDirEntries()) {
+      if (workspace.id && activeIds.has(workspace.id)) this.activeDirPaths.add(dirPath);
+    }
   }
 
   /**
@@ -383,6 +370,21 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
       const pid = lockFile ? this.extractPid(lockFile) : null;
       return { workspace, pid };
     } catch { return null; }
+  }
+
+  // Iterates all session subdirectories, returning parsed workspace + pid for each valid entry.
+  private readAllDirEntries(): Array<{ dirPath: string; workspace: WorkspaceYaml; pid: number | null }> {
+    if (!existsSync(this.sessionsDir)) return [];
+    const result: Array<{ dirPath: string; workspace: WorkspaceYaml; pid: number | null }> = [];
+    try {
+      for (const entry of readdirSync(this.sessionsDir, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const dirPath = join(this.sessionsDir, entry.name);
+        const data = this.readDirEntry(dirPath);
+        if (data?.workspace.id) result.push({ dirPath, ...data });
+      }
+    } catch { /* ignore */ }
+    return result;
   }
 
   /**
