@@ -15,7 +15,31 @@ import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
 import type { CliDetector, CliHookPayload } from './cli-detector.js';
 
-const DEFAULT_SESSIONS_DIR = join(homedir(), '.claude', 'sessions');
+
+/**
+ * Under the hood, Claude Code writes a JSON file per session in ~/.claude/sessions/*.json
+ * with the PID and CWD, which we can use for detection and tracking.
+ * The hooks are the primary real-time signal, while the registry files are a secondary
+ * signal we scan on a timer for reconciliation and edge cases (sessions started without
+ * hooks, PID backfill, unclean shutdown detection).
+ *
+ * Example registry file: ~/.claude/sessions/13232.json
+ * {
+ *   "pid": 13232,
+ *   "sessionId": "0f63ac9c-1cdf-47fe-abb1-d6b3bef059a1",
+ *   "cwd": "C:\\source\\github\\aarthi-ntrjn\\argus",
+ *   "startedAt": 1777845541042,
+ *   "procStart": "639134171321274940",
+ *   "version": "2.1.126",
+ *   "peerProtocol": 1,
+ *   "kind": "interactive",
+ *   "entrypoint": "cli",
+ *   "status": "idle",
+ *   "updatedAt": 1777845921982
+ * }
+ */
+
+const DEFAULT_SESSIONS_DIR= join(homedir(), '.claude', 'sessions');
 
 /**
  * Detects and tracks Claude Code sessions.
