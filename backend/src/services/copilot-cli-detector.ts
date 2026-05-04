@@ -48,6 +48,7 @@ interface WorkspaceYaml {
  */
 export class CopilotCliDetector implements CliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
+  private readonly sessionsDir: string;
   private lastScanTime: number;
   private activeDirPaths = new Set<string>();
   // Session tracking maps — seeded on startup and updated by hooks and scan().
@@ -59,7 +60,8 @@ export class CopilotCliDetector implements CliDetector {
   private sessionUpdatedCallback?: (session: Session) => void;
   private sessionEndedCallback?: (session: Session) => void;
 
-  constructor(private readonly sessionsDir: string = DEFAULT_SESSIONS_DIR) {
+  constructor(sessionsDir: string = DEFAULT_SESSIONS_DIR) {
+    this.sessionsDir = sessionsDir;
     const stored = getServerState('copilot_last_scan_time');
     this.lastScanTime = stored ? parseInt(stored, 10) : 0;
   }
