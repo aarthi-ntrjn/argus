@@ -14,7 +14,6 @@ function claudeProjectDirName(repoPath: string): string {
 
 export class ClaudeJsonlWatcher extends JsonlWatcherBase {
   protected readonly tag = '[ClaudeDetector]';
-  private readonly pendingAskUserCallIds = new Map<string, string>();
 
   protected parseLine(line: string, sessionId: string, seq: number, makeId: (blockIndex: number) => string): SessionOutput[] {
     return parseClaudeJsonlLine(line, sessionId, seq, makeId);
@@ -56,18 +55,5 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
       `${sessionId}.jsonl`,
     );
     await this.attachWatcher(sessionId, jsonlPath);
-  }
-
-  closeWatcher(sessionId: string): void {
-    this.watchers.get(sessionId)?.close().catch(() => {});
-    this.watchers.delete(sessionId);
-    this.filePositions.delete(sessionId);
-    this.sequenceCounters.delete(sessionId);
-    this.pendingAskUserCallIds.delete(sessionId);
-  }
-
-  stopAll(): void {
-    this.stopWatchers();
-    this.pendingAskUserCallIds.clear();
   }
 }

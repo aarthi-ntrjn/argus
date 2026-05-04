@@ -71,7 +71,7 @@ interface CopilotSessionEntry extends SessionEntry {
  * detected promptly.
  */
 export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> implements CliDetector {
-  private readonly jsonlWatcher = new CopilotJsonlWatcher();
+  protected readonly jsonlWatcher = new CopilotJsonlWatcher();
   protected readonly sessionsDir: string;
   private lastScanTime: number;
   /** Dirs that ended this scan cycle with an active session. Re-checked next cycle. */
@@ -231,7 +231,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
     upsertSession(session);
 
     if (isRunning) {
-      await this.jsonlWatcher.watchFile(sessionId, dirPath);
+      await this.watchJsonlFile(sessionId, dirPath);
     }
 
     return session;
@@ -302,17 +302,5 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
         }
       }
     }
-  }
-
-  protected watchJsonlFile(sessionId: string, repoPath: string): Promise<void> {
-    return this.jsonlWatcher.watchFile(sessionId, repoPath);
-  }
-
-  protected closeJsonlWatcher(sessionId: string): void {
-    this.jsonlWatcher.closeWatcher(sessionId);
-  }
-
-  stop(): void {
-    this.jsonlWatcher.stopWatchers();
   }
 }

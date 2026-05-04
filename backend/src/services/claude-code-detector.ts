@@ -67,7 +67,7 @@ interface ClaudeSessionEntry extends SessionEntry {
  * safety net that catches PTY sessions that don't appear in the session-file scan.
  */
 export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> implements CliDetector {
-  private readonly jsonlWatcher = new ClaudeJsonlWatcher();
+  protected readonly jsonlWatcher = new ClaudeJsonlWatcher();
   protected readonly sessionsDir: string;
   /** PIDs that passed the alive+expected-process guards in the previous scan. */
   private previousAlivePids = new Set<number>();
@@ -286,17 +286,5 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
         }
       }
     } catch { /* best-effort */ }
-  }
-
-  protected watchJsonlFile(sessionId: string, repoPath: string): Promise<void> {
-    return this.jsonlWatcher.watchFile(sessionId, repoPath);
-  }
-
-  protected closeJsonlWatcher(sessionId: string): void {
-    this.jsonlWatcher.closeWatcher(sessionId);
-  }
-
-  stop(): void {
-    this.jsonlWatcher.stopAll();
   }
 }

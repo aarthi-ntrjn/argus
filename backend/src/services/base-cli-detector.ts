@@ -20,6 +20,7 @@ import { normalize } from 'path';
 import { ptyRegistry } from './pty-registry.js';
 import { detectYoloModeFromPids } from './process-utils.js';
 import * as logger from '../utils/logger.js';
+import { JsonlWatcherBase } from './jsonl-watcher-base.js';
 import type { CliHookPayload } from './cli-detector.js';
 
 /**
@@ -46,22 +47,39 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
 
   /** Root directory the detector watches for session sources. */
   protected abstract readonly sessionsDir: string;
-  /** Close the JSONL output watcher for the given session. */
-  protected abstract closeJsonlWatcher(sessionId: string): void;
-  /** Start watching the JSONL output file for the given session. */
-  protected abstract watchJsonlFile(sessionId: string, repoPath: string): Promise<void>;
+  /** Per-detector JSONL watcher (Claude or Copilot). Holds all open file watchers. */
+  protected abstract readonly jsonlWatcher: JsonlWatcherBase;
   protected abstract readonly logTag: string;
   /** Hook tool name used for AskUser events, e.g. 'AskUserQuestion' or 'ask_user'. */
   protected abstract readonly askUserToolName: string;
   /** Session type identifier used for PTY registry and session rows. */
   protected abstract readonly toolTypeId: SessionType;
 
-  /** Read parsed entries from the source (registry files, session dirs, etc.). */
+  /** Read parsed entries from the source (session files, session dirs, etc.). */
   protected abstract readSessionEntries(force: boolean): Promise<TEntry[]>;
   /** Process one entry: apply guards, resolve PTY linkage, upsert the session row. */
   protected abstract processSessionEntry(entry: TEntry): Promise<Session | null>;
   /** Diff against sigCache and fire session.created/updated/ended callbacks. */
   protected abstract dispatchSessionEvents(sessions: Session[]): void;
+
+  /**
+   * Start watching a session's JSONL output file. Delegates to the detector's watcher.
+   * The path argument is detector-specific: Claude expects a repoPath (used to derive
+   * the per-session JSONL path), Copilot expects the session dirPath.
+   */
+  protected watchJsonlFile(sessionId: string, path: string): Promise<void> {
+    return this.jsonlWatcher.watchFile(sessionId, path);
+  }
+
+  /** Close one session's JSONL watcher. Delegates to the detector's watcher. */
+  protected closeJsonlWatcher(sessionId: string): void {
+    this.jsonlWatcher.closeWatcher(sessionId);
+  }
+
+  /** Server shutdown: release all file watchers held by this detector. */
+  stop(): void {
+    this.jsonlWatcher.stopWatchers();
+  }
 
   /**
    * Per-cycle scan orchestrator. Reads entries, processes each, dispatches events.
