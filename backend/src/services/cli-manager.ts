@@ -93,13 +93,6 @@ export class CliManager {
     return result;
   }
 
-  // --- Watcher management ---
-
-  /** Closes the JSONL file watcher for a specific Claude session. */
-  closeClaudeSessionWatcher(sessionId: string): void {
-    this.claudeDetector.closeSessionWatcher(sessionId);
-  }
-
   // --- Hook payload routing ---
 
   /** Dispatches an incoming Claude hook payload to the Claude detector. */
