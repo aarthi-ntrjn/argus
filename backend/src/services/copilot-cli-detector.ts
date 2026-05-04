@@ -16,7 +16,7 @@ import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import type { CliDetector, CliHookPayload } from './cli-detector.js';
 
-const DEFAULT_SESSION_DIR = join(homedir(), '.copilot', 'session-state');
+const DEFAULT_SESSIONS_DIR = join(homedir(), '.copilot', 'session-state');
 
 interface WorkspaceYaml {
   id?: string;
@@ -59,7 +59,7 @@ export class CopilotCliDetector implements CliDetector {
   private sessionUpdatedCallback?: (session: Session) => void;
   private sessionEndedCallback?: (session: Session) => void;
 
-  constructor(private sessionStateDir: string = DEFAULT_SESSION_DIR) {
+  constructor(private readonly sessionsDir: string = DEFAULT_SESSIONS_DIR) {
     const stored = getServerState('copilot_last_scan_time');
     this.lastScanTime = stored ? parseInt(stored, 10) : 0;
   }
@@ -99,15 +99,15 @@ export class CopilotCliDetector implements CliDetector {
 
   // Reads active copilot-cli sessions from the DB and finds their on-disk dirs.
   private initActiveDirsFromDb(): void {
-    if (!existsSync(this.sessionStateDir)) return;
+    if (!existsSync(this.sessionsDir)) return;
     const activeSessions = getSessions({ type: SessionTypes.COPILOT_CLI, status: 'active' });
     if (activeSessions.length === 0) return;
     const activeIds = new Set(activeSessions.map(s => s.id));
     try {
-      const entries = readdirSync(this.sessionStateDir, { withFileTypes: true });
+      const entries = readdirSync(this.sessionsDir, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
-        const dirPath = join(this.sessionStateDir, entry.name);
+        const dirPath = join(this.sessionsDir, entry.name);
         const workspaceFile = join(dirPath, 'workspace.yaml');
         if (!existsSync(workspaceFile)) continue;
         try {
@@ -121,7 +121,7 @@ export class CopilotCliDetector implements CliDetector {
   /**
    * Per-cycle scan. Two responsibilities:
    *
-   * 1. Directory sweep: walk sessionStateDir for new or changed directories.
+   * 1. Directory sweep: walk sessionsDir for new or changed directories.
    *    Applies mtime filtering to skip stale directories while always re-checking
    *    any directory that had an active session in the previous cycle.
    *    When force=true (triggered by repo add), skips the mtime filter entirely.
@@ -133,7 +133,7 @@ export class CopilotCliDetector implements CliDetector {
    * the return value. CopilotCliDetector is fully push-based via callbacks.
    */
   async scan(force = false): Promise<Session[]> {
-    if (!existsSync(this.sessionStateDir)) return [];
+    if (!existsSync(this.sessionsDir)) return [];
     const t0 = Date.now();
 
     // Collect dirs to process:
@@ -145,11 +145,11 @@ export class CopilotCliDetector implements CliDetector {
     let totalDirs = 0;
 
     try {
-      const entries = readdirSync(this.sessionStateDir, { withFileTypes: true });
+      const entries = readdirSync(this.sessionsDir, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
         totalDirs++;
-        const dirPath = join(this.sessionStateDir, entry.name);
+        const dirPath = join(this.sessionsDir, entry.name);
 
         if (this.activeDirPaths.has(dirPath)) {
           dirsToProcess.add(dirPath);
@@ -365,13 +365,13 @@ export class CopilotCliDetector implements CliDetector {
    */
   getRegistryEntries(): Map<string, number> {
     const result = new Map<string, number>();
-    if (!existsSync(this.sessionStateDir)) return result;
+    if (!existsSync(this.sessionsDir)) return result;
 
     try {
-      const entries = readdirSync(this.sessionStateDir, { withFileTypes: true });
+      const entries = readdirSync(this.sessionsDir, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
-        const dirPath = join(this.sessionStateDir, entry.name);
+        const dirPath = join(this.sessionsDir, entry.name);
         const workspaceFile = join(dirPath, 'workspace.yaml');
         if (!existsSync(workspaceFile)) continue;
 
