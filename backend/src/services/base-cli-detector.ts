@@ -1,5 +1,16 @@
 import { existsSync } from 'fs';
 import type { Session, PendingChoice, SessionType, Repository, PidSource } from '../models/index.js';
+
+/**
+ * Common shape every detector's parsed source record carries. Concrete detectors
+ * extend this with tool-specific extras (Copilot adds dirPath + workspace.yaml
+ * fields; Claude carries no extras and just narrows pid to non-null).
+ */
+export interface SessionEntry {
+  sessionId: string;
+  cwd: string;
+  pid: number | null;
+}
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
 import { updateSessionStatus, upsertSession, getRepositoryByPath, getSession } from '../db/database.js';
@@ -25,7 +36,7 @@ import type { CliHookPayload } from './cli-detector.js';
  * TEntry is the per-detector parsed source record (Claude registry JSON entry,
  * Copilot session-dir entry, etc.) and is private to the concrete detector.
  */
-export abstract class BaseCliDetector<TEntry = unknown> {
+export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry> {
   // Dedup map: last-emitted signature per session, used to avoid redundant callbacks.
   protected readonly sigCache = new Map<string, string>();
   protected readonly pendingChoices = new Map<string, PendingChoice>();

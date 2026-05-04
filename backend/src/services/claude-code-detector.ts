@@ -9,7 +9,7 @@ import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './proce
 import { SessionTypes } from '../models/index.js';
 import type { Session, Repository } from '../models/index.js';
 import type { CliDetector } from './cli-detector.js';
-import { BaseCliDetector } from './base-cli-detector.js';
+import { BaseCliDetector, type SessionEntry } from './base-cli-detector.js';
 
 
 /**
@@ -43,11 +43,9 @@ interface SessionProcessJson {
   cwd?: string;
 }
 
-/** Parsed entry from one ~/.claude/sessions/*.json file. */
-interface ClaudeRegistryEntry {
-  sessionId: string;
+/** Parsed entry from one ~/.claude/sessions/*.json file. Claude's registry guarantees a non-null pid. */
+interface ClaudeRegistryEntry extends SessionEntry {
   pid: number;
-  cwd: string;
 }
 
 /**

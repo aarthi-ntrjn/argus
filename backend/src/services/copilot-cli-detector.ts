@@ -10,7 +10,7 @@ import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './proce
 import { SessionTypes } from '../models/index.js';
 import type { Session } from '../models/index.js';
 import type { CliDetector } from './cli-detector.js';
-import { BaseCliDetector } from './base-cli-detector.js';
+import { BaseCliDetector, type SessionEntry } from './base-cli-detector.js';
 
 /**
  * Copilot CLI writes one subdirectory per session under ~/.copilot/session-state/.
@@ -39,11 +39,17 @@ interface WorkspaceYaml {
   updated_at?: string | Date;
 }
 
-/** Parsed entry from one ~/.copilot/session-state/<id>/ directory. */
-interface CopilotDirEntry {
+/**
+ * Parsed entry from one ~/.copilot/session-state/<id>/ directory.
+ * Adds workspace.yaml-sourced fields beyond the common SessionEntry: the
+ * session-dir path (for the JSONL watcher) and the seed values for the
+ * Session row's summary/timestamps.
+ */
+interface CopilotDirEntry extends SessionEntry {
   dirPath: string;
-  workspace: WorkspaceYaml;
-  pid: number | null;
+  summary: string | null;
+  startedAt: string | Date;
+  updatedAt: string | Date;
 }
 
 /**
@@ -118,7 +124,19 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> impleme
     const result: CopilotDirEntry[] = [];
     for (const dirPath of dirsToProcess) {
       const data = this.readDirEntry(dirPath);
-      if (data) result.push({ dirPath, workspace: data.workspace, pid: data.pid });
+      if (!data) continue;
+      const cwd = data.workspace.cwd;
+      if (!cwd) continue;
+      const nowIso = new Date().toISOString();
+      result.push({
+        sessionId: data.workspace.id ?? randomUUID(),
+        cwd,
+        pid: data.pid,
+        dirPath,
+        summary: data.workspace.summary ?? null,
+        startedAt: data.workspace.created_at ?? nowIso,
+        updatedAt: data.workspace.updated_at ?? nowIso,
+      });
     }
     return result;
   }
@@ -148,8 +166,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> impleme
    * watcher, but does not fire callbacks.
    */
   private async buildSessionFromEntry(entry: CopilotDirEntry): Promise<Session | null> {
-    const { dirPath, workspace, pid } = entry;
-    const sessionId = workspace.id ?? randomUUID();
+    const { sessionId, cwd, pid, dirPath, summary, startedAt, updatedAt } = entry;
     const existingSession = getSession(sessionId);
 
     // Guard 1: process is running (cheap signal-0 check)
@@ -165,15 +182,15 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> impleme
     // nothing has changed since we last marked them ended.
     if (!isRunning && existingSession?.status === 'ended') return null;
 
-    const repo = workspace.cwd ? getRepositoryByPath(normalize(workspace.cwd)) : null;
+    const repo = getRepositoryByPath(normalize(cwd));
     if (!repo) {
-      logger.warn(`[CopilotDetector] no repo for cwd="${workspace.cwd ?? 'none'}" sessionId=${sessionId} — session ignored`);
+      logger.warn(`[CopilotDetector] no repo for cwd="${cwd}" sessionId=${sessionId} — session ignored`);
       return null;
     }
 
     const status = isRunning ? 'active' : 'ended';
-    const toIso = (val: string | Date | undefined): string =>
-      val ? (val instanceof Date ? val.toISOString() : val) : new Date().toISOString();
+    const toIso = (val: string | Date): string =>
+      val instanceof Date ? val.toISOString() : val;
 
     const linkage = this.resolvePtyLinkage(sessionId, existingSession, repo.path, pid, 'lockfile', isRunning);
 
@@ -181,6 +198,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> impleme
       ? existingSession.yoloMode
       : isRunning ? detectYoloModeFromPids(linkage.pid, linkage.hostPid, SessionTypes.COPILOT_CLI) : null;
 
+    const updatedAtIso = toIso(updatedAt);
     const session: Session = {
       id: sessionId,
       repositoryId: repo.id,
@@ -190,12 +208,12 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> impleme
       hostPid: linkage.hostPid,
       pidSource: linkage.pidSource,
       status,
-      startedAt: toIso(workspace.created_at),
-      endedAt: status === 'ended' ? toIso(workspace.updated_at) : null,
-      lastActivityAt: existingSession?.lastActivityAt && existingSession.lastActivityAt > toIso(workspace.updated_at)
+      startedAt: toIso(startedAt),
+      endedAt: status === 'ended' ? updatedAtIso : null,
+      lastActivityAt: existingSession?.lastActivityAt && existingSession.lastActivityAt > updatedAtIso
         ? existingSession.lastActivityAt
-        : toIso(workspace.updated_at),
-      summary: existingSession?.summary ?? workspace.summary ?? null,
+        : updatedAtIso,
+      summary: existingSession?.summary ?? summary,
       expiresAt: null,
       model: existingSession?.model ?? null,
       reconciled: true,
