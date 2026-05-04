@@ -34,6 +34,12 @@ export abstract class BaseCliDetector {
   protected abstract closeJsonlWatcher(sessionId: string): void;
   /** Start watching the JSONL output file for the given session. */
   protected abstract watchJsonlFile(sessionId: string, repoPath: string): Promise<void>;
+  /**
+   * Synchronously reads session process entries from disk.
+   * Used by getSessionPidMap() for startup stale-session reconciliation.
+   * Each subclass reads from its own on-disk format (JSON files or YAML dirs).
+   */
+  protected abstract readSessionPidEntries(): Iterable<{ sessionId: string; pid: number }>;
 
   /** Log tag prefix for this detector, e.g. '[ClaudeDetector]'. */
   protected abstract readonly logTag: string;
@@ -41,6 +47,19 @@ export abstract class BaseCliDetector {
   protected abstract readonly askUserToolName: string;
   /** Session type identifier used for PTY registry and session rows. */
   protected abstract readonly toolTypeId: SessionType;
+
+  /**
+   * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
+   * Delegates discovery to readSessionPidEntries() so each subclass can use its
+   * own on-disk format without duplicating the map-building logic.
+   */
+  getSessionPidMap(): Map<string, number> {
+    const result = new Map<string, number>();
+    for (const entry of this.readSessionPidEntries()) {
+      result.set(entry.sessionId, entry.pid);
+    }
+    return result;
+  }
 
   /**
    * Seeds tracking state with sessions that survived from a previous run.

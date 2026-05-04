@@ -78,13 +78,12 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
-   * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
-   * Equivalent of ClaudeCodeDetector.getSessionPidMap() — scans inuse.<PID>.lock files.
+   * Returns pid/sessionId pairs from ~/.copilot/session-state/ for startup reconciliation.
+   * Reads workspace.yaml (session id) and inuse.<PID>.lock (pid) from each dir.
    */
-  getSessionPidMap(): Map<string, number> {
-    const result = new Map<string, number>();
-    if (!existsSync(this.sessionsDir)) return result;
-
+  protected readSessionPidEntries(): Array<{ sessionId: string; pid: number }> {
+    if (!existsSync(this.sessionsDir)) return [];
+    const result: Array<{ sessionId: string; pid: number }> = [];
     try {
       const entries = readdirSync(this.sessionsDir, { withFileTypes: true });
       for (const entry of entries) {
@@ -92,20 +91,15 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
         const dirPath = join(this.sessionsDir, entry.name);
         const workspaceFile = join(dirPath, 'workspace.yaml');
         if (!existsSync(workspaceFile)) continue;
-
         try {
           const workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as WorkspaceYaml;
           if (!workspace.id) continue;
-
           const lockFile = this.findLockFile(dirPath);
           const pid = lockFile ? this.extractPid(lockFile) : null;
-          if (pid != null) {
-            result.set(workspace.id, pid);
-          }
+          if (pid != null) result.push({ sessionId: workspace.id, pid });
         } catch { /* skip malformed */ }
       }
     } catch { /* ignore */ }
-
     return result;
   }
 
@@ -156,20 +150,32 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   async scan(force = false): Promise<Session[]> {
     if (!existsSync(this.sessionsDir)) return [];
     const t0 = Date.now();
+    const sessions = await this.scanSessionFiles(force);
+    this.lastScanTime = t0;
+    setServerState('copilot_last_scan_time', String(t0));
+    this.processSessionEvents(sessions);
+    return sessions;
+  }
 
+  /**
+   * Walks sessionsDir and returns the current state of each changed or active session.
+   *
+   * Applies mtime filtering to skip stale directories while always re-checking
+   * any directory that had an active session in the previous cycle.
+   * When force=true (triggered by repo add), skips the mtime filter entirely.
+   */
+  private async scanSessionFiles(force = false): Promise<Session[]> {
     // Collect dirs to process:
     // 1. Dirs modified since last scan — may contain new sessions.
-    //    When force=true (triggered by repo add) skip the mtime filter so we catch
-    //    sessions whose dir predates the last scan (e.g. after a repo remove+re-add).
+    //    When force=true skip the mtime filter so we catch sessions whose dir
+    //    predates the last scan (e.g. after a repo remove+re-add).
     // 2. Dirs that had an active session last scan — detect if they have ended.
     const dirsToProcess = new Set<string>();
-    let totalDirs = 0;
 
     try {
       const entries = readdirSync(this.sessionsDir, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
-        totalDirs++;
         const dirPath = join(this.sessionsDir, entry.name);
 
         if (this.activeDirPaths.has(dirPath)) {
@@ -205,10 +211,6 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     }
 
     this.activeDirPaths = newActiveDirPaths;
-    this.lastScanTime = t0;
-    setServerState('copilot_last_scan_time', String(t0));
-
-    this.processSessionEvents(sessions);
     return sessions;
   }
 
