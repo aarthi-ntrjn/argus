@@ -40,9 +40,6 @@ export abstract class BaseCliDetector {
   /** Session type identifier used for PTY registry and session rows. */
   protected abstract readonly toolTypeId: SessionType;
 
-  /** One-time startup lifecycle hook. Both detectors rely on the first runScan(true) for initialization. */
-  async start(): Promise<void> {}
-
   /**
    * Determines the PTY linkage state for a session this scan cycle.
    *

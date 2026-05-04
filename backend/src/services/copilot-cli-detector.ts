@@ -307,9 +307,6 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     }
   }
 
-  /** No-op: Copilot manages JSONL watchers internally in scan(). */
-  closeSessionWatcher(_sessionId: string): void {}
-
   protected watchJsonlFile(sessionId: string, repoPath: string): Promise<void> {
     return this.jsonlWatcher.watchFile(sessionId, repoPath);
   }

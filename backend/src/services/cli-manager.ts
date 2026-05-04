@@ -58,12 +58,10 @@ export class CliManager {
 
   // --- Lifecycle ---
 
-  /** Injects hooks into all registered repos/config files, then starts both detectors. */
-  async start(): Promise<void> {
+  /** Injects hooks into all registered repos/config files. Detector state is initialized by the first scan(true). */
+  start(): void {
     this.claudeInjector.injectForAll();
     this.copilotInjector.injectForAll();
-    await this.claudeDetector.start();
-    await this.copilotDetector.start();
   }
 
   /** Stops both detectors and releases their resources. */

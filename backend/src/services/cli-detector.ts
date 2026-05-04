@@ -23,12 +23,6 @@ export interface CliHookPayload {
  */
 export interface CliDetector {
   /**
-   * One-time startup lifecycle hook. Called before the first scan() cycle begins.
-   * Both detectors rely on the first runScan(true) for initialization.
-   */
-  start(): Promise<void>;
-
-  /**
    * Per-cycle scan. Returns sessions discovered this cycle.
    * Detectors that push sessions via callbacks (e.g. ClaudeCodeDetector) return [].
    */
@@ -45,9 +39,4 @@ export interface CliDetector {
    * This is the primary real-time update path for both tools.
    */
   handleHookPayload(payload: CliHookPayload): Promise<void>;
-
-  /** Close the per-session output watcher for a session that has ended.
-   * No-op for detectors that manage watchers internally (e.g. CopilotCliDetector).
-   */
-  closeSessionWatcher(sessionId: string): void;
 }

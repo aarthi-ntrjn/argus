@@ -54,11 +54,9 @@ vi.mock('../../src/services/repository-scanner.js', () => ({
 
 vi.mock('../../src/services/copilot-cli-detector.js', () => ({
   CopilotCliDetector: vi.fn().mockImplementation(() => ({
-    start: vi.fn(async () => {}),
     scan: vi.fn(async () => []),
     stop: vi.fn(),
     scanLockEntries: vi.fn(() => new Map()),
-    closeSessionWatcher: vi.fn(),
     getPendingChoice: vi.fn(() => null),
     handleHookPayload: vi.fn(async () => {}),
     setSessionCreatedCallback: vi.fn(),
@@ -71,10 +69,8 @@ vi.mock('../../src/services/copilot-cli-detector.js', () => ({
 vi.mock('../../src/services/claude-code-detector.js', () => ({
   ClaudeCodeDetector: Object.assign(
     vi.fn().mockImplementation(() => ({
-      start: vi.fn(async () => {}),
       scan: vi.fn(async () => []),
       stop: vi.fn(),
-      closeSessionWatcher: vi.fn(),
       setSessionCreatedCallback: vi.fn(),
       setSessionUpdatedCallback: vi.fn(),
       setSessionEndedCallback: vi.fn(),

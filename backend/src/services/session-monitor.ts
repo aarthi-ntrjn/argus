@@ -44,7 +44,7 @@ export class SessionMonitor extends EventEmitter {
   }
 
   async start(): Promise<void> {
-    await this.cliManager.start();
+    this.cliManager.start();
 
     const activeSessions = getSessions({ status: 'active' });
 

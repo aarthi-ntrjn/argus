@@ -2,7 +2,6 @@ import * as logger from '../utils/logger.js';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join, normalize } from 'path';
 import { homedir } from 'os';
-
 import { getSession, getSessions, upsertSession, updateSessionStatus, getRepositoryByPath, getRepositories } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
@@ -37,7 +36,7 @@ import { BaseCliDetector } from './base-cli-detector.js';
  * }
  */
 
-const DEFAULT_SESSIONS_DIR= join(homedir(), '.claude', 'sessions');
+const DEFAULT_SESSIONS_DIR = join(homedir(), '.claude', 'sessions');
 
 interface SessionProcessJson {
   pid?: number;
@@ -133,7 +132,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
         if (session.pid === oldPid && session.pidSource === 'session_registry') {
           logger.info(`[ClaudeDetector] session ended, registry file gone sessionId=${session.id} pid=${oldPid}`);
           updateSessionStatus(session.id, 'ended', now);
-          this.jsonlWatcher.closeWatcher(session.id);
+          this.closeJsonlWatcher(session.id);
           const ended = { ...session, status: 'ended' as const, endedAt: now };
           this.sigCache.delete(session.id);
           this.sessionEndedCallback?.(ended);
@@ -201,7 +200,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
       return;
     }
 
-    this.jsonlWatcher.closeWatcher(sessionId);
+    this.closeJsonlWatcher(sessionId);
     const base: Session = existingSession ?? {
       id: sessionId,
       repositoryId: repo.id,
@@ -259,7 +258,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
         if (!repo) {
           logger.info(`[ClaudeDetector] session ended, repo removed sessionId=${session.id}`);
           updateSessionStatus(session.id, 'ended', now);
-          this.jsonlWatcher.closeWatcher(session.id);
+          this.closeJsonlWatcher(session.id);
           const ended = { ...session, status: 'ended' as const, endedAt: now };
           this.sigCache.delete(session.id);
           this.sessionEndedCallback?.(ended);
@@ -269,7 +268,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
         if (session.pid != null && !isPidRunning(session.pid)) {
           logger.info(`[ClaudeDetector] session ended, process gone sessionId=${session.id} pid=${session.pid}`);
           updateSessionStatus(session.id, 'ended', now);
-          this.jsonlWatcher.closeWatcher(session.id);
+          this.closeJsonlWatcher(session.id);
           const ended = { ...session, status: 'ended' as const, endedAt: now };
           this.sigCache.delete(session.id);
           this.sessionEndedCallback?.(ended);
@@ -286,10 +285,6 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
         }
       }
     } catch { /* best-effort */ }
-  }
-
-  closeSessionWatcher(sessionId: string): void {
-    this.jsonlWatcher.closeWatcher(sessionId);
   }
 
   protected watchJsonlFile(sessionId: string, repoPath: string): Promise<void> {
