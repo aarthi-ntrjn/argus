@@ -115,6 +115,7 @@ export interface ArgusConfig {
   telemetryEnabled: boolean;
   telemetryPromptSeen: boolean;
   integrationsEnabled: boolean;
+  autoUpdate: boolean;
 }
 
 export type TelemetryEventType =

@@ -23,6 +23,7 @@ const DEFAULTS: ArgusConfig = {
   telemetryEnabled: true,
   telemetryPromptSeen: false,
   integrationsEnabled: false,
+  autoUpdate: true,
 };
 
 export function loadConfig(): ArgusConfig {

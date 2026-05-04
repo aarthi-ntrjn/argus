@@ -10,9 +10,9 @@
 
 **Independent Test**: Backend compiles and existing settings tests pass with the new field present and defaulting to `true`.
 
-- [ ] T001 [US1 US2 US3 US4] Add `autoUpdate: boolean` to `ArgusConfig` interface in `backend/src/models/index.ts`
-- [ ] T002 [P] [US1 US2 US3 US4] Add `autoUpdate: true` to `DEFAULTS` in `backend/src/config/config-loader.ts`
-- [ ] T003 [P] [US1 US2 US3 US4] Add `'autoUpdate'` to `ALLOWED_KEYS` set in `backend/src/api/routes/settings.ts`
+- [x] T001 [US1 US2 US3 US4] Add `autoUpdate: boolean` to `ArgusConfig` interface in `backend/src/models/index.ts`
+- [x] T002 [P] [US1 US2 US3 US4] Add `autoUpdate: true` to `DEFAULTS` in `backend/src/config/config-loader.ts`
+- [x] T003 [P] [US1 US2 US3 US4] Add `'autoUpdate'` to `ALLOWED_KEYS` set in `backend/src/api/routes/settings.ts`
 
 > **CRITICAL GATE**: T001–T003 must be complete before any Phase 2 task starts.
 
