@@ -175,31 +175,33 @@ updated_at: ${new Date().toISOString()}
     expect(session?.pidSource).toBe('lockfile');
   });
 
-  it('re-claims a new pending WS when alreadyClaimed=true, WS disconnected, and process still running (Argus restart)', async () => {
-    // Make testPid appear running so the re-link path is exercised
+  it('preserves existing PTY metadata when alreadyClaimed=true, WS disconnected, and process still running (no re-link)', async () => {
+    // A real Argus restart re-binds the launcher via promotePendingToSession in launcher.ts
+    // BEFORE scan runs, so ptyRegistry.has() is true at scan time. This test covers the
+    // distinct case where the launcher process itself died and a new launcher connected for
+    // the same repo. We must NOT silently re-bind the new launcher's WS to the existing
+    // sessionId: that new launcher just spawned a new CLI process with its own sessionId.
     mockIsPidRunning.mockReturnValueOnce(true);
     mockPsList.mockResolvedValueOnce([{ pid: testPid, name: 'copilot', ppid: 1 }]);
-    // Simulate: DB has launchMode:'pty' but in-memory WS is gone (Argus restarted)
     mockGetSession.mockReturnValueOnce({
       id: testSessionId,
       launchMode: 'pty',
-      pid: 11111,
+      pid: testPid,
       hostPid: 10000,
       pidSource: 'pty_registry' as const,
       status: 'active',
     });
     mockHas.mockReturnValueOnce(false);
-    mockClaimForSession.mockReturnValueOnce({ pid: 22222, hostPid: 20000 });
 
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
     const session = sessions.find((s) => s.id === testSessionId);
 
     expect(session?.launchMode).toBe('pty');
-    expect(session?.pid).toBe(22222);
-    expect(session?.hostPid).toBe(20000);
+    expect(session?.pid).toBe(testPid);
+    expect(session?.hostPid).toBe(10000);
     expect(session?.pidSource).toBe('pty_registry');
-    expect(mockClaimForSession).toHaveBeenCalledWith(testSessionId, testRepoCwd, 'copilot-cli');
+    expect(mockClaimForSession).not.toHaveBeenCalled();
   });
 
   it('skips ended+not-running session and does not re-claim (no re-claim)', async () => {

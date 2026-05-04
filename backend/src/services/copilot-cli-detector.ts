@@ -5,11 +5,10 @@ import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
 import { upsertSession, getRepositoryByPath, getSession, getSessions, updateSessionStatus, getServerState, setServerState } from '../db/database.js';
-import { ptyRegistry } from './pty-registry.js';
 import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
-import type { Session, Repository, PidSource } from '../models/index.js';
+import type { Session } from '../models/index.js';
 import type { CliDetector } from './cli-detector.js';
 import { BaseCliDetector } from './base-cli-detector.js';
 
@@ -198,20 +197,19 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     const toIso = (val: string | Date | undefined): string =>
       val ? (val instanceof Date ? val.toISOString() : val) : new Date().toISOString();
 
-    const { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource, resolvedPtyLaunchId } =
-      this.resolvePtyLinkage(sessionId, existingSession, repo, pid, isRunning);
+    const linkage = this.resolvePtyLinkage(sessionId, existingSession, repo.path, pid, 'lockfile', isRunning);
 
     const yoloMode = existingSession?.yoloMode != null
       ? existingSession.yoloMode
-      : isRunning ? detectYoloModeFromPids(resolvedPid, resolvedHostPid, SessionTypes.COPILOT_CLI) : null;
+      : isRunning ? detectYoloModeFromPids(linkage.pid, linkage.hostPid, SessionTypes.COPILOT_CLI) : null;
     const session: Session = {
       id: sessionId,
       repositoryId: repo.id,
       type: SessionTypes.COPILOT_CLI,
-      launchMode,
-      pid: resolvedPid,
-      hostPid: resolvedHostPid,
-      pidSource: resolvedPidSource,
+      launchMode: linkage.launchMode,
+      pid: linkage.pid,
+      hostPid: linkage.hostPid,
+      pidSource: linkage.pidSource,
       status,
       startedAt: toIso(workspace.created_at),
       endedAt: status === 'ended' ? toIso(workspace.updated_at) : null,
@@ -223,7 +221,7 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
       model: existingSession?.model ?? null,
       reconciled: true,
       yoloMode,
-      ptyLaunchId: resolvedPtyLaunchId,
+      ptyLaunchId: linkage.ptyLaunchId,
     };
 
     upsertSession(session);
@@ -233,89 +231,6 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     }
 
     return session;
-  }
-
-  /**
-   * Resolves PTY linkage for a session directory.
-   *
-   * Copilot sessions may be launched from the Argus UI (pty) or externally (null).
-   * This method determines which case applies and returns the final pid/hostPid/
-   * launchMode values by consulting the ptyRegistry.
-   *
-   * Three cases:
-   * - Already claimed (pty in DB): preserve pty metadata; correct any lockfile PID
-   *   mismatch; attempt re-link if the WebSocket disconnected and reconnected.
-   * - Registry has this sessionId (WS connected before lock file appeared): claim it.
-   * - New running session: try claimForSession() against the pending WS queue.
-   */
-  private resolvePtyLinkage(
-    sessionId: string,
-    existingSession: Session | null | undefined,
-    repo: { path: string },
-    pid: number | null,
-    isRunning: boolean,
-  ): { launchMode: 'pty' | null; resolvedPid: number | null; resolvedHostPid: number | null; resolvedPidSource: PidSource | null; resolvedPtyLaunchId: string | null } {
-    const alreadyClaimed = existingSession?.launchMode === 'pty';
-    const registryHas = ptyRegistry.has(sessionId);
-
-    let launchMode: 'pty' | null = null;
-    let resolvedPid = pid;
-    let resolvedHostPid: number | null = existingSession?.hostPid ?? null;
-    let resolvedPidSource: PidSource | null = pid != null ? 'lockfile' : null;
-    let resolvedPtyLaunchId: string | null = existingSession?.ptyLaunchId ?? null;
-
-    if (alreadyClaimed) {
-      launchMode = 'pty';
-      resolvedPid = existingSession!.pid;
-      resolvedHostPid = existingSession!.hostPid;
-      resolvedPidSource = existingSession!.pidSource;
-      // The lockfile PID is ground truth: it is written by the Copilot process itself and
-      // is always authoritative for which process owns this session. Correct any stale DB
-      // value so the row converges within one scan cycle.
-      if (pid !== null && pid !== existingSession!.pid) {
-        logger.warn(`[CopilotDetector] alreadyClaimed pid mismatch: lockfile=${pid} stored=${existingSession!.pid} sessionId=${sessionId} — correcting to lockfile pid`);
-        resolvedPid = pid;
-        resolvedPidSource = 'lockfile';
-      }
-      if (!registryHas && isRunning) {
-        logger.info(`[CopilotDetector] alreadyClaimed + WS gone + isRunning — attempting re-link sessionId=${sessionId}`);
-        const claimed = ptyRegistry.claimForSession(sessionId, repo.path, 'copilot-cli');
-        if (claimed) {
-          resolvedPid = claimed.pid;
-          resolvedHostPid = claimed.hostPid;
-          resolvedPidSource = 'pty_registry';
-          resolvedPtyLaunchId = claimed.ptyLaunchId;
-          logger.info(`[CopilotDetector] re-link OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
-        } else {
-          logger.info(`[CopilotDetector] re-link MISS — no pending WS yet for sessionId=${sessionId}`);
-        }
-      }
-    } else if (registryHas) {
-      logger.info(`[CopilotDetector] ptyRegistry already has sessionId=${sessionId} — marking pty`);
-      launchMode = 'pty';
-      resolvedPidSource = 'pty_registry';
-      resolvedPtyLaunchId = existingSession?.ptyLaunchId ?? ptyRegistry.getPtyLaunchIdForSession(sessionId) ?? null;
-      const parkedPid = ptyRegistry.getClaimedPid(sessionId);
-      if (parkedPid != null) {
-        resolvedPid = parkedPid;
-        logger.info(`[CopilotDetector] using parked resolved pid=${parkedPid} for sessionId=${sessionId}`);
-      }
-    } else if (isRunning && existingSession == null) {
-      logger.info(`[CopilotDetector] isRunning + not claimed — trying claimForSession sessionId=${sessionId} repoPath="${repo.path}"`);
-      const claimed = ptyRegistry.claimForSession(sessionId, repo.path, 'copilot-cli');
-      if (claimed) {
-        launchMode = 'pty';
-        resolvedPid = claimed.pid;
-        resolvedHostPid = claimed.hostPid;
-        resolvedPidSource = 'pty_registry';
-        resolvedPtyLaunchId = claimed.ptyLaunchId;
-        logger.info(`[CopilotDetector] claimForSession OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
-      } else {
-        logger.info(`[CopilotDetector] claimForSession MISS — no pending WS — sessionId=${sessionId} will be read-only`);
-      }
-    }
-
-    return { launchMode, resolvedPid, resolvedHostPid, resolvedPidSource, resolvedPtyLaunchId };
   }
 
   private findLockFile(dirPath: string): string | null {

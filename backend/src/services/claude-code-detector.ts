@@ -117,24 +117,9 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
 
       const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
       const repo = getRepositoryByPath(normalizedCwd);
-      if (!repo) { 
-        logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`); 
-        continue; 
-      }
-
-      // Backfill PID from registry if the session was created via hooks without a PID.
-      // Skip PTY-sourced PIDs — the PTY registry is more authoritative.
-      const existing = getSession(entry.sessionId);
-      if (existing && existing.pidSource !== 'pty_registry') {
-        const pidChanged = existing.pid !== entry.pid || existing.pidSource !== 'session_registry';
-        const yoloMode = existing.yoloMode !== null ? existing.yoloMode : detectYoloModeFromPids(entry.pid, null, 'claude-code');
-        const yoloResolved = existing.yoloMode === null && yoloMode !== null;
-        if (pidChanged || yoloResolved) {
-          logger.info(`[ClaudeDetector] pid assigned sessionId=${entry.sessionId} pid=${entry.pid} (was ${existing.pid}) yoloMode=${yoloMode}`);
-          const updated = { ...existing, pid: entry.pid, pidSource: 'session_registry' as const, yoloMode };
-          upsertSession(updated);
-          broadcast({ type: 'session.updated', timestamp: now, data: updated });
-        }
+      if (!repo) {
+        logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`);
+        continue;
       }
 
       await this.activateFoundSession(entry.sessionId, repo, entry.pid);
@@ -177,44 +162,54 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
-   * Called from the registry scan when a session is found for the first time
-   * (hook-created session without a registry file yet, or a hooks-free session).
-   * Attempts to link a PTY; fires sessionCreatedCallback.
+   * Called from the registry scan for each running session entry.
+   * Resolves PTY linkage via the shared helper, then either claims a PTY,
+   * refreshes existing session metadata, or reactivates a non-PTY session.
    */
-  private async activateFoundSession(sessionId: string, repo: Repository, claudePid: number | null): Promise<void> {
+  private async activateFoundSession(sessionId: string, repo: Repository, claudePid: number): Promise<void> {
     const now = new Date().toISOString();
     const existingSession = getSession(sessionId);
+    const linkage = this.resolvePtyLinkage(sessionId, existingSession, repo.path, claudePid, 'session_registry', true);
 
-    if (!existingSession) {
-      const claimed = ptyRegistry.claimForSession(sessionId, repo.path, 'claude-code');
-      if (claimed) {
-        logger.info(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
-        await this.createPtySession(sessionId, repo, claimed, now);
-        return;
-      }
+    if (!existingSession && linkage.freshClaim) {
+      logger.info(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${linkage.freshClaim.hostPid} pid=${linkage.freshClaim.pid}`);
+      await this.createPtySession(sessionId, repo, linkage.freshClaim, now);
+      return;
     }
 
     if (existingSession?.status === 'active') {
+      const yoloMode = existingSession.yoloMode !== null
+        ? existingSession.yoloMode
+        : detectYoloModeFromPids(linkage.pid, linkage.hostPid, 'claude-code');
+      const pidChanged = existingSession.pid !== linkage.pid || existingSession.pidSource !== linkage.pidSource;
+      const yoloResolved = existingSession.yoloMode === null && yoloMode !== null;
+      if (pidChanged || yoloResolved) {
+        logger.info(`[ClaudeDetector] pid assigned sessionId=${sessionId} pid=${linkage.pid} (was ${existingSession.pid}) yoloMode=${yoloMode}`);
+        const updated = { ...existingSession, pid: linkage.pid, pidSource: linkage.pidSource, yoloMode };
+        upsertSession(updated);
+        broadcast({ type: 'session.updated', timestamp: now, data: updated });
+      }
       await this.watchJsonlFile(sessionId, repo.path);
       return;
     }
 
-    // Don't re-activate a PTY session whose launcher has already disconnected.
-    // When the terminal closes, the WS close handler calls ptyRegistry.unregister(),
-    // so has() being false means the launcher is gone and the session should stay ended.
+    // Don't re-activate a PTY session whose launcher has already disconnected:
+    // a fresh launcher would be a new CLI process and binding it to the old
+    // sessionId would route prompts to the wrong process.
     if (existingSession?.launchMode === 'pty' && !ptyRegistry.has(sessionId)) {
       logger.info(`[ClaudeDetector] skipping re-activation — PTY launcher gone sessionId=${sessionId}`);
       return;
     }
+
     this.jsonlWatcher.closeWatcher(sessionId);
     const base: Session = existingSession ?? {
       id: sessionId,
       repositoryId: repo.id,
       type: 'claude-code',
-      launchMode: null,
-      pid: claudePid,
-      hostPid: null,
-      pidSource: claudePid !== null ? 'session_registry' as const : null,
+      launchMode: linkage.launchMode,
+      pid: linkage.pid,
+      hostPid: linkage.hostPid,
+      pidSource: linkage.pidSource,
       status: 'active',
       startedAt: now,
       endedAt: null,
@@ -223,11 +218,12 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
       expiresAt: null,
       model: null,
       reconciled: true,
-      yoloMode: claudePid ? detectYoloModeFromPids(claudePid, null, 'claude-code') : null,
+      yoloMode: linkage.pid ? detectYoloModeFromPids(linkage.pid, linkage.hostPid, 'claude-code') : null,
+      ptyLaunchId: linkage.ptyLaunchId,
     };
     const isNewSession = !existingSession;
-    const activated = { ...base, status: 'active' as const, endedAt: null as null, lastActivityAt: now, pid: claudePid };
-    logger.info(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
+    const activated = { ...base, status: 'active' as const, endedAt: null as null, lastActivityAt: now, pid: linkage.pid };
+    logger.info(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${linkage.pid}`);
     upsertSession(activated);
     if (isNewSession) {
       this.sigCache.set(activated.id, this.sessionSignature(activated));

@@ -1,4 +1,4 @@
-import type { Session, PendingChoice, SessionType, Repository } from '../models/index.js';
+import type { Session, PendingChoice, SessionType, Repository, PidSource } from '../models/index.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
 import { updateSessionStatus, upsertSession, getRepositoryByPath, getSession } from '../db/database.js';
@@ -42,6 +42,98 @@ export abstract class BaseCliDetector {
 
   /** One-time startup lifecycle hook. Both detectors rely on the first runScan(true) for initialization. */
   async start(): Promise<void> {}
+
+  /**
+   * Determines the PTY linkage state for a session this scan cycle.
+   *
+   * Branches:
+   * - alreadyClaimed (existing.launchMode='pty'): preserve PTY metadata. Apply
+   *   disk-wins PID correction when the on-disk PID disagrees with the stored value.
+   *   Never re-link a new launcher to a PTY whose original WS has dropped: a fresh
+   *   launcher is a fresh CLI process and binding it to the old sessionId would
+   *   route prompts to the wrong process.
+   * - registryHas: ptyRegistry already knows this sessionId but the DB has not yet
+   *   recorded launchMode='pty'. Mark as PTY using the parked pid + ptyLaunchId.
+   * - fresh claim: brand-new running session with no DB row, attempt claimForSession
+   *   against the pending launcher queue.
+   * - default: not PTY. PID comes from disk with the detector-supplied pidSource.
+   */
+  protected resolvePtyLinkage(
+    sessionId: string,
+    existingSession: Session | null | undefined,
+    repoPath: string,
+    diskPid: number | null,
+    defaultPidSource: PidSource,
+    isRunning: boolean,
+  ): {
+    launchMode: 'pty' | null;
+    pid: number | null;
+    hostPid: number | null;
+    pidSource: PidSource | null;
+    ptyLaunchId: string | null;
+    freshClaim: { pid: number | null; hostPid: number; ptyLaunchId: string } | null;
+  } {
+    const alreadyClaimed = existingSession?.launchMode === 'pty';
+    const registryHas = ptyRegistry.has(sessionId);
+
+    if (alreadyClaimed) {
+      let pid = existingSession!.pid;
+      let pidSource = existingSession!.pidSource;
+      if (diskPid !== null && diskPid !== existingSession!.pid) {
+        logger.warn(`${this.logTag} alreadyClaimed pid mismatch: disk=${diskPid} stored=${existingSession!.pid} sessionId=${sessionId} — correcting to disk pid`);
+        pid = diskPid;
+        pidSource = defaultPidSource;
+      }
+      if (!registryHas && isRunning) {
+        logger.info(`${this.logTag} alreadyClaimed + WS gone — keeping existing PTY metadata, not re-linking sessionId=${sessionId}`);
+      }
+      return {
+        launchMode: 'pty',
+        pid,
+        hostPid: existingSession!.hostPid,
+        pidSource,
+        ptyLaunchId: existingSession!.ptyLaunchId ?? null,
+        freshClaim: null,
+      };
+    }
+
+    if (registryHas) {
+      logger.info(`${this.logTag} ptyRegistry already has sessionId=${sessionId} — marking pty`);
+      const parkedPid = ptyRegistry.getClaimedPid(sessionId);
+      return {
+        launchMode: 'pty',
+        pid: parkedPid ?? diskPid,
+        hostPid: existingSession?.hostPid ?? null,
+        pidSource: 'pty_registry',
+        ptyLaunchId: existingSession?.ptyLaunchId ?? ptyRegistry.getPtyLaunchIdForSession(sessionId) ?? null,
+        freshClaim: null,
+      };
+    }
+
+    if (isRunning && !existingSession) {
+      const claimed = ptyRegistry.claimForSession(sessionId, repoPath, this.toolTypeId);
+      if (claimed) {
+        logger.info(`${this.logTag} claimForSession OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
+        return {
+          launchMode: 'pty',
+          pid: claimed.pid,
+          hostPid: claimed.hostPid,
+          pidSource: 'pty_registry',
+          ptyLaunchId: claimed.ptyLaunchId,
+          freshClaim: claimed,
+        };
+      }
+    }
+
+    return {
+      launchMode: null,
+      pid: diskPid,
+      hostPid: null,
+      pidSource: diskPid != null ? defaultPidSource : null,
+      ptyLaunchId: null,
+      freshClaim: null,
+    };
+  }
 
   /**
    * Seeds tracking state with sessions that survived from a previous run.
