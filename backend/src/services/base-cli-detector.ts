@@ -153,11 +153,11 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     const entries = await this.readSessionEntries(force);
     const sessions: Session[] = [];
     for (const entry of entries) {
-      const t0 = Date.now();
+      const entryStart = Date.now();
       const session = await this.processSessionEntry(entry);
-      const ms = Date.now() - t0;
-      if (ms > 50) {
-        logger.info(`${this.logTag} slow entry (${ms}ms): sessionId=${entry.sessionId}`);
+      const entryMs = Date.now() - entryStart;
+      if (entryMs > 50) {
+        logger.info(`${this.logTag} slow processSessionEntry (${entryMs}ms): sessionType=${this.toolTypeId} sessionId=${entry.sessionId} pid=${entry.pid}`);
       }
       if (session !== null) sessions.push(session);
     }
