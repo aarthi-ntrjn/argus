@@ -9,10 +9,7 @@ import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
-import type { Session, Repository, PendingChoice } from '../models/index.js';
-import { pendingChoiceEvents } from './pending-choice-events.js';
-import { parsePendingChoicePayload } from './pending-choice-utils.js';
-import { telemetryService } from './telemetry-service.js';
+import type { Session, Repository } from '../models/index.js';
 import type { CliDetector, CliHookPayload } from './cli-detector.js';
 import { BaseCliDetector } from './base-cli-detector.js';
 
@@ -278,35 +275,6 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     await this.jsonlWatcher.watchFile(session_id, repo.path);
   }
 
-  private handleSessionEnd(existing: Session | null | undefined, sessionId: string, now: string): void {
-    if (!existing) return;
-    updateSessionStatus(sessionId, 'ended', now);
-    this.jsonlWatcher.closeWatcher(sessionId);
-    const ended = { ...existing, status: 'ended' as const, endedAt: now };
-    broadcast({ type: 'session.ended', timestamp: now, data: ended });
-    telemetryService.sendEvent('session_ended', {
-      sessionType: existing.type,
-      sessionId: existing.id,
-      launchMode: existing.launchMode === 'pty' ? 'connected' : 'readonly',
-      yoloMode: existing.yoloMode,
-    });
-  }
-
-  private handlePreAskQuestion(sessionId: string, existing: Session | null | undefined, payload: CliHookPayload, now: string): void {
-    if (!existing) return;
-    const { question, choices, allQuestions } = parsePendingChoicePayload(payload.tool_input ?? {});
-    this.pendingChoices.set(sessionId, { question, choices, allQuestions });
-    broadcast({ type: 'session.pending_choice', timestamp: now, data: { sessionId, question, choices, allQuestions } });
-    pendingChoiceEvents.emit('session.pending_choice', { sessionId, question, choices, allQuestions });
-  }
-
-  private handlePostAskQuestion(sessionId: string, existing: Session | null | undefined, now: string): void {
-    if (!existing) return;
-    this.pendingChoices.delete(sessionId);
-    broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
-    pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
-  }
-
   /**
    * Creates a new session linked to a PTY launcher (terminal tab in Argus UI).
    * Called when a PTY claim succeeds — either from a hook event or from
@@ -437,6 +405,10 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
   }
 
   closeSessionWatcher(sessionId: string): void {
+    this.jsonlWatcher.closeWatcher(sessionId);
+  }
+
+  protected closeJsonlWatcher(sessionId: string): void {
     this.jsonlWatcher.closeWatcher(sessionId);
   }
 

@@ -6,14 +6,11 @@ import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
 import { upsertSession, getRepositoryByPath, getSession, getSessions, updateSessionStatus, getServerState, setServerState } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
-import { telemetryService } from './telemetry-service.js';
 import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
-import type { Session, Repository, PidSource, PendingChoice } from '../models/index.js';
+import type { Session, Repository, PidSource } from '../models/index.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
-import { pendingChoiceEvents } from './pending-choice-events.js';
-import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import type { CliDetector, CliHookPayload } from './cli-detector.js';
 import { BaseCliDetector } from './base-cli-detector.js';
 
@@ -507,36 +504,12 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     await this.upsertAndBroadcastSession(session_id, repo, existing, now);
   }
 
-  private handleSessionEnd(existing: Session | null | undefined, sessionId: string, now: string): void {
-    if (!existing) return;
-    updateSessionStatus(sessionId, 'ended', now);
+  protected closeJsonlWatcher(sessionId: string): void {
     this.jsonlWatcher.closeWatcher(sessionId);
-    const ended = { ...existing, status: 'ended' as const, endedAt: now };
+  }
+
+  protected onSessionEndedCleanup(sessionId: string): void {
     this.activeMap.delete(sessionId);
-    this.sigCache.delete(sessionId);
-    broadcast({ type: 'session.ended', timestamp: now, data: ended });
-    this.pendingChoices.delete(sessionId);
-    telemetryService.sendEvent('session_ended', {
-      sessionType: existing.type,
-      sessionId: existing.id,
-      launchMode: existing.launchMode === 'pty' ? 'connected' : 'readonly',
-      yoloMode: existing.yoloMode,
-    });
-  }
-
-  private handlePreAskQuestion(sessionId: string, existing: Session | null | undefined, payload: CliHookPayload, now: string): void {
-    if (!existing) return;
-    const { question, choices, allQuestions } = parsePendingChoicePayload(payload.tool_input ?? {});
-    this.pendingChoices.set(sessionId, { question, choices, allQuestions });
-    broadcast({ type: 'session.pending_choice', timestamp: now, data: { sessionId, question, choices, allQuestions } });
-    pendingChoiceEvents.emit('session.pending_choice', { sessionId, question, choices, allQuestions });
-  }
-
-  private handlePostAskQuestion(sessionId: string, existing: Session | null | undefined, now: string): void {
-    if (!existing) return;
-    this.pendingChoices.delete(sessionId);
-    broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
-    pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
   }
 
   /**
