@@ -1,15 +1,24 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
 
+let savedDbPath: string | undefined;
+
 // Use an in-memory DB for each test by overriding ARGUS_DB_PATH
 beforeEach(() => {
+  savedDbPath = process.env.ARGUS_DB_PATH;
   process.env.ARGUS_DB_PATH = ':memory:';
 });
 
 afterEach(async () => {
   const { closeDb } = await import('../../src/db/database.js');
   closeDb();
-  delete process.env.ARGUS_DB_PATH;
+  // Restore rather than delete: deleting leaves the env unset, which causes
+  // re-imports of database.ts in later tests to fall back to ~/.argus/argus.db.
+  if (savedDbPath !== undefined) {
+    process.env.ARGUS_DB_PATH = savedDbPath;
+  } else {
+    delete process.env.ARGUS_DB_PATH;
+  }
 });
 
 describe('repository path normalization', () => {
