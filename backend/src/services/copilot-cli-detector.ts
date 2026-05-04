@@ -11,7 +11,7 @@ import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './proce
 import { SessionTypes } from '../models/index.js';
 import type { Session, Repository, PidSource } from '../models/index.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
-import type { CliDetector, CliHookPayload } from './cli-detector.js';
+import type { CliDetector } from './cli-detector.js';
 import { BaseCliDetector } from './base-cli-detector.js';
 
 /**
@@ -69,6 +69,10 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   // Session tracking maps — seeded on startup and updated by hooks and scan().
   private readonly knownIds = new Set<string>();
   private readonly activeMap = new Map<string, Session>();
+
+  protected readonly logTag = '[CopilotDetector]';
+  protected readonly askUserToolName = 'ask_user';
+  protected readonly toolTypeId = 'copilot-cli' as const;
 
   constructor(sessionsDir: string = DEFAULT_SESSIONS_DIR) {
     super();
@@ -457,53 +461,6 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     }
   }
 
-  /**
-   * Primary real-time update path. Called for every hook event Copilot fires.
-   *
-   * Routes by event name:
-   * - SessionEnd: mark ended, close JSONL watcher, clean up tracking state, broadcast directly.
-   * - PreToolUse / PostToolUse (ask_user): manage pending-choice state, broadcast directly.
-   * - SessionStart or other events: create or update the DB session.
-   *   If a PTY claim succeeds, creates a pty-mode session immediately.
-   *   Otherwise, falls back to a read-only session (no pid/launchMode).
-   *   New sessions: fire sessionCreatedCallback (seeds knownIds/sigCache/activeMap so the next
-   *   scan cycle does not re-fire the event). Existing sessions: broadcast session.updated
-   *   directly, matching ClaudeCodeDetector's hook-update path.
-   */
-  async handleHookPayload(payload: CliHookPayload): Promise<void> {
-    const { hook_event_name, session_id, cwd } = payload;
-    if (!session_id) return;
-
-    const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
-    const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
-    if (!repo) {
-      logger.warn(`[CopilotDetector] no repo for cwd="${normalizedCwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`);
-      return;
-    }
-
-    const existing = getSession(session_id);
-    const now = new Date().toISOString();
-
-    if (hook_event_name === 'SessionEnd') {
-      return this.handleSessionEnd(existing, session_id, now);
-    }
-    if (hook_event_name === 'PreToolUse' && payload.tool_name === 'ask_user') {
-      return this.handlePreAskQuestion(session_id, existing, payload, now);
-    }
-    if (hook_event_name === 'PostToolUse' && payload.tool_name === 'ask_user') {
-      return this.handlePostAskQuestion(session_id, existing, now);
-    }
-
-    if (!existing) {
-      const claimed = normalizedCwd ? ptyRegistry.claimForSession(session_id, normalizedCwd, 'copilot-cli') : null;
-      if (claimed) {
-        return this.createPtySession(session_id, repo, claimed, now);
-      }
-    }
-
-    await this.upsertAndBroadcastSession(session_id, repo, existing, now);
-  }
-
   protected closeJsonlWatcher(sessionId: string): void {
     this.jsonlWatcher.closeWatcher(sessionId);
   }
@@ -516,7 +473,7 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
    * Creates a new session linked to a PTY launcher (terminal tab in Argus UI).
    * Called when a PTY claim succeeds from a hook event.
    */
-  private async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
+  protected async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
     const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'copilot-cli');
     const session: Session = {
       id: sessionId,
@@ -550,7 +507,7 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
    * On first event: fires sessionCreatedCallback (seeds knownIds/sigCache/activeMap).
    * On subsequent events: broadcasts session.updated directly.
    */
-  private async upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<void> {
+  protected async upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<void> {
     const session: Session = existing ?? {
       id: sessionId,
       repositoryId: repo.id,

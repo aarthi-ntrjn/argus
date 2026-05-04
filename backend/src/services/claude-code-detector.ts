@@ -10,7 +10,7 @@ import { broadcast } from '../api/ws/event-dispatcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
 import type { Session, Repository } from '../models/index.js';
-import type { CliDetector, CliHookPayload } from './cli-detector.js';
+import type { CliDetector } from './cli-detector.js';
 import { BaseCliDetector } from './base-cli-detector.js';
 
 
@@ -61,6 +61,10 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
   private readonly jsonlWatcher = new ClaudeJsonlWatcher();
   private readonly sessionsDir: string;
   private previousRegistryPids = new Set<number>();
+
+  protected readonly logTag = '[ClaudeDetector]';
+  protected readonly askUserToolName = 'AskUserQuestion';
+  protected readonly toolTypeId = 'claude-code' as const;
 
   constructor(sessionsDir: string = DEFAULT_SESSIONS_DIR) {
     super();
@@ -234,53 +238,11 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
-   * Primary real-time update path. Called for every hook event Claude fires.
-   *
-   * Routes by event name:
-   * - SessionEnd: mark ended, close JSONL watcher, fire sessionEndedCallback.
-   * - PreToolUse / PostToolUse (AskUserQuestion): manage pending-choice state.
-   * - All others (SessionStart, tool calls): upsert session in DB, fire
-   *   sessionCreatedCallback on first event or broadcast session.updated on
-   *   subsequent events. Starts JSONL watcher for output streaming.
-   */
-  async handleHookPayload(payload: CliHookPayload): Promise<void> {
-    const { hook_event_name, session_id, cwd } = payload;
-    if (!session_id) return;
-
-    const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
-    const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
-    if (!repo) { logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`); return; }
-
-    const existing = getSession(session_id);
-    const now = new Date().toISOString();
-
-    if (hook_event_name === 'SessionEnd') {
-      return this.handleSessionEnd(existing, session_id, now);
-    }
-    if (hook_event_name === 'PreToolUse' && payload.tool_name === 'AskUserQuestion') {
-      return this.handlePreAskQuestion(session_id, existing, payload, now);
-    }
-    if (hook_event_name === 'PostToolUse' && payload.tool_name === 'AskUserQuestion') {
-      return this.handlePostAskQuestion(session_id, existing, now);
-    }
-
-    if (!existing) {
-      const claimed = normalizedCwd ? ptyRegistry.claimForSession(session_id, normalizedCwd, 'claude-code') : null;
-      if (claimed) {
-        return this.createPtySession(session_id, repo, claimed, now);
-      }
-    }
-
-    this.upsertAndBroadcastSession(session_id, repo, existing, now);
-    await this.jsonlWatcher.watchFile(session_id, repo.path);
-  }
-
-  /**
    * Creates a new session linked to a PTY launcher (terminal tab in Argus UI).
    * Called when a PTY claim succeeds — either from a hook event or from
    * activateFoundSession() when the registry scan finds the session first.
    */
-  private async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
+  protected async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
     const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'claude-code');
     const session: Session = {
       id: sessionId,
@@ -314,7 +276,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
    * the authoritative update source — reconcileActiveSessions handles dedup
    * for poll-sourced updates, not hook-sourced ones).
    */
-  private upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): void {
+  protected async upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<void> {
     const session: Session = existing ?? {
       id: sessionId,
       repositoryId: repo.id,
@@ -333,15 +295,15 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
       reconciled: true,
       yoloMode: null,
     };
-    session.status = 'active';
-    session.lastActivityAt = now;
-    upsertSession(session);
+    const updated = { ...session, status: 'active' as const, lastActivityAt: now };
+    upsertSession(updated);
     if (existing) {
-      broadcast({ type: 'session.updated', timestamp: now, data: session });
+      broadcast({ type: 'session.updated', timestamp: now, data: updated });
     } else {
-      this.sigCache.set(session.id, this.sessionSignature(session));
-      this.sessionCreatedCallback?.(session);
+      this.sigCache.set(updated.id, this.sessionSignature(updated));
+      this.sessionCreatedCallback?.(updated);
     }
+    await this.jsonlWatcher.watchFile(sessionId, repo.path);
   }
 
   /**
