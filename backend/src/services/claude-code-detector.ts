@@ -86,16 +86,6 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
-   * Loads session state from disk so getSessionPidMap() is ready for reconciliation.
-   * Does NOT scan or fire any session events — the first runScan(true) handles that.
-   */
-  async start(): Promise<void> {
-    for (const { sessionId, pid } of this.scanSessionFiles()) {
-      this.pidMap.set(sessionId, pid);
-    }
-  }
-
-  /**
    * Per-cycle scan.Two responsibilities:
    *
    * 1. Registry sweep: read ~/.claude/sessions/*.json, backfill PIDs for hook-created
@@ -127,7 +117,10 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
 
       const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
       const repo = getRepositoryByPath(normalizedCwd);
-      if (!repo) { logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`); continue; }
+      if (!repo) { 
+        logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`); 
+        continue; 
+      }
 
       // Backfill PID from registry if the session was created via hooks without a PID.
       // Skip PTY-sourced PIDs — the PTY registry is more authoritative.
@@ -256,7 +249,10 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
    */
   private reconcileActiveSessions(): void {
     try {
-      const liveSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
+      const liveSessions = [
+        ...getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE }),
+        ...getSessions({ status: 'idle', type: SessionTypes.CLAUDE_CODE }),
+      ];
       if (liveSessions.length === 0) return;
 
       const repos = getRepositories();

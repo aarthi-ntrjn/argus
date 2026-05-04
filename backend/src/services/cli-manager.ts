@@ -80,19 +80,6 @@ export class CliManager {
     await this.copilotDetector.scan(force);
   }
 
-  // --- Startup reconciliation data ---
-
-  /**
-   * Returns a merged sessionId-to-PID map from both detectors, used at startup
-   * to reconcile stale sessions.
-   */
-  getSessionPidMap(): Map<string, number> {
-    const result = new Map<string, number>();
-    for (const [id, pid] of this.claudeDetector.getSessionPidMap()) result.set(id, pid);
-    for (const [id, pid] of this.copilotDetector.getSessionPidMap()) result.set(id, pid);
-    return result;
-  }
-
   // --- Hook payload routing ---
 
   /** Dispatches an incoming Claude hook payload to the Claude detector. */

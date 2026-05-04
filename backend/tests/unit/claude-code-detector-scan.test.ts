@@ -314,6 +314,68 @@ describe('ClaudeCodeDetector.scan', () => {
     const fakeSession = allSessions.find(s => s.id.startsWith('claude-startup-'));
     expect(fakeSession).toBeUndefined();
   });
+
+  // T006: reconcileActiveSessions ends a session when its PID dies.
+  it('T006: active session with dead PID is ended by reconcileActiveSessions during scan', async () => {
+    const sessionId = `t006-${randomUUID()}`;
+    const now = new Date().toISOString();
+    fakeRegistryEntries = {};
+    fakeJsonlFiles = [];
+    mockIsPidRunningResult = false;
+
+    dbModule.upsertSession({
+      id: sessionId,
+      repositoryId: 'repo-scan-test',
+      type: 'claude-code',
+      launchMode: null,
+      pid: 22222,
+      pidSource: 'session_registry' as const,
+      status: 'active',
+      startedAt: now,
+      endedAt: null,
+      lastActivityAt: now,
+      summary: null,
+      expiresAt: null,
+      model: null,
+    });
+
+    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    await new ClaudeCodeDetector().scan();
+
+    const session = dbModule.getSession(sessionId);
+    expect(session?.status).toBe('ended');
+  });
+
+  // T011: reconcileActiveSessions also handles idle sessions (process died while waiting for input).
+  it('T011: idle session with dead PID is ended by reconcileActiveSessions during scan', async () => {
+    const sessionId = `t011-${randomUUID()}`;
+    const now = new Date().toISOString();
+    fakeRegistryEntries = {};
+    fakeJsonlFiles = [];
+    mockIsPidRunningResult = false;
+
+    dbModule.upsertSession({
+      id: sessionId,
+      repositoryId: 'repo-scan-test',
+      type: 'claude-code',
+      launchMode: null,
+      pid: 66666,
+      pidSource: 'session_registry' as const,
+      status: 'idle',
+      startedAt: now,
+      endedAt: null,
+      lastActivityAt: now,
+      summary: null,
+      expiresAt: null,
+      model: null,
+    });
+
+    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    await new ClaudeCodeDetector().scan();
+
+    const session = dbModule.getSession(sessionId);
+    expect(session?.status).toBe('ended');
+  });
 });
 
 describe('ClaudeCodeDetector.handleHookPayload — Stop hook', () => {

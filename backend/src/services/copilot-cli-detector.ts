@@ -78,23 +78,6 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
-   * Loads session state from disk so getSessionPidMap() is ready for reconciliation
-   * and activeDirPaths is seeded for the first scan cycle.
-   * Does NOT scan or fire any session events — the first runScan(true) handles that.
-   */
-  async start(): Promise<void> {
-    const activeCopilotIds = new Set(
-      getSessions({ status: 'active', type: SessionTypes.COPILOT_CLI }).map(s => s.id)
-    );
-    for (const { dirPath, workspace, pid } of this.readAllDirEntries()) {
-      if (workspace.id) {
-        if (pid != null) this.pidMap.set(workspace.id, pid);
-        if (activeCopilotIds.has(workspace.id)) this.activeDirPaths.add(dirPath);
-      }
-    }
-  }
-
-  /**
    * Per-cycle scan. Two responsibilities:
    *
    * 1. Directory sweep: walk sessionsDir for new or changed directories.
@@ -360,21 +343,6 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     } catch { return null; }
   }
 
-  // Iterates all session subdirectories, returning parsed workspace + pid for each valid entry.
-  private readAllDirEntries(): Array<{ dirPath: string; workspace: WorkspaceYaml; pid: number | null }> {
-    if (!existsSync(this.sessionsDir)) return [];
-    const result: Array<{ dirPath: string; workspace: WorkspaceYaml; pid: number | null }> = [];
-    try {
-      for (const entry of readdirSync(this.sessionsDir, { withFileTypes: true })) {
-        if (!entry.isDirectory()) continue;
-        const dirPath = join(this.sessionsDir, entry.name);
-        const data = this.readDirEntry(dirPath);
-        if (data?.workspace.id) result.push({ dirPath, ...data });
-      }
-    } catch { /* ignore */ }
-    return result;
-  }
-
   /**
    * Diff-based event dispatch. Called after every scan() with the full set of
    * sessions found in that cycle.
@@ -392,7 +360,7 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
 
     // Detect sessions that dropped off the scan (workspace dir cleaned up by the OS).
     // Query DB directly — no need for a separate in-memory map.
-    const dbActiveSessions = getSessions().filter(s => s.type === 'copilot-cli' && s.status === 'active');
+    const dbActiveSessions = getSessions().filter(s => s.type === 'copilot-cli' && (s.status === 'active' || s.status === 'idle'));
     for (const session of dbActiveSessions) {
       if (!currentIds.has(session.id)) {
         updateSessionStatus(session.id, 'ended', now);

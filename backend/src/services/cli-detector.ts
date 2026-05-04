@@ -23,9 +23,8 @@ export interface CliHookPayload {
  */
 export interface CliDetector {
   /**
-   * One-time startup: initialize internal state before the scan loop begins.
-   * Must be called before the first scan(). Must NOT trigger a scan itself —
-   * the first runScan() cycle is the uniform entry point for both detectors.
+   * One-time startup lifecycle hook. Called before the first scan() cycle begins.
+   * Both detectors rely on the first runScan(true) for initialization.
    */
   start(): Promise<void>;
 
@@ -47,15 +46,8 @@ export interface CliDetector {
    */
   handleHookPayload(payload: CliHookPayload): Promise<void>;
 
-  /**
-   * Close the per-session output watcher for a session that has ended.
+  /** Close the per-session output watcher for a session that has ended.
    * No-op for detectors that manage watchers internally (e.g. CopilotCliDetector).
    */
   closeSessionWatcher(sessionId: string): void;
-
-  /**
-   * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
-   * Called once during start() before the first scan cycle.
-   */
-  getSessionPidMap(): Map<string, number>;
 }

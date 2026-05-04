@@ -1,15 +1,11 @@
 import { EventEmitter } from 'events';
-import psList from 'ps-list';
 import { RepositoryScanner } from './repository-scanner.js';
 import { CliManager } from './cli-manager.js';
 import { loadConfig } from '../config/config-loader.js';
-import { getSessions, getSession, getRepository, updateSessionStatus, getRepositories, updateRepositoryBranch } from '../db/database.js';
+import { getSessions, getRepository, getRepositories, updateRepositoryBranch } from '../db/database.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { getCurrentBranch } from './repository-scanner.js';
 import * as logger from '../utils/logger.js';
-import { isPidRunning } from './process-utils.js';
-import { isAiToolProcess } from './pid-validator.js';
-import { SessionTypes } from '../models/index.js';
 import type { Session, Repository } from '../models/index.js';
 
 export interface SessionMonitorEvents {
@@ -48,106 +44,21 @@ export class SessionMonitor extends EventEmitter {
   }
 
   async start(): Promise<void> {
-    // Load state from disk into both detectors (pidMap, activeDirPaths) without firing events.
     await this.cliManager.start();
-
-    await this.reconcileStaleSessions();
 
     const activeSessions = getSessions({ status: 'active' });
 
-    // Emit session.created for sessions already active in the DB from a previous run.
-    // reconcileStaleSessions() has already ended any dead ones, so what remains is live.
+    // Notify subscribers of sessions that were already active from a previous run.
     for (const session of activeSessions) {
       this.emit('session.created', session);
     }
 
-    // Seed both detectors' tracking state so the first scan doesn't fire duplicate or
-    // spurious events for sessions that survived from the previous run.
+    // Seed detectors so the first scan doesn't re-fire session.created for existing sessions.
     this.cliManager.seedState(activeSessions);
 
-    // Forced first scan: picks up sessions started while the server was down,
-    // bypassing Copilot's mtime filter. Both detectors scan consistently.
+    // Force scan: cleans up dead sessions, finds new ones started while server was down.
     await this.runScan(true);
     this.scanInterval = setInterval(() => this.runScan(), 5000);
-  }
-
-  /**
-   * Three-way reconciliation of active DB sessions on startup.
-   *
-   * Data sources:
-   *   1. DB sessions with status active/idle
-   *   2. Process registry (source of truth for PIDs, differs by session type):
-   *      - claude-code: ~/.claude/sessions/*.json (ClaudeSessionRegistry)
-   *      - copilot-cli: inuse.<PID>.lock files in ~/.copilot/session-state/<dir>/
-   *   3. Running OS processes (psList) as the liveness check
-   *
-   * Reconciliation matrix (applied per session using its type-specific registry):
-   *   Registry entry exists + PID running     → keep active, reconciled
-   *   Registry entry exists + PID NOT running → mark ended, unreconciled (WARNING)
-   *   No registry entry + PID running in OS   → mark active, unreconciled (ERROR)
-   *   No registry entry + PID NOT running     → mark ended, reconciled
-   */
-  private async reconcileStaleSessions(): Promise<void> {
-    try {
-      const sessions = [
-        ...getSessions({ status: 'active' }),
-        ...getSessions({ status: 'idle' }),
-      ];
-      if (sessions.length === 0) return;
-
-      // Source 2: Merged session registry (session ID → PID) from both detectors.
-      // Claude: JSON session registry files. Copilot: inuse.<PID>.lock files.
-      const registryEntries = this.cliManager.getSessionPidMap();
-
-      // Source 3: Running OS processes (filtered to AI tools only to avoid PID reuse false-positives).
-      // On Linux/Mac the copilot binary is often a Node.js script: ps-list name is "node" but
-      // the cmd (full command line) contains the copilot path. Check both.
-      const processes = await psList();
-      const runningPids = new Set(
-        processes
-          .filter((p) => {
-            if (isAiToolProcess(p.name, SessionTypes.CLAUDE_CODE) || isAiToolProcess(p.name, SessionTypes.COPILOT_CLI)) return true;
-            const cmd = (p.cmd ?? '').toLowerCase();
-            return /[/\\]copilot(\s|$)/.test(cmd) || cmd.includes('claude');
-          })
-          .map((p) => p.pid)
-      );
-
-      const now = new Date().toISOString();
-
-      for (const session of sessions) {
-        const registryPid = registryEntries.get(session.id) ?? null;
-
-        const registryLabel = session.type === SessionTypes.CLAUDE_CODE
-          ? 'Claude session registry'
-          : 'Copilot lock file';
-
-        if (registryPid != null) {
-          // Registry has an entry for this session
-          if (runningPids.has(registryPid)) {
-            // Registry PID is alive: session is genuinely active, reconciled
-            updateSessionStatus(session.id, 'active', null, true);
-          } else {
-            // Registry says this PID should be running, but OS says it's dead
-            logger.warn(
-              `[reconcile] WARNING: ${session.type} session ${session.id} has ${registryLabel} entry with PID ${registryPid}, but process is not running. Marking ended (unreconciled).`
-            );
-            updateSessionStatus(session.id, 'ended', now, false);
-          }
-        } else if (session.pid != null && runningPids.has(session.pid)) {
-          // No registry entry, but the DB PID is still a live OS process
-          logger.error(
-            `[reconcile] ERROR: ${session.type} session ${session.id} has no ${registryLabel} entry, but PID ${session.pid} is still running. Marking active (unreconciled).`
-          );
-          updateSessionStatus(session.id, 'active', null, false);
-        } else {
-          // No registry entry and no live process: cleanly ended
-          updateSessionStatus(session.id, 'ended', now, true);
-        }
-      }
-    } catch (err) {
-      logger.error('[reconcile] Failed to reconcile stale sessions:', err);
-    }
   }
 
   triggerScan(force = false): void {

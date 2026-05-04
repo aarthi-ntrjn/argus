@@ -25,8 +25,6 @@ import type { CliHookPayload } from './cli-detector.js';
 export abstract class BaseCliDetector {
   // Dedup map: last-emitted signature per session, used to avoid redundant callbacks.
   protected readonly sigCache = new Map<string, string>();
-  // Populated by start() so getSessionPidMap() can serve reconcileStaleSessions without re-reading disk.
-  protected readonly pidMap = new Map<string, number>();
   protected readonly pendingChoices = new Map<string, PendingChoice>();
   protected sessionCreatedCallback?: (session: Session) => void;
   protected sessionUpdatedCallback?: (session: Session) => void;
@@ -36,17 +34,14 @@ export abstract class BaseCliDetector {
   protected abstract closeJsonlWatcher(sessionId: string): void;
   /** Start watching the JSONL output file for the given session. */
   protected abstract watchJsonlFile(sessionId: string, repoPath: string): Promise<void>;
-  /**
-   * Returns the sessionId-to-PID map populated by start() for startup reconciliation.
-   */
-  getSessionPidMap(): Map<string, number> {
-    return new Map(this.pidMap);
-  }
   protected abstract readonly logTag: string;
   /** Hook tool name used for AskUser events, e.g. 'AskUserQuestion' or 'ask_user'. */
   protected abstract readonly askUserToolName: string;
   /** Session type identifier used for PTY registry and session rows. */
   protected abstract readonly toolTypeId: SessionType;
+
+  /** One-time startup lifecycle hook. Both detectors rely on the first runScan(true) for initialization. */
+  async start(): Promise<void> {}
 
   /**
    * Seeds tracking state with sessions that survived from a previous run.
