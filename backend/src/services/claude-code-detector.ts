@@ -7,7 +7,7 @@ import { ptyRegistry } from './pty-registry.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
-import type { Session, Repository } from '../models/index.js';
+import type { Session } from '../models/index.js';
 import type { CliDetector } from './cli-detector.js';
 import { BaseCliDetector, type SessionEntry } from './base-cli-detector.js';
 
@@ -99,10 +99,11 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
   }
 
   /**
-   * Per-entry pipeline: liveness + identity guards, repo lookup, then activate.
-   * Records the entry's pid in currentAlivePids before the repo check so a
-   * removed-repo session still counts as "alive this cycle" for disappearance
-   * detection.
+   * Per-entry bookkeeping wrapper. Applies liveness + identity guards (skip if
+   * the pid is dead or PID-reused) and records the entry's pid in
+   * currentAlivePids before delegating to buildSessionFromEntry. Pids are tracked
+   * before the repo check inside buildSessionFromEntry so a removed-repo session
+   * still counts as "alive this cycle" for disappearance detection.
    */
   protected async processSessionEntry(entry: ClaudeSessionEntry): Promise<Session | null> {
     if (!isPidRunning(entry.pid)) return null;
@@ -111,7 +112,17 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
       return null;
     }
     this.currentAlivePids.add(entry.pid);
+    return this.buildSessionFromEntry(entry);
+  }
 
+  /**
+   * Builds the Session row from one entry. Looks up the repo, resolves PTY
+   * linkage, and decides between fresh-claim, refresh-active, skip-pty-gone,
+   * and reactivate paths. Upserts the DB row and watches the JSONL output.
+   * Returns the persisted Session; never fires callbacks (dispatchSessionEvents
+   * handles created/updated firing).
+   */
+  private async buildSessionFromEntry(entry: ClaudeSessionEntry): Promise<Session | null> {
     const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
     const repo = getRepositoryByPath(normalizedCwd);
     if (!repo) {
@@ -119,23 +130,13 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
       return null;
     }
 
-    return this.activateFoundSession(entry.sessionId, repo, entry.pid);
-  }
-
-  /**
-   * Resolves PTY linkage and decides between fresh-claim, refresh-active,
-   * skip-pty-gone, and reactivate paths. Upserts the DB row and watches the
-   * JSONL output. Returns the persisted Session; never fires callbacks
-   * (dispatchSessionEvents handles created/updated firing).
-   */
-  private async activateFoundSession(sessionId: string, repo: Repository, claudePid: number): Promise<Session | null> {
     const now = new Date().toISOString();
-    const existingSession = getSession(sessionId);
-    const linkage = this.resolvePtyLinkage(sessionId, existingSession, repo.path, claudePid, 'session_registry', true);
+    const existingSession = getSession(entry.sessionId);
+    const linkage = this.resolvePtyLinkage(entry.sessionId, existingSession, repo.path, entry.pid, 'session_registry', true);
 
     if (!existingSession && linkage.freshClaim) {
-      logger.info(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${linkage.freshClaim.hostPid} pid=${linkage.freshClaim.pid}`);
-      return this.createPtySession(sessionId, repo, linkage.freshClaim, now);
+      logger.info(`[ClaudeDetector] session activated via PTY claim sessionId=${entry.sessionId} hostPid=${linkage.freshClaim.hostPid} pid=${linkage.freshClaim.pid}`);
+      return this.createPtySession(entry.sessionId, repo, linkage.freshClaim, now);
     }
 
     if (existingSession?.status === 'active') {
@@ -146,25 +147,25 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
       const yoloResolved = existingSession.yoloMode === null && yoloMode !== null;
       let session = existingSession;
       if (pidChanged || yoloResolved) {
-        logger.info(`[ClaudeDetector] pid assigned sessionId=${sessionId} pid=${linkage.pid} (was ${existingSession.pid}) yoloMode=${yoloMode}`);
+        logger.info(`[ClaudeDetector] pid assigned sessionId=${entry.sessionId} pid=${linkage.pid} (was ${existingSession.pid}) yoloMode=${yoloMode}`);
         session = { ...existingSession, pid: linkage.pid, pidSource: linkage.pidSource, yoloMode };
         upsertSession(session);
       }
-      await this.watchJsonlFile(sessionId, repo.path);
+      await this.watchJsonlFile(entry.sessionId, repo.path);
       return session;
     }
 
     // Don't re-activate a PTY session whose launcher has already disconnected:
     // a fresh launcher would be a new CLI process and binding it to the old
     // sessionId would route prompts to the wrong process.
-    if (existingSession?.launchMode === 'pty' && !ptyRegistry.has(sessionId)) {
-      logger.info(`[ClaudeDetector] skipping re-activation — PTY launcher gone sessionId=${sessionId}`);
+    if (existingSession?.launchMode === 'pty' && !ptyRegistry.has(entry.sessionId)) {
+      logger.info(`[ClaudeDetector] skipping re-activation — PTY launcher gone sessionId=${entry.sessionId}`);
       return existingSession;
     }
 
-    this.closeJsonlWatcher(sessionId);
+    this.closeJsonlWatcher(entry.sessionId);
     const base: Session = existingSession ?? {
-      id: sessionId,
+      id: entry.sessionId,
       repositoryId: repo.id,
       type: 'claude-code',
       launchMode: linkage.launchMode,
@@ -183,9 +184,9 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
       ptyLaunchId: linkage.ptyLaunchId,
     };
     const activated = { ...base, status: 'active' as const, endedAt: null as null, lastActivityAt: now, pid: linkage.pid };
-    logger.info(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${linkage.pid}`);
+    logger.info(`[ClaudeDetector] session activated sessionId=${entry.sessionId} pid=${linkage.pid}`);
     upsertSession(activated);
-    await this.watchJsonlFile(sessionId, repo.path);
+    await this.watchJsonlFile(entry.sessionId, repo.path);
     return activated;
   }
 
