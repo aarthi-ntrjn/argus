@@ -167,4 +167,26 @@ describe('UpdateService', () => {
       vi.useRealTimers();
     });
   });
+
+  describe('exit-handler path (T015)', () => {
+    it('applyUpdate resolves after timeout so the exit handler always continues', async () => {
+      vi.useFakeTimers();
+      vi.mocked(spawn).mockReturnValue(makeProcess(0, 9999999) as ReturnType<typeof spawn>);
+      const promise = service.applyUpdate();
+      vi.advanceTimersByTime(26000);
+      // Must resolve (not reject) so awaiting it in the exit handler does not throw
+      await expect(promise).resolves.toBeUndefined();
+      vi.useRealTimers();
+    });
+
+    it('applyUpdate rejects on npm failure so the exit handler can catch and log', async () => {
+      vi.mocked(spawn).mockReturnValue(makeProcess(1) as ReturnType<typeof spawn>);
+      await expect(service.applyUpdate()).rejects.toThrow();
+      expect(service.isUpdateInProgress).toBe(false);
+    });
+
+    it('hasUpdate returns false initially so no update runs at exit by default', () => {
+      expect(service.hasUpdate()).toBe(false);
+    });
+  });
 });

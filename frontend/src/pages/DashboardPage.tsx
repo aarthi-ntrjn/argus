@@ -3,6 +3,8 @@ import { useRef, useState, useEffect, useMemo } from 'react';
 import { Plus, Check, Maximize2, Minimize2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getSessions, getRepositories } from '../services/api';
+import { useUpdateStatus } from '../hooks/useUpdateStatus';
+import { UpdateBadge } from '../components/UpdateBadge/UpdateBadge';
 import { useSettings } from '../hooks/useSettings';
 import { useArgusSettings } from '../hooks/useArgusSettings';
 import { useIntegrationControl } from '../hooks/useIntegrationControl';
@@ -64,6 +66,7 @@ export default function DashboardPage() {
 
   const [settings, updateSetting] = useSettings();
   const { settings: argusSettings, isLoading: argusSettingsLoading, patchSetting } = useArgusSettings();
+  const updateStatus = useUpdateStatus();
   const { integrationsEnabled, toggle, isPending } = useIntegrationControl();
   const { tourStatus, seenRepoSteps, startTour, skipTour, completeTour, markRepoStepsSeen, resetOnboarding } = useOnboarding();
   const [tourRun, setTourRun] = useState(false);
@@ -287,6 +290,14 @@ export default function DashboardPage() {
               </div>
             )}
             <div className="relative" ref={settingsRef}>
+              {updateStatus && (
+                <span className="absolute -top-1 -right-1 z-10 pointer-events-none">
+                  <UpdateBadge
+                    updateAvailable={updateStatus.updateAvailable}
+                    latestVersion={updateStatus.latestVersion}
+                  />
+                </span>
+              )}
               <button
                 data-tour-id="dashboard-settings"
                 onClick={() => setSettingsOpen(o => !o)}
