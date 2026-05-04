@@ -10,7 +10,7 @@ import { telemetryService } from './telemetry-service.js';
 import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
-import type { Session, PidSource, PendingChoice } from '../models/index.js';
+import type { Session, Repository, PidSource, PendingChoice } from '../models/index.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
@@ -488,75 +488,98 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     const now = new Date().toISOString();
 
     if (hook_event_name === 'SessionEnd') {
-      if (!existing) return;
-      updateSessionStatus(session_id, 'ended', now);
-      this.jsonlWatcher.closeWatcher(session_id);
-      const ended = { ...existing, status: 'ended' as const, endedAt: now };
-      this.activeMap.delete(session_id);
-      this.sigCache.delete(session_id);
-      broadcast({ type: 'session.ended', timestamp: now, data: ended });
-      this.pendingChoices.delete(session_id);
-      telemetryService.sendEvent('session_ended', {
-        sessionType: existing.type,
-        sessionId: existing.id,
-        launchMode: existing.launchMode === 'pty' ? 'connected' : 'readonly',
-        yoloMode: existing.yoloMode,
-      });
-      return;
+      return this.handleSessionEnd(existing, session_id, now);
     }
-
     if (hook_event_name === 'PreToolUse' && payload.tool_name === 'ask_user') {
-      if (!existing) return;
-      const { question, choices, allQuestions } = parsePendingChoicePayload(payload.tool_input ?? {});
-      this.pendingChoices.set(session_id, { question, choices, allQuestions });
-      broadcast({ type: 'session.pending_choice', timestamp: now, data: { sessionId: session_id, question, choices, allQuestions } });
-      pendingChoiceEvents.emit('session.pending_choice', { sessionId: session_id, question, choices, allQuestions });
-      return;
+      return this.handlePreAskQuestion(session_id, existing, payload, now);
     }
-
     if (hook_event_name === 'PostToolUse' && payload.tool_name === 'ask_user') {
-      if (!existing) return;
-      this.pendingChoices.delete(session_id);
-      broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId: session_id } });
-      pendingChoiceEvents.emit('session.pending_choice.resolved', session_id);
-      return;
+      return this.handlePostAskQuestion(session_id, existing, now);
     }
 
-    // SessionStart or other events: create/update session
     if (!existing) {
       const claimed = normalizedCwd ? ptyRegistry.claimForSession(session_id, normalizedCwd, 'copilot-cli') : null;
       if (claimed) {
-        const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'copilot-cli');
-        const ptySession: Session = {
-          id: session_id,
-          repositoryId: repo.id,
-          type: SessionTypes.COPILOT_CLI,
-          launchMode: 'pty',
-          pid: claimed.pid,
-          hostPid: claimed.hostPid,
-          pidSource: 'pty_registry' as PidSource,
-          status: 'active',
-          startedAt: now,
-          endedAt: null,
-          lastActivityAt: now,
-          summary: null,
-          expiresAt: null,
-          model: null,
-          reconciled: true,
-          yoloMode,
-        };
-        upsertSession(ptySession);
-        this.knownIds.add(session_id);
-        this.sigCache.set(session_id, this.sessionSignature(ptySession));
-        this.activeMap.set(session_id, ptySession);
-        this.sessionCreatedCallback?.(ptySession);
-        await this.jsonlWatcher.watchFile(session_id, repo.path);
-        return;
+        return this.createPtySession(session_id, repo, claimed, now);
       }
     }
 
+    await this.upsertAndBroadcastSession(session_id, repo, existing, now);
+  }
+
+  private handleSessionEnd(existing: Session | null | undefined, sessionId: string, now: string): void {
+    if (!existing) return;
+    updateSessionStatus(sessionId, 'ended', now);
+    this.jsonlWatcher.closeWatcher(sessionId);
+    const ended = { ...existing, status: 'ended' as const, endedAt: now };
+    this.activeMap.delete(sessionId);
+    this.sigCache.delete(sessionId);
+    broadcast({ type: 'session.ended', timestamp: now, data: ended });
+    this.pendingChoices.delete(sessionId);
+    telemetryService.sendEvent('session_ended', {
+      sessionType: existing.type,
+      sessionId: existing.id,
+      launchMode: existing.launchMode === 'pty' ? 'connected' : 'readonly',
+      yoloMode: existing.yoloMode,
+    });
+  }
+
+  private handlePreAskQuestion(sessionId: string, existing: Session | null | undefined, payload: CliHookPayload, now: string): void {
+    if (!existing) return;
+    const { question, choices, allQuestions } = parsePendingChoicePayload(payload.tool_input ?? {});
+    this.pendingChoices.set(sessionId, { question, choices, allQuestions });
+    broadcast({ type: 'session.pending_choice', timestamp: now, data: { sessionId, question, choices, allQuestions } });
+    pendingChoiceEvents.emit('session.pending_choice', { sessionId, question, choices, allQuestions });
+  }
+
+  private handlePostAskQuestion(sessionId: string, existing: Session | null | undefined, now: string): void {
+    if (!existing) return;
+    this.pendingChoices.delete(sessionId);
+    broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
+    pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
+  }
+
+  /**
+   * Creates a new session linked to a PTY launcher (terminal tab in Argus UI).
+   * Called when a PTY claim succeeds from a hook event.
+   */
+  private async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
+    const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'copilot-cli');
+    const session: Session = {
+      id: sessionId,
+      repositoryId: repo.id,
+      type: SessionTypes.COPILOT_CLI,
+      launchMode: 'pty',
+      pid: claimed.pid,
+      hostPid: claimed.hostPid,
+      pidSource: 'pty_registry' as PidSource,
+      status: 'active',
+      startedAt: now,
+      endedAt: null,
+      lastActivityAt: now,
+      summary: null,
+      expiresAt: null,
+      model: null,
+      reconciled: true,
+      yoloMode,
+      ptyLaunchId: claimed.ptyLaunchId,
+    };
+    upsertSession(session);
+    this.knownIds.add(sessionId);
+    this.sigCache.set(sessionId, this.sessionSignature(session));
+    this.activeMap.set(sessionId, session);
+    this.sessionCreatedCallback?.(session);
+    await this.jsonlWatcher.watchFile(sessionId, repo.path);
+  }
+
+  /**
+   * Creates or updates a session in response to a hook event.
+   * On first event: fires sessionCreatedCallback (seeds knownIds/sigCache/activeMap).
+   * On subsequent events: broadcasts session.updated directly.
+   */
+  private async upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<void> {
     const session: Session = existing ?? {
-      id: session_id,
+      id: sessionId,
       repositoryId: repo.id,
       type: SessionTypes.COPILOT_CLI,
       launchMode: null,
@@ -573,21 +596,18 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
       reconciled: true,
       yoloMode: null,
     };
-
     const updated = { ...session, lastActivityAt: now };
     upsertSession(updated);
-
     if (existing) {
-      this.sigCache.set(session_id, this.sessionSignature(updated));
+      this.sigCache.set(sessionId, this.sessionSignature(updated));
       broadcast({ type: 'session.updated', timestamp: now, data: updated });
     } else {
-      this.knownIds.add(session_id);
-      this.sigCache.set(session_id, this.sessionSignature(updated));
-      this.activeMap.set(session_id, updated);
+      this.knownIds.add(sessionId);
+      this.sigCache.set(sessionId, this.sessionSignature(updated));
+      this.activeMap.set(sessionId, updated);
       this.sessionCreatedCallback?.(updated);
     }
-
-    await this.jsonlWatcher.watchFile(session_id, repo.path);
+    await this.jsonlWatcher.watchFile(sessionId, repo.path);
   }
 
   /** No-op: Copilot manages JSONL watchers internally in scan(). */
