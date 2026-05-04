@@ -85,19 +85,10 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     if (!existsSync(this.sessionsDir)) return [];
     const result: Array<{ sessionId: string; pid: number }> = [];
     try {
-      const entries = readdirSync(this.sessionsDir, { withFileTypes: true });
-      for (const entry of entries) {
+      for (const entry of readdirSync(this.sessionsDir, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue;
-        const dirPath = join(this.sessionsDir, entry.name);
-        const workspaceFile = join(dirPath, 'workspace.yaml');
-        if (!existsSync(workspaceFile)) continue;
-        try {
-          const workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as WorkspaceYaml;
-          if (!workspace.id) continue;
-          const lockFile = this.findLockFile(dirPath);
-          const pid = lockFile ? this.extractPid(lockFile) : null;
-          if (pid != null) result.push({ sessionId: workspace.id, pid });
-        } catch { /* skip malformed */ }
+        const data = this.readDirEntry(join(this.sessionsDir, entry.name));
+        if (data?.workspace.id && data.pid != null) result.push({ sessionId: data.workspace.id, pid: data.pid });
       }
     } catch { /* ignore */ }
     return result;
@@ -119,16 +110,11 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     if (activeSessions.length === 0) return;
     const activeIds = new Set(activeSessions.map(s => s.id));
     try {
-      const entries = readdirSync(this.sessionsDir, { withFileTypes: true });
-      for (const entry of entries) {
+      for (const entry of readdirSync(this.sessionsDir, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue;
         const dirPath = join(this.sessionsDir, entry.name);
-        const workspaceFile = join(dirPath, 'workspace.yaml');
-        if (!existsSync(workspaceFile)) continue;
-        try {
-          const workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as WorkspaceYaml;
-          if (workspace.id && activeIds.has(workspace.id)) this.activeDirPaths.add(dirPath);
-        } catch { /* ignore */ }
+        const data = this.readDirEntry(dirPath);
+        if (data?.workspace.id && activeIds.has(data.workspace.id)) this.activeDirPaths.add(dirPath);
       }
     } catch { /* ignore */ }
   }
@@ -227,16 +213,9 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
    * one is waiting in the registry.
    */
   private async processSessionDir(dirPath: string): Promise<Session | null> {
-    const workspaceFile = join(dirPath, 'workspace.yaml');
-    if (!existsSync(workspaceFile)) return null;
-
-    let workspace: WorkspaceYaml;
-    try {
-      workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as WorkspaceYaml;
-    } catch { return null; }
-
-    const lockFile = this.findLockFile(dirPath);
-    const pid = lockFile ? this.extractPid(lockFile) : null;
+    const data = this.readDirEntry(dirPath);
+    if (!data) return null;
+    const { workspace, pid } = data;
 
     const sessionId = workspace.id ?? randomUUID();
     const existingSession = getSession(sessionId);
@@ -391,6 +370,19 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   private extractPid(lockFile: string): number | null {
     const match = lockFile.match(/inuse\.(\d+)\.lock/);
     return match ? parseInt(match[1], 10) : null;
+  }
+
+  // Reads workspace.yaml and the lock file for a single session directory.
+  // Returns null if the workspace file is missing or malformed.
+  private readDirEntry(dirPath: string): { workspace: WorkspaceYaml; pid: number | null } | null {
+    const workspaceFile = join(dirPath, 'workspace.yaml');
+    if (!existsSync(workspaceFile)) return null;
+    try {
+      const workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as WorkspaceYaml;
+      const lockFile = this.findLockFile(dirPath);
+      const pid = lockFile ? this.extractPid(lockFile) : null;
+      return { workspace, pid };
+    } catch { return null; }
   }
 
   /**
