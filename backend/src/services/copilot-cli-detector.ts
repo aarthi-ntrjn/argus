@@ -93,7 +93,14 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
    *
    * Applies mtime filtering to skip stale directories while always re-checking
    * any directory that had an active session in the previous cycle.
-   * When force=true (triggered by repo add or first scan), skips the mtime filter.
+   *
+   * force=true bypasses the mtime filter and processes every directory. Two
+   * callers need it:
+   *   1. First scan after server startup: in-memory activeDirPaths is empty, so
+   *      idle sessions whose dirs predate lastScanTime would be missed.
+   *   2. Repo add: a newly-registered repo may already have running sessions
+   *      whose dir mtime is older than this scan; without force they would be
+   *      skipped until something touched the dir.
    *
    * Resets activeDirPaths so processSessionEntry can repopulate it as it iterates.
    */
