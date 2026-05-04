@@ -237,7 +237,7 @@ export async function startServer() {
 
   setUpdateService(updateService);
   setUpdateServiceForRoutes(updateService);
-  updateService.scheduleChecks();
+  updateService.scheduleChecks(config.updateCheckIntervalHours * 3600_000);
 
   async function runExitUpdate(): Promise<void> {
     if (config.autoUpdate && updateService.hasUpdate() && !updateService.isUpdateInProgress) {

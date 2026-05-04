@@ -7,7 +7,7 @@ import { createTaggedLogger } from '../utils/logger.js';
 const log = createTaggedLogger('[UpdateService]', '\x1b[33m');
 
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org/argus-ai-hub/latest';
-const CHECK_INTERVAL_MS = 3600_000;
+const DEFAULT_CHECK_INTERVAL_MS = 4 * 3600_000;
 const APPLY_TIMEOUT_MS = 25_000;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -97,9 +97,9 @@ export class UpdateService {
     }
   }
 
-  scheduleChecks(): void {
+  scheduleChecks(intervalMs: number = DEFAULT_CHECK_INTERVAL_MS): void {
     void this.checkForUpdates();
-    this.intervalHandle = setInterval(() => void this.checkForUpdates(), CHECK_INTERVAL_MS);
+    this.intervalHandle = setInterval(() => void this.checkForUpdates(), intervalMs);
   }
 
   stopSchedule(): void {
