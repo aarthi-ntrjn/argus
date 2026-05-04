@@ -38,6 +38,12 @@ interface WorkspaceYaml {
   updated_at?: string | Date;
 }
 
+/** js-yaml may yield Date or string for unquoted vs quoted timestamps. Normalize to ISO string. */
+function toIsoString(val: string | Date | undefined): string | null {
+  if (val === undefined) return null;
+  return val instanceof Date ? val.toISOString() : val;
+}
+
 /**
  * Parsed entry from one ~/.copilot/session-state/<id>/ directory.
  * Adds workspace.yaml-sourced fields beyond the common SessionEntry: the
@@ -47,8 +53,8 @@ interface WorkspaceYaml {
 interface CopilotSessionEntry extends SessionEntry {
   dirPath: string;
   summary: string | null;
-  startedAt: string | Date;
-  updatedAt: string | Date;
+  startedAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -140,20 +146,22 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
     setServerState('copilot_last_scan_time', String(t0));
 
     const result: CopilotSessionEntry[] = [];
+    const nowIso = new Date().toISOString();
     for (const dirPath of dirsToProcess) {
       const data = this.readDirEntry(dirPath);
       if (!data) continue;
       const cwd = data.workspace.cwd;
       if (!cwd) continue;
-      const nowIso = new Date().toISOString();
       result.push({
         sessionId: data.workspace.id ?? randomUUID(),
         cwd,
         pid: data.pid,
         dirPath,
         summary: data.workspace.summary ?? null,
-        startedAt: data.workspace.created_at ?? nowIso,
-        updatedAt: data.workspace.updated_at ?? nowIso,
+        // js-yaml parses unquoted ISO timestamps as Date and quoted ones as string;
+        // normalize both to ISO string here so downstream code only sees strings.
+        startedAt: toIsoString(data.workspace.created_at) ?? nowIso,
+        updatedAt: toIsoString(data.workspace.updated_at) ?? nowIso,
       });
     }
     return result;
@@ -178,17 +186,12 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
     const { sessionId, pid, dirPath, summary, startedAt, updatedAt } = entry;
 
     const existingSession = getSession(sessionId);
-
-    const toIso = (val: string | Date): string =>
-      val instanceof Date ? val.toISOString() : val;
-
     const linkage = this.resolvePtyLinkage(sessionId, existingSession, repo.path, pid, 'lockfile', true);
 
     const yoloMode = existingSession?.yoloMode != null
       ? existingSession.yoloMode
       : detectYoloModeFromPids(linkage.pid, linkage.hostPid, SessionTypes.COPILOT_CLI);
 
-    const updatedAtIso = toIso(updatedAt);
     const session: Session = {
       id: sessionId,
       repositoryId: repo.id,
@@ -198,11 +201,11 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
       hostPid: linkage.hostPid,
       pidSource: linkage.pidSource,
       status: 'active',
-      startedAt: toIso(startedAt),
+      startedAt,
       endedAt: null,
-      lastActivityAt: existingSession?.lastActivityAt && existingSession.lastActivityAt > updatedAtIso
+      lastActivityAt: existingSession?.lastActivityAt && existingSession.lastActivityAt > updatedAt
         ? existingSession.lastActivityAt
-        : updatedAtIso,
+        : updatedAt,
       summary: existingSession?.summary ?? summary,
       expiresAt: null,
       model: existingSession?.model ?? null,
