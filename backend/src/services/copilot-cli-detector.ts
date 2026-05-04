@@ -79,9 +79,9 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
 
   /**
    * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
-   * Equivalent of ClaudeCodeDetector.getRegistryEntries() — scans inuse.<PID>.lock files.
+   * Equivalent of ClaudeCodeDetector.getSessionPidMap() — scans inuse.<PID>.lock files.
    */
-  getRegistryEntries(): Map<string, number> {
+  getSessionPidMap(): Map<string, number> {
     const result = new Map<string, number>();
     if (!existsSync(this.sessionsDir)) return result;
 

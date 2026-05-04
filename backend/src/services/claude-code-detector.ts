@@ -72,7 +72,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
   }
 
   /** Returns a sessionId-to-PID map for startup stale-session reconciliation only. */
-  getRegistryEntries(): Map<string, number> {
+  getSessionPidMap(): Map<string, number> {
     const result = new Map<string, number>();
     for (const entry of this.scanSessionFiles()) {
       result.set(entry.sessionId, entry.pid);

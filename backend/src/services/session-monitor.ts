@@ -93,7 +93,7 @@ export class SessionMonitor extends EventEmitter {
 
       // Source 2: Merged session registry (session ID → PID) from both detectors.
       // Claude: JSON session registry files. Copilot: inuse.<PID>.lock files.
-      const registryEntries = this.cliManager.getRegistryEntries();
+      const registryEntries = this.cliManager.getSessionPidMap();
 
       // Source 3: Running OS processes (filtered to AI tools only to avoid PID reuse false-positives).
       // On Linux/Mac the copilot binary is often a Node.js script: ps-list name is "node" but

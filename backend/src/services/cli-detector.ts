@@ -57,5 +57,5 @@ export interface CliDetector {
    * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
    * Called once during start() before the first scan cycle.
    */
-  getRegistryEntries(): Map<string, number>;
+  getSessionPidMap(): Map<string, number>;
 }

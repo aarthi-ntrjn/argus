@@ -86,10 +86,10 @@ export class CliManager {
    * Returns a merged sessionId-to-PID map from both detectors, used at startup
    * to reconcile stale sessions.
    */
-  getRegistryEntries(): Map<string, number> {
+  getSessionPidMap(): Map<string, number> {
     const result = new Map<string, number>();
-    for (const [id, pid] of this.claudeDetector.getRegistryEntries()) result.set(id, pid);
-    for (const [id, pid] of this.copilotDetector.getRegistryEntries()) result.set(id, pid);
+    for (const [id, pid] of this.claudeDetector.getSessionPidMap()) result.set(id, pid);
+    for (const [id, pid] of this.copilotDetector.getSessionPidMap()) result.set(id, pid);
     return result;
   }
 
