@@ -15,11 +15,11 @@ import { BaseCliDetector, type SessionEntry } from './base-cli-detector.js';
 /**
  * Under the hood, Claude Code writes a JSON file per session in ~/.claude/sessions/*.json
  * with the PID and CWD, which we can use for detection and tracking.
- * The hooks are the primary real-time signal, while the registry files are a secondary
- * signal we scan on a timer for reconciliation and edge cases (sessions started without
- * hooks, PID backfill, unclean shutdown detection).
+ * The hooks are the primary real-time signal, while the on-disk session files are a
+ * secondary signal we scan on a timer for reconciliation and edge cases (sessions
+ * started without hooks, PID backfill, unclean shutdown detection).
  *
- * Example registry file: ~/.claude/sessions/13232.json
+ * Example session file: ~/.claude/sessions/13232.json
  * {
  *   "pid": 13232,
  *   "sessionId": "0f63ac9c-1cdf-47fe-abb1-d6b3bef059a1",
@@ -43,8 +43,8 @@ interface SessionProcessJson {
   cwd?: string;
 }
 
-/** Parsed entry from one ~/.claude/sessions/*.json file. Claude's registry guarantees a non-null pid. */
-interface ClaudeRegistryEntry extends SessionEntry {
+/** Parsed entry from one ~/.claude/sessions/*.json file. The on-disk session file always carries a non-null pid. */
+interface ClaudeSessionEntry extends SessionEntry {
   pid: number;
 }
 
@@ -57,16 +57,16 @@ interface ClaudeRegistryEntry extends SessionEntry {
  * to /hooks/claude on every tool call. handleHookPayload() creates or updates the DB
  * session and fires sessionCreatedCallback immediately.
  *
- * Secondary path — registry scan: scan() reads ~/.claude/sessions/*.json on every
+ * Secondary path — session-file scan: scan() reads ~/.claude/sessions/*.json on every
  * cycle. This catches sessions that started without hooks (e.g. legacy installs) and
- * backfills the PID once Claude writes it to its registry file. It also detects
- * unclean shutdowns where SessionEnd never fired (registry file disappears).
+ * backfills the PID once Claude writes it to its session file. It also detects
+ * unclean shutdowns where SessionEnd never fired (session file disappears).
  *
  * The base scan() pipeline calls readSessionEntries → processSessionEntry per entry
  * → dispatchSessionEvents. Claude's dispatchSessionEvents adds a reconcileActiveSessions
- * safety net that catches PTY sessions that don't appear in the registry scan.
+ * safety net that catches PTY sessions that don't appear in the session-file scan.
  */
-export class ClaudeCodeDetector extends BaseCliDetector<ClaudeRegistryEntry> implements CliDetector {
+export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> implements CliDetector {
   private readonly jsonlWatcher = new ClaudeJsonlWatcher();
   protected readonly sessionsDir: string;
   /** PIDs that passed the alive+expected-process guards in the previous scan. */
@@ -84,10 +84,10 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeRegistryEntry> imp
   }
 
   /** Reads ~/.claude/sessions/*.json and returns one parsed entry per valid file. */
-  protected async readSessionEntries(_force: boolean): Promise<ClaudeRegistryEntry[]> {
+  protected async readSessionEntries(_force: boolean): Promise<ClaudeSessionEntry[]> {
     this.currentAlivePids = new Set();
     const files = readdirSync(this.sessionsDir).filter((f) => f.endsWith('.json'));
-    const entries: ClaudeRegistryEntry[] = [];
+    const entries: ClaudeSessionEntry[] = [];
     for (const file of files) {
       try {
         const data = JSON.parse(readFileSync(join(this.sessionsDir, file), 'utf-8')) as SessionProcessJson;
@@ -104,7 +104,7 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeRegistryEntry> imp
    * removed-repo session still counts as "alive this cycle" for disappearance
    * detection.
    */
-  protected async processSessionEntry(entry: ClaudeRegistryEntry): Promise<Session | null> {
+  protected async processSessionEntry(entry: ClaudeSessionEntry): Promise<Session | null> {
     if (!isPidRunning(entry.pid)) return null;
     if (!isExpectedProcess(entry.pid, 'claude-code')) {
       logger.info(`[ClaudeDetector] PID reuse detected: pid ${entry.pid} is running with wrong name, skipping (sessionId=${entry.sessionId})`);
@@ -192,11 +192,11 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeRegistryEntry> imp
   /**
    * Three-stage dispatch:
    *   1. Disappearance: any pid that was alive last cycle but is gone this cycle
-   *      means the registry file vanished. End the matching DB session.
+   *      means the session file vanished. End the matching DB session.
    *   2. sigCache diff: fire created for new sessions, updated for changed ones.
-   *   3. Reconcile safety net: catches sessions not visible in the registry scan
-   *      (e.g. PTY sessions whose registry file never appeared) by checking PID
-   *      liveness and repo existence directly.
+   *   3. Reconcile safety net: catches sessions not visible in the session-file
+   *      scan (e.g. PTY sessions whose session file never appeared) by checking
+   *      PID liveness and repo existence directly.
    */
   protected dispatchSessionEvents(sessions: Session[]): void {
     const now = new Date().toISOString();
@@ -206,7 +206,7 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeRegistryEntry> imp
       const activeSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
       for (const session of activeSessions) {
         if (session.pid === oldPid && session.pidSource === 'session_registry') {
-          logger.info(`[ClaudeDetector] session ended, registry file gone sessionId=${session.id} pid=${oldPid}`);
+          logger.info(`[ClaudeDetector] session ended, session file gone sessionId=${session.id} pid=${oldPid}`);
           updateSessionStatus(session.id, 'ended', now);
           this.closeJsonlWatcher(session.id);
           const ended = { ...session, status: 'ended' as const, endedAt: now };
@@ -232,8 +232,8 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeRegistryEntry> imp
   }
 
   /**
-   * Liveness safety net for sessions not visible in the registry scan (e.g. PTY
-   * sessions whose registry file never appeared, or sessions whose repo was
+   * Liveness safety net for sessions not visible in the session-file scan (e.g.
+   * PTY sessions whose session file never appeared, or sessions whose repo was
    * removed). Walks all active+idle Claude sessions in the DB and:
    *
    * - Repo removed: end the session.

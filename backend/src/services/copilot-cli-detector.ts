@@ -45,7 +45,7 @@ interface WorkspaceYaml {
  * session-dir path (for the JSONL watcher) and the seed values for the
  * Session row's summary/timestamps.
  */
-interface CopilotDirEntry extends SessionEntry {
+interface CopilotSessionEntry extends SessionEntry {
   dirPath: string;
   summary: string | null;
   startedAt: string | Date;
@@ -70,7 +70,7 @@ interface CopilotDirEntry extends SessionEntry {
  * detection). Active dirs are always re-checked next cycle so session ends are
  * detected promptly.
  */
-export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> implements CliDetector {
+export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> implements CliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
   protected readonly sessionsDir: string;
   private lastScanTime: number;
@@ -97,7 +97,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> impleme
    *
    * Resets activeDirPaths so processSessionEntry can repopulate it as it iterates.
    */
-  protected async readSessionEntries(force: boolean): Promise<CopilotDirEntry[]> {
+  protected async readSessionEntries(force: boolean): Promise<CopilotSessionEntry[]> {
     const t0 = Date.now();
     const previousActive = this.activeDirPaths;
     const dirsToProcess = new Set<string>();
@@ -121,7 +121,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> impleme
     this.lastScanTime = t0;
     setServerState('copilot_last_scan_time', String(t0));
 
-    const result: CopilotDirEntry[] = [];
+    const result: CopilotSessionEntry[] = [];
     for (const dirPath of dirsToProcess) {
       const data = this.readDirEntry(dirPath);
       if (!data) continue;
@@ -149,7 +149,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> impleme
    * Records active dirPaths so they are always re-checked next cycle to detect
    * the eventual end transition.
    */
-  protected async processSessionEntry(entry: CopilotDirEntry): Promise<Session | null> {
+  protected async processSessionEntry(entry: CopilotSessionEntry): Promise<Session | null> {
     const tDir = Date.now();
     const session = await this.buildSessionFromEntry(entry);
     const dirMs = Date.now() - tDir;
@@ -165,7 +165,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> impleme
    * PTY linkage. Pure of dispatch concerns: it upserts the DB row and starts the
    * watcher, but does not fire callbacks.
    */
-  private async buildSessionFromEntry(entry: CopilotDirEntry): Promise<Session | null> {
+  private async buildSessionFromEntry(entry: CopilotSessionEntry): Promise<Session | null> {
     const { sessionId, cwd, pid, dirPath, summary, startedAt, updatedAt } = entry;
     const existingSession = getSession(sessionId);
 
