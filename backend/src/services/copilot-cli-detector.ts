@@ -16,6 +16,23 @@ import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import type { CliDetector, CliHookPayload } from './cli-detector.js';
 
+/**
+ * Copilot CLI writes one subdirectory per session under ~/.copilot/session-state/.
+ * Each subdirectory contains a workspace.yaml with session metadata and an
+ * inuse.<PID>.lock file while the session is running. Lock file absence signals
+ * that the session has ended (clean or unclean).
+ *
+ * Example session directory: ~/.copilot/session-state/<session-id>/
+ * workspace.yaml:
+ * {
+ *   "id": "0f63ac9c-1cdf-47fe-abb1-d6b3bef059a1",
+ *   "cwd": "C:\\source\\github\\aarthi-ntrjn\\argus",
+ *   "summary": "...",
+ *   "created_at": "2026-05-03T18:00:00.000Z",
+ *   "updated_at": "2026-05-03T18:05:00.000Z"
+ * }
+ * inuse.13232.lock  (empty file; name encodes the PID)
+ */
 const DEFAULT_SESSIONS_DIR = join(homedir(), '.copilot', 'session-state');
 
 interface WorkspaceYaml {
