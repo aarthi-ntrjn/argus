@@ -18,7 +18,7 @@ import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
 import { normalize } from 'path';
 import { ptyRegistry } from './pty-registry.js';
-import { detectYoloModeFromPids } from './process-utils.js';
+import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import * as logger from '../utils/logger.js';
 import { JsonlWatcherBase } from './jsonl-watcher-base.js';
 import type { CliHookPayload } from './cli-detector.js';
@@ -120,6 +120,22 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   /** Logs the "no repo for this cwd" warning used by both detectors' buildSessionFromEntry. */
   protected warnNoRepo(cwd: string, sessionId: string): void {
     logger.warn(`${this.logTag} no repo for cwd="${cwd}" sessionId=${sessionId} — session ignored`);
+  }
+
+  /**
+   * Liveness + identity check: returns true only when the pid is alive AND the
+   * process at that pid is actually this detector's AI tool. Logs a "PID reuse
+   * detected" warning when the pid is alive but the process is something else
+   * (stale on-disk source pointing at a recycled OS pid).
+   */
+  protected isExpectedProcessAlive(pid: number | null, sessionId: string): boolean {
+    if (pid === null) return false;
+    if (!isPidRunning(pid)) return false;
+    if (!isExpectedProcess(pid, this.toolTypeId)) {
+      logger.info(`${this.logTag} PID reuse detected: pid ${pid} is running with wrong name, skipping (sessionId=${sessionId})`);
+      return false;
+    }
+    return true;
   }
 
   /**

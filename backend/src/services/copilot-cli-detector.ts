@@ -6,7 +6,7 @@ import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
 import { upsertSession, getRepositoryByPath, getSession, getSessions, getServerState, setServerState } from '../db/database.js';
 import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
-import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
+import { detectYoloModeFromPids } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
 import type { Session } from '../models/index.js';
 import type { CliDetector } from './cli-detector.js';
@@ -176,14 +176,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
     const { sessionId, cwd, pid, dirPath, summary, startedAt, updatedAt } = entry;
     const existingSession = getSession(sessionId);
 
-    // Guard 1: process is running (cheap signal-0 check)
-    // Guard 2: verify the process at this PID is actually the expected AI tool — catches
-    //   stale lock files pointing to recycled PIDs (PID reuse by an unrelated process).
-    const pidAlive = pid !== null && isPidRunning(pid);
-    const isRunning = pidAlive && isExpectedProcess(pid!, SessionTypes.COPILOT_CLI);
-    if (pidAlive && !isRunning) {
-      logger.info(`[CopilotDetector] PID reuse detected: pid ${pid} is running with wrong name — skipping (sessionId=${sessionId} existingStatus=${existingSession?.status ?? 'new'})`);
-    }
+    const isRunning = this.isExpectedProcessAlive(pid, sessionId);
 
     // Skip directories for sessions already recorded as ended: no lock file means
     // nothing has changed since we last marked them ended.

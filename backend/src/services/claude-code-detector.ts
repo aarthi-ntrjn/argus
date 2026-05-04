@@ -5,7 +5,7 @@ import { homedir } from 'os';
 import { getSession, getSessions, upsertSession, getRepositoryByPath, getRepositories } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
-import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
+import { detectYoloModeFromPids, isPidRunning } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
 import type { Session } from '../models/index.js';
 import type { CliDetector } from './cli-detector.js';
@@ -81,7 +81,7 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
   constructor(sessionsDir: string = DEFAULT_SESSIONS_DIR) {
     super();
     this.sessionsDir = sessionsDir;
-  }
+  } 
 
   /** Reads ~/.claude/sessions/*.json and returns one parsed entry per valid file. */
   protected async readSessionEntries(_force: boolean): Promise<ClaudeSessionEntry[]> {
@@ -106,11 +106,7 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
    * still counts as "alive this cycle" for disappearance detection.
    */
   protected async processSessionEntry(entry: ClaudeSessionEntry): Promise<Session | null> {
-    if (!isPidRunning(entry.pid)) return null;
-    if (!isExpectedProcess(entry.pid, 'claude-code')) {
-      logger.info(`[ClaudeDetector] PID reuse detected: pid ${entry.pid} is running with wrong name, skipping (sessionId=${entry.sessionId})`);
-      return null;
-    }
+    if (!this.isExpectedProcessAlive(entry.pid, entry.sessionId)) return null;
     this.currentAlivePids.add(entry.pid);
     return this.buildSessionFromEntry(entry);
   }
