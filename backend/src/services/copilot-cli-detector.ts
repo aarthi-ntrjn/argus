@@ -73,7 +73,19 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
   protected readonly jsonlWatcher = new CopilotJsonlWatcher();
   protected readonly sessionsDir: string;
   private lastScanTime: number;
-  /** Dirs that ended this scan cycle with an active session. Re-checked next cycle. */
+  /**
+   * Mtime-filter override set. readSessionEntries skips dirs whose mtime
+   * hasn't changed since lastScanTime, but always re-processes dirs in this
+   * set so we promptly detect when an active session ends.
+   *
+   * Only dirs whose buildSessionFromEntry produced a status='active' Session
+   * are added — dirs that yielded null (no repo, etc.) don't need re-checking
+   * because they'd just yield null again. This is the narrower of the two
+   * scan-set semantics: alive AND yielded an active session.
+   *
+   * Claude's currentAlivePids tracks a broader set (every alive pid) for a
+   * different purpose (disappearance detection).
+   */
   private activeDirPaths = new Set<string>();
 
   protected readonly logTag = '[CopilotDetector]';

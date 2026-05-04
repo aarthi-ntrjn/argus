@@ -69,9 +69,23 @@ interface ClaudeSessionEntry extends SessionEntry {
 export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> implements CliDetector {
   protected readonly jsonlWatcher = new ClaudeJsonlWatcher();
   protected readonly sessionsDir: string;
-  /** PIDs that passed the alive+expected-process guards in the previous scan. */
+  /**
+   * Disappearance-detection bookkeeping. Each scan tracks every pid that
+   * passed the alive+expected-process guards into currentAlivePids. At the
+   * end of dispatch, the diff (previous \ current) identifies sessions whose
+   * file vanished between cycles, so we can end them.
+   *
+   * Pids are tracked regardless of whether buildSessionFromEntry produced a
+   * Session — a no-repo entry still counts as "seen alive this cycle", which
+   * keeps disappearance from firing spuriously on entries that were already
+   * filtered out earlier in the same cycle.
+   *
+   * This is the broader of the two scan-set semantics in this codebase: it
+   * tracks ALL alive pids. Copilot's activeDirPaths tracks the narrower
+   * subset (alive AND yielded an active session) for a different purpose
+   * (mtime-filter override).
+   */
   private previousAlivePids = new Set<number>();
-  /** PIDs that pass the alive+expected-process guards in the current scan. */
   private currentAlivePids = new Set<number>();
 
   protected readonly logTag = '[ClaudeDetector]';
