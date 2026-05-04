@@ -78,21 +78,20 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
-   * Returns pid/sessionId pairs from ~/.copilot/session-state/ for startup reconciliation.
-   * Reads workspace.yaml (session id) and inuse.<PID>.lock (pid) from each dir.
-   */
-  protected readSessionPidEntries(): Array<{ sessionId: string; pid: number }> {
-    return this.readAllDirEntries()
-      .filter(e => e.pid != null)
-      .map(e => ({ sessionId: e.workspace.id!, pid: e.pid! }));
-  }
-
-  /**
-   * One-time startup: run a forced full scan so activeDirPaths is seeded and any
-   * sessions active at restart are picked up regardless of directory mtime.
+   * Loads session state from disk so getSessionPidMap() is ready for reconciliation
+   * and activeDirPaths is seeded for the first scan cycle.
+   * Does NOT scan or fire any session events — the first runScan(true) handles that.
    */
   async start(): Promise<void> {
-    await this.scan(true);
+    const activeCopilotIds = new Set(
+      getSessions({ status: 'active', type: SessionTypes.COPILOT_CLI }).map(s => s.id)
+    );
+    for (const { dirPath, workspace, pid } of this.readAllDirEntries()) {
+      if (workspace.id) {
+        if (pid != null) this.pidMap.set(workspace.id, pid);
+        if (activeCopilotIds.has(workspace.id)) this.activeDirPaths.add(dirPath);
+      }
+    }
   }
 
   /**
@@ -101,7 +100,7 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
    * 1. Directory sweep: walk sessionsDir for new or changed directories.
    *    Applies mtime filtering to skip stale directories while always re-checking
    *    any directory that had an active session in the previous cycle.
-   *    When force=true (triggered by repo add), skips the mtime filter entirely.
+   *    When force=true (startup or repo add), skips the mtime filter entirely.
    *
    * 2. Event dispatch: calls processSessionEvents() with all discovered sessions
    *    to fire sessionCreatedCallback / sessionUpdatedCallback / sessionEndedCallback.

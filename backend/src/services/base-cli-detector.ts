@@ -25,6 +25,8 @@ import type { CliHookPayload } from './cli-detector.js';
 export abstract class BaseCliDetector {
   // Dedup map: last-emitted signature per session, used to avoid redundant callbacks.
   protected readonly sigCache = new Map<string, string>();
+  // Populated by start() so getSessionPidMap() can serve reconcileStaleSessions without re-reading disk.
+  protected readonly pidMap = new Map<string, number>();
   protected readonly pendingChoices = new Map<string, PendingChoice>();
   protected sessionCreatedCallback?: (session: Session) => void;
   protected sessionUpdatedCallback?: (session: Session) => void;
@@ -35,31 +37,16 @@ export abstract class BaseCliDetector {
   /** Start watching the JSONL output file for the given session. */
   protected abstract watchJsonlFile(sessionId: string, repoPath: string): Promise<void>;
   /**
-   * Synchronously reads session process entries from disk.
-   * Used by getSessionPidMap() for startup stale-session reconciliation.
-   * Each subclass reads from its own on-disk format (JSON files or YAML dirs).
+   * Returns the sessionId-to-PID map populated by start() for startup reconciliation.
    */
-  protected abstract readSessionPidEntries(): Iterable<{ sessionId: string; pid: number }>;
-
-  /** Log tag prefix for this detector, e.g. '[ClaudeDetector]'. */
+  getSessionPidMap(): Map<string, number> {
+    return new Map(this.pidMap);
+  }
   protected abstract readonly logTag: string;
   /** Hook tool name used for AskUser events, e.g. 'AskUserQuestion' or 'ask_user'. */
   protected abstract readonly askUserToolName: string;
   /** Session type identifier used for PTY registry and session rows. */
   protected abstract readonly toolTypeId: SessionType;
-
-  /**
-   * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
-   * Delegates discovery to readSessionPidEntries() so each subclass can use its
-   * own on-disk format without duplicating the map-building logic.
-   */
-  getSessionPidMap(): Map<string, number> {
-    const result = new Map<string, number>();
-    for (const entry of this.readSessionPidEntries()) {
-      result.set(entry.sessionId, entry.pid);
-    }
-    return result;
-  }
 
   /**
    * Seeds tracking state with sessions that survived from a previous run.

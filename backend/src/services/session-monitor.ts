@@ -48,6 +48,9 @@ export class SessionMonitor extends EventEmitter {
   }
 
   async start(): Promise<void> {
+    // Load state from disk into both detectors (pidMap, activeDirPaths) without firing events.
+    await this.cliManager.start();
+
     await this.reconcileStaleSessions();
 
     const activeSessions = getSessions({ status: 'active' });
@@ -62,8 +65,9 @@ export class SessionMonitor extends EventEmitter {
     // spurious events for sessions that survived from the previous run.
     this.cliManager.seedState(activeSessions);
 
-    await this.cliManager.start();
-    await this.runScan();
+    // Forced first scan: picks up sessions started while the server was down,
+    // bypassing Copilot's mtime filter. Both detectors scan consistently.
+    await this.runScan(true);
     this.scanInterval = setInterval(() => this.runScan(), 5000);
   }
 

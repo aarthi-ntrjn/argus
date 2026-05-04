@@ -85,13 +85,15 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     this.sessionsDir = sessionsDir;
   }
 
-  /** Returns pid/sessionId pairs from ~/.claude/sessions/*.json for startup reconciliation. */
-  protected readSessionPidEntries(): Array<{ sessionId: string; pid: number }> {
-    return this.scanSessionFiles().map(e => ({ sessionId: e.sessionId, pid: e.pid }));
+  /**
+   * Loads session state from disk so getSessionPidMap() is ready for reconciliation.
+   * Does NOT scan or fire any session events — the first runScan(true) handles that.
+   */
+  async start(): Promise<void> {
+    for (const { sessionId, pid } of this.scanSessionFiles()) {
+      this.pidMap.set(sessionId, pid);
+    }
   }
-
-  /** One-time startup: nothing to initialize for Claude Code before the first scan. */
-  async start(): Promise<void> {}
 
   /**
    * Per-cycle scan.Two responsibilities:
