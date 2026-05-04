@@ -48,10 +48,11 @@ export class CliManager {
   }
 
   /**
-   * Seeds Copilot tracking state with sessions that survived from a previous run.
-   * Call before the first scan() to prevent duplicate session.created events for survivors.
+   * Seeds both detectors' tracking state with sessions that survived from a previous run.
+   * Call before the first scan() to prevent duplicate or spurious events for survivors.
    */
-  seedCopilotState(sessions: Session[]): void {
+  seedState(sessions: Session[]): void {
+    this.claudeDetector.seedState(sessions);
     this.copilotDetector.seedState(sessions);
   }
 

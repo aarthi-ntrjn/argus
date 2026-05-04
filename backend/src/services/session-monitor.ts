@@ -58,9 +58,9 @@ export class SessionMonitor extends EventEmitter {
       this.emit('session.created', session);
     }
 
-    // Seed CliManager's Copilot tracking state so the first scan doesn't fire duplicate
-    // session.created events for sessions that survived from the previous run.
-    this.cliManager.seedCopilotState(activeSessions.filter(s => s.type === SessionTypes.COPILOT_CLI));
+    // Seed both detectors' tracking state so the first scan doesn't fire duplicate or
+    // spurious events for sessions that survived from the previous run.
+    this.cliManager.seedState(activeSessions);
 
     await this.cliManager.start();
     await this.runScan();
