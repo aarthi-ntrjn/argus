@@ -103,6 +103,26 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   }
 
   /**
+   * Scan-detected end-of-session: marks the session ended in the DB, closes its
+   * JSONL watcher, clears the sigCache entry, and fires sessionEndedCallback.
+   * Hook-driven ends go through handleSessionEnd instead (which broadcasts +
+   * sends telemetry rather than firing the callback).
+   */
+  protected markSessionEnded(session: Session, now: string, reason: string): void {
+    const pidSuffix = session.pid != null ? ` pid=${session.pid}` : '';
+    logger.info(`${this.logTag} session ended, ${reason} sessionId=${session.id}${pidSuffix}`);
+    updateSessionStatus(session.id, 'ended', now);
+    this.closeJsonlWatcher(session.id);
+    this.sigCache.delete(session.id);
+    this.sessionEndedCallback?.({ ...session, status: 'ended' as const, endedAt: now });
+  }
+
+  /** Logs the "no repo for this cwd" warning used by both detectors' buildSessionFromEntry. */
+  protected warnNoRepo(cwd: string, sessionId: string): void {
+    logger.warn(`${this.logTag} no repo for cwd="${cwd}" sessionId=${sessionId} — session ignored`);
+  }
+
+  /**
    * Per-cycle scan orchestrator. Reads entries, processes each, dispatches events.
    * Concrete detectors implement the three abstract steps. force=true bypasses
    * any caching the read step may apply (e.g. Copilot's mtime filter).

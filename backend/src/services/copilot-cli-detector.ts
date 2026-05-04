@@ -4,7 +4,7 @@ import { join, normalize } from 'path';
 import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
-import { upsertSession, getRepositoryByPath, getSession, getSessions, updateSessionStatus, getServerState, setServerState } from '../db/database.js';
+import { upsertSession, getRepositoryByPath, getSession, getSessions, getServerState, setServerState } from '../db/database.js';
 import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
@@ -191,7 +191,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
 
     const repo = getRepositoryByPath(normalize(cwd));
     if (!repo) {
-      logger.warn(`[CopilotDetector] no repo for cwd="${cwd}" sessionId=${sessionId} — session ignored`);
+      this.warnNoRepo(cwd, sessionId);
       return null;
     }
 
@@ -279,9 +279,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
     const dbActiveSessions = getSessions().filter((s) => s.type === 'copilot-cli' && (s.status === 'active' || s.status === 'idle'));
     for (const session of dbActiveSessions) {
       if (!currentIds.has(session.id)) {
-        updateSessionStatus(session.id, 'ended', now);
-        this.sessionEndedCallback?.({ ...session, status: 'ended', endedAt: now });
-        this.sigCache.delete(session.id);
+        this.markSessionEnded(session, now, 'dir gone');
       }
     }
 

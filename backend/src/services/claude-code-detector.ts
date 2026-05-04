@@ -2,7 +2,7 @@ import * as logger from '../utils/logger.js';
 import { readdirSync, readFileSync } from 'fs';
 import { join, normalize } from 'path';
 import { homedir } from 'os';
-import { getSession, getSessions, upsertSession, updateSessionStatus, getRepositoryByPath, getRepositories } from '../db/database.js';
+import { getSession, getSessions, upsertSession, getRepositoryByPath, getRepositories } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
@@ -126,7 +126,7 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
     const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
     const repo = getRepositoryByPath(normalizedCwd);
     if (!repo) {
-      logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`);
+      this.warnNoRepo(normalizedCwd, entry.sessionId);
       return null;
     }
 
@@ -208,12 +208,7 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
       const activeSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
       for (const session of activeSessions) {
         if (session.pid === oldPid && session.pidSource === 'session_registry') {
-          logger.info(`[ClaudeDetector] session ended, session file gone sessionId=${session.id} pid=${oldPid}`);
-          updateSessionStatus(session.id, 'ended', now);
-          this.closeJsonlWatcher(session.id);
-          const ended = { ...session, status: 'ended' as const, endedAt: now };
-          this.sigCache.delete(session.id);
-          this.sessionEndedCallback?.(ended);
+          this.markSessionEnded(session, now, 'session file gone');
         }
       }
     }
@@ -250,22 +245,12 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
       for (const session of liveSessions) {
         const repo = repos.find((r) => r.id === session.repositoryId);
         if (!repo) {
-          logger.info(`[ClaudeDetector] session ended, repo removed sessionId=${session.id}`);
-          updateSessionStatus(session.id, 'ended', now);
-          this.closeJsonlWatcher(session.id);
-          const ended = { ...session, status: 'ended' as const, endedAt: now };
-          this.sigCache.delete(session.id);
-          this.sessionEndedCallback?.(ended);
+          this.markSessionEnded(session, now, 'repo removed');
           continue;
         }
 
         if (session.pid != null && !isPidRunning(session.pid)) {
-          logger.info(`[ClaudeDetector] session ended, process gone sessionId=${session.id} pid=${session.pid}`);
-          updateSessionStatus(session.id, 'ended', now);
-          this.closeJsonlWatcher(session.id);
-          const ended = { ...session, status: 'ended' as const, endedAt: now };
-          this.sigCache.delete(session.id);
-          this.sessionEndedCallback?.(ended);
+          this.markSessionEnded(session, now, 'process gone');
           continue;
         }
 
