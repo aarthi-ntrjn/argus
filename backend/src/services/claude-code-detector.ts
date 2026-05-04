@@ -194,7 +194,8 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
    * Three-stage dispatch:
    *   1. Disappearance: any pid that was alive last cycle but is gone this cycle
    *      means the session file vanished. End the matching DB session.
-   *   2. sigCache diff: fire created for new sessions, updated for changed ones.
+   *   2. sigCache diff (shared): fire created/updated callbacks via the base
+   *      fireCreatedAndUpdated helper.
    *   3. Reconcile safety net: catches sessions not visible in the session-file
    *      scan (e.g. PTY sessions whose session file never appeared) by checking
    *      PID liveness and repo existence directly.
@@ -218,16 +219,7 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
     }
     this.previousAlivePids = new Set(this.currentAlivePids);
 
-    for (const session of sessions) {
-      const sig = this.sessionSignature(session);
-      if (!this.sigCache.has(session.id)) {
-        this.sigCache.set(session.id, sig);
-        this.sessionCreatedCallback?.(session);
-      } else if (this.sigCache.get(session.id) !== sig) {
-        this.sigCache.set(session.id, sig);
-        this.sessionUpdatedCallback?.(session);
-      }
-    }
+    this.fireCreatedAndUpdated(sessions);
 
     this.reconcileActiveSessions();
   }

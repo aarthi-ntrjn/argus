@@ -262,11 +262,15 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
   }
 
   /**
-   * Two-stage dispatch:
+   * Three-stage dispatch:
    *   1. Dropped-off detection: any DB active/idle session not seen in this scan
    *      had its workspace dir cleaned up by the OS. Mark ended and fire callback.
-   *   2. sigCache diff: fire created for new sessions, updated for changed ones,
-   *      and ended (one-shot) for sessions that ended this cycle.
+   *   2. sigCache diff (shared): fire created/updated callbacks via the base
+   *      fireCreatedAndUpdated helper.
+   *   3. Per-session ended one-shot: any session whose buildSessionFromEntry
+   *      returned status='ended' this cycle (lockfile gone, workspace.yaml
+   *      remains) fires sessionEndedCallback once and clears sigCache.
+   *      Gated by sigCache.has() so a prior SessionEnd hook doesn't double-fire.
    */
   protected dispatchSessionEvents(sessions: Session[]): void {
     const currentIds = new Set(sessions.map((s) => s.id));
@@ -281,25 +285,12 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
       }
     }
 
-    for (const session of sessions) {
-      if (!this.sigCache.has(session.id)) {
-        this.sigCache.set(session.id, this.sessionSignature(session));
-        this.sessionCreatedCallback?.(session);
-      } else {
-        const sig = this.sessionSignature(session);
-        if (this.sigCache.get(session.id) !== sig) {
-          this.sigCache.set(session.id, sig);
-          this.sessionUpdatedCallback?.(session);
-        }
-      }
+    this.fireCreatedAndUpdated(sessions);
 
-      if (session.status === 'ended') {
-        // sigCache.has() gates the one-shot fire: cleared here and in handleSessionEnd.
-        // If a SessionEnd hook already fired, sigCache is already cleared — no double fire.
-        if (this.sigCache.has(session.id)) {
-          this.sessionEndedCallback?.(session);
-          this.sigCache.delete(session.id);
-        }
+    for (const session of sessions) {
+      if (session.status === 'ended' && this.sigCache.has(session.id)) {
+        this.sessionEndedCallback?.(session);
+        this.sigCache.delete(session.id);
       }
     }
   }

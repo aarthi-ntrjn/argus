@@ -82,6 +82,27 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   }
 
   /**
+   * Shared sigCache-diff loop used by every detector's dispatchSessionEvents.
+   * Fires sessionCreatedCallback for sessions not yet in sigCache, and
+   * sessionUpdatedCallback when the signature changed since last cycle.
+   *
+   * Detectors layer their own pre-step (disappearance detection) and post-step
+   * (Claude's reconcile, Copilot's ended one-shot) around this primitive.
+   */
+  protected fireCreatedAndUpdated(sessions: Session[]): void {
+    for (const session of sessions) {
+      const sig = this.sessionSignature(session);
+      if (!this.sigCache.has(session.id)) {
+        this.sigCache.set(session.id, sig);
+        this.sessionCreatedCallback?.(session);
+      } else if (this.sigCache.get(session.id) !== sig) {
+        this.sigCache.set(session.id, sig);
+        this.sessionUpdatedCallback?.(session);
+      }
+    }
+  }
+
+  /**
    * Per-cycle scan orchestrator. Reads entries, processes each, dispatches events.
    * Concrete detectors implement the three abstract steps. force=true bypasses
    * any caching the read step may apply (e.g. Copilot's mtime filter).
