@@ -56,10 +56,20 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
 
   /** Read parsed entries from the source (session files, session dirs, etc.). */
   protected abstract readSessionEntries(force: boolean): Promise<TEntry[]>;
-  /** Process one entry: apply guards, resolve PTY linkage, upsert the session row. */
-  protected abstract processSessionEntry(entry: TEntry): Promise<Session | null>;
+  /**
+   * Build the Session row for one entry. Called only when the entry passes the
+   * alive check AND its cwd resolves to a registered repo (both filters live in
+   * scan()). Returns the persisted Session, or null only if the detector has
+   * its own additional skip condition.
+   */
+  protected abstract buildSessionFromEntry(entry: TEntry, repo: Repository): Promise<Session | null>;
   /** Diff against sigCache and fire session.created/updated/ended callbacks. */
   protected abstract dispatchSessionEvents(sessions: Session[]): void;
+
+  /** Optional hook: called for every entry that passed the alive check, before the repo filter. */
+  protected onAliveEntry(_entry: TEntry): void {}
+  /** Optional hook: called after buildSessionFromEntry returns, for post-build bookkeeping. */
+  protected onSessionBuilt(_entry: TEntry, _session: Session | null): void {}
 
   /**
    * Start watching a session's JSONL output file. Delegates to the detector's watcher.
@@ -171,9 +181,15 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     const sessions: Session[] = [];
     for (const entry of entries) {
       const entryStart = Date.now();
-      const session = this.isExpectedProcessAlive(entry.pid, entry.sessionId)
-        ? await this.processSessionEntry(entry)
-        : null;
+      let session: Session | null = null;
+      if (this.isExpectedProcessAlive(entry.pid, entry.sessionId)) {
+        this.onAliveEntry(entry);
+        const repo = this.resolveRepoOrWarn(entry);
+        if (repo) {
+          session = await this.buildSessionFromEntry(entry, repo);
+          this.onSessionBuilt(entry, session);
+        }
+      }
       const entryMs = Date.now() - entryStart;
       if (entryMs > 50) {
         logger.warn(`${this.logTag} slow processSessionEntry (${entryMs}ms): sessionType=${this.toolTypeId} sessionId=${entry.sessionId} pid=${entry.pid}`);

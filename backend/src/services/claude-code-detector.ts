@@ -7,7 +7,7 @@ import { ptyRegistry } from './pty-registry.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
-import type { Session } from '../models/index.js';
+import type { Session, Repository } from '../models/index.js';
 import type { CliDetector } from './cli-detector.js';
 import { BaseCliDetector, type SessionEntry } from './base-cli-detector.js';
 
@@ -113,29 +113,22 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
   }
 
   /**
-   * Per-entry bookkeeping wrapper. The base scan() has already filtered out
-   * dead/PID-reused entries, so any entry reaching here has a live process.
-   * Records the entry's pid in currentAlivePids before delegating to
-   * buildSessionFromEntry — pids are tracked even when buildSessionFromEntry
-   * returns null (e.g. no repo) so disappearance detection treats the pid as
-   * "still seen this cycle".
+   * Tracks every alive pid in currentAlivePids so disappearance detection in
+   * the next cycle can tell which sessions vanished. Runs before the repo
+   * filter, so no-repo entries still count as "seen alive this cycle".
    */
-  protected async processSessionEntry(entry: ClaudeSessionEntry): Promise<Session | null> {
+  protected onAliveEntry(entry: ClaudeSessionEntry): void {
     this.currentAlivePids.add(entry.pid);
-    return this.buildSessionFromEntry(entry);
   }
 
   /**
-   * Builds the Session row from one entry. Looks up the repo, resolves PTY
-   * linkage, and decides between fresh-claim, refresh-active, skip-pty-gone,
-   * and reactivate paths. Upserts the DB row and watches the JSONL output.
-   * Returns the persisted Session; never fires callbacks (dispatchSessionEvents
-   * handles created/updated firing).
+   * Builds the Session row from one entry. Resolves PTY linkage and decides
+   * between fresh-claim, refresh-active, skip-pty-gone, and reactivate paths.
+   * Upserts the DB row and watches the JSONL output. Returns the persisted
+   * Session; never fires callbacks (dispatchSessionEvents handles created/
+   * updated firing).
    */
-  private async buildSessionFromEntry(entry: ClaudeSessionEntry): Promise<Session | null> {
-    const repo = this.resolveRepoOrWarn(entry);
-    if (!repo) return null;
-
+  protected async buildSessionFromEntry(entry: ClaudeSessionEntry, repo: Repository): Promise<Session | null> {
     const now = new Date().toISOString();
     const existingSession = getSession(entry.sessionId);
     const linkage = this.resolvePtyLinkage(entry.sessionId, existingSession, repo.path, entry.pid, 'session_registry', true);

@@ -7,7 +7,7 @@ import { upsertSession, getSession, getSessions, getServerState, setServerState 
 import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
 import { detectYoloModeFromPids } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
-import type { Session } from '../models/index.js';
+import type { Session, Repository } from '../models/index.js';
 import type { CliDetector } from './cli-detector.js';
 import { BaseCliDetector, type SessionEntry } from './base-cli-detector.js';
 
@@ -160,29 +160,24 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
   }
 
   /**
-   * Per-entry pipeline: delegates to buildSessionFromEntry and records active
-   * dirPaths so they are always re-checked next cycle (used by the mtime filter
-   * in readSessionEntries) to detect the eventual end transition.
+   * Records dirPaths of sessions that ended this cycle as 'active'. The mtime
+   * filter in readSessionEntries always re-checks these dirs next cycle so we
+   * detect the eventual end transition promptly.
    */
-  protected async processSessionEntry(entry: CopilotSessionEntry): Promise<Session | null> {
-    const session = await this.buildSessionFromEntry(entry);
+  protected onSessionBuilt(entry: CopilotSessionEntry, session: Session | null): void {
     if (session?.status === 'active') this.activeDirPaths.add(entry.dirPath);
-    return session;
   }
 
   /**
    * Builds the Session row from a directory entry. The base scan() has already
-   * filtered out dead/PID-reused entries, so any entry reaching here has a live
-   * process. Upserts a status='active' row and starts the JSONL watcher. Does
-   * not fire callbacks. Returns null only when no repo is registered for the cwd.
+   * filtered out dead/PID-reused entries and resolved the repo, so this method
+   * just upserts the row, starts the JSONL watcher, and returns it. Does not
+   * fire callbacks (dispatchSessionEvents handles those).
    */
-  private async buildSessionFromEntry(entry: CopilotSessionEntry): Promise<Session | null> {
-    const { sessionId, cwd, pid, dirPath, summary, startedAt, updatedAt } = entry;
+  protected async buildSessionFromEntry(entry: CopilotSessionEntry, repo: Repository): Promise<Session | null> {
+    const { sessionId, pid, dirPath, summary, startedAt, updatedAt } = entry;
 
     const existingSession = getSession(sessionId);
-
-    const repo = this.resolveRepoOrWarn(entry);
-    if (!repo) return null;
 
     const toIso = (val: string | Date): string =>
       val instanceof Date ? val.toISOString() : val;
