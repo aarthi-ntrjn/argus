@@ -120,24 +120,22 @@ export class CliManager {
 
   // --- Hook injection for individual repos ---
 
-  /** Injects Copilot hooks into a newly registered repository. Claude hooks are global and do not need per-repo injection. */
+  /** Injects hooks for a newly registered repository into both injectors. */
   injectHooksForRepo(repoPath: string): void {
+    this.claudeInjector.injectForRepo(repoPath);
     this.copilotInjector.injectForRepo(repoPath);
   }
 
-  /** Removes Copilot hooks from a repository being unregistered. */
+  /** Removes hooks for a repository being unregistered from both injectors. */
   removeHooksForRepo(repoPath: string): void {
+    this.claudeInjector.removeForRepo(repoPath);
     this.copilotInjector.removeForRepo(repoPath);
   }
 
-  /** Re-injects Claude hooks globally (e.g., after a new repo is added). */
-  reinjectClaudeHooks(): void {
-    this.claudeInjector.injectForAll();
-  }
-
-  /** Removes all Claude hooks (called when the last repository is removed). */
-  removeAllClaudeHooks(): void {
+  /** Removes all hooks from both injectors (called when the last repository is removed). */
+  removeAllHooks(): void {
     this.claudeInjector.removeAll();
+    this.copilotInjector.removeAll();
   }
 
 }

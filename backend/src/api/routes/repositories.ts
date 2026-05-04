@@ -17,13 +17,13 @@ import { broadcast } from '../ws/event-dispatcher.js';
 import { getCurrentBranch, getRemoteUrl } from '../../services/repository-scanner.js';
 
 let _monitor: { triggerScan(force?: boolean): void } | null = null;
-let _cliManager: { reinjectClaudeHooks(): void; removeAllClaudeHooks(): void; injectHooksForRepo(path: string): void; removeHooksForRepo(path: string): void } | null = null;
+let _cliManager: { removeAllHooks(): void; injectHooksForRepo(path: string): void; removeHooksForRepo(path: string): void } | null = null;
 
 export function setMonitor(monitor: { triggerScan(force?: boolean): void }): void {
   _monitor = monitor;
 }
 
-export function setCliManager(manager: { reinjectClaudeHooks(): void; removeAllClaudeHooks(): void; injectHooksForRepo(path: string): void; removeHooksForRepo(path: string): void }): void {
+export function setCliManager(manager: { removeAllHooks(): void; injectHooksForRepo(path: string): void; removeHooksForRepo(path: string): void }): void {
   _cliManager = manager;
 }
 
@@ -67,7 +67,6 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
 
     // Re-inject Claude hooks in case they were removed when the last repo was deleted
     const tHooks = Date.now();
-    _cliManager?.reinjectClaudeHooks();
     _cliManager?.injectHooksForRepo(repoPath);
     logger.debug(`[Repositories] injectHooks — ${Date.now() - tHooks}ms`);
 
@@ -106,10 +105,10 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(500).send({ error: 'DELETE_FAILED', message: 'Failed to delete repository. Check server logs for details.', requestId: req.id });
     }
 
-    // Remove Claude hooks if no repositories remain
+    // Remove all hooks if no repositories remain; always remove per-repo hooks.
     const remaining = getRepositories();
     if (remaining.length === 0) {
-      _cliManager?.removeAllClaudeHooks();
+      _cliManager?.removeAllHooks();
     }
     _cliManager?.removeHooksForRepo(existing.path);
 
