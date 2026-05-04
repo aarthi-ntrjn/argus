@@ -71,17 +71,6 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     this.sessionsDir = sessionsDir;
   }
 
-  /**
-   * Seeds tracking statewith sessions that survived from a previous run.
-   * Call before the first scan() to prevent spurious session.updated events on startup.
-   */
-  seedState(sessions: Session[]): void {
-    for (const session of sessions) {
-      if (session.type !== SessionTypes.CLAUDE_CODE) continue;
-      this.sigCache.set(session.id, this.sessionSignature(session));
-    }
-  }
-
   /** Returns a sessionId-to-PID map for startup stale-session reconciliation only. */
   getRegistryEntries(): Map<string, number> {
     const result = new Map<string, number>();
@@ -90,8 +79,6 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     }
     return result;
   }
-
-
 
   /** One-time startup: nothing to initialize for Claude Code before the first scan. */
   async start(): Promise<void> {}

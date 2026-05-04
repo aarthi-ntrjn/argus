@@ -43,6 +43,18 @@ export abstract class BaseCliDetector {
   protected abstract readonly toolTypeId: SessionType;
 
   /**
+   * Seeds tracking state with sessions that survived from a previous run.
+   * Filters to only this detector's session type using toolTypeId.
+   * Call before the first scan() to prevent spurious created/updated events on startup.
+   */
+  seedState(sessions: Session[]): void {
+    for (const session of sessions) {
+      if (session.type !== this.toolTypeId) continue;
+      this.sigCache.set(session.id, this.sessionSignature(session));
+    }
+  }
+
+  /**
    * Creates a new session linked to a PTY launcher (terminal tab in Argus UI).
    * Called when a PTY claim succeeds from a hook event (or scan, for Claude).
    */

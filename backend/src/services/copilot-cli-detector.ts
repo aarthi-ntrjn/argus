@@ -78,16 +78,6 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
-   * Seeds tracking state with sessions that survived from a previous run.
-   * Call before the first scan() to prevent duplicate session.created events.
-   */
-  seedState(sessions: Session[]): void {
-    for (const session of sessions) {
-      this.sigCache.set(session.id, this.sessionSignature(session));
-    }
-  }
-
-  /**
    * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
    * Equivalent of ClaudeCodeDetector.getRegistryEntries() — scans inuse.<PID>.lock files.
    */
