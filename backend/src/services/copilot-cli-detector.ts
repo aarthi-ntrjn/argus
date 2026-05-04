@@ -302,11 +302,10 @@ export class CopilotCliDetector implements CliDetector {
 
 
   /**
-   * Scan all copilot session directories and return a map of session ID → PID
-   * from inuse.<PID>.lock files. This is the copilot equivalent of
-   * ClaudeSessionRegistry.scanEntries().
+   * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
+   * Equivalent of ClaudeCodeDetector.getRegistryEntries() — scans inuse.<PID>.lock files.
    */
-  scanLockEntries(): Map<string, number> {
+  getRegistryEntries(): Map<string, number> {
     const result = new Map<string, number>();
     if (!existsSync(this.sessionStateDir)) return result;
 

@@ -8,7 +8,7 @@ import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
-import type { Session, Repository, PendingChoice, ClaudeSessionRegistryEntry } from '../models/index.js';
+import type { Session, Repository, PendingChoice } from '../models/index.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
@@ -49,9 +49,13 @@ export class ClaudeCodeDetector implements CliDetector {
     }
   }
 
-  /** Returns raw registry entries for startup stale-session reconciliation only. */
-  getRegistryEntries(): ClaudeSessionRegistryEntry[] {
-    return this.registry.scanEntries();
+  /** Returns a sessionId-to-PID map for startup stale-session reconciliation only. */
+  getRegistryEntries(): Map<string, number> {
+    const result = new Map<string, number>();
+    for (const entry of this.registry.scanEntries()) {
+      result.set(entry.sessionId, entry.pid);
+    }
+    return result;
   }
 
   getPendingChoice(sessionId: string): PendingChoice | null {

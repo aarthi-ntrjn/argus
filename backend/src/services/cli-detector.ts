@@ -52,4 +52,10 @@ export interface CliDetector {
    * No-op for detectors that manage watchers internally (e.g. CopilotCliDetector).
    */
   closeSessionWatcher(sessionId: string): void;
+
+  /**
+   * Returns a sessionId-to-PID map for startup stale-session reconciliation only.
+   * Called once during start() before the first scan cycle.
+   */
+  getRegistryEntries(): Map<string, number>;
 }

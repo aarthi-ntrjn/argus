@@ -2,7 +2,7 @@ import { ClaudeCodeDetector } from './claude-code-detector.js';
 import { CopilotCliDetector } from './copilot-cli-detector.js';
 import { ClaudeCodeHooksInjector } from './claude-code-hooks-injector.js';
 import { CopilotHooksInjector } from './copilot-cli-hooks-injector.js';
-import type { Session, ClaudeSessionRegistryEntry } from '../models/index.js';
+import type { Session } from '../models/index.js';
 import type { CliHookPayload } from './cli-detector.js';
 
 /**
@@ -82,14 +82,15 @@ export class CliManager {
 
   // --- Startup reconciliation data ---
 
-  /** Returns the current Claude session registry entries (used at startup to reconcile stale sessions). */
-  claudeRegistryEntries(): ClaudeSessionRegistryEntry[] {
-    return this.claudeDetector.getRegistryEntries();
-  }
-
-  /** Returns the Copilot lock-file registry (session ID to PID) for startup reconciliation. */
-  scanLockEntries(): Map<string, number> {
-    return this.copilotDetector.scanLockEntries();
+  /**
+   * Returns a merged sessionId-to-PID map from both detectors, used at startup
+   * to reconcile stale sessions.
+   */
+  getRegistryEntries(): Map<string, number> {
+    const result = new Map<string, number>();
+    for (const [id, pid] of this.claudeDetector.getRegistryEntries()) result.set(id, pid);
+    for (const [id, pid] of this.copilotDetector.getRegistryEntries()) result.set(id, pid);
+    return result;
   }
 
   // --- Watcher management ---

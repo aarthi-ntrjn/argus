@@ -91,12 +91,9 @@ export class SessionMonitor extends EventEmitter {
       ];
       if (sessions.length === 0) return;
 
-      // Source 2a: Claude session registry (session ID → registry entry with PID)
-      const claudeRegistryEntries = this.cliManager.claudeRegistryEntries();
-      const claudeRegistryBySessionId = new Map(claudeRegistryEntries.map(e => [e.sessionId, e.pid]));
-
-      // Source 2b: Copilot lock file registry (session ID → PID)
-      const copilotLockEntries = this.cliManager.scanLockEntries();
+      // Source 2: Merged session registry (session ID → PID) from both detectors.
+      // Claude: JSON session registry files. Copilot: inuse.<PID>.lock files.
+      const registryEntries = this.cliManager.getRegistryEntries();
 
       // Source 3: Running OS processes (filtered to AI tools only to avoid PID reuse false-positives).
       // On Linux/Mac the copilot binary is often a Node.js script: ps-list name is "node" but
@@ -115,10 +112,7 @@ export class SessionMonitor extends EventEmitter {
       const now = new Date().toISOString();
 
       for (const session of sessions) {
-        // Look up the registry PID using the correct registry for this session type
-        const registryPid = session.type === SessionTypes.CLAUDE_CODE
-          ? claudeRegistryBySessionId.get(session.id) ?? null
-          : copilotLockEntries.get(session.id) ?? null;
+        const registryPid = registryEntries.get(session.id) ?? null;
 
         const registryLabel = session.type === SessionTypes.CLAUDE_CODE
           ? 'Claude session registry'
