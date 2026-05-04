@@ -237,73 +237,8 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     } catch { /* best-effort */ }
   }
 
-  /**
-   * Creates a new session linked to a PTY launcher (terminal tab in Argus UI).
-   * Called when a PTY claim succeeds — either from a hook event or from
-   * activateFoundSession() when the registry scan finds the session first.
-   */
-  protected async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
-    const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'claude-code');
-    const session: Session = {
-      id: sessionId,
-      repositoryId: repo.id,
-      type: 'claude-code',
-      launchMode: 'pty',
-      pid: claimed.pid,
-      hostPid: claimed.hostPid,
-      pidSource: 'pty_registry',
-      status: 'active',
-      startedAt: now,
-      endedAt: null,
-      lastActivityAt: now,
-      summary: null,
-      expiresAt: null,
-      model: null,
-      reconciled: true,
-      yoloMode,
-      ptyLaunchId: claimed.ptyLaunchId,
-    };
-    upsertSession(session);
-    this.sigCache.set(session.id, this.sessionSignature(session));
-    this.sessionCreatedCallback?.(session);
-    await this.jsonlWatcher.watchFile(sessionId, repo.path);
-  }
-
-  /**
-   * Creates or updates a session in response to a hook event.
-   * On first event: fires sessionCreatedCallback (seeds sigCache).
-   * On subsequent events: broadcasts session.updated directly (hooks are
-   * the authoritative update source — reconcileActiveSessions handles dedup
-   * for poll-sourced updates, not hook-sourced ones).
-   */
-  protected async upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<void> {
-    const session: Session = existing ?? {
-      id: sessionId,
-      repositoryId: repo.id,
-      type: 'claude-code',
-      launchMode: null,
-      pid: null,
-      hostPid: null,
-      pidSource: null,
-      status: 'active',
-      startedAt: now,
-      endedAt: null,
-      lastActivityAt: now,
-      summary: null,
-      expiresAt: null,
-      model: null,
-      reconciled: true,
-      yoloMode: null,
-    };
-    const updated = { ...session, status: 'active' as const, lastActivityAt: now };
-    upsertSession(updated);
-    if (existing) {
-      broadcast({ type: 'session.updated', timestamp: now, data: updated });
-    } else {
-      this.sigCache.set(updated.id, this.sessionSignature(updated));
-      this.sessionCreatedCallback?.(updated);
-    }
-    await this.jsonlWatcher.watchFile(sessionId, repo.path);
+  protected watchJsonlFile(sessionId: string, repoPath: string): Promise<void> {
+    return this.jsonlWatcher.watchFile(sessionId, repoPath);
   }
 
   /**
@@ -325,7 +260,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     }
 
     if (existingSession?.status === 'active') {
-      await this.jsonlWatcher.watchFile(sessionId, repo.path);
+      await this.watchJsonlFile(sessionId, repo.path);
       return;
     }
 
@@ -363,7 +298,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
       this.sigCache.set(activated.id, this.sessionSignature(activated));
       this.sessionCreatedCallback?.(activated);
     }
-    await this.jsonlWatcher.watchFile(sessionId, repo.path);
+    await this.watchJsonlFile(sessionId, repo.path);
   }
 
   closeSessionWatcher(sessionId: string): void {

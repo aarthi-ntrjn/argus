@@ -1,11 +1,12 @@
 import type { Session, PendingChoice, SessionType, Repository } from '../models/index.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
-import { updateSessionStatus, getRepositoryByPath, getSession } from '../db/database.js';
+import { updateSessionStatus, upsertSession, getRepositoryByPath, getSession } from '../db/database.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
 import { normalize } from 'path';
 import { ptyRegistry } from './pty-registry.js';
+import { detectYoloModeFromPids } from './process-utils.js';
 import * as logger from '../utils/logger.js';
 import type { CliHookPayload } from './cli-detector.js';
 
@@ -31,6 +32,8 @@ export abstract class BaseCliDetector {
 
   /** Close the JSONL output watcher for the given session. */
   protected abstract closeJsonlWatcher(sessionId: string): void;
+  /** Start watching the JSONL output file for the given session. */
+  protected abstract watchJsonlFile(sessionId: string, repoPath: string): Promise<void>;
 
   /** Log tag prefix for this detector, e.g. '[ClaudeDetector]'. */
   protected abstract readonly logTag: string;
@@ -39,8 +42,71 @@ export abstract class BaseCliDetector {
   /** Session type identifier used for PTY registry and session rows. */
   protected abstract readonly toolTypeId: SessionType;
 
-  protected abstract upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<void>;
-  protected abstract createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void>;
+  /**
+   * Creates a new session linked to a PTY launcher (terminal tab in Argus UI).
+   * Called when a PTY claim succeeds from a hook event (or scan, for Claude).
+   */
+  protected async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
+    const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, this.toolTypeId);
+    const session: Session = {
+      id: sessionId,
+      repositoryId: repo.id,
+      type: this.toolTypeId,
+      launchMode: 'pty',
+      pid: claimed.pid,
+      hostPid: claimed.hostPid,
+      pidSource: 'pty_registry',
+      status: 'active',
+      startedAt: now,
+      endedAt: null,
+      lastActivityAt: now,
+      summary: null,
+      expiresAt: null,
+      model: null,
+      reconciled: true,
+      yoloMode,
+      ptyLaunchId: claimed.ptyLaunchId,
+    };
+    upsertSession(session);
+    this.sigCache.set(session.id, this.sessionSignature(session));
+    this.sessionCreatedCallback?.(session);
+    await this.watchJsonlFile(sessionId, repo.path);
+  }
+
+  /**
+   * Creates or updates a session in response to a hook event.
+   * On first event: fires sessionCreatedCallback (seeds sigCache).
+   * On subsequent events: updates sigCache and broadcasts session.updated.
+   */
+  protected async upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<void> {
+    const session: Session = existing ?? {
+      id: sessionId,
+      repositoryId: repo.id,
+      type: this.toolTypeId,
+      launchMode: null,
+      pid: null,
+      hostPid: null,
+      pidSource: null,
+      status: 'active',
+      startedAt: now,
+      endedAt: null,
+      lastActivityAt: now,
+      summary: null,
+      expiresAt: null,
+      model: null,
+      reconciled: true,
+      yoloMode: null,
+    };
+    const updated = { ...session, status: 'active' as const, lastActivityAt: now };
+    upsertSession(updated);
+    this.sigCache.set(updated.id, this.sessionSignature(updated));
+    if (existing) {
+      broadcast({ type: 'session.updated', timestamp: now, data: updated });
+    } else {
+      this.sessionCreatedCallback?.(updated);
+    }
+    await this.watchJsonlFile(sessionId, repo.path);
+  }
 
   setSessionCreatedCallback(cb: (session: Session) => void): void {
     this.sessionCreatedCallback = cb;

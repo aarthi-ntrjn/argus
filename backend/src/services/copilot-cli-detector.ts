@@ -10,7 +10,6 @@ import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
 import type { Session, Repository, PidSource } from '../models/index.js';
-import { broadcast } from '../api/ws/event-dispatcher.js';
 import type { CliDetector } from './cli-detector.js';
 import { BaseCliDetector } from './base-cli-detector.js';
 
@@ -455,71 +454,8 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     this.jsonlWatcher.closeWatcher(sessionId);
   }
 
-  /**
-   * Creates a new session linked to a PTY launcher (terminal tab in Argus UI).
-   * Called when a PTY claim succeeds from a hook event.
-   */
-  protected async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
-    const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'copilot-cli');
-    const session: Session = {
-      id: sessionId,
-      repositoryId: repo.id,
-      type: SessionTypes.COPILOT_CLI,
-      launchMode: 'pty',
-      pid: claimed.pid,
-      hostPid: claimed.hostPid,
-      pidSource: 'pty_registry' as PidSource,
-      status: 'active',
-      startedAt: now,
-      endedAt: null,
-      lastActivityAt: now,
-      summary: null,
-      expiresAt: null,
-      model: null,
-      reconciled: true,
-      yoloMode,
-      ptyLaunchId: claimed.ptyLaunchId,
-    };
-    upsertSession(session);
-    this.sigCache.set(sessionId, this.sessionSignature(session));
-    this.sessionCreatedCallback?.(session);
-    await this.jsonlWatcher.watchFile(sessionId, repo.path);
-  }
-
-  /**
-   * Creates or updates a session in response to a hook event.
-   * On first event: fires sessionCreatedCallback (seeds knownIds/sigCache/activeMap).
-   * On subsequent events: broadcasts session.updated directly.
-   */
-  protected async upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<void> {
-    const session: Session = existing ?? {
-      id: sessionId,
-      repositoryId: repo.id,
-      type: SessionTypes.COPILOT_CLI,
-      launchMode: null,
-      pid: null,
-      hostPid: null,
-      pidSource: null,
-      status: 'active',
-      startedAt: now,
-      endedAt: null,
-      lastActivityAt: now,
-      summary: null,
-      expiresAt: null,
-      model: null,
-      reconciled: true,
-      yoloMode: null,
-    };
-    const updated = { ...session, lastActivityAt: now };
-    upsertSession(updated);
-    if (existing) {
-      this.sigCache.set(sessionId, this.sessionSignature(updated));
-      broadcast({ type: 'session.updated', timestamp: now, data: updated });
-    } else {
-      this.sigCache.set(sessionId, this.sessionSignature(updated));
-      this.sessionCreatedCallback?.(updated);
-    }
-    await this.jsonlWatcher.watchFile(sessionId, repo.path);
+  protected watchJsonlFile(sessionId: string, repoPath: string): Promise<void> {
+    return this.jsonlWatcher.watchFile(sessionId, repoPath);
   }
 
   /** No-op: Copilot manages JSONL watchers internally in scan(). */
