@@ -39,7 +39,7 @@ import { BaseCliDetector } from './base-cli-detector.js';
 
 const DEFAULT_SESSIONS_DIR= join(homedir(), '.claude', 'sessions');
 
-interface SessionRegistryJson {
+interface SessionProcessJson {
   pid?: number;
   sessionId?: string;
   cwd?: string;
@@ -177,7 +177,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     const entries: Array<{ pid: number; sessionId: string; cwd: string }> = [];
     for (const file of files) {
       try {
-        const data = JSON.parse(readFileSync(join(this.sessionsDir, file), 'utf-8')) as SessionRegistryJson;
+        const data = JSON.parse(readFileSync(join(this.sessionsDir, file), 'utf-8')) as SessionProcessJson;
         if (typeof data.pid !== 'number' || typeof data.sessionId !== 'string' || typeof data.cwd !== 'string') continue;
         entries.push({ pid: data.pid, sessionId: data.sessionId, cwd: data.cwd });
       } catch { /* skip malformed */ }
