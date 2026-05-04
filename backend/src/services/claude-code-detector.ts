@@ -99,14 +99,14 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
   }
 
   /**
-   * Per-entry bookkeeping wrapper. Applies liveness + identity guards (skip if
-   * the pid is dead or PID-reused) and records the entry's pid in
-   * currentAlivePids before delegating to buildSessionFromEntry. Pids are tracked
-   * before the repo check inside buildSessionFromEntry so a removed-repo session
-   * still counts as "alive this cycle" for disappearance detection.
+   * Per-entry bookkeeping wrapper. The base scan() has already filtered out
+   * dead/PID-reused entries, so any entry reaching here has a live process.
+   * Records the entry's pid in currentAlivePids before delegating to
+   * buildSessionFromEntry — pids are tracked even when buildSessionFromEntry
+   * returns null (e.g. no repo) so disappearance detection treats the pid as
+   * "still seen this cycle".
    */
   protected async processSessionEntry(entry: ClaudeSessionEntry): Promise<Session | null> {
-    if (!this.isExpectedProcessAlive(entry.pid, entry.sessionId)) return null;
     this.currentAlivePids.add(entry.pid);
     return this.buildSessionFromEntry(entry);
   }

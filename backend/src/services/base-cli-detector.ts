@@ -139,13 +139,17 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   }
 
   /**
-   * Per-cycle scan orchestrator. Reads entries, processes each, dispatches events.
-   * Concrete detectors implement the three abstract steps. force=true bypasses
-   * any caching the read step may apply (e.g. Copilot's mtime filter).
+   * Per-cycle scan orchestrator. Reads entries, filters out entries whose source
+   * process isn't alive (or is the wrong process via PID reuse), processes the
+   * survivors, then dispatches events. Sessions whose source died are ended via
+   * dispatchSessionEvents' dropped-off detection.
    *
-   * Logs an info-level "slow entry" line when a single processSessionEntry
+   * force=true bypasses any caching the read step may apply (e.g. Copilot's
+   * mtime filter).
+   *
+   * Logs an info-level "slow processSessionEntry" line when a single entry
    * takes more than 50ms, and a warn-level "slow scan" line when the whole
-   * cycle does. Both thresholds catch pathological per-entry I/O regressions.
+   * cycle does.
    */
   async scan(force = false): Promise<Session[]> {
     if (!existsSync(this.sessionsDir)) return [];
@@ -154,7 +158,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     const sessions: Session[] = [];
     for (const entry of entries) {
       const entryStart = Date.now();
-      const session = await this.processSessionEntry(entry);
+      const session = this.isExpectedProcessAlive(entry.pid, entry.sessionId)
+        ? await this.processSessionEntry(entry)
+        : null;
       const entryMs = Date.now() - entryStart;
       if (entryMs > 50) {
         logger.info(`${this.logTag} slow processSessionEntry (${entryMs}ms): sessionType=${this.toolTypeId} sessionId=${entry.sessionId} pid=${entry.pid}`);

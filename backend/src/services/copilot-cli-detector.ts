@@ -159,19 +159,15 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
   }
 
   /**
-   * Builds the Session row from a directory entry, applying liveness guards and
-   * PTY linkage. Pure of dispatch concerns: it upserts the DB row and starts the
-   * watcher, but does not fire callbacks.
+   * Builds the Session row from a directory entry. The base scan() has already
+   * filtered out dead/PID-reused entries, so any entry reaching here has a live
+   * process. Upserts a status='active' row and starts the JSONL watcher. Does
+   * not fire callbacks. Returns null only when no repo is registered for the cwd.
    */
   private async buildSessionFromEntry(entry: CopilotSessionEntry): Promise<Session | null> {
     const { sessionId, cwd, pid, dirPath, summary, startedAt, updatedAt } = entry;
+
     const existingSession = getSession(sessionId);
-
-    const isRunning = this.isExpectedProcessAlive(pid, sessionId);
-
-    // Skip directories for sessions already recorded as ended: no lock file means
-    // nothing has changed since we last marked them ended.
-    if (!isRunning && existingSession?.status === 'ended') return null;
 
     const repo = getRepositoryByPath(normalize(cwd));
     if (!repo) {
@@ -179,15 +175,14 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
       return null;
     }
 
-    const status = isRunning ? 'active' : 'ended';
     const toIso = (val: string | Date): string =>
       val instanceof Date ? val.toISOString() : val;
 
-    const linkage = this.resolvePtyLinkage(sessionId, existingSession, repo.path, pid, 'lockfile', isRunning);
+    const linkage = this.resolvePtyLinkage(sessionId, existingSession, repo.path, pid, 'lockfile', true);
 
     const yoloMode = existingSession?.yoloMode != null
       ? existingSession.yoloMode
-      : isRunning ? detectYoloModeFromPids(linkage.pid, linkage.hostPid, SessionTypes.COPILOT_CLI) : null;
+      : detectYoloModeFromPids(linkage.pid, linkage.hostPid, SessionTypes.COPILOT_CLI);
 
     const updatedAtIso = toIso(updatedAt);
     const session: Session = {
@@ -198,9 +193,9 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
       pid: linkage.pid,
       hostPid: linkage.hostPid,
       pidSource: linkage.pidSource,
-      status,
+      status: 'active',
       startedAt: toIso(startedAt),
-      endedAt: status === 'ended' ? updatedAtIso : null,
+      endedAt: null,
       lastActivityAt: existingSession?.lastActivityAt && existingSession.lastActivityAt > updatedAtIso
         ? existingSession.lastActivityAt
         : updatedAtIso,
@@ -213,11 +208,7 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
     };
 
     upsertSession(session);
-
-    if (isRunning) {
-      await this.watchJsonlFile(sessionId, dirPath);
-    }
-
+    await this.watchJsonlFile(sessionId, dirPath);
     return session;
   }
 
@@ -246,15 +237,12 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
   }
 
   /**
-   * Three-stage dispatch:
-   *   1. Dropped-off detection: any DB active/idle session not seen in this scan
-   *      had its workspace dir cleaned up by the OS. Mark ended and fire callback.
+   * Two-stage dispatch:
+   *   1. End-detection: any DB active/idle session not in this cycle's results
+   *      means its lockfile is gone, its dir was cleaned up, or its repo was
+   *      removed. Mark ended and fire callback.
    *   2. sigCache diff (shared): fire created/updated callbacks via the base
-   *      fireCreatedAndUpdated helper.
-   *   3. Per-session ended one-shot: any session whose buildSessionFromEntry
-   *      returned status='ended' this cycle (lockfile gone, workspace.yaml
-   *      remains) fires sessionEndedCallback once and clears sigCache.
-   *      Gated by sigCache.has() so a prior SessionEnd hook doesn't double-fire.
+   *      fireCreatedAndUpdated helper for sessions still active.
    */
   protected dispatchSessionEvents(sessions: Session[]): void {
     const currentIds = new Set(sessions.map((s) => s.id));
@@ -263,17 +251,10 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
     const dbActiveSessions = getSessions().filter((s) => s.type === 'copilot-cli' && (s.status === 'active' || s.status === 'idle'));
     for (const session of dbActiveSessions) {
       if (!currentIds.has(session.id)) {
-        this.markSessionEnded(session, now, 'dir gone');
+        this.markSessionEnded(session, now, 'no longer detected');
       }
     }
 
     this.fireCreatedAndUpdated(sessions);
-
-    for (const session of sessions) {
-      if (session.status === 'ended' && this.sigCache.has(session.id)) {
-        this.sessionEndedCallback?.(session);
-        this.sigCache.delete(session.id);
-      }
-    }
   }
 }
