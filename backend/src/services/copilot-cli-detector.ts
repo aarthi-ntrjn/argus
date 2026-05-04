@@ -1,4 +1,4 @@
-import { readdirSync, existsSync, readFileSync, statSync } from 'fs';
+import { readdirSync, readFileSync, statSync } from 'fs';
 import * as logger from '../utils/logger.js';
 import { join, normalize } from 'path';
 import { homedir } from 'os';
@@ -39,6 +39,13 @@ interface WorkspaceYaml {
   updated_at?: string | Date;
 }
 
+/** Parsed entry from one ~/.copilot/session-state/<id>/ directory. */
+interface CopilotDirEntry {
+  dirPath: string;
+  workspace: WorkspaceYaml;
+  pid: number | null;
+}
+
 /**
  * Detects and tracks Copilot CLI sessions.
  *
@@ -51,18 +58,17 @@ interface WorkspaceYaml {
  * Secondary path — directory scan: scan() walks ~/.copilot/session-state/ on every cycle.
  * This catches sessions that started without hooks (e.g. legacy installs or missed events)
  * and detects unclean shutdowns where SessionEnd never fired (lock file disappears).
- * Mtime filtering skips unchanged directories; directories with active sessions are always
- * re-checked to detect process exit.
  *
- * Change detection: processSessionEvents() diffs the scan result against sigCache
- * and fires sessionCreatedCallback, sessionUpdatedCallback, or sessionEndedCallback
- * exactly once per transition. Hook-created sessions are pre-seeded into sigCache
- * so the next scan cycle does not re-fire the same event.
+ * The base scan() pipeline calls readSessionEntries (mtime-filtered dir walk) →
+ * processSessionEntry per dir → dispatchSessionEvents (sigCache diff + dropped-off
+ * detection). Active dirs are always re-checked next cycle so session ends are
+ * detected promptly.
  */
-export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
+export class CopilotCliDetector extends BaseCliDetector<CopilotDirEntry> implements CliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
-  private readonly sessionsDir: string;
+  protected readonly sessionsDir: string;
   private lastScanTime: number;
+  /** Dirs that ended this scan cycle with an active session. Re-checked next cycle. */
   private activeDirPaths = new Set<string>();
 
   protected readonly logTag = '[CopilotDetector]';
@@ -77,42 +83,17 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
-   * Per-cycle scan. Two responsibilities:
-   *
-   * 1. Directory sweep: walk sessionsDir for new or changed directories.
-   *    Applies mtime filtering to skip stale directories while always re-checking
-   *    any directory that had an active session in the previous cycle.
-   *    When force=true (startup or repo add), skips the mtime filter entirely.
-   *
-   * 2. Event dispatch: calls processSessionEvents() with all discovered sessions
-   *    to fire sessionCreatedCallback / sessionUpdatedCallback / sessionEndedCallback.
-   *
-   * Returns the discovered sessions, but callers (CliManager/SessionMonitor) ignore
-   * the return value. CopilotCliDetector is fully push-based via callbacks.
-   */
-  async scan(force = false): Promise<Session[]> {
-    if (!existsSync(this.sessionsDir)) return [];
-    const t0 = Date.now();
-    const sessions = await this.scanSessionFiles(force);
-    this.lastScanTime = t0;
-    setServerState('copilot_last_scan_time', String(t0));
-    this.processSessionEvents(sessions);
-    return sessions;
-  }
-
-  /**
-   * Walks sessionsDir and returns the current state of each changed or active session.
+   * Walks sessionsDir and returns one parsed entry per dir to process this cycle.
    *
    * Applies mtime filtering to skip stale directories while always re-checking
    * any directory that had an active session in the previous cycle.
-   * When force=true (triggered by repo add), skips the mtime filter entirely.
+   * When force=true (triggered by repo add or first scan), skips the mtime filter.
+   *
+   * Resets activeDirPaths so processSessionEntry can repopulate it as it iterates.
    */
-  private async scanSessionFiles(force = false): Promise<Session[]> {
-    // Collect dirs to process:
-    // 1. Dirs modified since last scan — may contain new sessions.
-    //    When force=true skip the mtime filter so we catch sessions whose dir
-    //    predates the last scan (e.g. after a repo remove+re-add).
-    // 2. Dirs that had an active session last scan — detect if they have ended.
+  protected async readSessionEntries(force: boolean): Promise<CopilotDirEntry[]> {
+    const t0 = Date.now();
+    const previousActive = this.activeDirPaths;
     const dirsToProcess = new Set<string>();
 
     try {
@@ -120,60 +101,54 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
         const dirPath = join(this.sessionsDir, entry.name);
-
-        if (this.activeDirPaths.has(dirPath)) {
+        if (previousActive.has(dirPath) || force) {
           dirsToProcess.add(dirPath);
           continue;
         }
-
-        if (force) {
-          dirsToProcess.add(dirPath);
-          continue;
-        }
-
         try {
           if (statSync(dirPath).mtimeMs > this.lastScanTime) dirsToProcess.add(dirPath);
         } catch { /* ignore */ }
       }
     } catch { /* ignore */ }
 
-    const sessions: Session[] = [];
-    const newActiveDirPaths = new Set<string>();
+    this.activeDirPaths = new Set();
+    this.lastScanTime = t0;
+    setServerState('copilot_last_scan_time', String(t0));
 
+    const result: CopilotDirEntry[] = [];
     for (const dirPath of dirsToProcess) {
-      const tDir = Date.now();
-      const session = await this.processSessionDir(dirPath);
-      const dirMs = Date.now() - tDir;
-      if (dirMs > 50) {
-        logger.info(`[CopilotDetector] slow dir (${dirMs}ms): ${dirPath}`);
-      }
-      if (session) {
-        sessions.push(session);
-        if (session.status === 'active') newActiveDirPaths.add(dirPath);
-      }
+      const data = this.readDirEntry(dirPath);
+      if (data) result.push({ dirPath, workspace: data.workspace, pid: data.pid });
     }
-
-    this.activeDirPaths = newActiveDirPaths;
-    return sessions;
+    return result;
   }
 
   /**
-   * Reads one session directory and returns the current session state or null.
+   * Per-entry pipeline: liveness + identity guards, repo lookup, PTY linkage,
+   * upsert, watch JSONL. Returns the persisted Session, or null if the entry
+   * should be skipped (no repo, already-ended-and-not-running, etc.).
    *
-   * Requires workspace.yaml (session metadata). If a lock file is also present,
-   * the session is considered running — lock file absence means ended. Performs
-   * two liveness guards to avoid false positives from PID reuse:
-   *   1. isPidRunning() — cheap signal-0 check.
-   *   2. isExpectedProcess() — verifies the process name matches the AI tool.
-   *
-   * Calls resolvePtyLinkage() to associate the session with a PTY launcher if
-   * one is waiting in the registry.
+   * Records active dirPaths so they are always re-checked next cycle to detect
+   * the eventual end transition.
    */
-  private async processSessionDir(dirPath: string): Promise<Session | null> {
-    const data = this.readDirEntry(dirPath);
-    if (!data) return null;
-    const { workspace, pid } = data;
+  protected async processSessionEntry(entry: CopilotDirEntry): Promise<Session | null> {
+    const tDir = Date.now();
+    const session = await this.buildSessionFromEntry(entry);
+    const dirMs = Date.now() - tDir;
+    if (dirMs > 50) {
+      logger.info(`[CopilotDetector] slow dir (${dirMs}ms): ${entry.dirPath}`);
+    }
+    if (session?.status === 'active') this.activeDirPaths.add(entry.dirPath);
+    return session;
+  }
 
+  /**
+   * Builds the Session row from a directory entry, applying liveness guards and
+   * PTY linkage. Pure of dispatch concerns: it upserts the DB row and starts the
+   * watcher, but does not fire callbacks.
+   */
+  private async buildSessionFromEntry(entry: CopilotDirEntry): Promise<Session | null> {
+    const { dirPath, workspace, pid } = entry;
     const sessionId = workspace.id ?? randomUUID();
     const existingSession = getSession(sessionId);
 
@@ -191,7 +166,10 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     if (!isRunning && existingSession?.status === 'ended') return null;
 
     const repo = workspace.cwd ? getRepositoryByPath(normalize(workspace.cwd)) : null;
-    if (!repo) { logger.warn(`[CopilotDetector] no repo for cwd="${workspace.cwd ?? 'none'}" sessionId=${sessionId} — session ignored`); return null; }
+    if (!repo) {
+      logger.warn(`[CopilotDetector] no repo for cwd="${workspace.cwd ?? 'none'}" sessionId=${sessionId} — session ignored`);
+      return null;
+    }
 
     const status = isRunning ? 'active' : 'ended';
     const toIso = (val: string | Date | undefined): string =>
@@ -202,6 +180,7 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
     const yoloMode = existingSession?.yoloMode != null
       ? existingSession.yoloMode
       : isRunning ? detectYoloModeFromPids(linkage.pid, linkage.hostPid, SessionTypes.COPILOT_CLI) : null;
+
     const session: Session = {
       id: sessionId,
       repositoryId: repo.id,
@@ -249,7 +228,6 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   // Returns null if the workspace file is missing or malformed.
   private readDirEntry(dirPath: string): { workspace: WorkspaceYaml; pid: number | null } | null {
     const workspaceFile = join(dirPath, 'workspace.yaml');
-    if (!existsSync(workspaceFile)) return null;
     try {
       const workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as WorkspaceYaml;
       const lockFile = this.findLockFile(dirPath);
@@ -259,23 +237,17 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
-   * Diff-based event dispatch. Called after every scan() with the full set of
-   * sessions found in that cycle.
-   *
-   * - Sessions active in the DB but absent from the scan: fire sessionEndedCallback
-   *   (process exited cleanly — workspace dir was cleaned up).
-   * - Sessions seen for the first time (not in sigCache): fire sessionCreatedCallback.
-   * - Sessions with a changed signature: fire sessionUpdatedCallback.
-   * - Sessions with status 'ended' still tracked in sigCache: fire sessionEndedCallback
-   *   once, then clear from sigCache (ended sessions remain on disk — only fire once).
+   * Two-stage dispatch:
+   *   1. Dropped-off detection: any DB active/idle session not seen in this scan
+   *      had its workspace dir cleaned up by the OS. Mark ended and fire callback.
+   *   2. sigCache diff: fire created for new sessions, updated for changed ones,
+   *      and ended (one-shot) for sessions that ended this cycle.
    */
-  private processSessionEvents(sessions: Session[]): void {
-    const currentIds = new Set(sessions.map(s => s.id));
+  protected dispatchSessionEvents(sessions: Session[]): void {
+    const currentIds = new Set(sessions.map((s) => s.id));
     const now = new Date().toISOString();
 
-    // Detect sessions that dropped off the scan (workspace dir cleaned up by the OS).
-    // Query DB directly — no need for a separate in-memory map.
-    const dbActiveSessions = getSessions().filter(s => s.type === 'copilot-cli' && (s.status === 'active' || s.status === 'idle'));
+    const dbActiveSessions = getSessions().filter((s) => s.type === 'copilot-cli' && (s.status === 'active' || s.status === 'idle'));
     for (const session of dbActiveSessions) {
       if (!currentIds.has(session.id)) {
         updateSessionStatus(session.id, 'ended', now);
@@ -318,6 +290,4 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   stop(): void {
     this.jsonlWatcher.stopWatchers();
   }
-
 }
-

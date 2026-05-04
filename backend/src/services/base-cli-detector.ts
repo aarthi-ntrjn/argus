@@ -1,3 +1,4 @@
+import { existsSync } from 'fs';
 import type { Session, PendingChoice, SessionType, Repository, PidSource } from '../models/index.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
@@ -13,16 +14,18 @@ import type { CliHookPayload } from './cli-detector.js';
 /**
  * Shared state and behavior for all CLI session detectors.
  *
- * Provides:
- * - sigCache: change-detection fingerprint map (sessionId -> JSON signature)
- * - pendingChoices: in-flight AskUser prompts waiting for a response
- * - Callback setters for session lifecycle events
- * - getPendingChoice() / clearPendingChoice() accessors
- * - sessionSignature() fingerprint helper
+ * Defines the canonical scan pipeline (read → process → dispatch) so both Claude
+ * and Copilot detectors share the same shape:
  *
- * Concrete detectors extend this class and implement the CliDetector interface.
+ *   scan(force)
+ *     → readSessionEntries(force)         // collect parsed entries from disk
+ *     → processSessionEntry(entry) per item  // upsert DB row, return Session
+ *     → dispatchSessionEvents(sessions)   // diff sigCache, fire callbacks
+ *
+ * TEntry is the per-detector parsed source record (Claude registry JSON entry,
+ * Copilot session-dir entry, etc.) and is private to the concrete detector.
  */
-export abstract class BaseCliDetector {
+export abstract class BaseCliDetector<TEntry = unknown> {
   // Dedup map: last-emitted signature per session, used to avoid redundant callbacks.
   protected readonly sigCache = new Map<string, string>();
   protected readonly pendingChoices = new Map<string, PendingChoice>();
@@ -30,6 +33,8 @@ export abstract class BaseCliDetector {
   protected sessionUpdatedCallback?: (session: Session) => void;
   protected sessionEndedCallback?: (session: Session) => void;
 
+  /** Root directory the detector watches for session sources. */
+  protected abstract readonly sessionsDir: string;
   /** Close the JSONL output watcher for the given session. */
   protected abstract closeJsonlWatcher(sessionId: string): void;
   /** Start watching the JSONL output file for the given session. */
@@ -39,6 +44,30 @@ export abstract class BaseCliDetector {
   protected abstract readonly askUserToolName: string;
   /** Session type identifier used for PTY registry and session rows. */
   protected abstract readonly toolTypeId: SessionType;
+
+  /** Read parsed entries from the source (registry files, session dirs, etc.). */
+  protected abstract readSessionEntries(force: boolean): Promise<TEntry[]>;
+  /** Process one entry: apply guards, resolve PTY linkage, upsert the session row. */
+  protected abstract processSessionEntry(entry: TEntry): Promise<Session | null>;
+  /** Diff against sigCache and fire session.created/updated/ended callbacks. */
+  protected abstract dispatchSessionEvents(sessions: Session[]): void;
+
+  /**
+   * Per-cycle scan orchestrator. Reads entries, processes each, dispatches events.
+   * Concrete detectors implement the three abstract steps. force=true bypasses
+   * any caching the read step may apply (e.g. Copilot's mtime filter).
+   */
+  async scan(force = false): Promise<Session[]> {
+    if (!existsSync(this.sessionsDir)) return [];
+    const entries = await this.readSessionEntries(force);
+    const sessions: Session[] = [];
+    for (const entry of entries) {
+      const session = await this.processSessionEntry(entry);
+      if (session !== null) sessions.push(session);
+    }
+    this.dispatchSessionEvents(sessions);
+    return sessions;
+  }
 
   /**
    * Determines the PTY linkage state for a session this scan cycle.
@@ -145,10 +174,11 @@ export abstract class BaseCliDetector {
   }
 
   /**
-   * Creates a new session linked to a PTY launcher (terminal tab in Argus UI).
-   * Called when a PTY claim succeeds from a hook event (or scan, for Claude).
+   * Builds and persists a fresh PTY-bound session row. Watches its JSONL output.
+   * Returns the persisted Session. Does not fire callbacks — caller decides
+   * (hook path fires immediately, scan path defers to dispatchSessionEvents).
    */
-  protected async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
+  protected async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<Session> {
     const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, this.toolTypeId);
     const session: Session = {
       id: sessionId,
@@ -170,17 +200,15 @@ export abstract class BaseCliDetector {
       ptyLaunchId: claimed.ptyLaunchId,
     };
     upsertSession(session);
-    this.sigCache.set(session.id, this.sessionSignature(session));
-    this.sessionCreatedCallback?.(session);
     await this.watchJsonlFile(sessionId, repo.path);
+    return session;
   }
 
   /**
-   * Creates or updates a session in response to a hook event.
-   * On first event: fires sessionCreatedCallback (seeds sigCache).
-   * On subsequent events: updates sigCache and broadcasts session.updated.
+   * Builds or refreshes an active session row in response to a hook event.
+   * Returns the persisted Session. Does not fire callbacks — caller decides.
    */
-  protected async upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<void> {
+  protected async upsertActiveSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<Session> {
     const session: Session = existing ?? {
       id: sessionId,
       repositoryId: repo.id,
@@ -201,13 +229,8 @@ export abstract class BaseCliDetector {
     };
     const updated = { ...session, status: 'active' as const, lastActivityAt: now };
     upsertSession(updated);
-    this.sigCache.set(updated.id, this.sessionSignature(updated));
-    if (existing) {
-      broadcast({ type: 'session.updated', timestamp: now, data: updated });
-    } else {
-      this.sessionCreatedCallback?.(updated);
-    }
     await this.watchJsonlFile(sessionId, repo.path);
+    return updated;
   }
 
   setSessionCreatedCallback(cb: (session: Session) => void): void {
@@ -284,11 +307,20 @@ export abstract class BaseCliDetector {
     if (!existing) {
       const claimed = normalizedCwd ? ptyRegistry.claimForSession(session_id, normalizedCwd, this.toolTypeId) : null;
       if (claimed) {
-        return this.createPtySession(session_id, repo, claimed, now);
+        const session = await this.createPtySession(session_id, repo, claimed, now);
+        this.sigCache.set(session.id, this.sessionSignature(session));
+        this.sessionCreatedCallback?.(session);
+        return;
       }
     }
 
-    await this.upsertAndBroadcastSession(session_id, repo, existing, now);
+    const session = await this.upsertActiveSession(session_id, repo, existing, now);
+    this.sigCache.set(session.id, this.sessionSignature(session));
+    if (existing) {
+      broadcast({ type: 'session.updated', timestamp: now, data: session });
+    } else {
+      this.sessionCreatedCallback?.(session);
+    }
   }
 
   protected handleSessionEnd(existing: Session | null | undefined, sessionId: string, now: string): void {

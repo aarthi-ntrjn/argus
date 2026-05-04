@@ -1,11 +1,10 @@
 import * as logger from '../utils/logger.js';
-import { existsSync, readdirSync, readFileSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { join, normalize } from 'path';
 import { homedir } from 'os';
 import { getSession, getSessions, upsertSession, updateSessionStatus, getRepositoryByPath, getRepositories } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
-import { broadcast } from '../api/ws/event-dispatcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
 import type { Session, Repository } from '../models/index.js';
@@ -42,14 +41,13 @@ interface SessionProcessJson {
   pid?: number;
   sessionId?: string;
   cwd?: string;
-  startedAt?: number;
-  procStart?: string;
-  version?: string;
-  peerProtocol?: number;
-  kind?: string;
-  entrypoint?: string;
-  status?: string;
-  updatedAt?: number;
+}
+
+/** Parsed entry from one ~/.claude/sessions/*.json file. */
+interface ClaudeRegistryEntry {
+  sessionId: string;
+  pid: number;
+  cwd: string;
 }
 
 /**
@@ -66,14 +64,17 @@ interface SessionProcessJson {
  * backfills the PID once Claude writes it to its registry file. It also detects
  * unclean shutdowns where SessionEnd never fired (registry file disappears).
  *
- * Reconciliation: reconcileActiveSessions() (called at the end of every scan()) checks
- * all active DB sessions for liveness (process dead, repo removed) and fires
- * sessionEndedCallback on failure or sessionUpdatedCallback when a tracked field changes.
+ * The base scan() pipeline calls readSessionEntries → processSessionEntry per entry
+ * → dispatchSessionEvents. Claude's dispatchSessionEvents adds a reconcileActiveSessions
+ * safety net that catches PTY sessions that don't appear in the registry scan.
  */
-export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
+export class ClaudeCodeDetector extends BaseCliDetector<ClaudeRegistryEntry> implements CliDetector {
   private readonly jsonlWatcher = new ClaudeJsonlWatcher();
-  private readonly sessionsDir: string;
-  private previousRegistryPids = new Set<number>();
+  protected readonly sessionsDir: string;
+  /** PIDs that passed the alive+expected-process guards in the previous scan. */
+  private previousAlivePids = new Set<number>();
+  /** PIDs that pass the alive+expected-process guards in the current scan. */
+  private currentAlivePids = new Set<number>();
 
   protected readonly logTag = '[ClaudeDetector]';
   protected readonly askUserToolName = 'AskUserQuestion';
@@ -84,96 +85,59 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     this.sessionsDir = sessionsDir;
   }
 
-  /**
-   * Per-cycle scan.Two responsibilities:
-   *
-   * 1. Registry sweep: read ~/.claude/sessions/*.json, backfill PIDs for hook-created
-   *    sessions, and detect new sessions that started without hooks firing.
-   *    Fires sessionCreatedCallback for genuinely new sessions.
-   *    Detects registry-file disappearance as an unclean session end.
-   *
-   * 2. Reconciliation: call reconcileActiveSessions() to detect liveness failures
-   *    (process died, repo deleted) and emit sessionUpdated/sessionEnded accordingly.
-   *
-   * Always returns []. ClaudeCodeDetector is fully push-based — all session events
-   * are delivered via callbacks, not via the return value.
-   */
-  async scan(): Promise<Session[]> {
-    const registryEntries = this.scanSessionFiles();
-    const currentPids = new Set<number>();
-    const now = new Date().toISOString();
-
-    for (const entry of registryEntries) {
-      // Guard 1: process is running (cheap signal-0 check)
-      // Guard 2: verify the process is actually the expected AI tool (catches recycled PIDs)
-      if (!isPidRunning(entry.pid)) continue;
-      if (!isExpectedProcess(entry.pid, 'claude-code')) {
-        logger.info(`[ClaudeDetector] PID reuse detected: pid ${entry.pid} is running with wrong name, skipping (sessionId=${entry.sessionId})`);
-        continue;
-      }
-
-      currentPids.add(entry.pid);
-
-      const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
-      const repo = getRepositoryByPath(normalizedCwd);
-      if (!repo) {
-        logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`);
-        continue;
-      }
-
-      await this.activateFoundSession(entry.sessionId, repo, entry.pid);
-    }
-
-    // Detect sessions whose registry file disappeared (unclean shutdown, SessionEnd hook not fired).
-    for (const oldPid of this.previousRegistryPids) {
-      if (currentPids.has(oldPid)) continue;
-      const activeSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
-      for (const session of activeSessions) {
-        if (session.pid === oldPid && session.pidSource === 'session_registry') {
-          logger.info(`[ClaudeDetector] session ended, registry file gone sessionId=${session.id} pid=${oldPid}`);
-          updateSessionStatus(session.id, 'ended', now);
-          this.closeJsonlWatcher(session.id);
-          const ended = { ...session, status: 'ended' as const, endedAt: now };
-          this.sigCache.delete(session.id);
-          this.sessionEndedCallback?.(ended);
-        }
-      }
-    }
-    this.previousRegistryPids = currentPids;
-
-    this.reconcileActiveSessions();
-    return [];
-  }
-
-  // Reads ~/.claude/sessions/*.json and returns the pid/sessionId/cwd for each valid entry.
-  private scanSessionFiles(): Array<{ pid: number; sessionId: string; cwd: string }> {
-    if (!existsSync(this.sessionsDir)) return [];
-    const files = readdirSync(this.sessionsDir).filter(f => f.endsWith('.json'));
-    const entries: Array<{ pid: number; sessionId: string; cwd: string }> = [];
+  /** Reads ~/.claude/sessions/*.json and returns one parsed entry per valid file. */
+  protected async readSessionEntries(_force: boolean): Promise<ClaudeRegistryEntry[]> {
+    this.currentAlivePids = new Set();
+    const files = readdirSync(this.sessionsDir).filter((f) => f.endsWith('.json'));
+    const entries: ClaudeRegistryEntry[] = [];
     for (const file of files) {
       try {
         const data = JSON.parse(readFileSync(join(this.sessionsDir, file), 'utf-8')) as SessionProcessJson;
         if (typeof data.pid !== 'number' || typeof data.sessionId !== 'string' || typeof data.cwd !== 'string') continue;
-        entries.push({ pid: data.pid, sessionId: data.sessionId, cwd: data.cwd });
+        entries.push({ sessionId: data.sessionId, pid: data.pid, cwd: data.cwd });
       } catch { /* skip malformed */ }
     }
     return entries;
   }
 
   /**
-   * Called from the registry scan for each running session entry.
-   * Resolves PTY linkage via the shared helper, then either claims a PTY,
-   * refreshes existing session metadata, or reactivates a non-PTY session.
+   * Per-entry pipeline: liveness + identity guards, repo lookup, then activate.
+   * Records the entry's pid in currentAlivePids before the repo check so a
+   * removed-repo session still counts as "alive this cycle" for disappearance
+   * detection.
    */
-  private async activateFoundSession(sessionId: string, repo: Repository, claudePid: number): Promise<void> {
+  protected async processSessionEntry(entry: ClaudeRegistryEntry): Promise<Session | null> {
+    if (!isPidRunning(entry.pid)) return null;
+    if (!isExpectedProcess(entry.pid, 'claude-code')) {
+      logger.info(`[ClaudeDetector] PID reuse detected: pid ${entry.pid} is running with wrong name, skipping (sessionId=${entry.sessionId})`);
+      return null;
+    }
+    this.currentAlivePids.add(entry.pid);
+
+    const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
+    const repo = getRepositoryByPath(normalizedCwd);
+    if (!repo) {
+      logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`);
+      return null;
+    }
+
+    return this.activateFoundSession(entry.sessionId, repo, entry.pid);
+  }
+
+  /**
+   * Resolves PTY linkage and decides between fresh-claim, refresh-active,
+   * skip-pty-gone, and reactivate paths. Upserts the DB row and watches the
+   * JSONL output. Returns the persisted Session; never fires callbacks
+   * (dispatchSessionEvents handles created/updated firing).
+   */
+  private async activateFoundSession(sessionId: string, repo: Repository, claudePid: number): Promise<Session | null> {
     const now = new Date().toISOString();
     const existingSession = getSession(sessionId);
     const linkage = this.resolvePtyLinkage(sessionId, existingSession, repo.path, claudePid, 'session_registry', true);
 
     if (!existingSession && linkage.freshClaim) {
       logger.info(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${linkage.freshClaim.hostPid} pid=${linkage.freshClaim.pid}`);
-      await this.createPtySession(sessionId, repo, linkage.freshClaim, now);
-      return;
+      return this.createPtySession(sessionId, repo, linkage.freshClaim, now);
     }
 
     if (existingSession?.status === 'active') {
@@ -182,14 +146,14 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
         : detectYoloModeFromPids(linkage.pid, linkage.hostPid, 'claude-code');
       const pidChanged = existingSession.pid !== linkage.pid || existingSession.pidSource !== linkage.pidSource;
       const yoloResolved = existingSession.yoloMode === null && yoloMode !== null;
+      let session = existingSession;
       if (pidChanged || yoloResolved) {
         logger.info(`[ClaudeDetector] pid assigned sessionId=${sessionId} pid=${linkage.pid} (was ${existingSession.pid}) yoloMode=${yoloMode}`);
-        const updated = { ...existingSession, pid: linkage.pid, pidSource: linkage.pidSource, yoloMode };
-        upsertSession(updated);
-        broadcast({ type: 'session.updated', timestamp: now, data: updated });
+        session = { ...existingSession, pid: linkage.pid, pidSource: linkage.pidSource, yoloMode };
+        upsertSession(session);
       }
       await this.watchJsonlFile(sessionId, repo.path);
-      return;
+      return session;
     }
 
     // Don't re-activate a PTY session whose launcher has already disconnected:
@@ -197,7 +161,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     // sessionId would route prompts to the wrong process.
     if (existingSession?.launchMode === 'pty' && !ptyRegistry.has(sessionId)) {
       logger.info(`[ClaudeDetector] skipping re-activation — PTY launcher gone sessionId=${sessionId}`);
-      return;
+      return existingSession;
     }
 
     this.closeJsonlWatcher(sessionId);
@@ -220,27 +184,66 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
       yoloMode: linkage.pid ? detectYoloModeFromPids(linkage.pid, linkage.hostPid, 'claude-code') : null,
       ptyLaunchId: linkage.ptyLaunchId,
     };
-    const isNewSession = !existingSession;
     const activated = { ...base, status: 'active' as const, endedAt: null as null, lastActivityAt: now, pid: linkage.pid };
     logger.info(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${linkage.pid}`);
     upsertSession(activated);
-    if (isNewSession) {
-      this.sigCache.set(activated.id, this.sessionSignature(activated));
-      this.sessionCreatedCallback?.(activated);
-    }
     await this.watchJsonlFile(sessionId, repo.path);
+    return activated;
   }
 
   /**
-   * Checks all active Claude Code DB sessions for liveness and field changes.
-   * Called at the end of every scan() cycle.
+   * Three-stage dispatch:
+   *   1. Disappearance: any pid that was alive last cycle but is gone this cycle
+   *      means the registry file vanished. End the matching DB session.
+   *   2. sigCache diff: fire created for new sessions, updated for changed ones.
+   *   3. Reconcile safety net: catches sessions not visible in the registry scan
+   *      (e.g. PTY sessions whose registry file never appeared) by checking PID
+   *      liveness and repo existence directly.
+   */
+  protected dispatchSessionEvents(sessions: Session[]): void {
+    const now = new Date().toISOString();
+
+    for (const oldPid of this.previousAlivePids) {
+      if (this.currentAlivePids.has(oldPid)) continue;
+      const activeSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
+      for (const session of activeSessions) {
+        if (session.pid === oldPid && session.pidSource === 'session_registry') {
+          logger.info(`[ClaudeDetector] session ended, registry file gone sessionId=${session.id} pid=${oldPid}`);
+          updateSessionStatus(session.id, 'ended', now);
+          this.closeJsonlWatcher(session.id);
+          const ended = { ...session, status: 'ended' as const, endedAt: now };
+          this.sigCache.delete(session.id);
+          this.sessionEndedCallback?.(ended);
+        }
+      }
+    }
+    this.previousAlivePids = new Set(this.currentAlivePids);
+
+    for (const session of sessions) {
+      const sig = this.sessionSignature(session);
+      if (!this.sigCache.has(session.id)) {
+        this.sigCache.set(session.id, sig);
+        this.sessionCreatedCallback?.(session);
+      } else if (this.sigCache.get(session.id) !== sig) {
+        this.sigCache.set(session.id, sig);
+        this.sessionUpdatedCallback?.(session);
+      }
+    }
+
+    this.reconcileActiveSessions();
+  }
+
+  /**
+   * Liveness safety net for sessions not visible in the registry scan (e.g. PTY
+   * sessions whose registry file never appeared, or sessions whose repo was
+   * removed). Walks all active+idle Claude sessions in the DB and:
    *
-   * - Repo removed: end the session immediately.
-   * - Process dead: end the session (catches crashes not covered by SessionEnd hook).
-   * - Field change: fire sessionUpdatedCallback (deduped via sigCache).
+   * - Repo removed: end the session.
+   * - Process dead: end the session.
+   * - Field change since last cycle: fire sessionUpdatedCallback (deduped via sigCache).
    *
-   * First time a session is seen here its sig is seeded without firing updated,
-   * preventing a spurious update event on the cycle right after creation.
+   * The sigCache diff here only catches drifts that processSessionEntry didn't
+   * already update for — those will already have been dispatched above.
    */
   private reconcileActiveSessions(): void {
     try {
@@ -254,7 +257,7 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
       const now = new Date().toISOString();
 
       for (const session of liveSessions) {
-        const repo = repos.find(r => r.id === session.repositoryId);
+        const repo = repos.find((r) => r.id === session.repositoryId);
         if (!repo) {
           logger.info(`[ClaudeDetector] session ended, repo removed sessionId=${session.id}`);
           updateSessionStatus(session.id, 'ended', now);
@@ -277,7 +280,6 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
 
         const sig = this.sessionSignature(session);
         if (!this.sigCache.has(session.id)) {
-          // First time seeing this session in the reconcile loop — seed without firing updated.
           this.sigCache.set(session.id, sig);
         } else if (this.sigCache.get(session.id) !== sig) {
           this.sigCache.set(session.id, sig);
@@ -299,4 +301,3 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     this.jsonlWatcher.stopAll();
   }
 }
-

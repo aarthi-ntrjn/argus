@@ -74,7 +74,7 @@ export class CliManager {
 
   /** Runs both CLI detector scans; each detector fires session lifecycle callbacks internally. */
   async scan(force = false): Promise<void> {
-    await this.claudeDetector.scan();
+    await this.claudeDetector.scan(force);
     await this.copilotDetector.scan(force);
   }
 
