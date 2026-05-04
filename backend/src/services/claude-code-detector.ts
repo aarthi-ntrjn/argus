@@ -90,13 +90,6 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     return result;
   }
 
-  clearPendingChoice(sessionId: string): void {
-    if (!this.pendingChoices.has(sessionId)) return;
-    this.pendingChoices.delete(sessionId);
-    const now = new Date().toISOString();
-    broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
-    pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
-  }
 
 
   /** One-time startup: nothing to initialize for Claude Code before the first scan. */

@@ -402,10 +402,6 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   /** No-op: Copilot manages JSONL watchers internally in scan(). */
   closeSessionWatcher(_sessionId: string): void {}
 
-  clearPendingChoice(sessionId: string): void {
-    this.pendingChoices.delete(sessionId);
-  }
-
   /**
    * Primary real-time update path. Called for every hook event Copilot fires.
    *

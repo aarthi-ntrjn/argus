@@ -1,4 +1,6 @@
 import type { Session, PendingChoice } from '../models/index.js';
+import { broadcast } from '../api/ws/event-dispatcher.js';
+import { pendingChoiceEvents } from './pending-choice-events.js';
 
 /**
  * Shared state and behavior for all CLI session detectors.
@@ -7,11 +9,10 @@ import type { Session, PendingChoice } from '../models/index.js';
  * - sigCache: change-detection fingerprint map (sessionId -> JSON signature)
  * - pendingChoices: in-flight AskUser prompts waiting for a response
  * - Callback setters for session lifecycle events
- * - getPendingChoice() accessor
+ * - getPendingChoice() / clearPendingChoice() accessors
  * - sessionSignature() fingerprint helper
  *
  * Concrete detectors extend this class and implement the CliDetector interface.
- * clearPendingChoice() is NOT here because each detector broadcasts differently.
  */
 export abstract class BaseCliDetector {
   // Dedup map: last-emitted signature per session, used to avoid redundant callbacks.
@@ -35,6 +36,14 @@ export abstract class BaseCliDetector {
 
   getPendingChoice(sessionId: string): PendingChoice | null {
     return this.pendingChoices.get(sessionId) ?? null;
+  }
+
+  clearPendingChoice(sessionId: string): void {
+    if (!this.pendingChoices.has(sessionId)) return;
+    this.pendingChoices.delete(sessionId);
+    const now = new Date().toISOString();
+    broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
+    pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
   }
 
   protected sessionSignature(session: Session): string {
