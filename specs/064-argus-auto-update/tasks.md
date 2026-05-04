@@ -82,8 +82,8 @@
 
 **Goal**: Documentation complete, full test suite passes, frontend build succeeds.
 
-- [ ] T022 [P] [US1 US2 US3 US4] Update `README.md`: add "Auto Update" section describing default on-exit update behavior, how to disable (`autoUpdate: false` in config or via Settings), and the monitoring-paused message shown during exit
-- [ ] T023 [P] [US1 US2 US3 US4] Update `docs/README-CONTRIBUTORS.md`: document `UpdateService` (location, responsibilities, logger color), `GET /api/v1/update/status`, `POST /api/v1/update/apply`, and the `autoUpdate` config field
-- [ ] T024 [US1 US2 US3 US4] Run full backend test suite (`npm run test --workspace=backend`) and confirm all tests pass
-- [ ] T025 [US1 US2 US3 US4] Run full frontend test suite (`npm run test --workspace=frontend`) and confirm all tests pass
-- [ ] T026 [US1 US2 US3 US4] Run `npm run build --workspace=frontend` and confirm clean build with no type errors
+- [x] T022 [P] [US1 US2 US3 US4] Update `README.md`: add "Auto Update" section describing default on-exit update behavior, how to disable (`autoUpdate: false` in config or via Settings), and the monitoring-paused message shown during exit
+- [x] T023 [P] [US1 US2 US3 US4] Update `docs/README-CONTRIBUTORS.md`: document `UpdateService` (location, responsibilities, logger color), `GET /api/v1/update/status`, `POST /api/v1/update/apply`, and the `autoUpdate` config field
+- [x] T024 [US1 US2 US3 US4] Run full backend test suite (`npm run test --workspace=backend`) and confirm all tests pass
+- [x] T025 [US1 US2 US3 US4] Run full frontend test suite (`npm run test --workspace=frontend`) and confirm all tests pass
+- [x] T026 [US1 US2 US3 US4] Run `npm run build --workspace=frontend` and confirm clean build with no type errors

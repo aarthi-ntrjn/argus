@@ -270,6 +270,36 @@ Default port: **7411**. Override in `~/.argus/config.json`:
 }
 ```
 
+## Auto Update
+
+Argus checks npm for a newer version of `argus-ai-hub` once per hour. When a newer version is available:
+
+- A yellow **update badge** appears next to the gear icon in the header, visible from any page.
+- The Settings panel shows the available version and an **Update now** button.
+- When you stop Argus (Ctrl+C or SIGTERM), it applies the update automatically before exiting.
+
+### Exit behavior
+
+When Argus shuts down with an update available and `autoUpdate` enabled (the default), it prints:
+
+```
+Applying update to v{version}. Active monitoring paused until update is applied and server is restarted.
+```
+
+It then runs `npm install -g argus-ai-hub@latest` and exits. The update has a 25-second timeout; if it does not complete in time, Argus exits anyway. Restart Argus after the update to run the new version.
+
+### Disabling auto update
+
+To turn off the on-exit update, uncheck **Auto-update on exit** in the Settings panel. You can also set it directly in `~/.argus/config.json`:
+
+```json
+{
+  "autoUpdate": false
+}
+```
+
+With `autoUpdate: false`, Argus still checks for updates and shows the badge and the "Update now" button, but it will not apply updates automatically on exit.
+
 ## Slack Integration
 
 Argus can post AI session events to a Slack channel and respond to questions from the Slack bot. Both features run on Slack's free tier.
