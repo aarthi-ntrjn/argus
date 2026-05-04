@@ -61,9 +61,9 @@
 
 **Independent Test**: Clicking "Update now" in the Settings panel while an update is available shows a progress state, then a "Restart to apply" banner on success or an error message on failure.
 
-- [ ] T017 [US3] Write failing tests for SettingsPanel update UI in `frontend/src/components/SettingsPanel/SettingsPanel.test.tsx` — covers: "Update available: v{latestVersion}" notice visible when `updateAvailable=true`; "Update now" button present and clickable; button shows "Updating..." and is disabled during in-progress state; restart banner appears after successful apply; error banner appears on failed apply with actionable message
-- [ ] T018 [US3] Add `applyUpdate()` API function to `frontend/src/services/api.ts` calling `POST /api/v1/update/apply`; handle 409 and 503 error responses per §XII UX rules
-- [ ] T019 [US3] Extend `frontend/src/components/SettingsPanel/SettingsPanel.tsx` to make T017 pass: add `useUpdateStatus()` call; render `Badge` with update-available notice; add `Button` (`variant="primary"`, `size="sm"`) labelled "Update now" that calls `applyUpdate()`; manage `isUpdating` local state to show "Updating..." and disable button; show dismissible blue restart banner on success using existing banner pattern; show dismissible red error banner on failure following UX Error Message rules
+- [x] T017 [US3] Write failing tests for SettingsPanel update UI in `frontend/src/components/SettingsPanel/SettingsPanel.test.tsx` — covers: "Update available: v{latestVersion}" notice visible when `updateAvailable=true`; "Update now" button present and clickable; button shows "Updating..." and is disabled during in-progress state; restart banner appears after successful apply; error banner appears on failed apply with actionable message
+- [x] T018 [US3] Add `applyUpdate()` API function to `frontend/src/services/api.ts` calling `POST /api/v1/update/apply`; handle 409 and 503 error responses per §XII UX rules
+- [x] T019 [US3] Extend `frontend/src/components/SettingsPanel/SettingsPanel.tsx` to make T017 pass: add `useUpdateStatus()` call; render `Badge` with update-available notice; add `Button` (`variant="primary"`, `size="sm"`) labelled "Update now" that calls `applyUpdate()`; manage `isUpdating` local state to show "Updating..." and disable button; show dismissible blue restart banner on success using existing banner pattern; show dismissible red error banner on failure following UX Error Message rules
 
 ---
 
@@ -73,8 +73,8 @@
 
 **Independent Test**: Unchecking "Auto-update on exit" in Settings, then stopping Argus with an update available produces no update step and no monitoring-paused message.
 
-- [ ] T020 [US4] Write failing tests for auto-update toggle in `frontend/src/components/SettingsPanel/SettingsPanel.test.tsx` — covers: `Checkbox` labelled "Auto-update on exit" renders; it is checked when `argusSettings.autoUpdate` is true (default); unchecking calls `patchSetting({ autoUpdate: false })`
-- [ ] T021 [US4] Add "Auto-update on exit" `Checkbox` (shared component) to `frontend/src/components/SettingsPanel/SettingsPanel.tsx` to make T020 pass: call `useArgusSettings()` for `argusSettings` and `patchSetting`; bind checkbox to `argusSettings.autoUpdate ?? true`; on change call `patchSetting({ autoUpdate: checked })`
+- [x] T020 [US4] Write failing tests for auto-update toggle in `frontend/src/components/SettingsPanel/SettingsPanel.test.tsx` — covers: `Checkbox` labelled "Auto-update on exit" renders; it is checked when `argusSettings.autoUpdate` is true (default); unchecking calls `patchSetting({ autoUpdate: false })`
+- [x] T021 [US4] Add "Auto-update on exit" `Checkbox` (shared component) to `frontend/src/components/SettingsPanel/SettingsPanel.tsx` to make T020 pass: call `useArgusSettings()` for `argusSettings` and `patchSetting`; bind checkbox to `argusSettings.autoUpdate ?? true`; on change call `patchSetting({ autoUpdate: checked })`
 
 ---
 
