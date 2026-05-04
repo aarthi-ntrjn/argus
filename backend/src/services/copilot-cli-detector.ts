@@ -3,7 +3,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
-import { upsertSession, getRepositoryByPath, getSession, getSessions, getServerState, setServerState } from '../db/database.js';
+import { upsertSession, getSession, getSessions, getServerState, setServerState } from '../db/database.js';
 import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
 import { detectYoloModeFromPids } from './process-utils.js';
 import { SessionTypes } from '../models/index.js';
@@ -181,11 +181,8 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
 
     const existingSession = getSession(sessionId);
 
-    const repo = getRepositoryByPath(cwd);
-    if (!repo) {
-      this.warnNoRepo(cwd, sessionId);
-      return null;
-    }
+    const repo = this.resolveRepoOrWarn(entry);
+    if (!repo) return null;
 
     const toIso = (val: string | Date): string =>
       val instanceof Date ? val.toISOString() : val;

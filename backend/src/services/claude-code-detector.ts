@@ -2,7 +2,7 @@ import * as logger from '../utils/logger.js';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { getSession, getSessions, upsertSession, getRepositoryByPath, getRepositories } from '../db/database.js';
+import { getSession, getSessions, upsertSession, getRepositories } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
 import { detectYoloModeFromPids, isPidRunning } from './process-utils.js';
@@ -133,11 +133,8 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
    * handles created/updated firing).
    */
   private async buildSessionFromEntry(entry: ClaudeSessionEntry): Promise<Session | null> {
-    const repo = getRepositoryByPath(entry.cwd);
-    if (!repo) {
-      this.warnNoRepo(entry.cwd, entry.sessionId);
-      return null;
-    }
+    const repo = this.resolveRepoOrWarn(entry);
+    if (!repo) return null;
 
     const now = new Date().toISOString();
     const existingSession = getSession(entry.sessionId);

@@ -122,6 +122,20 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   }
 
   /**
+   * Repo lookup helper for buildSessionFromEntry. Returns the matching
+   * Repository, or null after logging the "no repo" warning so the caller
+   * can early-return without repeating the same boilerplate.
+   */
+  protected resolveRepoOrWarn(entry: SessionEntry): Repository | null {
+    const repo = getRepositoryByPath(entry.cwd);
+    if (!repo) {
+      this.warnNoRepo(entry.cwd, entry.sessionId);
+      return null;
+    }
+    return repo;
+  }
+
+  /**
    * Liveness + identity check: returns true only when the pid is alive AND the
    * process at that pid is actually this detector's AI tool. Logs a "PID reuse
    * detected" warning when the pid is alive but the process is something else
