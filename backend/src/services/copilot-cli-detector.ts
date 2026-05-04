@@ -88,22 +88,11 @@ export class CopilotCliDetector extends BaseCliDetector implements CliDetector {
   }
 
   /**
-   * One-time startup: seed activeDirPaths from the DB so sessions that were active
-   * when the server stopped are re-checked on the first scan, even if their directory
-   * mtime predates lastScanTime.
+   * One-time startup: run a forced full scan so activeDirPaths is seeded and any
+   * sessions active at restart are picked up regardless of directory mtime.
    */
   async start(): Promise<void> {
-    this.initActiveDirsFromDb();
-  }
-
-  // Reads active copilot-cli sessions from the DB and finds their on-disk dirs.
-  private initActiveDirsFromDb(): void {
-    const activeSessions = getSessions({ type: SessionTypes.COPILOT_CLI, status: 'active' });
-    if (activeSessions.length === 0) return;
-    const activeIds = new Set(activeSessions.map(s => s.id));
-    for (const { dirPath, workspace } of this.readAllDirEntries()) {
-      if (workspace.id && activeIds.has(workspace.id)) this.activeDirPaths.add(dirPath);
-    }
+    await this.scan(true);
   }
 
   /**
