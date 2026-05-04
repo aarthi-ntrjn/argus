@@ -33,15 +33,15 @@ import type { CliDetector, CliHookPayload } from './cli-detector.js';
  * sessionEndedCallback on failure or sessionUpdatedCallback when a tracked field changes.
  */
 export class ClaudeCodeDetector implements CliDetector {
-  private jsonlWatcher = new ClaudeJsonlWatcher();
-  private pendingChoices = new Map<string, PendingChoice>();
+  private readonly jsonlWatcher = new ClaudeJsonlWatcher();
+  private readonly registry = new ClaudeSessionRegistry();
+  private previousRegistryPids = new Set<number>();
+  // Dedup map: last-emitted signature per session, used by reconcileActiveSessions().
+  private readonly lastEmittedSigs = new Map<string, string>();
+  private readonly pendingChoices = new Map<string, PendingChoice>();
   private sessionCreatedCallback?: (session: Session) => void;
   private sessionUpdatedCallback?: (session: Session) => void;
   private sessionEndedCallback?: (session: Session) => void;
-  private registry = new ClaudeSessionRegistry();
-  private previousRegistryPids = new Set<number>();
-  // Dedup map: last-emitted signature per session, used by reconcileActiveSessions().
-  private lastEmittedSigs = new Map<string, string>();
 
   setSessionCreatedCallback(cb: (session: Session) => void): void {
     this.sessionCreatedCallback = cb;

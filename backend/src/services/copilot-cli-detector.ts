@@ -50,12 +50,11 @@ export class CopilotCliDetector implements CliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
   private lastScanTime: number;
   private activeDirPaths = new Set<string>();
+  // Session tracking maps — seeded on startup and updated by hooks and scan().
+  private readonly knownIds = new Set<string>();
+  private readonly sigCache = new Map<string, string>();
+  private readonly activeMap = new Map<string, Session>();
   private readonly pendingChoices = new Map<string, PendingChoice>();
-
-  // Push-based session lifecycle tracking — fires callbacks from hooks and from scan().
-  private knownIds = new Set<string>();
-  private sigCache = new Map<string, string>();
-  private activeMap = new Map<string, Session>();
   private sessionCreatedCallback?: (session: Session) => void;
   private sessionUpdatedCallback?: (session: Session) => void;
   private sessionEndedCallback?: (session: Session) => void;
