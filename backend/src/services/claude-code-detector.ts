@@ -1,9 +1,10 @@
 import * as logger from '../utils/logger.js';
-import { normalize } from 'path';
+import { existsSync, readdirSync, readFileSync } from 'fs';
+import { join, normalize } from 'path';
+import { homedir } from 'os';
 
 import { getSession, getSessions, upsertSession, updateSessionStatus, getRepositoryByPath, getRepositories } from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
-import { ClaudeSessionRegistry } from './claude-code-session-registry.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
@@ -13,6 +14,8 @@ import { pendingChoiceEvents } from './pending-choice-events.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
 import type { CliDetector, CliHookPayload } from './cli-detector.js';
+
+const DEFAULT_SESSIONS_DIR = join(homedir(), '.claude', 'sessions');
 
 /**
  * Detects and tracks Claude Code sessions.
@@ -34,7 +37,7 @@ import type { CliDetector, CliHookPayload } from './cli-detector.js';
  */
 export class ClaudeCodeDetector implements CliDetector {
   private readonly jsonlWatcher = new ClaudeJsonlWatcher();
-  private readonly registry = new ClaudeSessionRegistry();
+  private readonly sessionsDir: string;
   private previousRegistryPids = new Set<number>();
   // Dedup map: last-emitted signature per session, used by reconcileActiveSessions().
   private readonly lastEmittedSigs = new Map<string, string>();
@@ -42,6 +45,10 @@ export class ClaudeCodeDetector implements CliDetector {
   private sessionCreatedCallback?: (session: Session) => void;
   private sessionUpdatedCallback?: (session: Session) => void;
   private sessionEndedCallback?: (session: Session) => void;
+
+  constructor(sessionsDir: string = DEFAULT_SESSIONS_DIR) {
+    this.sessionsDir = sessionsDir;
+  }
 
   setSessionCreatedCallback(cb: (session: Session) => void): void {
     this.sessionCreatedCallback = cb;
@@ -69,7 +76,7 @@ export class ClaudeCodeDetector implements CliDetector {
   /** Returns a sessionId-to-PID map for startup stale-session reconciliation only. */
   getRegistryEntries(): Map<string, number> {
     const result = new Map<string, number>();
-    for (const entry of this.registry.scanEntries()) {
+    for (const entry of this.scanSessionFiles()) {
       result.set(entry.sessionId, entry.pid);
     }
     return result;
@@ -91,8 +98,23 @@ export class ClaudeCodeDetector implements CliDetector {
   /** One-time startup: nothing to initialize for Claude Code before the first scan. */
   async start(): Promise<void> {}
 
+  // Reads ~/.claude/sessions/*.json and returns the pid/sessionId/cwd for each valid entry.
+  private scanSessionFiles(): Array<{ pid: number; sessionId: string; cwd: string }> {
+    if (!existsSync(this.sessionsDir)) return [];
+    const files = readdirSync(this.sessionsDir).filter(f => f.endsWith('.json'));
+    const entries: Array<{ pid: number; sessionId: string; cwd: string }> = [];
+    for (const file of files) {
+      try {
+        const data = JSON.parse(readFileSync(join(this.sessionsDir, file), 'utf-8'));
+        if (typeof data.pid !== 'number' || typeof data.sessionId !== 'string' || typeof data.cwd !== 'string') continue;
+        entries.push({ pid: data.pid, sessionId: data.sessionId, cwd: data.cwd });
+      } catch { /* skip malformed */ }
+    }
+    return entries;
+  }
+
   /**
-   * Per-cycle scan. Two responsibilities:
+   * Per-cycle scan.Two responsibilities:
    *
    * 1. Registry sweep: read ~/.claude/sessions/*.json, backfill PIDs for hook-created
    *    sessions, and detect new sessions that started without hooks firing.
@@ -106,7 +128,7 @@ export class ClaudeCodeDetector implements CliDetector {
    * are delivered via callbacks, not via the return value.
    */
   async scan(): Promise<Session[]> {
-    const registryEntries = this.registry.scanEntries();
+    const registryEntries = this.scanSessionFiles();
     const currentPids = new Set<number>();
     const now = new Date().toISOString();
 
