@@ -1,15 +1,15 @@
 # Coverage Report
 
-*Generated: May 3, 2026, 2:25 PM*
+*Generated: May 4, 2026, 9:46 AM*
 
 ## Summary
 
 | Suite | Files | Tests | Statements | Branches | Functions | Lines | Covers |
 |-------|-------|-------|------------|----------|-----------|-------|--------|
-| backend unit   | 167 | 🟢 454/454 | 🟡 62.43% | 🟡 75.72% | 🟡 69.74% | 🟡 62.43% | backend/src |
+| backend unit   | 167 | 🟢 454/454 | 🟡 62.42% | 🟡 75.72% | 🟡 69.74% | 🟡 62.42% | backend/src |
 | frontend unit  | 120 | 🟢 345/345 | 🟢 89.90% | 🟡 77.93% | 🔴 50.14% | 🟢 89.90% | frontend/src |
 | e2e mock       | 14 | 🟢 152/152 (2 skipped) | 🔴 55.33% | 🔴 49.37% | 🔴 49.60% | 🔴 56.79% | frontend/src |
-| e2e real       | 7 | 🟢 48/48 | 🔴 59.78% | 🟡 64.34% | 🟡 62.59% | 🔴 59.78% | backend/src |
+| e2e real       | 7 | 🟢 48/48 | 🔴 59.41% | 🟡 64.60% | 🟡 62.56% | 🔴 59.41% | backend/src |
 
 ## Backend unit - per file
 
@@ -40,7 +40,7 @@
 | `backend/src/config/slack-config-loader.ts` | 🟡 71.79% | 🟢 100.00% | 🔴 50.00% | 🟡 71.79% |
 | `backend/src/config/teams-config-loader.ts` | 🟡 63.88% | 🔴 40.00% | 🔴 50.00% | 🟡 63.88% |
 | `backend/src/constants/slack-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/db/database.ts` | 🟡 61.35% | 🟡 72.83% | 🔴 50.00% | 🟡 61.35% |
+| `backend/src/db/database.ts` | 🟡 61.07% | 🟡 71.95% | 🔴 50.00% | 🟡 61.07% |
 | `backend/src/db/schema.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/integration/slack/slack-listener.ts` | 🔴 58.65% | 🟢 85.71% | 🟡 63.63% | 🔴 58.65% |
 | `backend/src/integration/slack/slack-notifier.ts` | 🔴 57.62% | 🟡 64.19% | 🟡 66.66% | 🔴 57.62% |
@@ -62,7 +62,7 @@
 | `backend/src/services/output-store.ts` | 🟢 86.66% | 🟢 86.66% | 🟢 83.33% | 🟢 86.66% |
 | `backend/src/services/pending-choice-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/services/pid-validator.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/services/process-utils.ts` | 🔴 58.43% | 🔴 35.48% | 🟡 72.72% | 🔴 58.43% |
+| `backend/src/services/process-utils.ts` | 🔴 58.43% | 🔴 36.66% | 🟡 72.72% | 🔴 58.43% |
 | `backend/src/services/pruning-job.ts` | 🔴 20.83% | 🟢 100.00% | 🔴 0.00% | 🔴 20.83% |
 | `backend/src/services/pty-registry.ts` | 🟡 66.87% | 🟢 92.30% | 🟡 66.66% | 🟡 66.87% |
 | `backend/src/services/repository-scanner.ts` | 🔴 41.41% | 🟢 92.85% | 🔴 25.00% | 🔴 41.41% |
@@ -546,7 +546,7 @@
 | `backend/src/config/slack-config-loader.ts` | 🟡 75.00% | 🔴 30.00% | 🟡 60.00% | 🟡 75.00% |
 | `backend/src/config/teams-config-loader.ts` | 🟡 73.17% | 🔴 50.00% | 🟡 60.00% | 🟡 73.17% |
 | `backend/src/constants/slack-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/db/database.ts` | 🟡 75.74% | 🟡 69.04% | 🟡 64.10% | 🟡 75.74% |
+| `backend/src/db/database.ts` | 🟡 67.30% | 🟡 67.27% | 🟡 63.15% | 🟡 67.30% |
 | `backend/src/db/schema.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/integration/slack/slack-listener.ts` | 🔴 38.80% | 🟡 77.77% | 🔴 46.15% | 🔴 38.80% |
 | `backend/src/integration/slack/slack-notifier.ts` | 🔴 43.54% | 🔴 46.34% | 🔴 47.82% | 🔴 43.54% |
@@ -555,10 +555,10 @@
 | `backend/src/integration/teams/teams-sdk-adapter.ts` | 🔴 56.00% | 🟢 100.00% | 🟢 100.00% | 🔴 56.00% |
 | `backend/src/models/index.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/server.ts` | 🟢 84.49% | 🟡 63.63% | 🟡 60.00% | 🟢 84.49% |
-| `backend/src/services/claude-code-detector.ts` | 🟡 60.96% | 🔴 56.75% | 🟡 63.15% | 🟡 60.96% |
+| `backend/src/services/claude-code-detector.ts` | 🟡 60.96% | 🔴 57.89% | 🟡 63.15% | 🟡 60.96% |
 | `backend/src/services/claude-code-jsonl-parser.ts` | 🔴 29.71% | 🟢 100.00% | 🔴 16.66% | 🔴 29.71% |
 | `backend/src/services/claude-jsonl-watcher.ts` | 🔴 47.94% | 🟢 100.00% | 🔴 55.55% | 🔴 47.94% |
-| `backend/src/services/claude-session-registry.ts` | 🟢 90.69% | 🔴 50.00% | 🟢 100.00% | 🟢 90.69% |
+| `backend/src/services/claude-session-registry.ts` | 🟢 90.69% | 🔴 53.84% | 🟢 100.00% | 🟢 90.69% |
 | `backend/src/services/copilot-cli-detector.ts` | 🔴 59.35% | 🔴 45.09% | 🟡 72.72% | 🔴 59.35% |
 | `backend/src/services/copilot-cli-jsonl-parser.ts` | 🔴 26.05% | 🟢 100.00% | 🔴 25.00% | 🔴 26.05% |
 | `backend/src/services/copilot-jsonl-watcher.ts` | 🔴 32.72% | 🟢 100.00% | 🔴 42.85% | 🔴 32.72% |
@@ -568,13 +568,13 @@
 | `backend/src/services/output-store.ts` | 🔴 39.02% | 🟢 100.00% | 🔴 37.50% | 🔴 39.02% |
 | `backend/src/services/pending-choice-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/services/pid-validator.ts` | 🔴 32.50% | 🟢 100.00% | 🔴 33.33% | 🔴 32.50% |
-| `backend/src/services/process-utils.ts` | 🟢 88.25% | 🔴 52.17% | 🟢 91.66% | 🟢 88.25% |
+| `backend/src/services/process-utils.ts` | 🟢 88.25% | 🔴 53.19% | 🟢 91.66% | 🟢 88.25% |
 | `backend/src/services/pruning-job.ts` | 🔴 42.85% | 🟢 100.00% | 🔴 50.00% | 🔴 42.85% |
 | `backend/src/services/pty-registry.ts` | 🟡 65.72% | 🟡 66.66% | 🔴 55.00% | 🟡 65.72% |
 | `backend/src/services/repository-scanner.ts` | 🟡 64.95% | 🔴 58.33% | 🟡 63.63% | 🟡 64.95% |
 | `backend/src/services/session-controller.ts` | 🔴 33.96% | 🔴 57.14% | 🔴 55.55% | 🔴 33.96% |
 | `backend/src/services/session-diff-tracker.ts` | 🟡 75.72% | 🟢 100.00% | 🔴 55.55% | 🟡 75.72% |
-| `backend/src/services/session-monitor.ts` | 🔴 56.32% | 🟡 62.22% | 🟢 94.44% | 🔴 56.32% |
+| `backend/src/services/session-monitor.ts` | 🔴 56.32% | 🟡 63.04% | 🟢 94.44% | 🔴 56.32% |
 | `backend/src/services/session-pid-resolver.ts` | 🔴 36.06% | 🟢 100.00% | 🔴 25.00% | 🔴 36.06% |
 | `backend/src/services/telemetry-service.ts` | 🔴 50.00% | 🟡 69.23% | 🟡 66.66% | 🔴 50.00% |
 | `backend/src/services/watcher-session-helpers.ts` | 🔴 27.02% | 🟢 100.00% | 🔴 25.00% | 🔴 27.02% |
