@@ -29,22 +29,22 @@ interface WorkspaceYaml {
 /**
  * Detects and tracks Copilot CLI sessions.
  *
- * Detection model: polling via directory scan, supplemented by HTTP hooks.
+ * Detection model: event-driven via HTTP hooks, backed by a directory scan.
  *
- * Primary path — directory scan: scan() walks ~/.copilot/session-state/ on every cycle.
- * Each subdirectory holds a workspace.yaml (session metadata) and optionally an
- * inuse.<PID>.lock file (indicates the session process is running). Mtime filtering
- * skips unchanged directories, but directories with active sessions are always re-checked
- * to detect process exit.
+ * Primary path — HTTP hooks: Copilot fires SessionStart / PreToolUse / SessionEnd events
+ * to /hooks/copilot on every tool call. handleHookPayload() creates or updates the DB
+ * session and fires sessionCreatedCallback immediately for new sessions.
  *
- * Secondary path — HTTP hooks: handleHookPayload() is called for each hook event from
- * /hooks/copilot. Hooks deliver real-time updates between scan cycles. The hook handler
- * creates or updates the DB session and broadcasts events immediately without waiting
- * for the next scan.
+ * Secondary path — directory scan: scan() walks ~/.copilot/session-state/ on every cycle.
+ * This catches sessions that started without hooks (e.g. legacy installs or missed events)
+ * and detects unclean shutdowns where SessionEnd never fired (lock file disappears).
+ * Mtime filtering skips unchanged directories; directories with active sessions are always
+ * re-checked to detect process exit.
  *
  * Change detection: processSessionEvents() diffs the scan result against sigCache /
  * knownIds / activeMap and fires sessionCreatedCallback, sessionUpdatedCallback, or
- * sessionEndedCallback exactly once per transition.
+ * sessionEndedCallback exactly once per transition. Hook-created sessions are pre-seeded
+ * into these maps so the next scan cycle does not re-fire the same event.
  */
 export class CopilotCliDetector implements CliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
@@ -52,7 +52,7 @@ export class CopilotCliDetector implements CliDetector {
   private activeDirPaths = new Set<string>();
   private readonly pendingChoices = new Map<string, PendingChoice>();
 
-  // Push-based session lifecycle tracking — fires callbacks after each scan().
+  // Push-based session lifecycle tracking — fires callbacks from hooks and from scan().
   private knownIds = new Set<string>();
   private sigCache = new Map<string, string>();
   private activeMap = new Map<string, Session>();

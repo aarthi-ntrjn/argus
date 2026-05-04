@@ -30,7 +30,7 @@ import type { CliDetector, CliHookPayload } from './cli-detector.js';
  *
  * Reconciliation: reconcileActiveSessions() (called at the end of every scan()) checks
  * all active DB sessions for liveness (process dead, repo removed) and fires
- * sessionUpdatedCallback when any tracked field changes.
+ * sessionEndedCallback on failure or sessionUpdatedCallback when a tracked field changes.
  */
 export class ClaudeCodeDetector implements CliDetector {
   private jsonlWatcher = new ClaudeJsonlWatcher();
