@@ -143,11 +143,13 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
    * Concrete detectors implement the three abstract steps. force=true bypasses
    * any caching the read step may apply (e.g. Copilot's mtime filter).
    *
-   * Logs a "slow entry" line whenever a single processSessionEntry takes more
-   * than 50ms — useful for spotting pathological per-entry I/O regressions.
+   * Logs an info-level "slow entry" line when a single processSessionEntry
+   * takes more than 50ms, and a warn-level "slow scan" line when the whole
+   * cycle does. Both thresholds catch pathological per-entry I/O regressions.
    */
   async scan(force = false): Promise<Session[]> {
     if (!existsSync(this.sessionsDir)) return [];
+    const scanStart = Date.now();
     const entries = await this.readSessionEntries(force);
     const sessions: Session[] = [];
     for (const entry of entries) {
@@ -160,6 +162,10 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       if (session !== null) sessions.push(session);
     }
     this.dispatchSessionEvents(sessions);
+    const scanMs = Date.now() - scanStart;
+    if (scanMs > 50) {
+      logger.warn(`${this.logTag} slow scan (${scanMs}ms): entries=${entries.length} sessions=${sessions.length}`);
+    }
     return sessions;
   }
 
