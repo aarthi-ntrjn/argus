@@ -26,6 +26,26 @@ interface WorkspaceYaml {
   updated_at?: string | Date;
 }
 
+/**
+ * Detects and tracks Copilot CLI sessions.
+ *
+ * Detection model: polling via directory scan, supplemented by HTTP hooks.
+ *
+ * Primary path — directory scan: scan() walks ~/.copilot/session-state/ on every cycle.
+ * Each subdirectory holds a workspace.yaml (session metadata) and optionally an
+ * inuse.<PID>.lock file (indicates the session process is running). Mtime filtering
+ * skips unchanged directories, but directories with active sessions are always re-checked
+ * to detect process exit.
+ *
+ * Secondary path — HTTP hooks: handleHookPayload() is called for each hook event from
+ * /hooks/copilot. Hooks deliver real-time updates between scan cycles. The hook handler
+ * creates or updates the DB session and broadcasts events immediately without waiting
+ * for the next scan.
+ *
+ * Change detection: processSessionEvents() diffs the scan result against sigCache /
+ * knownIds / activeMap and fires sessionCreatedCallback, sessionUpdatedCallback, or
+ * sessionEndedCallback exactly once per transition.
+ */
 export class CopilotCliDetector implements CliDetector {
   private readonly jsonlWatcher = new CopilotJsonlWatcher();
   private lastScanTime: number;
@@ -99,6 +119,20 @@ export class CopilotCliDetector implements CliDetector {
     } catch { /* ignore */ }
   }
 
+  /**
+   * Per-cycle scan. Two responsibilities:
+   *
+   * 1. Directory sweep: walk sessionStateDir for new or changed directories.
+   *    Applies mtime filtering to skip stale directories while always re-checking
+   *    any directory that had an active session in the previous cycle.
+   *    When force=true (triggered by repo add), skips the mtime filter entirely.
+   *
+   * 2. Event dispatch: calls processSessionEvents() with all discovered sessions
+   *    to fire sessionCreatedCallback / sessionUpdatedCallback / sessionEndedCallback.
+   *
+   * Returns the discovered sessions, but callers (CliManager/SessionMonitor) ignore
+   * the return value. CopilotCliDetector is fully push-based via callbacks.
+   */
   async scan(force = false): Promise<Session[]> {
     if (!existsSync(this.sessionStateDir)) return [];
     const t0 = Date.now();
@@ -158,6 +192,18 @@ export class CopilotCliDetector implements CliDetector {
     return sessions;
   }
 
+  /**
+   * Reads one session directory and returns the current session state or null.
+   *
+   * Requires workspace.yaml (session metadata). If a lock file is also present,
+   * the session is considered running — lock file absence means ended. Performs
+   * two liveness guards to avoid false positives from PID reuse:
+   *   1. isPidRunning() — cheap signal-0 check.
+   *   2. isExpectedProcess() — verifies the process name matches the AI tool.
+   *
+   * Calls resolvePtyLinkage() to associate the session with a PTY launcher if
+   * one is waiting in the registry.
+   */
   private async processSessionDir(dirPath: string): Promise<Session | null> {
     const workspaceFile = join(dirPath, 'workspace.yaml');
     if (!existsSync(workspaceFile)) return null;
@@ -230,6 +276,19 @@ export class CopilotCliDetector implements CliDetector {
     return session;
   }
 
+  /**
+   * Resolves PTY linkage for a session directory.
+   *
+   * Copilot sessions may be launched from the Argus UI (pty) or externally (null).
+   * This method determines which case applies and returns the final pid/hostPid/
+   * launchMode values by consulting the ptyRegistry.
+   *
+   * Three cases:
+   * - Already claimed (pty in DB): preserve pty metadata; correct any lockfile PID
+   *   mismatch; attempt re-link if the WebSocket disconnected and reconnected.
+   * - Registry has this sessionId (WS connected before lock file appeared): claim it.
+   * - New running session: try claimForSession() against the pending WS queue.
+   */
   private resolvePtyLinkage(
     sessionId: string,
     existingSession: Session | null | undefined,
@@ -348,6 +407,19 @@ export class CopilotCliDetector implements CliDetector {
     this.pendingChoices.delete(sessionId);
   }
 
+  /**
+   * Primary real-time update path. Called for every hook event Copilot fires.
+   *
+   * Routes by event name:
+   * - SessionEnd: mark ended, close JSONL watcher, clean up tracking state, broadcast directly.
+   * - PreToolUse / PostToolUse (ask_user): manage pending-choice state, broadcast directly.
+   * - SessionStart or other events: create or update the DB session.
+   *   If a PTY claim succeeds, creates a pty-mode session immediately.
+   *   Otherwise, falls back to a read-only session (no pid/launchMode).
+   *   New sessions: fire sessionCreatedCallback (seeds knownIds/sigCache/activeMap so the next
+   *   scan cycle does not re-fire the event). Existing sessions: broadcast session.updated
+   *   directly, matching ClaudeCodeDetector's hook-update path.
+   */
   async handleHookPayload(payload: CliHookPayload): Promise<void> {
     const { hook_event_name, session_id, cwd } = payload;
     if (!session_id) return;
@@ -367,6 +439,8 @@ export class CopilotCliDetector implements CliDetector {
       updateSessionStatus(session_id, 'ended', now);
       this.jsonlWatcher.closeWatcher(session_id);
       const ended = { ...existing, status: 'ended' as const, endedAt: now };
+      this.activeMap.delete(session_id);
+      this.sigCache.delete(session_id);
       broadcast({ type: 'session.ended', timestamp: now, data: ended });
       this.pendingChoices.delete(session_id);
       telemetryService.sendEvent('session_ended', {
@@ -419,7 +493,10 @@ export class CopilotCliDetector implements CliDetector {
           yoloMode,
         };
         upsertSession(ptySession);
-        broadcast({ type: 'session.created', timestamp: now, data: ptySession });
+        this.knownIds.add(session_id);
+        this.sigCache.set(session_id, this.sessionSignature(ptySession));
+        this.activeMap.set(session_id, ptySession);
+        this.sessionCreatedCallback?.(ptySession);
         await this.jsonlWatcher.watchFile(session_id, repo.path);
         return;
       }
@@ -447,8 +524,15 @@ export class CopilotCliDetector implements CliDetector {
     const updated = { ...session, lastActivityAt: now };
     upsertSession(updated);
 
-    const eventType = existing ? 'session.updated' : 'session.created';
-    broadcast({ type: eventType, timestamp: now, data: updated });
+    if (existing) {
+      this.sigCache.set(session_id, this.sessionSignature(updated));
+      broadcast({ type: 'session.updated', timestamp: now, data: updated });
+    } else {
+      this.knownIds.add(session_id);
+      this.sigCache.set(session_id, this.sessionSignature(updated));
+      this.activeMap.set(session_id, updated);
+      this.sessionCreatedCallback?.(updated);
+    }
 
     await this.jsonlWatcher.watchFile(session_id, repo.path);
   }
@@ -479,6 +563,17 @@ export class CopilotCliDetector implements CliDetector {
     });
   }
 
+  /**
+   * Diff-based event dispatch. Called after every scan() with the full set of
+   * sessions found in that cycle.
+   *
+   * - Sessions absent from the scan but present in activeMap: fire sessionEndedCallback
+   *   (process exited cleanly — workspace dir was cleaned up).
+   * - Sessions seen for the first time (not in knownIds): fire sessionCreatedCallback.
+   * - Sessions with a changed signature: fire sessionUpdatedCallback.
+   * - Sessions with status 'ended' that are still in activeMap: fire sessionEndedCallback
+   *   once, then remove from activeMap (ended sessions remain on disk — only fire once).
+   */
   private processSessionEvents(sessions: Session[]): void {
     const currentIds = new Set(sessions.map(s => s.id));
     const now = new Date().toISOString();

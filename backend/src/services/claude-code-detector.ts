@@ -14,6 +14,24 @@ import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
 import type { CliDetector, CliHookPayload } from './cli-detector.js';
 
+/**
+ * Detects and tracks Claude Code sessions.
+ *
+ * Detection model: event-driven via two complementary sources.
+ *
+ * Primary path — HTTP hooks: Claude fires PreToolUse / PostToolUse / SessionEnd events
+ * to /hooks/claude on every tool call. handleHookPayload() creates or updates the DB
+ * session and fires sessionCreatedCallback immediately.
+ *
+ * Secondary path — registry scan: scan() reads ~/.claude/sessions/*.json on every
+ * cycle. This catches sessions that started without hooks (e.g. legacy installs) and
+ * backfills the PID once Claude writes it to its registry file. It also detects
+ * unclean shutdowns where SessionEnd never fired (registry file disappears).
+ *
+ * Reconciliation: reconcileActiveSessions() (called at the end of every scan()) checks
+ * all active DB sessions for liveness (process dead, repo removed) and fires
+ * sessionUpdatedCallback when any tracked field changes.
+ */
 export class ClaudeCodeDetector implements CliDetector {
   private jsonlWatcher = new ClaudeJsonlWatcher();
   private pendingChoices = new Map<string, PendingChoice>();
@@ -33,7 +51,6 @@ export class ClaudeCodeDetector implements CliDetector {
     this.sessionUpdatedCallback = cb;
   }
 
-  /** Wires the callback fired when a session ends due to a disappeared registry file. */
   setSessionEndedCallback(cb: (session: Session) => void): void {
     this.sessionEndedCallback = cb;
   }
@@ -74,6 +91,20 @@ export class ClaudeCodeDetector implements CliDetector {
   /** One-time startup: nothing to initialize for Claude Code before the first scan. */
   async start(): Promise<void> {}
 
+  /**
+   * Per-cycle scan. Two responsibilities:
+   *
+   * 1. Registry sweep: read ~/.claude/sessions/*.json, backfill PIDs for hook-created
+   *    sessions, and detect new sessions that started without hooks firing.
+   *    Fires sessionCreatedCallback for genuinely new sessions.
+   *    Detects registry-file disappearance as an unclean session end.
+   *
+   * 2. Reconciliation: call reconcileActiveSessions() to detect liveness failures
+   *    (process died, repo deleted) and emit sessionUpdated/sessionEnded accordingly.
+   *
+   * Always returns []. ClaudeCodeDetector is fully push-based — all session events
+   * are delivered via callbacks, not via the return value.
+   */
   async scan(): Promise<Session[]> {
     const registryEntries = this.registry.scanEntries();
     const currentPids = new Set<number>();
@@ -133,6 +164,17 @@ export class ClaudeCodeDetector implements CliDetector {
     return [];
   }
 
+  /**
+   * Checks all active Claude Code DB sessions for liveness and field changes.
+   * Called at the end of every scan() cycle.
+   *
+   * - Repo removed: end the session immediately.
+   * - Process dead: end the session (catches crashes not covered by SessionEnd hook).
+   * - Field change: fire sessionUpdatedCallback (deduped via lastEmittedSigs).
+   *
+   * First time a session is seen here its sig is seeded without firing updated,
+   * preventing a spurious update event on the cycle right after creation.
+   */
   private reconcileActiveSessions(): void {
     try {
       const liveSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
@@ -189,6 +231,16 @@ export class ClaudeCodeDetector implements CliDetector {
     });
   }
 
+  /**
+   * Primary real-time update path. Called for every hook event Claude fires.
+   *
+   * Routes by event name:
+   * - SessionEnd: mark ended, close JSONL watcher, fire sessionEndedCallback.
+   * - PreToolUse / PostToolUse (AskUserQuestion): manage pending-choice state.
+   * - All others (SessionStart, tool calls): upsert session in DB, fire
+   *   sessionCreatedCallback on first event or broadcast session.updated on
+   *   subsequent events. Starts JSONL watcher for output streaming.
+   */
   async handleHookPayload(payload: CliHookPayload): Promise<void> {
     const { hook_event_name, session_id, cwd } = payload;
     if (!session_id) return;
@@ -250,6 +302,11 @@ export class ClaudeCodeDetector implements CliDetector {
     pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
   }
 
+  /**
+   * Creates a new session linked to a PTY launcher (terminal tab in Argus UI).
+   * Called when a PTY claim succeeds — either from a hook event or from
+   * activateFoundSession() when the registry scan finds the session first.
+   */
   private async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
     const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'claude-code');
     const session: Session = {
@@ -277,6 +334,13 @@ export class ClaudeCodeDetector implements CliDetector {
     await this.jsonlWatcher.watchFile(sessionId, repo.path);
   }
 
+  /**
+   * Creates or updates a session in response to a hook event.
+   * On first event: fires sessionCreatedCallback (seeds lastEmittedSigs).
+   * On subsequent events: broadcasts session.updated directly (hooks are
+   * the authoritative update source — reconcileActiveSessions handles dedup
+   * for poll-sourced updates, not hook-sourced ones).
+   */
   private upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): void {
     const session: Session = existing ?? {
       id: sessionId,
@@ -307,6 +371,11 @@ export class ClaudeCodeDetector implements CliDetector {
     }
   }
 
+  /**
+   * Called from the registry scan when a session is found for the first time
+   * (hook-created session without a registry file yet, or a hooks-free session).
+   * Attempts to link a PTY; fires sessionCreatedCallback.
+   */
   private async activateFoundSession(sessionId: string, repo: Repository, claudePid: number | null): Promise<void> {
     const now = new Date().toISOString();
     const existingSession = getSession(sessionId);
