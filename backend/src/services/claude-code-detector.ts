@@ -96,21 +96,6 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
   /** One-time startup: nothing to initialize for Claude Code before the first scan. */
   async start(): Promise<void> {}
 
-  // Reads ~/.claude/sessions/*.json and returns the pid/sessionId/cwd for each valid entry.
-  private scanSessionFiles(): Array<{ pid: number; sessionId: string; cwd: string }> {
-    if (!existsSync(this.sessionsDir)) return [];
-    const files = readdirSync(this.sessionsDir).filter(f => f.endsWith('.json'));
-    const entries: Array<{ pid: number; sessionId: string; cwd: string }> = [];
-    for (const file of files) {
-      try {
-        const data = JSON.parse(readFileSync(join(this.sessionsDir, file), 'utf-8'));
-        if (typeof data.pid !== 'number' || typeof data.sessionId !== 'string' || typeof data.cwd !== 'string') continue;
-        entries.push({ pid: data.pid, sessionId: data.sessionId, cwd: data.cwd });
-      } catch { /* skip malformed */ }
-    }
-    return entries;
-  }
-
   /**
    * Per-cycle scan.Two responsibilities:
    *
@@ -184,61 +169,19 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     return [];
   }
 
-  /**
-   * Checks all active Claude Code DB sessions for liveness and field changes.
-   * Called at the end of every scan() cycle.
-   *
-   * - Repo removed: end the session immediately.
-   * - Process dead: end the session (catches crashes not covered by SessionEnd hook).
-   * - Field change: fire sessionUpdatedCallback (deduped via sigCache).
-   *
-   * First time a session is seen here its sig is seeded without firing updated,
-   * preventing a spurious update event on the cycle right after creation.
-   */
-  private reconcileActiveSessions(): void {
-    try {
-      const liveSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
-      if (liveSessions.length === 0) return;
-
-      const repos = getRepositories();
-      const now = new Date().toISOString();
-
-      for (const session of liveSessions) {
-        const repo = repos.find(r => r.id === session.repositoryId);
-        if (!repo) {
-          logger.info(`[ClaudeDetector] session ended, repo removed sessionId=${session.id}`);
-          updateSessionStatus(session.id, 'ended', now);
-          this.jsonlWatcher.closeWatcher(session.id);
-          const ended = { ...session, status: 'ended' as const, endedAt: now };
-          this.sigCache.delete(session.id);
-          this.sessionEndedCallback?.(ended);
-          continue;
-        }
-
-        if (session.pid != null && !isPidRunning(session.pid)) {
-          logger.info(`[ClaudeDetector] session ended, process gone sessionId=${session.id} pid=${session.pid}`);
-          updateSessionStatus(session.id, 'ended', now);
-          this.jsonlWatcher.closeWatcher(session.id);
-          const ended = { ...session, status: 'ended' as const, endedAt: now };
-          this.sigCache.delete(session.id);
-          this.sessionEndedCallback?.(ended);
-          continue;
-        }
-
-        const sig = this.sessionSignature(session);
-        if (!this.sigCache.has(session.id)) {
-          // First time seeing this session in the reconcile loop — seed without firing updated.
-          this.sigCache.set(session.id, sig);
-        } else if (this.sigCache.get(session.id) !== sig) {
-          this.sigCache.set(session.id, sig);
-          this.sessionUpdatedCallback?.(session);
-        }
-      }
-    } catch { /* best-effort */ }
-  }
-
-  protected watchJsonlFile(sessionId: string, repoPath: string): Promise<void> {
-    return this.jsonlWatcher.watchFile(sessionId, repoPath);
+  // Reads ~/.claude/sessions/*.json and returns the pid/sessionId/cwd for each valid entry.
+  private scanSessionFiles(): Array<{ pid: number; sessionId: string; cwd: string }> {
+    if (!existsSync(this.sessionsDir)) return [];
+    const files = readdirSync(this.sessionsDir).filter(f => f.endsWith('.json'));
+    const entries: Array<{ pid: number; sessionId: string; cwd: string }> = [];
+    for (const file of files) {
+      try {
+        const data = JSON.parse(readFileSync(join(this.sessionsDir, file), 'utf-8'));
+        if (typeof data.pid !== 'number' || typeof data.sessionId !== 'string' || typeof data.cwd !== 'string') continue;
+        entries.push({ pid: data.pid, sessionId: data.sessionId, cwd: data.cwd });
+      } catch { /* skip malformed */ }
+    }
+    return entries;
   }
 
   /**
@@ -301,8 +244,65 @@ export class ClaudeCodeDetector extends BaseCliDetector implements CliDetector {
     await this.watchJsonlFile(sessionId, repo.path);
   }
 
+  /**
+   * Checks all active Claude Code DB sessions for liveness and field changes.
+   * Called at the end of every scan() cycle.
+   *
+   * - Repo removed: end the session immediately.
+   * - Process dead: end the session (catches crashes not covered by SessionEnd hook).
+   * - Field change: fire sessionUpdatedCallback (deduped via sigCache).
+   *
+   * First time a session is seen here its sig is seeded without firing updated,
+   * preventing a spurious update event on the cycle right after creation.
+   */
+  private reconcileActiveSessions(): void {
+    try {
+      const liveSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
+      if (liveSessions.length === 0) return;
+
+      const repos = getRepositories();
+      const now = new Date().toISOString();
+
+      for (const session of liveSessions) {
+        const repo = repos.find(r => r.id === session.repositoryId);
+        if (!repo) {
+          logger.info(`[ClaudeDetector] session ended, repo removed sessionId=${session.id}`);
+          updateSessionStatus(session.id, 'ended', now);
+          this.jsonlWatcher.closeWatcher(session.id);
+          const ended = { ...session, status: 'ended' as const, endedAt: now };
+          this.sigCache.delete(session.id);
+          this.sessionEndedCallback?.(ended);
+          continue;
+        }
+
+        if (session.pid != null && !isPidRunning(session.pid)) {
+          logger.info(`[ClaudeDetector] session ended, process gone sessionId=${session.id} pid=${session.pid}`);
+          updateSessionStatus(session.id, 'ended', now);
+          this.jsonlWatcher.closeWatcher(session.id);
+          const ended = { ...session, status: 'ended' as const, endedAt: now };
+          this.sigCache.delete(session.id);
+          this.sessionEndedCallback?.(ended);
+          continue;
+        }
+
+        const sig = this.sessionSignature(session);
+        if (!this.sigCache.has(session.id)) {
+          // First time seeing this session in the reconcile loop — seed without firing updated.
+          this.sigCache.set(session.id, sig);
+        } else if (this.sigCache.get(session.id) !== sig) {
+          this.sigCache.set(session.id, sig);
+          this.sessionUpdatedCallback?.(session);
+        }
+      }
+    } catch { /* best-effort */ }
+  }
+
   closeSessionWatcher(sessionId: string): void {
     this.jsonlWatcher.closeWatcher(sessionId);
+  }
+
+  protected watchJsonlFile(sessionId: string, repoPath: string): Promise<void> {
+    return this.jsonlWatcher.watchFile(sessionId, repoPath);
   }
 
   protected closeJsonlWatcher(sessionId: string): void {
