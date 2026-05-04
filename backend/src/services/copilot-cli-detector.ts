@@ -1,5 +1,4 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
-import * as logger from '../utils/logger.js';
 import { join, normalize } from 'path';
 import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
@@ -149,20 +148,12 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
   }
 
   /**
-   * Per-entry pipeline: liveness + identity guards, repo lookup, PTY linkage,
-   * upsert, watch JSONL. Returns the persisted Session, or null if the entry
-   * should be skipped (no repo, already-ended-and-not-running, etc.).
-   *
-   * Records active dirPaths so they are always re-checked next cycle to detect
-   * the eventual end transition.
+   * Per-entry pipeline: delegates to buildSessionFromEntry and records active
+   * dirPaths so they are always re-checked next cycle (used by the mtime filter
+   * in readSessionEntries) to detect the eventual end transition.
    */
   protected async processSessionEntry(entry: CopilotSessionEntry): Promise<Session | null> {
-    const tDir = Date.now();
     const session = await this.buildSessionFromEntry(entry);
-    const dirMs = Date.now() - tDir;
-    if (dirMs > 50) {
-      logger.info(`[CopilotDetector] slow dir (${dirMs}ms): ${entry.dirPath}`);
-    }
     if (session?.status === 'active') this.activeDirPaths.add(entry.dirPath);
     return session;
   }

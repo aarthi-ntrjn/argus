@@ -142,13 +142,21 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
    * Per-cycle scan orchestrator. Reads entries, processes each, dispatches events.
    * Concrete detectors implement the three abstract steps. force=true bypasses
    * any caching the read step may apply (e.g. Copilot's mtime filter).
+   *
+   * Logs a "slow entry" line whenever a single processSessionEntry takes more
+   * than 50ms — useful for spotting pathological per-entry I/O regressions.
    */
   async scan(force = false): Promise<Session[]> {
     if (!existsSync(this.sessionsDir)) return [];
     const entries = await this.readSessionEntries(force);
     const sessions: Session[] = [];
     for (const entry of entries) {
+      const t0 = Date.now();
       const session = await this.processSessionEntry(entry);
+      const ms = Date.now() - t0;
+      if (ms > 50) {
+        logger.info(`${this.logTag} slow entry (${ms}ms): sessionId=${entry.sessionId}`);
+      }
       if (session !== null) sessions.push(session);
     }
     this.dispatchSessionEvents(sessions);
