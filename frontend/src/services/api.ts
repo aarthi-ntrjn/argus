@@ -217,10 +217,34 @@ export async function stopIntegration(platform: 'slack' | 'teams'): Promise<void
   await apiFetch<unknown>(`/integrations/${platform}/stop`, { method: 'POST' });
 }
 
-export async function getHealth(): Promise<{ status: string; version: string; uptime: number }> {
+export interface HealthResponse {
+  status: string;
+  version: string;
+  uptime: number;
+  updateAvailable?: boolean;
+  latestVersion?: string;
+}
+
+export async function getHealth(): Promise<HealthResponse> {
   const res = await fetch('/api/health');
   if (!res.ok) throw new Error('Health check failed');
-  return res.json() as Promise<{ status: string; version: string; uptime: number }>;
+  return res.json() as Promise<HealthResponse>;
+}
+
+export interface UpdateStatus {
+  currentVersion: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
+  lastChecked: string | null;
+  updateInProgress: boolean;
+}
+
+export async function getUpdateStatus(): Promise<UpdateStatus> {
+  return apiFetch<UpdateStatus>('/update/status');
+}
+
+export async function applyUpdate(): Promise<{ applied: boolean }> {
+  return apiFetch<{ applied: boolean }>('/update/apply', { method: 'POST' });
 }
 
 export function postTelemetryEvent(type: string): void {

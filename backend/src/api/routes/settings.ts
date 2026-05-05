@@ -7,7 +7,7 @@ import type { ArgusConfig, SlackConfig } from '../../models/index.js';
 const ALLOWED_KEYS = new Set<keyof ArgusConfig>([
   'port', 'watchDirectories', 'sessionRetentionHours',
   'outputRetentionMbPerSession', 'autoRegisterRepos', 'yoloMode', 'restingThresholdMinutes',
-  'telemetryEnabled', 'telemetryPromptSeen',
+  'telemetryEnabled', 'telemetryPromptSeen', 'autoUpdate', 'updateCheckIntervalHours',
 ]);
 
 const SLACK_EDITABLE_KEYS: (keyof SlackConfig)[] = [

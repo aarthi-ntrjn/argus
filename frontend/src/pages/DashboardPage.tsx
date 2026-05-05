@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useRef, useState, useEffect, useMemo } from 'react';
 import { Plus, Check, Maximize2, Minimize2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getSessions, getRepositories } from '../services/api';
+import { getSessions, getRepositories, applyUpdate } from '../services/api';
+import { useUpdateStatus } from '../hooks/useUpdateStatus';
 import { useSettings } from '../hooks/useSettings';
 import { useArgusSettings } from '../hooks/useArgusSettings';
 import { useIntegrationControl } from '../hooks/useIntegrationControl';
@@ -64,6 +65,7 @@ export default function DashboardPage() {
 
   const [settings, updateSetting] = useSettings();
   const { settings: argusSettings, isLoading: argusSettingsLoading, patchSetting } = useArgusSettings();
+  const updateStatus = useUpdateStatus();
   const { integrationsEnabled, toggle, isPending } = useIntegrationControl();
   const { tourStatus, seenRepoSteps, startTour, skipTour, completeTour, markRepoStepsSeen, resetOnboarding } = useOnboarding();
   const [tourRun, setTourRun] = useState(false);
@@ -82,6 +84,22 @@ export default function DashboardPage() {
   } = useRepositoryManagement();
 
   const [launchError, setLaunchError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateBanner, setUpdateBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  async function handleUpdateNow() {
+    setIsUpdating(true);
+    setUpdateBanner(null);
+    try {
+      await applyUpdate();
+      setUpdateBanner({ type: 'success', message: 'Update applied. Restart Argus to run the new version.' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      setUpdateBanner({ type: 'error', message: `Failed to apply update. ${msg || 'Make sure the Argus server is running and you have permission to install packages globally.'}` });
+    } finally {
+      setIsUpdating(false);
+    }
+  }
 
   const [infoSnapshot, setInfoSnapshot] = useState<string | null>(null);
   useEffect(() => { if (addInfo) setInfoSnapshot(addInfo); }, [addInfo]);
@@ -298,7 +316,18 @@ export default function DashboardPage() {
                 />
               </div>
             )}
-            <div className="relative" ref={settingsRef}>
+            <div className="flex items-center gap-2" ref={settingsRef}>
+              {updateStatus?.updateAvailable && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => void handleUpdateNow()}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? 'Updating...' : `Update to v${updateStatus.latestVersion ?? 'latest'}`}
+                </Button>
+              )}
+              <div className="relative">
               <button
                 data-tour-id="dashboard-settings"
                 onClick={() => setSettingsOpen(o => !o)}
@@ -320,6 +349,7 @@ export default function DashboardPage() {
                   onOpenAllSettings={() => openDialog('general')}
                 />
               )}
+              </div>
             </div>
             <button
               type="button"
@@ -342,6 +372,20 @@ export default function DashboardPage() {
       {/* Page content */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <div className={`mx-auto ${dashboardWidthClassName} h-full px-4 py-4 md:px-8 md:py-6 flex flex-col`}>
+
+        {updateBanner && (
+          <div
+            role="alert"
+            className={`mb-4 px-3 py-2 rounded text-sm flex items-center justify-between gap-3 ${
+              updateBanner.type === 'success'
+                ? 'bg-blue-50 border border-blue-200 text-blue-800'
+                : 'bg-red-50 border border-red-200 text-red-700'
+            }`}
+          >
+            <span className="leading-snug">{updateBanner.message}</span>
+            <button onClick={() => setUpdateBanner(null)} aria-label="Dismiss" className="icon-btn shrink-0 p-0 leading-none">&times;</button>
+          </div>
+        )}
 
         {addError && (
           <div role="alert" className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm flex items-center justify-between gap-3">

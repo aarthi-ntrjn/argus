@@ -75,6 +75,8 @@ export interface ArgusConfig {
   restingThresholdMinutes: number;
   telemetryEnabled: boolean;
   telemetryPromptSeen: boolean;
+  autoUpdate?: boolean;
+  updateCheckIntervalHours?: number;
 }
 
 export interface DashboardSettings {

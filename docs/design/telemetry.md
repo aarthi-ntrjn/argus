@@ -93,6 +93,10 @@ Event-specific properties included in `properties`:
 | `errorCode` | `string` (e.g. `"INTERNAL_ERROR"`) | `request_error` |
 | `errorMessage` | `string` (sanitized) | `request_error` |
 | `errorOrigin` | `string` (top stack frame, no PII) | `request_error` |
+| `currentVersion` | `string` | `update_available`, `update_attempt` |
+| `latestVersion` | `string` | `update_available`, `update_attempt` |
+| `status` | `"succeeded" \| "failed"` | `update_attempt` |
+| `exitCode` | `string` (e.g. `"1"`, `"timeout"`) | `update_attempt` (failed only) |
 
 No `$ip` or `$geoip_disable` properties are set. PostHog derives location from the connection IP natively (see GeoIP section below).
 
@@ -111,6 +115,8 @@ No `$ip` or `$geoip_disable` properties are set. PostHog derives location from t
 | `integration_started` | A Slack or Teams integration becomes active |
 | `integration_stopped` | A Slack or Teams integration is deactivated |
 | `request_error` | An unhandled server error occurs (5xx) |
+| `update_available` | A newer version of Argus is detected on npm (fires once per discovery, not on every poll) |
+| `update_attempt` | An update is applied on exit or via the UI; `status` is `"succeeded"` or `"failed"` |
 
 ### Opt-Out Mechanism
 
