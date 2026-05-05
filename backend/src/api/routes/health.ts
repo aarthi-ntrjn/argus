@@ -5,16 +5,22 @@ import { dirname, join } from 'path';
 import { loadTeamsConfig } from '../../config/teams-config-loader.js';
 import type { SlackNotifier } from '../../integration/slack/slack-notifier.js';
 import type { SlackListener } from '../../integration/slack/slack-listener.js';
+import type { UpdateService } from '../../services/update-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 let slackNotifierRef: SlackNotifier | null = null;
 let slackListenerRef: SlackListener | null = null;
+let updateServiceRef: UpdateService | null = null;
 
 export function setSlackServices(notifier: SlackNotifier, listener: SlackListener | null): void {
   slackNotifierRef = notifier;
   slackListenerRef = listener;
+}
+
+export function setUpdateService(service: UpdateService): void {
+  updateServiceRef = service;
 }
 
 const healthRoutes: FastifyPluginAsync = async (app) => {
@@ -44,6 +50,8 @@ const healthRoutes: FastifyPluginAsync = async (app) => {
                 },
               },
             },
+            updateAvailable: { type: 'boolean' },
+            latestVersion: { type: 'string' },
           },
         },
       },
@@ -77,15 +85,25 @@ const healthRoutes: FastifyPluginAsync = async (app) => {
           }
         : undefined;
 
+      const updateStatus = updateServiceRef?.getStatus();
+      const updateFields = updateStatus
+        ? {
+            updateAvailable: updateStatus.updateAvailable,
+            ...(updateStatus.latestVersion ? { latestVersion: updateStatus.latestVersion } : {}),
+          }
+        : { updateAvailable: false };
+
       return reply.send({
         status: 'ok',
         version,
         uptime: process.uptime(),
         teams,
         ...(slackStatus ? { slack: slackStatus } : {}),
+        ...updateFields,
       });
     },
   );
+
 };
 
 export default healthRoutes;

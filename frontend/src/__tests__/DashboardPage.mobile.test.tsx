@@ -29,6 +29,7 @@ vi.mock('../services/api', () => ({
   startIntegration: vi.fn().mockResolvedValue(undefined),
   stopIntegration: vi.fn().mockResolvedValue(undefined),
   getHealth: vi.fn().mockResolvedValue({ status: 'ok', version: '1.2.3', uptime: 0 }),
+  getUpdateStatus: vi.fn().mockResolvedValue({ currentVersion: '1.2.3', latestVersion: null, updateAvailable: false, lastChecked: null, updateInProgress: false }),
 }));
 
 vi.mock('../hooks/useSettings', () => ({

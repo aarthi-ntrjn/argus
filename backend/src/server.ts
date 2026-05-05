@@ -18,7 +18,9 @@ import { addClient, removeClient, broadcast } from './api/ws/event-dispatcher.js
 import repositoriesRoutes, { setMonitor } from './api/routes/repositories.js';
 import sessionsRoutes, { setSessionClaudeDetector } from './api/routes/sessions.js';
 import hooksRoutes, { setClaudeDetector } from './api/routes/hooks.js';
-import healthRoutes, { setSlackServices } from './api/routes/health.js';
+import healthRoutes, { setSlackServices, setUpdateService } from './api/routes/health.js';
+import updateRoutes, { setUpdateServiceForRoutes } from './api/routes/update.js';
+import { updateService } from './services/update-service.js';
 import integrationsRoutes, { setIntegrationServices } from './api/routes/integrations.js';
 import metricsRoutes from './api/routes/metrics.js';
 import { fsRoutes } from './api/routes/fs.js';
@@ -164,6 +166,7 @@ export async function buildServer(): Promise<{
   await app.register(teamsSettingsRoutes);
   await app.register(telemetryRoutes);
   await app.register(integrationsRoutes);
+  await app.register(updateRoutes);
 
   if (process.env.NODE_V8_COVERAGE) {
     const { registerTestRoutes } = await import('./api/routes/test-utils.js');
@@ -272,8 +275,28 @@ export async function startServer(): Promise<FastifyInstance> {
     monitor,
   );
 
+  setUpdateService(updateService);
+  setUpdateServiceForRoutes(updateService);
+  updateService.setTelemetryService(telemetryService);
+  updateService.scheduleChecks(config.updateCheckIntervalHours * 3600_000);
+
+  async function runExitUpdate(): Promise<void> {
+    if (config.autoUpdate && updateService.hasUpdate() && !updateService.isUpdateInProgress) {
+      const latest = updateService.getStatus().latestVersion;
+      process.stdout.write(
+        `Applying update to v${latest}. Active monitoring paused until update is applied and server is restarted.\n`,
+      );
+      try {
+        await updateService.applyUpdate();
+      } catch {
+        app.log.warn('Update failed during exit, continuing shutdown');
+      }
+    }
+  }
+
   process.on('SIGTERM', async () => {
     telemetryService.sendEvent('app_ended');
+    await runExitUpdate();
     teamsNotifier?.shutdown();
     teamsListener?.shutdown();
     slackListener?.shutdown();
@@ -284,6 +307,7 @@ export async function startServer(): Promise<FastifyInstance> {
   });
   process.on('SIGINT', async () => {
     telemetryService.sendEvent('app_ended');
+    await runExitUpdate();
     teamsNotifier?.shutdown();
     teamsListener?.shutdown();
     slackListener?.shutdown();
@@ -292,6 +316,7 @@ export async function startServer(): Promise<FastifyInstance> {
     await app.close();
     process.exit(0);
   });
+
 
   await app.listen({ port: config.port, host: '127.0.0.1' });
   app.log.info({ port: config.port }, 'Argus server started');

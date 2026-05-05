@@ -14,6 +14,8 @@ const ALLOWED_KEYS = new Set<keyof ArgusConfig>([
   'restingThresholdMinutes',
   'telemetryEnabled',
   'telemetryPromptSeen',
+  'autoUpdate',
+  'updateCheckIntervalHours',
 ]);
 
 const SLACK_EDITABLE_KEYS: (keyof SlackConfig)[] = [
