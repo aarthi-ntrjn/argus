@@ -120,7 +120,11 @@ export class UpdateService {
         resolve();
       }, APPLY_TIMEOUT_MS);
 
-      const proc = spawn('npm', ['install', '-g', 'argus-ai-hub@latest'], { shell: true });
+      const customCmd = process.env.ARGUS_UPDATE_CMD;
+      const [cmd, ...args] = customCmd
+        ? customCmd.split(' ')
+        : ['npm', 'install', '-g', 'argus-ai-hub@latest'];
+      const proc = spawn(cmd, args, { shell: true });
 
       proc.stdout?.on('data', (chunk: Buffer) => log.info(chunk.toString().trim()));
       proc.stderr?.on('data', (chunk: Buffer) => log.warn(chunk.toString().trim()));
