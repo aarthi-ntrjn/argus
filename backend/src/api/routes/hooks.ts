@@ -58,17 +58,14 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
       const payload = req.body;
       const eventName = payload?.hook_event_name;
       const isLifecycle = eventName === 'SessionStart' || eventName === 'SessionEnd';
+      const isToolUse = eventName === 'PreToolUse' || eventName === 'PostToolUse';
 
-      if (!isLifecycle && payload?.tool_name !== 'AskUserQuestion') {
+      if (!isLifecycle && !isToolUse) {
         return reply.send({ ok: true });
       }
 
-      if (!isLifecycle && eventName !== 'PreToolUse' && eventName !== 'PostToolUse') {
-        return reply.status(400).send({
-          error: 'INVALID_HOOK_EVENT',
-          message: 'AskUserQuestion hooks must use PreToolUse or PostToolUse event',
-          requestId: req.id,
-        });
+      if (isToolUse && payload?.tool_name !== 'AskUserQuestion') {
+        return reply.send({ ok: true });
       }
 
       const sessionId = payload.session_id;
@@ -113,17 +110,14 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
       const body = req.body ?? {};
       const event = req.query.event;
       const isLifecycle = event === 'sessionStart' || event === 'sessionEnd';
+      const isToolUse = event === 'preToolUse' || event === 'postToolUse';
 
-      if (!isLifecycle && body.toolName !== 'ask_user') {
+      if (!isLifecycle && !isToolUse) {
         return reply.send({ ok: true });
       }
 
-      if (!isLifecycle && event !== 'preToolUse' && event !== 'postToolUse') {
-        return reply.status(400).send({
-          error: 'INVALID_HOOK_EVENT',
-          message: 'ask_user tool hooks must use preToolUse or postToolUse event',
-          requestId: req.id,
-        });
+      if (isToolUse && body.toolName !== 'ask_user') {
+        return reply.send({ ok: true });
       }
 
       const sessionId = body.sessionId;
