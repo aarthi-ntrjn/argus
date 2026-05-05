@@ -71,6 +71,29 @@ Perform each check below. Record findings as `PASS`, `FAIL`, or `N/A` with evide
   ```
   For each new non-test source file, verify a corresponding test file exists or that tests were added to an existing test file. Mark **FAIL** if new source has zero test coverage.
 
+#### §II Coding Style
+
+Run lint and format across both workspaces:
+
+```
+npm run lint:fix --workspace=backend
+npm run lint:fix --workspace=frontend
+npm run format --workspace=backend
+npm run format --workspace=frontend
+```
+
+If any files were modified, stage and commit them:
+
+```
+git add -A
+git commit -m "chore(merge-gate): apply lint and format fixes
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+git push
+```
+
+If `lint:fix` exits with errors that are **not** auto-fixable (i.e., files still show errors after `--fix`), mark as **FAIL** and list the files and rules. Fix them before continuing.
+
 #### §III Code Standards
 
 - Spot-check new/modified TypeScript/JavaScript files from the diff for functions exceeding 50 lines. Flag any with `WARN`.
@@ -151,6 +174,7 @@ Output a pre-merge report:
 
 | Check | Status | Notes |
 |-------|--------|-------|
+| Coding style (lint + format) | ✅ PASS / ❌ FIXED | N files reformatted / no violations |
 | Backend tests | ✅ PASS | All N tests passed |
 | Frontend build | ✅ PASS | Build succeeded |
 | E2E mock tests (Tier 1) | ✅ PASS | N tests passed |
