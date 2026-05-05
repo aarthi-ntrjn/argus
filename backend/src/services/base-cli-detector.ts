@@ -54,15 +54,34 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   /** Session type identifier used for PTY registry and session rows. */
   protected abstract readonly toolTypeId: SessionType;
 
+  /**
+   * Default pid source label for disk-sourced pids (used when no PTY is involved).
+   * Claude: 'session_registry'. Copilot: 'lockfile'.
+   */
+  protected abstract readonly defaultPidSource: PidSource;
+
   /** Read parsed entries from the source (session files, session dirs, etc.). */
   protected abstract readSessionEntries(force: boolean): Promise<TEntry[]>;
+
   /**
-   * Build the Session row for one entry. Called only when the entry passes the
-   * alive check AND its cwd resolves to a registered repo (both filters live in
-   * scan()). Returns the persisted Session, or null only if the detector has
-   * its own additional skip condition.
+   * Returns the path argument to pass to watchJsonlFile for a given entry.
+   * Claude passes repo.path (the watcher derives the JSONL path from it).
+   * Copilot passes entry.dirPath (the session directory containing events.jsonl).
    */
-  protected abstract buildSessionFromEntry(entry: TEntry, repo: Repository): Promise<Session | null>;
+  protected abstract resolveWatchPath(entry: TEntry, repo: Repository): string;
+
+  /**
+   * Returns the three session fields that differ between detectors for the
+   * reactivation/new-session path (path 4 in buildSessionFromEntry).
+   * Called only when no fast-path applied (no fresh PTY claim, session not
+   * currently active, PTY launcher still present or session is non-PTY).
+   */
+  protected abstract buildNewSessionFields(
+    entry: TEntry,
+    existingSession: Session | null | undefined,
+    now: string,
+  ): { startedAt: string; lastActivityAt: string; summary: string | null };
+
   /** Diff against sigCache and fire session.created/updated/ended callbacks. */
   protected abstract dispatchSessionEvents(sessions: Session[]): void;
 
@@ -309,11 +328,90 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   }
 
   /**
+   * Shared scan-path session builder. Called for every entry that passed the alive
+   * check and resolved to a registered repo. Handles four cases in order:
+   *
+   * 1. Fresh PTY claim: brand-new session claimed by a waiting PTY launcher.
+   * 2. Already active: update pid/yoloMode only when something changed.
+   * 3. Dead PTY launcher: skip re-activation to avoid routing prompts to
+   *    the wrong process (a fresh launcher is a new CLI process).
+   * 4. New or ended session: (re)activate using disk data via buildNewSessionFields.
+   *
+   * Detectors no longer override this; they only supply the three small abstracts
+   * (defaultPidSource, resolveWatchPath, buildNewSessionFields) that encode the
+   * fields that genuinely differ between Claude and Copilot.
+   */
+  protected async buildSessionFromEntry(entry: TEntry, repo: Repository): Promise<Session | null> {
+    const now = new Date().toISOString();
+    const existingSession = getSession(entry.sessionId);
+    const linkage = this.resolvePtyLinkage(entry.sessionId, existingSession, repo.path, entry.pid, this.defaultPidSource, true);
+    const watchPath = this.resolveWatchPath(entry, repo);
+
+    if (!existingSession && linkage.freshClaim) {
+      logger.info(`${this.logTag} session activated via PTY claim sessionId=${entry.sessionId} hostPid=${linkage.freshClaim.hostPid} pid=${linkage.freshClaim.pid}`);
+      return this.createPtySession(entry.sessionId, repo, linkage.freshClaim, now, watchPath);
+    }
+
+    if (existingSession?.status === 'active') {
+      const yoloMode = existingSession.yoloMode !== null
+        ? existingSession.yoloMode
+        : detectYoloModeFromPids(linkage.pid, linkage.hostPid, this.toolTypeId);
+      const pidChanged = existingSession.pid !== linkage.pid || existingSession.pidSource !== linkage.pidSource;
+      const yoloResolved = existingSession.yoloMode === null && yoloMode !== null;
+      let session = existingSession;
+      if (pidChanged || yoloResolved) {
+        logger.info(`${this.logTag} pid assigned sessionId=${entry.sessionId} pid=${linkage.pid} (was ${existingSession.pid}) yoloMode=${yoloMode}`);
+        session = { ...existingSession, pid: linkage.pid, pidSource: linkage.pidSource, yoloMode };
+        upsertSession(session);
+      }
+      await this.watchJsonlFile(entry.sessionId, watchPath);
+      return session;
+    }
+
+    // Don't re-activate a PTY session whose launcher has already disconnected:
+    // a fresh launcher would be a new CLI process and binding it to the old
+    // sessionId would route prompts to the wrong process.
+    if (existingSession?.launchMode === 'pty' && !ptyRegistry.has(entry.sessionId)) {
+      logger.info(`${this.logTag} skipping re-activation — PTY launcher gone sessionId=${entry.sessionId}`);
+      return existingSession;
+    }
+
+    this.closeJsonlWatcher(entry.sessionId);
+    const fields = this.buildNewSessionFields(entry, existingSession, now);
+    const base: Session = existingSession ?? {
+      id: entry.sessionId,
+      repositoryId: repo.id,
+      type: this.toolTypeId,
+      launchMode: linkage.launchMode,
+      pid: linkage.pid,
+      hostPid: linkage.hostPid,
+      pidSource: linkage.pidSource,
+      status: 'active',
+      endedAt: null,
+      expiresAt: null,
+      model: null,
+      reconciled: true,
+      yoloMode: linkage.pid ? detectYoloModeFromPids(linkage.pid, linkage.hostPid, this.toolTypeId) : null,
+      ptyLaunchId: linkage.ptyLaunchId,
+      ...fields,
+    };
+    const activated = { ...base, status: 'active' as const, endedAt: null as null, pid: linkage.pid, ...fields };
+    logger.info(`${this.logTag} session activated sessionId=${entry.sessionId} pid=${linkage.pid}`);
+    upsertSession(activated);
+    await this.watchJsonlFile(entry.sessionId, watchPath);
+    return activated;
+  }
+
+  /**
    * Builds and persists a fresh PTY-bound session row. Watches its JSONL output.
    * Returns the persisted Session. Does not fire callbacks — caller decides
    * (hook path fires immediately, scan path defers to dispatchSessionEvents).
+   *
+   * watchPath is the path passed to watchJsonlFile. Scan-path callers supply
+   * resolveWatchPath(entry, repo); hook-path callers omit it and fall back to
+   * repo.path (acceptable — the file rarely exists yet when the first hook fires).
    */
-  protected async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<Session> {
+  protected async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string, watchPath?: string): Promise<Session> {
     const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, this.toolTypeId);
     const session: Session = {
       id: sessionId,
@@ -335,7 +433,7 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       ptyLaunchId: claimed.ptyLaunchId,
     };
     upsertSession(session);
-    await this.watchJsonlFile(sessionId, repo.path);
+    await this.watchJsonlFile(sessionId, watchPath ?? repo.path);
     return session;
   }
 

@@ -3,10 +3,8 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
-import { upsertSession, getSession, getSessions, getServerState, setServerState } from '../db/database.js';
+import { getSessions, getServerState, setServerState } from '../db/database.js';
 import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
-import { detectYoloModeFromPids } from './process-utils.js';
-import { SessionTypes } from '../models/index.js';
 import type { Session, Repository } from '../models/index.js';
 import type { CliDetector } from './cli-detector.js';
 import { BaseCliDetector, type SessionEntry } from './base-cli-detector.js';
@@ -167,6 +165,27 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
     return result;
   }
 
+  protected readonly defaultPidSource = 'lockfile' as const;
+
+  protected resolveWatchPath(entry: CopilotSessionEntry, _repo: Repository): string {
+    return entry.dirPath;
+  }
+
+  /** Session timestamps and summary for the reactivation/new-session path. */
+  protected buildNewSessionFields(
+    entry: CopilotSessionEntry,
+    existingSession: Session | undefined | null,
+    _now: string,
+  ): { startedAt: string; lastActivityAt: string; summary: string | null } {
+    return {
+      startedAt: entry.startedAt,
+      lastActivityAt: existingSession?.lastActivityAt && existingSession.lastActivityAt > entry.updatedAt
+        ? existingSession.lastActivityAt
+        : entry.updatedAt,
+      summary: existingSession?.summary ?? entry.summary,
+    };
+  }
+
   /**
    * Records dirPaths of sessions that ended this cycle as 'active'. The mtime
    * filter in readSessionEntries always re-checks these dirs next cycle so we
@@ -174,49 +193,6 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
    */
   protected onSessionBuilt(entry: CopilotSessionEntry, session: Session | null): void {
     if (session?.status === 'active') this.activeDirPaths.add(entry.dirPath);
-  }
-
-  /**
-   * Builds the Session row from a directory entry. The base scan() has already
-   * filtered out dead/PID-reused entries and resolved the repo, so this method
-   * just upserts the row, starts the JSONL watcher, and returns it. Does not
-   * fire callbacks (dispatchSessionEvents handles those).
-   */
-  protected async buildSessionFromEntry(entry: CopilotSessionEntry, repo: Repository): Promise<Session | null> {
-    const { sessionId, pid, dirPath, summary, startedAt, updatedAt } = entry;
-
-    const existingSession = getSession(sessionId);
-    const linkage = this.resolvePtyLinkage(sessionId, existingSession, repo.path, pid, 'lockfile', true);
-
-    const yoloMode = existingSession?.yoloMode != null
-      ? existingSession.yoloMode
-      : detectYoloModeFromPids(linkage.pid, linkage.hostPid, SessionTypes.COPILOT_CLI);
-
-    const session: Session = {
-      id: sessionId,
-      repositoryId: repo.id,
-      type: SessionTypes.COPILOT_CLI,
-      launchMode: linkage.launchMode,
-      pid: linkage.pid,
-      hostPid: linkage.hostPid,
-      pidSource: linkage.pidSource,
-      status: 'active',
-      startedAt,
-      endedAt: null,
-      lastActivityAt: existingSession?.lastActivityAt && existingSession.lastActivityAt > updatedAt
-        ? existingSession.lastActivityAt
-        : updatedAt,
-      summary: existingSession?.summary ?? summary,
-      expiresAt: null,
-      model: existingSession?.model ?? null,
-      reconciled: true,
-      yoloMode,
-      ptyLaunchId: linkage.ptyLaunchId,
-    };
-
-    upsertSession(session);
-    await this.watchJsonlFile(sessionId, dirPath);
-    return session;
   }
 
   private findLockFile(dirPath: string): string | null {
