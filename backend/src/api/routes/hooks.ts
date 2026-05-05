@@ -50,7 +50,7 @@ export function setCliManager(manager: {
 const hooksRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Body: HookPayload }>(
     '/hooks/claude',
-    { bodyLimit: HOOK_BODY_LIMIT },
+    { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
     async (req, reply) => {
       const payload = req.body;
       const sessionId = payload?.session_id;
@@ -76,7 +76,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      req.log.info({ hookEvent: payload.hook_event_name, payload }, 'hook received');
+      req.log.debug({ hookEvent: payload.hook_event_name, payload }, 'hook received');
 
       if (_cliManager) {
         await _cliManager.handleClaudeHookPayload(payload);
@@ -87,7 +87,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Querystring: { event?: string }; Body: CopilotRawPayload }>(
     '/hooks/copilot',
-    { bodyLimit: HOOK_BODY_LIMIT },
+    { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
     async (req, reply) => {
       const event = req.query.event;
 
@@ -147,7 +147,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         tool_input: toolInput,
       };
 
-      req.log.info(
+      req.log.debug(
         { hookEvent: normalized.hook_event_name, sessionId: normalized.session_id },
         'copilot hook received',
       );
