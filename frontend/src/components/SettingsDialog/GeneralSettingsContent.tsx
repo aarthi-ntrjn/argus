@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RotateCcw } from 'lucide-react';
 import type { DashboardSettings } from '../../types';
@@ -19,18 +19,26 @@ export interface GeneralSettingsContentProps {
   compact?: boolean;
 }
 
-export function GeneralSettingsContent({ settings, onToggle, compact = false }: GeneralSettingsContentProps) {
+export function GeneralSettingsContent({
+  settings,
+  onToggle,
+  compact = false,
+}: GeneralSettingsContentProps) {
   const { settings: argusSettings, patchSetting } = useArgusSettings();
   const [showYoloWarning, setShowYoloWarning] = useState(false);
   const [rescanState, setRescanState] = useState<'idle' | 'scanning' | 'done'>('idle');
-  const [thresholdInput, setThresholdInput] = useState(String(argusSettings?.restingThresholdMinutes ?? DEFAULT_THRESHOLD));
+  const [thresholdInput, setThresholdInput] = useState(
+    String(argusSettings?.restingThresholdMinutes ?? DEFAULT_THRESHOLD),
+  );
   const [thresholdError, setThresholdError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const [prevThreshold, setPrevThreshold] = useState(argusSettings?.restingThresholdMinutes);
+  if (prevThreshold !== argusSettings?.restingThresholdMinutes) {
+    setPrevThreshold(argusSettings?.restingThresholdMinutes);
     if (argusSettings?.restingThresholdMinutes != null) {
       setThresholdInput(String(argusSettings.restingThresholdMinutes));
     }
-  }, [argusSettings?.restingThresholdMinutes]);
+  }
 
   const handleYoloChange = (checked: boolean) => {
     if (checked) {
@@ -69,7 +77,9 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
       return;
     }
     setThresholdError(null);
-    if (normalizeInput) setThresholdInput(String(rounded));
+    if (normalizeInput) {
+      setThresholdInput(String(rounded));
+    }
     patchSetting({ restingThresholdMinutes: rounded });
   };
 
@@ -81,15 +91,13 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
 
   return (
     <>
-      {!compact && (
-        <SectionHeading className="mb-1">General</SectionHeading>
-      )}
+      {!compact && <SectionHeading className="mb-1">General</SectionHeading>}
       <div className="py-1">
         <Checkbox
           label="Hide ended sessions"
           aria-label="Hide ended sessions"
           checked={settings.hideEndedSessions}
-          onChange={e => onToggle('hideEndedSessions', e.target.checked)}
+          onChange={(e) => onToggle('hideEndedSessions', e.target.checked)}
         />
       </div>
       <div className="py-1">
@@ -97,7 +105,7 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
           label="Hide repos with no active sessions"
           aria-label="Hide repos with no active sessions"
           checked={settings.hideReposWithNoActiveSessions}
-          onChange={e => onToggle('hideReposWithNoActiveSessions', e.target.checked)}
+          onChange={(e) => onToggle('hideReposWithNoActiveSessions', e.target.checked)}
         />
       </div>
       <div className="py-1">
@@ -105,7 +113,7 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
           label={`Hide inactive sessions (>${argusSettings?.restingThresholdMinutes ?? DEFAULT_THRESHOLD} min)`}
           aria-label="Hide inactive sessions"
           checked={settings.hideInactiveSessions}
-          onChange={e => onToggle('hideInactiveSessions', e.target.checked)}
+          onChange={(e) => onToggle('hideInactiveSessions', e.target.checked)}
         />
       </div>
       <div className="py-1">
@@ -113,7 +121,7 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
           label="Hide To Do panel"
           aria-label="Hide To Do panel"
           checked={settings.hideTodoPanel}
-          onChange={e => onToggle('hideTodoPanel', e.target.checked)}
+          onChange={(e) => onToggle('hideTodoPanel', e.target.checked)}
         />
       </div>
 
@@ -131,11 +139,11 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
               value={thresholdInput}
               min={MIN_THRESHOLD}
               max={MAX_THRESHOLD}
-              onChange={e => {
+              onChange={(e) => {
                 setThresholdInput(e.target.value);
                 commitThreshold(e.target.value);
               }}
-              onBlur={e => commitThreshold(e.target.value, true)}
+              onBlur={(e) => commitThreshold(e.target.value, true)}
               className="w-14 text-sm px-1 py-0.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 text-center"
             />
             <span className="text-sm text-gray-500 shrink-0">min</span>
@@ -150,7 +158,9 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
             </button>
           </div>
           {thresholdError && (
-            <p role="alert" className="text-xs text-red-600 mt-0.5 px-1">{thresholdError}</p>
+            <p role="alert" className="text-xs text-red-600 mt-0.5 px-1">
+              {thresholdError}
+            </p>
           )}
         </div>
       )}
@@ -161,7 +171,7 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
           <Checkbox
             aria-label="Yolo mode"
             checked={argusSettings?.yoloMode ?? false}
-            onChange={e => handleYoloChange(e.target.checked)}
+            onChange={(e) => handleYoloChange(e.target.checked)}
             className="mt-0.5"
           />
           <span className="flex flex-col">
@@ -180,12 +190,14 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
             <Checkbox
               aria-label="Send anonymous usage telemetry"
               checked={argusSettings?.telemetryEnabled ?? true}
-              onChange={e => patchSetting({ telemetryEnabled: e.target.checked })}
+              onChange={(e) => patchSetting({ telemetryEnabled: e.target.checked })}
               className="mt-0.5"
             />
             <span className="flex flex-col">
               <span className="text-sm text-gray-600">Send anonymous usage telemetry</span>
-              <Link to="/telemetry" className="text-xs text-blue-600 hover:underline">What we collect</Link>
+              <Link to="/telemetry" className="text-xs text-blue-600 hover:underline">
+                What we collect
+              </Link>
             </span>
           </label>
         </div>
@@ -205,7 +217,11 @@ export function GeneralSettingsContent({ settings, onToggle, compact = false }: 
             }}
             className="w-full text-left !text-sm hover:!text-blue-600"
           >
-            {rescanState === 'scanning' ? 'Scanning...' : rescanState === 'done' ? 'Done' : 'Rescan Remote URLs'}
+            {rescanState === 'scanning'
+              ? 'Scanning...'
+              : rescanState === 'done'
+                ? 'Done'
+                : 'Rescan Remote URLs'}
           </Button>
         </div>
       )}

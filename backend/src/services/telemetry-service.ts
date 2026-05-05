@@ -19,7 +19,8 @@ function getIdPath(): string {
   return process.env.ARGUS_TELEMETRY_ID_PATH ?? join(homedir(), '.argus', 'telemetry-id');
 }
 
-const OS_PLATFORM = ({ darwin: 'macos', win32: 'windows' } as Record<string, string>)[platform()] ?? 'linux';
+const OS_PLATFORM =
+  ({ darwin: 'macos', win32: 'windows' } as Record<string, string>)[platform()] ?? 'linux';
 const OS_ARCH = arch();
 
 export class TelemetryService {
@@ -43,7 +44,9 @@ export class TelemetryService {
   }
 
   loadOrCreateInstallationId(): string {
-    if (this.installationId) return this.installationId;
+    if (this.installationId) {
+      return this.installationId;
+    }
     const idPath = getIdPath();
     try {
       const existing = readFileSync(idPath, 'utf-8').trim();
@@ -67,7 +70,9 @@ export class TelemetryService {
   }
 
   readAppVersion(): string {
-    if (this.appVersion) return this.appVersion;
+    if (this.appVersion) {
+      return this.appVersion;
+    }
     try {
       const pkgPath = fileURLToPath(new URL('../../../package.json', import.meta.url));
       const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
@@ -79,9 +84,13 @@ export class TelemetryService {
   }
 
   sendEvent(type: TelemetryEventType, extra?: Record<string, string | boolean | null>): void {
-    if (!this.isTelemetryEnabled()) return;
+    if (!this.isTelemetryEnabled()) {
+      return;
+    }
     const url = process.env.TELEMETRY_URL ?? POSTHOG_URL;
-    if (!url) return;
+    if (!url) {
+      return;
+    }
 
     const installationId = this.loadOrCreateInstallationId();
     const appVersion = this.readAppVersion();
@@ -92,11 +101,19 @@ export class TelemetryService {
       api_key: POSTHOG_API_KEY,
       distinct_id: installationId,
       event: type,
-      properties: { appVersion, os_platform: OS_PLATFORM, os_arch: OS_ARCH, ...integrationProps, ...extra },
+      properties: {
+        appVersion,
+        os_platform: OS_PLATFORM,
+        os_arch: OS_ARCH,
+        ...integrationProps,
+        ...extra,
+      },
       timestamp: new Date().toISOString(),
     };
 
-    log.info(`sendEvent type=${type} appVersion=${appVersion} props=${JSON.stringify({ os_platform: OS_PLATFORM, os_arch: OS_ARCH, ...integrationProps, ...extra })}`);
+    log.info(
+      `sendEvent type=${type} appVersion=${appVersion} props=${JSON.stringify({ os_platform: OS_PLATFORM, os_arch: OS_ARCH, ...integrationProps, ...extra })}`,
+    );
 
     void (async () => {
       try {

@@ -1,8 +1,20 @@
 import { WebClient } from '@slack/web-api';
 import type { SessionMonitor } from '../../services/session-monitor.js';
-import type { Session, Repository, SlackConfig, SessionOutput, NotificationIntegration } from '../../models/index.js';
+import type {
+  Session,
+  Repository,
+  SlackConfig,
+  SessionOutput,
+  NotificationIntegration,
+} from '../../models/index.js';
 import { randomUUID } from 'crypto';
-import { getRepository, getSlackThread, getSlackThreadByTs, upsertSlackThread, deleteSlackThread } from '../../db/database.js';
+import {
+  getRepository,
+  getSlackThread,
+  getSlackThreadByTs,
+  upsertSlackThread,
+  deleteSlackThread,
+} from '../../db/database.js';
 import { MessageQueue } from '../../services/message-queue.js';
 import { SessionDiffTracker } from '../../services/session-diff-tracker.js';
 import type { SessionChange } from '../../services/session-diff-tracker.js';
@@ -99,7 +111,9 @@ export class SlackNotifier implements NotificationIntegration {
 
   getSessionIdByThreadTs(threadTs: string): string | undefined {
     for (const [sessionId, ts] of this.threadAnchors) {
-      if (ts === threadTs) return sessionId;
+      if (ts === threadTs) {
+        return sessionId;
+      }
     }
     // Fall back to DB for sessions not yet loaded into the in-memory map
     const thread = getSlackThreadByTs(threadTs);
@@ -116,7 +130,9 @@ export class SlackNotifier implements NotificationIntegration {
 
   async onSessionCreated(session: Session): Promise<void> {
     log.info(`slack.session.created.received: session=${session.id} status=${session.status}`);
-    if (!this.active || !this.client) return;
+    if (!this.active || !this.client) {
+      return;
+    }
     if (!this.isEventEnabled(SESSION_CREATED)) {
       log.info(`slack.session.created.skipped: event not enabled`);
       return;
@@ -126,7 +142,8 @@ export class SlackNotifier implements NotificationIntegration {
     const blocks = buildSessionStartBlocks(session, repo);
 
     // Restore a persisted thread anchor (e.g. after server restart)
-    const existingThreadTs = this.threadAnchors.get(session.id) ?? getSlackThread(session.id)?.slackThreadTs ?? null;
+    const existingThreadTs =
+      this.threadAnchors.get(session.id) ?? getSlackThread(session.id)?.slackThreadTs ?? null;
     if (existingThreadTs) {
       this.threadAnchors.set(session.id, existingThreadTs);
       log.info(`slack.thread.reused: session=${session.id} ts=${existingThreadTs}`);
@@ -134,63 +151,85 @@ export class SlackNotifier implements NotificationIntegration {
       log.info(`slack.thread.creating: session=${session.id} repo=${repo?.name ?? '(unknown)'}`);
     }
 
-    this.queue.enqueue(async () => {
-      try {
-        const threadTs = this.threadAnchors.get(session.id);
-        const result = await this.client!.chat.postMessage({
-          channel: this.config.channelId,
-          text: `AI session started: ${session.id} (${session.type})`,
-          blocks,
-          ...(threadTs ? { thread_ts: threadTs } : {}),
-        });
-        if (result.ts) {
-          // Update anchor when: (a) no prior anchor (new session), or (b) we tried to thread
-          // but the message landed as a new top-level post because the parent was deleted
-          // (stale anchor after channel cleanup). In case (b), Slack returns success but the
-          // message's thread_ts equals its own ts, indicating it became a new thread root.
-          const resultThreadTs = (result.message as any)?.thread_ts as string | undefined;
-          const isNewTopLevel = !threadTs || !resultThreadTs || resultThreadTs === result.ts;
-          if (isNewTopLevel) {
-            this.threadAnchors.set(session.id, result.ts);
-            upsertSlackThread({ id: randomUUID(), sessionId: session.id, slackThreadTs: result.ts, slackChannelId: this.config.channelId, workspaceId: this.workspaceId, createdAt: new Date().toISOString() });
-            log.info(`slack.thread.created: session=${session.id} ts=${result.ts}`);
-          } else {
-            log.info(`slack.thread.reused.notified: session=${session.id} ts=${result.ts}`);
-          }
-          this.diffTracker.seed(session);
-        }
-      } catch (err) {
-        if ((err as any)?.data?.error === 'message_not_found') {
-          // Stale anchor: the parent message was deleted (e.g. after channel cleanup).
-          // Clear the stale anchor and retry as a new top-level post.
-          log.warn(`slack.thread.stale.detected: session=${session.id}`);
-          this.threadAnchors.delete(session.id);
-          deleteSlackThread(session.id);
-          try {
-            const result = await this.client!.chat.postMessage({
-              channel: this.config.channelId,
-              text: `AI session started: ${session.id} (${session.type})`,
-              blocks,
-            });
-            if (result.ts) {
+    this.queue.enqueue(
+      async () => {
+        try {
+          const threadTs = this.threadAnchors.get(session.id);
+          const result = await this.client!.chat.postMessage({
+            channel: this.config.channelId,
+            text: `AI session started: ${session.id} (${session.type})`,
+            blocks,
+            ...(threadTs ? { thread_ts: threadTs } : {}),
+          });
+          if (result.ts) {
+            // Update anchor when: (a) no prior anchor (new session), or (b) we tried to thread
+            // but the message landed as a new top-level post because the parent was deleted
+            // (stale anchor after channel cleanup). In case (b), Slack returns success but the
+            // message's thread_ts equals its own ts, indicating it became a new thread root.
+            const msg = result.message as { thread_ts?: string } | undefined;
+            const resultThreadTs = msg?.thread_ts;
+            const isNewTopLevel = !threadTs || !resultThreadTs || resultThreadTs === result.ts;
+            if (isNewTopLevel) {
               this.threadAnchors.set(session.id, result.ts);
-              upsertSlackThread({ id: randomUUID(), sessionId: session.id, slackThreadTs: result.ts, slackChannelId: this.config.channelId, workspaceId: this.workspaceId, createdAt: new Date().toISOString() });
-              this.diffTracker.seed(session);
-              log.info(`slack.thread.stale.recovered: session=${session.id} ts=${result.ts}`);
+              upsertSlackThread({
+                id: randomUUID(),
+                sessionId: session.id,
+                slackThreadTs: result.ts,
+                slackChannelId: this.config.channelId,
+                workspaceId: this.workspaceId,
+                createdAt: new Date().toISOString(),
+              });
+              log.info(`slack.thread.created: session=${session.id} ts=${result.ts}`);
+            } else {
+              log.info(`slack.thread.reused.notified: session=${session.id} ts=${result.ts}`);
             }
-          } catch (retryErr) {
-            log.error(`slack.thread.stale.recover.failed: session=${session.id}`, retryErr);
+            this.diffTracker.seed(session);
           }
-        } else {
-          log.error(`slack.thread.create.failed: session=${session.id}`, err);
+        } catch (err) {
+          const slackErr = err as { data?: { error?: string } } | null;
+          if (slackErr?.data?.error === 'message_not_found') {
+            // Stale anchor: the parent message was deleted (e.g. after channel cleanup).
+            // Clear the stale anchor and retry as a new top-level post.
+            log.warn(`slack.thread.stale.detected: session=${session.id}`);
+            this.threadAnchors.delete(session.id);
+            deleteSlackThread(session.id);
+            try {
+              const result = await this.client!.chat.postMessage({
+                channel: this.config.channelId,
+                text: `AI session started: ${session.id} (${session.type})`,
+                blocks,
+              });
+              if (result.ts) {
+                this.threadAnchors.set(session.id, result.ts);
+                upsertSlackThread({
+                  id: randomUUID(),
+                  sessionId: session.id,
+                  slackThreadTs: result.ts,
+                  slackChannelId: this.config.channelId,
+                  workspaceId: this.workspaceId,
+                  createdAt: new Date().toISOString(),
+                });
+                this.diffTracker.seed(session);
+                log.info(`slack.thread.stale.recovered: session=${session.id} ts=${result.ts}`);
+              }
+            } catch (retryErr) {
+              log.error(`slack.thread.stale.recover.failed: session=${session.id}`, retryErr);
+            }
+          } else {
+            log.error(`slack.thread.create.failed: session=${session.id}`, err);
+          }
         }
-      }
-    }, SESSION_CREATED, session.id);
+      },
+      SESSION_CREATED,
+      session.id,
+    );
   }
 
   async onSessionEnded(session: Session): Promise<void> {
     log.info(`slack.session.ended.received: session=${session.id} status=${session.status}`);
-    if (!this.active || !this.client) return;
+    if (!this.active || !this.client) {
+      return;
+    }
     if (!this.isEventEnabled(SESSION_ENDED)) {
       log.info(`slack.session.ended.skipped: event not enabled`);
       return;
@@ -201,32 +240,42 @@ export class SlackNotifier implements NotificationIntegration {
       log.warn(`slack.session.ended.skipped: no thread anchor for session=${session.id}`);
     }
     const blocks = buildSessionEndBlocks(session);
-    this.queue.enqueue(async () => {
-      try {
-        await this.client!.chat.postMessage({
-          channel: this.config.channelId,
-          text: `AI session ended: ${session.id} (${session.status})`,
-          blocks,
-          ...(threadTs ? { thread_ts: threadTs } : {}),
-        });
-        this.threadAnchors.delete(session.id);
-        this.diffTracker.clear(session.id);
-        deleteSlackThread(session.id);
-        log.info(`slack.session.ended.posted: session=${session.id} status=${session.status}`);
-      } catch (err) {
-        log.error(`slack.session.end.notify.failed: session=${session.id}`, err);
-      }
-    }, SESSION_ENDED, session.id);
+    this.queue.enqueue(
+      async () => {
+        try {
+          await this.client!.chat.postMessage({
+            channel: this.config.channelId,
+            text: `AI session ended: ${session.id} (${session.status})`,
+            blocks,
+            ...(threadTs ? { thread_ts: threadTs } : {}),
+          });
+          this.threadAnchors.delete(session.id);
+          this.diffTracker.clear(session.id);
+          deleteSlackThread(session.id);
+          log.info(`slack.session.ended.posted: session=${session.id} status=${session.status}`);
+        } catch (err) {
+          log.error(`slack.session.end.notify.failed: session=${session.id}`, err);
+        }
+      },
+      SESSION_ENDED,
+      session.id,
+    );
   }
 
   async onSessionUpdated(session: Session): Promise<void> {
     log.debug(`slack.session.updated.received: session=${session.id} status=${session.status}`);
-    if (!this.active || !this.client) return;
-    if (!this.isEventEnabled(SESSION_UPDATED)) return;
+    if (!this.active || !this.client) {
+      return;
+    }
+    if (!this.isEventEnabled(SESSION_UPDATED)) {
+      return;
+    }
 
     const changes = this.diffTracker.update(session);
     if (changes === null) {
-      log.debug(`slack.session.updated.skipped: no baseline, recording current state for session=${session.id}`);
+      log.debug(
+        `slack.session.updated.skipped: no baseline, recording current state for session=${session.id}`,
+      );
       return;
     }
     if (changes.length === 0) {
@@ -234,114 +283,159 @@ export class SlackNotifier implements NotificationIntegration {
       return;
     }
 
-    log.info(`slack.session.updated.posting: session=${session.id} changes=${changes.map(c => c.label).join(',')}`);
+    log.info(
+      `slack.session.updated.posting: session=${session.id} changes=${changes.map((c) => c.label).join(',')}`,
+    );
     const blocks = buildSessionUpdatedBlocks(session, changes);
-    this.queue.enqueue(async () => {
-      // Resolve thread anchor: check in-memory first, then fall back to DB for sessions
-      // detected after server restart where the anchor was persisted but not yet loaded.
-      let threadTs = this.threadAnchors.get(session.id);
-      if (!threadTs) {
-        const stored = getSlackThread(session.id);
-        if (stored) {
-          threadTs = stored.slackThreadTs;
-          this.threadAnchors.set(session.id, threadTs);
+    this.queue.enqueue(
+      async () => {
+        // Resolve thread anchor: check in-memory first, then fall back to DB for sessions
+        // detected after server restart where the anchor was persisted but not yet loaded.
+        let threadTs = this.threadAnchors.get(session.id);
+        if (!threadTs) {
+          const stored = getSlackThread(session.id);
+          if (stored) {
+            threadTs = stored.slackThreadTs;
+            this.threadAnchors.set(session.id, threadTs);
+          }
         }
-      }
-      if (!threadTs) {
-        log.error(`slack.session.updated.skipped: no thread anchor for session=${session.id}`);
-        return;
-      }
-      try {
-        await this.client!.chat.postMessage({
-          channel: this.config.channelId,
-          text: `Session updated: ${session.id}`,
-          blocks,
-          thread_ts: threadTs,
-        });
-        log.info(`slack.session.updated.posted: session=${session.id}`);
-      } catch (err) {
-        log.error(`slack.session.update.notify.failed: session=${session.id}`, err);
-      }
-    }, SESSION_UPDATED, session.id);
+        if (!threadTs) {
+          log.error(`slack.session.updated.skipped: no thread anchor for session=${session.id}`);
+          return;
+        }
+        try {
+          await this.client!.chat.postMessage({
+            channel: this.config.channelId,
+            text: `Session updated: ${session.id}`,
+            blocks,
+            thread_ts: threadTs,
+          });
+          log.info(`slack.session.updated.posted: session=${session.id}`);
+        } catch (err) {
+          log.error(`slack.session.update.notify.failed: session=${session.id}`, err);
+        }
+      },
+      SESSION_UPDATED,
+      session.id,
+    );
   }
 
   async onSessionOutput(sessionId: string, outputs: SessionOutput[]): Promise<void> {
-    if (!this.active || !this.client) return;
-    if (!this.isEventEnabled(SESSION_AI_RESPONSE)) return;
+    if (!this.active || !this.client) {
+      return;
+    }
+    if (!this.isEventEnabled(SESSION_AI_RESPONSE)) {
+      return;
+    }
 
-    const relevant = outputs.filter((o) => o.type === 'message' && o.content.trim() && !o.isMeta &&
-      (o.role === 'assistant' || o.role === 'user'));
-    if (relevant.length === 0) return;
+    const relevant = outputs.filter(
+      (o) =>
+        o.type === 'message' &&
+        o.content.trim() &&
+        !o.isMeta &&
+        (o.role === 'assistant' || o.role === 'user'),
+    );
+    if (relevant.length === 0) {
+      return;
+    }
 
-    const text = relevant.map((o) =>
-      o.role === 'user' ? `*You said:* ${o.content}` : o.content
-    ).join('\n\n');
-    this.queue.enqueue(async () => {
-      const threadTs = this.threadAnchors.get(sessionId);
-      if (!threadTs) return;
-      try {
-        await this.client!.chat.postMessage({
-          channel: this.config.channelId,
-          text,
-          thread_ts: threadTs,
-        });
-        log.debug(`slack.session.output.posted: session=${sessionId} chars=${text.length}`);
-      } catch (err) {
-        log.error(`slack.session.output.failed: session=${sessionId}`, err);
-      }
-    }, SESSION_AI_RESPONSE, sessionId);
+    const text = relevant
+      .map((o) => (o.role === 'user' ? `*You said:* ${o.content}` : o.content))
+      .join('\n\n');
+    this.queue.enqueue(
+      async () => {
+        const threadTs = this.threadAnchors.get(sessionId);
+        if (!threadTs) {
+          return;
+        }
+        try {
+          await this.client!.chat.postMessage({
+            channel: this.config.channelId,
+            text,
+            thread_ts: threadTs,
+          });
+          log.debug(`slack.session.output.posted: session=${sessionId} chars=${text.length}`);
+        } catch (err) {
+          log.error(`slack.session.output.failed: session=${sessionId}`, err);
+        }
+      },
+      SESSION_AI_RESPONSE,
+      sessionId,
+    );
   }
 
   async onPendingChoice(choice: PendingChoice): Promise<void> {
-    if (!this.active || !this.client) return;
-    if (!this.isEventEnabled(SESSION_PENDING_CHOICE)) return;
+    if (!this.active || !this.client) {
+      return;
+    }
+    if (!this.isEventEnabled(SESSION_PENDING_CHOICE)) {
+      return;
+    }
 
     const blocks = buildPendingChoiceBlocks(choice);
-    this.queue.enqueue(async () => {
-      const threadTs = this.threadAnchors.get(choice.sessionId);
-      if (!threadTs) return;
-      try {
-        await this.client!.chat.postMessage({
-          channel: this.config.channelId,
-          text: `Action required: ${choice.question}`,
-          blocks,
-          thread_ts: threadTs,
-        });
-        log.info(`slack.pending_choice.posted: session=${choice.sessionId}`);
-      } catch (err) {
-        log.error(`slack.pending_choice.failed: session=${choice.sessionId}`, err);
-      }
-    }, SESSION_PENDING_CHOICE, choice.sessionId);
+    this.queue.enqueue(
+      async () => {
+        const threadTs = this.threadAnchors.get(choice.sessionId);
+        if (!threadTs) {
+          return;
+        }
+        try {
+          await this.client!.chat.postMessage({
+            channel: this.config.channelId,
+            text: `Action required: ${choice.question}`,
+            blocks,
+            thread_ts: threadTs,
+          });
+          log.info(`slack.pending_choice.posted: session=${choice.sessionId}`);
+        } catch (err) {
+          log.error(`slack.pending_choice.failed: session=${choice.sessionId}`, err);
+        }
+      },
+      SESSION_PENDING_CHOICE,
+      choice.sessionId,
+    );
   }
 
   // -------------------------------------------------------------------------
   // Generic event
   // -------------------------------------------------------------------------
 
-  async postEvent(sessionId: string, eventType: string, payload: Session | Repository): Promise<void> {
-    if (!this.active || !this.client) return;
-    if (!this.isEventEnabled(eventType)) return;
+  async postEvent(
+    sessionId: string,
+    eventType: string,
+    payload: Session | Repository,
+  ): Promise<void> {
+    if (!this.active || !this.client) {
+      return;
+    }
+    if (!this.isEventEnabled(eventType)) {
+      return;
+    }
 
     const blocks = buildEventBlocks(eventType, payload);
-    this.queue.enqueue(async () => {
-      // Resolve thread anchor at execution time so any preceding SESSION_CREATED job in the
-      // queue has already run and set the anchor before we look it up.
-      const threadTs = sessionId ? this.threadAnchors.get(sessionId) : undefined;
-      if (sessionId && !threadTs) {
-        log.error(`No thread anchor for ${eventType} session ${sessionId}, cannot post`);
-        return;
-      }
-      try {
-        await this.client!.chat.postMessage({
-          channel: this.config.channelId,
-          text: `Argus event: ${eventType}`,
-          blocks,
-          ...(threadTs ? { thread_ts: threadTs } : {}),
-        });
-      } catch (err) {
-        log.error(`Failed to post event ${eventType} for session ${sessionId}:`, err);
-      }
-    }, eventType, sessionId);
+    this.queue.enqueue(
+      async () => {
+        // Resolve thread anchor at execution time so any preceding SESSION_CREATED job in the
+        // queue has already run and set the anchor before we look it up.
+        const threadTs = sessionId ? this.threadAnchors.get(sessionId) : undefined;
+        if (sessionId && !threadTs) {
+          log.error(`No thread anchor for ${eventType} session ${sessionId}, cannot post`);
+          return;
+        }
+        try {
+          await this.client!.chat.postMessage({
+            channel: this.config.channelId,
+            text: `Argus event: ${eventType}`,
+            blocks,
+            ...(threadTs ? { thread_ts: threadTs } : {}),
+          });
+        } catch (err) {
+          log.error(`Failed to post event ${eventType} for session ${sessionId}:`, err);
+        }
+      },
+      eventType,
+      sessionId,
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -349,12 +443,16 @@ export class SlackNotifier implements NotificationIntegration {
   // -------------------------------------------------------------------------
 
   private isEventEnabled(eventType: string): boolean {
-    if (!this.config.enabledEventTypes) return true;
+    if (!this.config.enabledEventTypes) {
+      return true;
+    }
     return this.config.enabledEventTypes.includes(eventType);
   }
 
   private subscribeToEvents(): void {
-    if (this.subscribed) return;
+    if (this.subscribed) {
+      return;
+    }
     this.subscribed = true;
     this.sessionMonitor.on(SESSION_CREATED, (session: Session) => {
       this.onSessionCreated(session).catch((err) => {
@@ -392,7 +490,6 @@ export class SlackNotifier implements NotificationIntegration {
       });
     });
   }
-
 }
 
 // -------------------------------------------------------------------------
@@ -448,9 +545,7 @@ function buildSessionEndBlocks(session: Session) {
 }
 
 function buildSessionUpdatedBlocks(session: Session, changes: SessionChange[]) {
-  const lines = changes.map(({ label, from, to }) =>
-    `\u2022 *${label}:* ${from} \u2192 ${to}`
-  );
+  const lines = changes.map(({ label, from, to }) => `\u2022 *${label}:* ${from} \u2192 ${to}`);
   return [
     {
       type: 'section',
@@ -463,9 +558,8 @@ function buildSessionUpdatedBlocks(session: Session, changes: SessionChange[]) {
 }
 
 function buildPendingChoiceBlocks(choice: PendingChoice) {
-  const optionLines = choice.choices.length > 0
-    ? choice.choices.map((c, i) => `${i + 1}. ${c}`).join('\n')
-    : '';
+  const optionLines =
+    choice.choices.length > 0 ? choice.choices.map((c, i) => `${i + 1}. ${c}`).join('\n') : '';
   const text = optionLines
     ? `*Action Required*\n*Question:* ${choice.question}\n*Options:*\n${optionLines}`
     : `*Action Required*\n*Question:* ${choice.question}`;
@@ -478,7 +572,7 @@ function buildPendingChoiceBlocks(choice: PendingChoice) {
 }
 
 function buildEventBlocks(eventType: string, payload: Session | Repository) {
-  const summary = ('id' in payload) ? `\`${payload.id}\`` : JSON.stringify(payload).slice(0, 120);
+  const summary = 'id' in payload ? `\`${payload.id}\`` : JSON.stringify(payload).slice(0, 120);
   return [
     {
       type: 'section',
@@ -489,10 +583,10 @@ function buildEventBlocks(eventType: string, payload: Session | Repository) {
 
 function formatDuration(start: Date, end: Date): string {
   const seconds = Math.floor((end.getTime() - start.getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
   const minutes = Math.floor(seconds / 60);
   const remaining = seconds % 60;
   return remaining > 0 ? `${minutes}m ${remaining}s` : `${minutes}m`;
 }
-
-

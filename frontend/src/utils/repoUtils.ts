@@ -2,9 +2,11 @@ const DEFAULT_BRANCHES = new Set(['master', 'main']);
 
 export function buildGitHubCompareUrl(
   remoteUrl: string | null | undefined,
-  branch: string | null | undefined
+  branch: string | null | undefined,
 ): string | null {
-  if (!remoteUrl || !branch) return null;
+  if (!remoteUrl || !branch) {
+    return null;
+  }
 
   let baseUrl: string | null = null;
 
@@ -15,7 +17,9 @@ export function buildGitHubCompareUrl(
     baseUrl = `https://github.com/${path}`;
   }
 
-  if (!baseUrl) return null;
+  if (!baseUrl) {
+    return null;
+  }
 
   if (DEFAULT_BRANCHES.has(branch)) {
     return `${baseUrl}/compare`;

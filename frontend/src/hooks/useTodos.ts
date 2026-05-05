@@ -17,7 +17,11 @@ export function useCreateTodo(): UseMutationResult<TodoItem, Error, string> {
   });
 }
 
-export function useUpdateTodoText(): UseMutationResult<TodoItem, Error, { id: string; text: string }> {
+export function useUpdateTodoText(): UseMutationResult<
+  TodoItem,
+  Error,
+  { id: string; text: string }
+> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, text }: { id: string; text: string }) => updateTodoText(id, text),

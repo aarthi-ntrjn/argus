@@ -30,5 +30,13 @@ export function useIntegrationControl() {
     },
   });
 
-  return { integrationsEnabled, teamsRunning, slackRunning, teamsStatus, slackStatus, toggle, isPending };
+  return {
+    integrationsEnabled,
+    teamsRunning,
+    slackRunning,
+    teamsStatus,
+    slackStatus,
+    toggle,
+    isPending,
+  };
 }

@@ -4,11 +4,7 @@ import {
   writeOnboardingState,
   resetOnboardingState,
 } from '../services/onboardingStorage';
-import {
-  onTourStarted,
-  onTourCompleted,
-  onTourSkipped,
-} from '../services/onboardingEvents';
+import { onTourStarted, onTourCompleted, onTourSkipped } from '../services/onboardingEvents';
 import type { DashboardTourStatus } from '../types';
 
 export interface UseOnboardingReturn {
@@ -36,7 +32,7 @@ export function useOnboarding(): UseOnboardingReturn {
   }, []);
 
   const skipTour = useCallback((reason: 'user_action' | 'navigation') => {
-    setState(prev => {
+    setState((prev) => {
       const stepIndex = 0; // step tracking is handled by OnboardingTour via joyride callback
       onTourSkipped(stepIndex, reason);
       const updated = {
@@ -54,7 +50,7 @@ export function useOnboarding(): UseOnboardingReturn {
 
   const completeTour = useCallback(() => {
     onTourCompleted();
-    setState(prev => {
+    setState((prev) => {
       const updated = {
         ...prev,
         dashboardTour: {
@@ -69,7 +65,7 @@ export function useOnboarding(): UseOnboardingReturn {
   }, []);
 
   const markRepoStepsSeen = useCallback(() => {
-    setState(prev => {
+    setState((prev) => {
       const updated = {
         ...prev,
         dashboardTour: { ...prev.dashboardTour, seenRepoSteps: true },

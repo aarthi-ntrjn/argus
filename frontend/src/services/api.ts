@@ -1,5 +1,13 @@
 import { QueryClient } from '@tanstack/react-query';
-import type { Repository, Session, SessionOutput, ControlAction, TodoItem, ArgusConfig, ToolCommand } from '../types';
+import type {
+  Repository,
+  Session,
+  SessionOutput,
+  ControlAction,
+  TodoItem,
+  ArgusConfig,
+  ToolCommand,
+} from '../types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,10 +32,14 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     try {
       const json = JSON.parse(text);
       message = json.message ?? text;
-    } catch { /* not JSON, use raw text */ }
+    } catch {
+      /* not JSON, use raw text */
+    }
     throw new Error(message);
   }
-  if (res.status === 204) return undefined as T;
+  if (res.status === 204) {
+    return undefined as T;
+  }
   return res.json() as Promise<T>;
 }
 
@@ -44,18 +56,24 @@ export async function removeRepository(id: string): Promise<void> {
 }
 
 export async function rescanRemoteUrls(): Promise<{ updated: number; total: number }> {
-  return apiFetch<{ updated: number; total: number }>('/repositories/rescan-remotes', { method: 'POST' });
+  return apiFetch<{ updated: number; total: number }>('/repositories/rescan-remotes', {
+    method: 'POST',
+  });
 }
 
 export async function scanFolder(path: string): Promise<Array<{ path: string; name: string }>> {
   const result = await apiFetch<{ repos: Array<{ path: string; name: string }>; error?: string }>(
     '/fs/scan-folder',
-    { method: 'POST', body: JSON.stringify({ path }) }
+    { method: 'POST', body: JSON.stringify({ path }) },
   );
   return result.repos ?? [];
 }
 
-export interface SessionFilters { repositoryId?: string; status?: string; type?: string; }
+export interface SessionFilters {
+  repositoryId?: string;
+  status?: string;
+  type?: string;
+}
 
 export async function getSessions(filters?: SessionFilters): Promise<Session[]> {
   const qs = filters ? '?' + new URLSearchParams(filters as Record<string, string>).toString() : '';
@@ -66,8 +84,15 @@ export async function getSession(id: string): Promise<Session> {
   return apiFetch<Session>(`/sessions/${id}`);
 }
 
-export interface OutputParams { limit?: number; before?: string; }
-export interface OutputPage { items: SessionOutput[]; nextBefore: string | null; total: number; }
+export interface OutputParams {
+  limit?: number;
+  before?: string;
+}
+export interface OutputPage {
+  items: SessionOutput[];
+  nextBefore: string | null;
+  total: number;
+}
 
 export async function getSessionOutput(id: string, params?: OutputParams): Promise<OutputPage> {
   const qs = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';
@@ -79,7 +104,9 @@ export async function stopSession(id: string): Promise<{ actionId: string; statu
 }
 
 export async function interruptSession(id: string): Promise<{ actionId: string; status: string }> {
-  return apiFetch<{ actionId: string; status: string }>(`/sessions/${id}/interrupt`, { method: 'POST' });
+  return apiFetch<{ actionId: string; status: string }>(`/sessions/${id}/interrupt`, {
+    method: 'POST',
+  });
 }
 
 export async function rejectTool(id: string): Promise<{ status: string }> {
@@ -90,12 +117,26 @@ export async function dismissSession(id: string): Promise<{ status: string }> {
   return apiFetch<{ status: string }>(`/sessions/${id}/dismiss`, { method: 'POST' });
 }
 
-export async function sendPrompt(id: string, prompt: string, opts?: { raw?: boolean }): Promise<ControlAction> {
-  return apiFetch<ControlAction>(`/sessions/${id}/send`, { method: 'POST', body: JSON.stringify({ prompt, ...(opts?.raw ? { raw: true } : {}) }) });
+export async function sendPrompt(
+  id: string,
+  prompt: string,
+  opts?: { raw?: boolean },
+): Promise<ControlAction> {
+  return apiFetch<ControlAction>(`/sessions/${id}/send`, {
+    method: 'POST',
+    body: JSON.stringify({ prompt, ...(opts?.raw ? { raw: true } : {}) }),
+  });
 }
 
-export async function sendPromptWithChoice(id: string, choiceNumber: string, prompt: string): Promise<ControlAction> {
-  return apiFetch<ControlAction>(`/sessions/${id}/send-with-choice`, { method: 'POST', body: JSON.stringify({ choiceNumber, prompt }) });
+export async function sendPromptWithChoice(
+  id: string,
+  choiceNumber: string,
+  prompt: string,
+): Promise<ControlAction> {
+  return apiFetch<ControlAction>(`/sessions/${id}/send-with-choice`, {
+    method: 'POST',
+    body: JSON.stringify({ choiceNumber, prompt }),
+  });
 }
 
 export async function getTodos(): Promise<TodoItem[]> {
@@ -132,20 +173,29 @@ export async function getAvailableTools(): Promise<AvailableTools> {
 
 // Returns { cmd } when the server cannot open a terminal (headless/Codespaces),
 // so the caller can show the command for manual execution. Throws on other errors.
-export async function launchInTerminal(tool: ToolCommand, repoPath?: string): Promise<{ cmd?: string }> {
+export async function launchInTerminal(
+  tool: ToolCommand,
+  repoPath?: string,
+): Promise<{ cmd?: string }> {
   const res = await fetch(`${BASE}/sessions/launch-terminal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tool, repoPath }),
   });
-  if (res.status === 202) return {};
+  if (res.status === 202) {
+    return {};
+  }
   if (res.status === 422) {
-    const body = await res.json() as { cmd?: string };
+    const body = (await res.json()) as { cmd?: string };
     return { cmd: body.cmd };
   }
   const text = await res.text();
   let message = text;
-  try { message = (JSON.parse(text) as { message?: string }).message ?? text; } catch { /* use raw text */ }
+  try {
+    message = (JSON.parse(text) as { message?: string }).message ?? text;
+  } catch {
+    /* use raw text */
+  }
   throw new Error(message);
 }
 
@@ -171,8 +221,13 @@ export async function getTeamsSettings(): Promise<TeamsSettings> {
   return apiFetch<TeamsSettings>('/settings/teams');
 }
 
-export async function patchTeamsSettings(patch: Partial<Omit<TeamsSettings, 'enabled' | 'connectionStatus'>>): Promise<TeamsSettings> {
-  return apiFetch<TeamsSettings>('/settings/teams', { method: 'PATCH', body: JSON.stringify(patch) });
+export async function patchTeamsSettings(
+  patch: Partial<Omit<TeamsSettings, 'enabled' | 'connectionStatus'>>,
+): Promise<TeamsSettings> {
+  return apiFetch<TeamsSettings>('/settings/teams', {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
 }
 
 export interface SlackSettings {
@@ -187,8 +242,13 @@ export async function getSlackSettings(): Promise<SlackSettings> {
   return apiFetch<SlackSettings>('/settings/slack');
 }
 
-export async function patchSlackSettings(patch: Partial<Omit<SlackSettings, 'enabled'>>): Promise<SlackSettings> {
-  return apiFetch<SlackSettings>('/settings/slack', { method: 'PATCH', body: JSON.stringify(patch) });
+export async function patchSlackSettings(
+  patch: Partial<Omit<SlackSettings, 'enabled'>>,
+): Promise<SlackSettings> {
+  return apiFetch<SlackSettings>('/settings/slack', {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
 }
 
 export type ConnectionStatus = 'connected' | 'stopped' | 'unconfigured';
@@ -217,10 +277,36 @@ export async function stopIntegration(platform: 'slack' | 'teams'): Promise<void
   await apiFetch<unknown>(`/integrations/${platform}/stop`, { method: 'POST' });
 }
 
-export async function getHealth(): Promise<{ status: string; version: string; uptime: number }> {
+export interface HealthResponse {
+  status: string;
+  version: string;
+  uptime: number;
+  updateAvailable?: boolean;
+  latestVersion?: string;
+}
+
+export async function getHealth(): Promise<HealthResponse> {
   const res = await fetch('/api/health');
-  if (!res.ok) throw new Error('Health check failed');
-  return res.json() as Promise<{ status: string; version: string; uptime: number }>;
+  if (!res.ok) {
+    throw new Error('Health check failed');
+  }
+  return res.json() as Promise<HealthResponse>;
+}
+
+export interface UpdateStatus {
+  currentVersion: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
+  lastChecked: string | null;
+  updateInProgress: boolean;
+}
+
+export async function getUpdateStatus(): Promise<UpdateStatus> {
+  return apiFetch<UpdateStatus>('/update/status');
+}
+
+export async function applyUpdate(): Promise<{ applied: boolean }> {
+  return apiFetch<{ applied: boolean }>('/update/apply', { method: 'POST' });
 }
 
 export function postTelemetryEvent(type: string): void {
@@ -228,5 +314,7 @@ export function postTelemetryEvent(type: string): void {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ type }),
-  }).catch(() => { /* fire-and-forget */ });
+  }).catch(() => {
+    /* fire-and-forget */
+  });
 }

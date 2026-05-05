@@ -9,6 +9,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    pool: 'forks',
     include: ['tests/**/*.test.ts'],
     exclude: ['node_modules', 'dist'],
     env: {
@@ -16,9 +17,7 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      include: ['src/**/*.ts'],
-      exclude: ['node_modules', 'dist', 'src/**/*.d.ts'],
+      reporter: ['text', 'json', 'json-summary', 'html'],
     },
   },
 });

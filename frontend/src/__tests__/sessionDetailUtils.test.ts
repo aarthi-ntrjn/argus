@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { summariseToolUse, isAlwaysVisible, buildDisplayItems } from '../components/SessionDetail/sessionDetailUtils';
+import {
+  summariseToolUse,
+  isAlwaysVisible,
+  buildDisplayItems,
+} from '../components/SessionDetail/sessionDetailUtils';
 import type { SessionOutput } from '../types';
 
 function output(overrides: Partial<SessionOutput>): SessionOutput {
@@ -37,12 +41,18 @@ describe('summariseToolUse', () => {
   });
 
   it('extracts path key from JSON content', () => {
-    const item = output({ toolName: 'Edit', content: JSON.stringify({ path: 'src/App.tsx', old_str: 'foo', new_str: 'bar' }) });
+    const item = output({
+      toolName: 'Edit',
+      content: JSON.stringify({ path: 'src/App.tsx', old_str: 'foo', new_str: 'bar' }),
+    });
     expect(summariseToolUse(item)).toBe('Edit: src/App.tsx');
   });
 
   it('extracts file_path key from JSON content', () => {
-    const item = output({ toolName: 'Write', content: JSON.stringify({ file_path: 'src/main.ts', content: 'hello' }) });
+    const item = output({
+      toolName: 'Write',
+      content: JSON.stringify({ file_path: 'src/main.ts', content: 'hello' }),
+    });
     expect(summariseToolUse(item)).toBe('Write: src/main.ts');
   });
 
@@ -52,7 +62,10 @@ describe('summariseToolUse', () => {
   });
 
   it('falls back to first 80 chars of raw content when JSON has no known key', () => {
-    const item = output({ toolName: 'Search', content: JSON.stringify({ query: 'findAll', limit: 10 }) });
+    const item = output({
+      toolName: 'Search',
+      content: JSON.stringify({ query: 'findAll', limit: 10 }),
+    });
     const result = summariseToolUse(item);
     expect(result).toContain('Search:');
     expect(result.length).toBeLessThanOrEqual(80);
@@ -110,7 +123,7 @@ describe('buildDisplayItems', () => {
     expect(result).toHaveLength(1);
     expect(result[0].kind).toBe('tool_group');
     if (result[0].kind === 'tool_group') {
-      const pairs = result[0].groupItems.filter(gi => gi.kind === 'tool_pair');
+      const pairs = result[0].groupItems.filter((gi) => gi.kind === 'tool_pair');
       expect(pairs).toHaveLength(1);
       if (pairs[0].kind === 'tool_pair') {
         expect(pairs[0].toolUse.id).toBe('1');
@@ -127,13 +140,13 @@ describe('buildDisplayItems', () => {
     const result = buildDisplayItems(items, true);
     expect(result).toHaveLength(1);
     expect(result[0].kind).toBe('single');
-    if (result[0].kind === 'single') expect(result[0].item.id).toBe('1');
+    if (result[0].kind === 'single') {
+      expect(result[0].item.id).toBe('1');
+    }
   });
 
   it('focused mode emits unpaired tool_use (result not yet arrived) as single', () => {
-    const items = [
-      output({ id: '1', type: 'tool_use', toolCallId: 'call-pending' }),
-    ];
+    const items = [output({ id: '1', type: 'tool_use', toolCallId: 'call-pending' })];
     const result = buildDisplayItems(items, true);
     expect(result).toHaveLength(1);
     expect(result[0].kind).toBe('single');
@@ -160,7 +173,6 @@ describe('buildDisplayItems', () => {
     expect(result[1].kind).toBe('single');
   });
 
-
   it('focused mode groups consecutive tool_pairs into a tool_group', () => {
     const items = [
       output({ id: '1', type: 'tool_use', toolCallId: 'call-1' }),
@@ -172,10 +184,14 @@ describe('buildDisplayItems', () => {
     expect(result).toHaveLength(1);
     expect(result[0].kind).toBe('tool_group');
     if (result[0].kind === 'tool_group') {
-      const pairs = result[0].groupItems.filter(gi => gi.kind === 'tool_pair');
+      const pairs = result[0].groupItems.filter((gi) => gi.kind === 'tool_pair');
       expect(pairs).toHaveLength(2);
-      if (pairs[0].kind === 'tool_pair') expect(pairs[0].toolUse.id).toBe('1');
-      if (pairs[1].kind === 'tool_pair') expect(pairs[1].toolUse.id).toBe('3');
+      if (pairs[0].kind === 'tool_pair') {
+        expect(pairs[0].toolUse.id).toBe('1');
+      }
+      if (pairs[1].kind === 'tool_pair') {
+        expect(pairs[1].toolUse.id).toBe('3');
+      }
     }
   });
 
@@ -191,7 +207,9 @@ describe('buildDisplayItems', () => {
     expect(result).toHaveLength(3);
     expect(result[0].kind).toBe('tool_group');
     expect(result[1].kind).toBe('single');
-    if (result[1].kind === 'single') expect(result[1].item.id).toBe('3');
+    if (result[1].kind === 'single') {
+      expect(result[1].item.id).toBe('3');
+    }
     expect(result[2].kind).toBe('tool_group');
   });
 
@@ -207,7 +225,7 @@ describe('buildDisplayItems', () => {
     expect(result).toHaveLength(1);
     expect(result[0].kind).toBe('tool_group');
     if (result[0].kind === 'tool_group') {
-      expect(result[0].groupItems.filter(gi => gi.kind === 'tool_pair')).toHaveLength(2);
+      expect(result[0].groupItems.filter((gi) => gi.kind === 'tool_pair')).toHaveLength(2);
     }
   });
 

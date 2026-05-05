@@ -4,7 +4,9 @@ import { ARGUS_GITHUB_REPO_URL, buildBugReportUrl, buildFeatureRequestUrl } from
 describe('feedback URL builders', () => {
   describe('buildBugReportUrl', () => {
     it('returns a URL starting with the Argus GitHub repo URL', () => {
-      expect(buildBugReportUrl()).toMatch(/^https:\/\/github\.com\/aarthi-ntrjn\/argus\/issues\/new/);
+      expect(buildBugReportUrl()).toMatch(
+        /^https:\/\/github\.com\/aarthi-ntrjn\/argus\/issues\/new/,
+      );
     });
 
     it('uses the bug_report.md template', () => {
@@ -15,7 +17,9 @@ describe('feedback URL builders', () => {
 
   describe('buildFeatureRequestUrl', () => {
     it('returns a URL starting with the Argus GitHub repo URL', () => {
-      expect(buildFeatureRequestUrl()).toMatch(/^https:\/\/github\.com\/aarthi-ntrjn\/argus\/issues\/new/);
+      expect(buildFeatureRequestUrl()).toMatch(
+        /^https:\/\/github\.com\/aarthi-ntrjn\/argus\/issues\/new/,
+      );
     });
 
     it('uses the feature_request.md template', () => {

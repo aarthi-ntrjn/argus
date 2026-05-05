@@ -11,13 +11,16 @@ import { KillSessionDialog } from '../components/KillSessionDialog/KillSessionDi
 
 const ENDED_STATUSES = new Set(['completed', 'ended']);
 
-
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const kill = useKillSession({ onKilled: () => navigate('/') });
 
-  const { data: session, isLoading: sessionLoading, error: sessionError } = useQuery({
+  const {
+    data: session,
+    isLoading: sessionLoading,
+    error: sessionError,
+  } = useQuery({
     queryKey: ['session', id],
     queryFn: () => getSession(id!),
     enabled: !!id,
@@ -29,7 +32,7 @@ export default function SessionPage() {
     enabled: !!session,
   });
 
-  const repo = session ? repos.find(r => r.id === session.repositoryId) : undefined;
+  const repo = session ? repos.find((r) => r.id === session.repositoryId) : undefined;
 
   if (sessionLoading) {
     return (
@@ -45,8 +48,12 @@ export default function SessionPage() {
   if (sessionError || !session) {
     return (
       <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-        <button onClick={() => navigate('/')} className="icon-btn text-sm font-medium text-gray-700 hover:text-blue-600 mb-4 flex items-center gap-1">
-          <ArrowLeft size={14} />Back to Dashboard
+        <button
+          onClick={() => navigate('/')}
+          className="icon-btn text-sm font-medium text-gray-700 hover:text-blue-600 mb-4 flex items-center gap-1"
+        >
+          <ArrowLeft size={14} />
+          Back to Dashboard
         </button>
         <div className="text-center text-gray-500 py-16">Session not found.</div>
       </div>
@@ -55,12 +62,15 @@ export default function SessionPage() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
-
       {/* Always-visible header — shrink-0 sibling of the scrollable area */}
       <div className="shrink-0 px-4 md:px-8 pt-4 md:pt-6">
         <div className="max-w-4xl mx-auto w-full">
-          <button onClick={() => navigate('/')} className="icon-btn text-sm font-medium text-gray-700 hover:text-blue-600 mb-2 flex items-center gap-1">
-            <ArrowLeft size={14} />Back
+          <button
+            onClick={() => navigate('/')}
+            className="icon-btn text-sm font-medium text-gray-700 hover:text-blue-600 mb-2 flex items-center gap-1"
+          >
+            <ArrowLeft size={14} />
+            Back
           </button>
           {repo && <RepoContextBar repo={repo} />}
           <div className="bg-white rounded-lg shadow px-3 pt-3 pb-2" data-tour-id="session-status">
@@ -79,7 +89,6 @@ export default function SessionPage() {
       {/* Output stream + prompt bar — fills remaining height */}
       <div className="flex-1 min-h-0 flex flex-col px-4 md:px-8 pb-4 md:pb-6 mt-2">
         <div className="max-w-4xl mx-auto w-full flex-1 min-h-0 flex flex-col">
-
           <OutputPane
             session={session}
             className="flex-1 min-h-0 shadow"
@@ -88,14 +97,16 @@ export default function SessionPage() {
 
           <div data-tour-id="session-prompt-bar" className="mt-2 shrink-0">
             {ENDED_STATUSES.has(session.status) ? (
-              <div role="alert" className="px-3 py-2 bg-gray-100 border border-gray-300 rounded text-gray-600 text-sm text-center">
+              <div
+                role="alert"
+                className="px-3 py-2 bg-gray-100 border border-gray-300 rounded text-gray-600 text-sm text-center"
+              >
                 This session has ended.
               </div>
             ) : (
               <SessionPromptBar session={session} />
             )}
           </div>
-
         </div>
       </div>
 

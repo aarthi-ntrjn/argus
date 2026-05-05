@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Joyride, ACTIONS, EVENTS, STATUS, type EventData } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
 import type { TourStep } from '../../types';
@@ -76,7 +76,9 @@ const tourStyles = {
 export function OnboardingTour({ run, steps, onComplete, onSkip }: OnboardingTourProps) {
   const location = useLocation();
   const runRef = useRef(run);
-  runRef.current = run;
+  useLayoutEffect(() => {
+    runRef.current = run;
+  });
 
   // FR-011: gracefully dismiss if user navigates away mid-tour
   const prevPathRef = useRef(location.pathname);

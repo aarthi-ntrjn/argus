@@ -11,10 +11,12 @@ function mockMatchMedia(matches: boolean) {
     }),
     removeEventListener: vi.fn((_: string, cb: (e: { matches: boolean }) => void) => {
       const idx = listeners.indexOf(cb);
-      if (idx !== -1) listeners.splice(idx, 1);
+      if (idx !== -1) {
+        listeners.splice(idx, 1);
+      }
     }),
     dispatchChange: (newMatches: boolean) => {
-      listeners.forEach(cb => cb({ matches: newMatches }));
+      listeners.forEach((cb) => cb({ matches: newMatches }));
     },
   };
   Object.defineProperty(window, 'matchMedia', {
@@ -46,10 +48,14 @@ describe('useIsMobile', () => {
     const { result } = renderHook(() => useIsMobile());
     expect(result.current).toBe(false);
 
-    act(() => { mq.dispatchChange(true); });
+    act(() => {
+      mq.dispatchChange(true);
+    });
     expect(result.current).toBe(true);
 
-    act(() => { mq.dispatchChange(false); });
+    act(() => {
+      mq.dispatchChange(false);
+    });
     expect(result.current).toBe(false);
   });
 

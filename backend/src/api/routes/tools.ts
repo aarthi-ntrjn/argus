@@ -47,13 +47,17 @@ function isCopilotInstalled(): boolean {
 // Returns false in headless environments (Codespaces, SSH-only, no display server).
 function canLaunchTerminal(): boolean {
   const os = platform();
-  if (os === 'win32') return true;
+  if (os === 'win32') {
+    return true;
+  }
   if (os === 'darwin') {
     // SSH session without a local display = no GUI terminal
     return !process.env.SSH_CLIENT && !process.env.SSH_TTY;
   }
   // Linux: need a display server; Codespaces is always headless
-  if (process.env.CODESPACES === 'true') return false;
+  if (process.env.CODESPACES === 'true') {
+    return false;
+  }
   return !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
 }
 
@@ -71,7 +75,8 @@ function openTerminalWithCommand(cmd: string): void {
 
   if (os === 'win32') {
     // Prefer Windows Terminal; fall back to a plain PowerShell window.
-    const wtAvailable = spawnSync('where', ['wt.exe'], { encoding: 'utf-8', timeout: 2000 }).status === 0;
+    const wtAvailable =
+      spawnSync('where', ['wt.exe'], { encoding: 'utf-8', timeout: 2000 }).status === 0;
     if (wtAvailable) {
       spawnDetached('wt.exe', ['new-tab', '--', 'powershell', '-NoExit', '-Command', cmd]);
     } else {
@@ -91,9 +96,9 @@ function openTerminalWithCommand(cmd: string): void {
   // Linux: try common terminal emulators in order of preference.
   const terminals = [
     { bin: 'x-terminal-emulator', args: ['-e', cmd] },
-    { bin: 'gnome-terminal',      args: ['--', 'bash', '-c', `${cmd}; exec bash`] },
-    { bin: 'xterm',               args: ['-e', cmd] },
-    { bin: 'konsole',             args: ['--noclose', '-e', cmd] },
+    { bin: 'gnome-terminal', args: ['--', 'bash', '-c', `${cmd}; exec bash`] },
+    { bin: 'xterm', args: ['-e', cmd] },
+    { bin: 'konsole', args: ['--noclose', '-e', cmd] },
   ];
   for (const t of terminals) {
     if (spawnSync('which', [t.bin], { encoding: 'utf-8', timeout: 2000 }).status === 0) {
@@ -103,7 +108,9 @@ function openTerminalWithCommand(cmd: string): void {
   }
 
   // No GUI terminal found (e.g. headless / Codespaces).
-  throw new Error(`No GUI terminal emulator found. Run this command manually in your terminal:\n${cmd}`);
+  throw new Error(
+    `No GUI terminal emulator found. Run this command manually in your terminal:\n${cmd}`,
+  );
 }
 
 const toolsRoutes: FastifyPluginAsync = async (app) => {
@@ -148,9 +155,8 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
         logger.warn(`[LaunchTerminal] ${message}`);
         return reply.status(422).send({ status: 'no-terminal', message, cmd });
       }
-    }
+    },
   );
 };
 
 export default toolsRoutes;
-

@@ -9,18 +9,44 @@ import type { DashboardSettings } from '../types';
 import * as api from '../services/api';
 
 vi.mock('../services/api', () => ({
-  getArgusSettings: vi.fn().mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 } as any),
-  patchArgusSettings: vi.fn().mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 } as any),
+  getArgusSettings: vi.fn().mockResolvedValue({
+    autoRegisterRepos: false,
+    yoloMode: false,
+    restingThresholdMinutes: 20,
+    autoUpdate: true,
+  } as any),
+  patchArgusSettings: vi.fn().mockResolvedValue({
+    autoRegisterRepos: false,
+    yoloMode: false,
+    restingThresholdMinutes: 20,
+    autoUpdate: true,
+  } as any),
   getTeamsSettings: vi.fn().mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' }),
-  patchTeamsSettings: vi.fn().mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' }),
+  patchTeamsSettings: vi
+    .fn()
+    .mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' }),
   getSlackSettings: vi.fn().mockRejectedValue(new Error('not configured')),
   getHealth: vi.fn().mockResolvedValue({ status: 'ok', version: '1.2.3', uptime: 0 }),
   rescanRemoteUrls: vi.fn().mockResolvedValue(undefined),
+  getUpdateStatus: vi
+    .fn()
+    .mockResolvedValue({
+      currentVersion: '1.2.3',
+      latestVersion: null,
+      updateAvailable: false,
+      lastChecked: null,
+      updateInProgress: false,
+    }),
+  applyUpdate: vi.fn().mockResolvedValue({ started: true }),
 }));
 
 function renderWithQuery(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<MemoryRouter><QueryClientProvider client={qc}>{ui}</QueryClientProvider></MemoryRouter>);
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 const allOff: DashboardSettings = {
@@ -43,21 +69,27 @@ describe('SettingsPanel', () => {
   it('renders all three setting checkboxes', () => {
     renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
     expect(screen.getByRole('checkbox', { name: /hide ended sessions/i })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: /hide repos with no active sessions/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('checkbox', { name: /hide repos with no active sessions/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /hide inactive sessions/i })).toBeInTheDocument();
   });
 
   it('shows unchecked checkboxes when all settings are false', () => {
     renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
     expect(screen.getByRole('checkbox', { name: /hide ended sessions/i })).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: /hide repos with no active sessions/i })).not.toBeChecked();
+    expect(
+      screen.getByRole('checkbox', { name: /hide repos with no active sessions/i }),
+    ).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: /hide inactive sessions/i })).not.toBeChecked();
   });
 
   it('shows checked checkboxes when all settings are true', () => {
     renderWithQuery(<SettingsPanel settings={allOn} onToggle={vi.fn()} />);
     expect(screen.getByRole('checkbox', { name: /hide ended sessions/i })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: /hide repos with no active sessions/i })).toBeChecked();
+    expect(
+      screen.getByRole('checkbox', { name: /hide repos with no active sessions/i }),
+    ).toBeChecked();
     expect(screen.getByRole('checkbox', { name: /hide inactive sessions/i })).toBeChecked();
   });
 
@@ -78,7 +110,9 @@ describe('SettingsPanel', () => {
   it('calls onToggle with "hideReposWithNoActiveSessions" when that checkbox is toggled', async () => {
     const onToggle = vi.fn();
     renderWithQuery(<SettingsPanel settings={allOff} onToggle={onToggle} />);
-    await userEvent.click(screen.getByRole('checkbox', { name: /hide repos with no active sessions/i }));
+    await userEvent.click(
+      screen.getByRole('checkbox', { name: /hide repos with no active sessions/i }),
+    );
     expect(onToggle).toHaveBeenCalledWith('hideReposWithNoActiveSessions', true);
   });
 
@@ -99,12 +133,24 @@ describe('SettingsPanel', () => {
   describe('resting threshold input', () => {
     beforeEach(() => {
       vi.clearAllMocks();
-      vi.mocked(api.getArgusSettings).mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 } as any);
-      vi.mocked(api.patchArgusSettings).mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 } as any);
+      vi.mocked(api.getArgusSettings).mockResolvedValue({
+        autoRegisterRepos: false,
+        yoloMode: false,
+        restingThresholdMinutes: 20,
+      } as any);
+      vi.mocked(api.patchArgusSettings).mockResolvedValue({
+        autoRegisterRepos: false,
+        yoloMode: false,
+        restingThresholdMinutes: 20,
+      } as any);
     });
 
     it('renders a threshold input synced from argus settings', async () => {
-      vi.mocked(api.getArgusSettings).mockResolvedValueOnce({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 15 } as any);
+      vi.mocked(api.getArgusSettings).mockResolvedValueOnce({
+        autoRegisterRepos: false,
+        yoloMode: false,
+        restingThresholdMinutes: 15,
+      } as any);
       renderWithQuery(<GeneralSettingsContent settings={allOff} onToggle={vi.fn()} />);
       await waitFor(() => {
         expect(screen.getByRole('spinbutton', { name: /resting after/i })).toHaveValue(15);
@@ -151,7 +197,11 @@ describe('SettingsPanel', () => {
     });
 
     it('the hide inactive sessions label includes the threshold value from argus settings', async () => {
-      vi.mocked(api.getArgusSettings).mockResolvedValueOnce({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 30 } as any);
+      vi.mocked(api.getArgusSettings).mockResolvedValueOnce({
+        autoRegisterRepos: false,
+        yoloMode: false,
+        restingThresholdMinutes: 30,
+      } as any);
       renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
       await waitFor(() => {
         expect(screen.getByText(/hide inactive sessions.*30 min/i)).toBeInTheDocument();
@@ -185,9 +235,18 @@ describe('SettingsPanel', () => {
   describe('about section', () => {
     it('renders website, GitHub, and npm links', () => {
       renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
-      expect(screen.getByRole('link', { name: /website/i })).toHaveAttribute('href', 'https://aarthi-ntrjn.github.io/argus');
-      expect(screen.getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', 'https://github.com/aarthi-ntrjn/argus');
-      expect(screen.getByRole('link', { name: /npm/i })).toHaveAttribute('href', 'https://www.npmjs.com/package/argus-ai-hub');
+      expect(screen.getByRole('link', { name: /website/i })).toHaveAttribute(
+        'href',
+        'https://aarthi-ntrjn.github.io/argus',
+      );
+      expect(screen.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
+        'href',
+        'https://github.com/aarthi-ntrjn/argus',
+      );
+      expect(screen.getByRole('link', { name: /npm/i })).toHaveAttribute(
+        'href',
+        'https://www.npmjs.com/package/argus-ai-hub',
+      );
     });
 
     it('all about links open in a new tab', () => {
@@ -213,7 +272,10 @@ describe('SettingsPanel', () => {
     });
 
     it('shows warning dialog when toggling yolo mode on', async () => {
-      vi.mocked(api.getArgusSettings).mockResolvedValue({ autoRegisterRepos: false, yoloMode: false } as any);
+      vi.mocked(api.getArgusSettings).mockResolvedValue({
+        autoRegisterRepos: false,
+        yoloMode: false,
+      } as any);
       renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
       await waitFor(() => screen.getByRole('checkbox', { name: /yolo mode/i }));
       await userEvent.click(screen.getByRole('checkbox', { name: /yolo mode/i }));
@@ -221,8 +283,14 @@ describe('SettingsPanel', () => {
     });
 
     it('calls patchArgusSettings with yoloMode: true when dialog is confirmed', async () => {
-      vi.mocked(api.getArgusSettings).mockResolvedValue({ autoRegisterRepos: false, yoloMode: false } as any);
-      vi.mocked(api.patchArgusSettings).mockResolvedValue({ autoRegisterRepos: false, yoloMode: true } as any);
+      vi.mocked(api.getArgusSettings).mockResolvedValue({
+        autoRegisterRepos: false,
+        yoloMode: false,
+      } as any);
+      vi.mocked(api.patchArgusSettings).mockResolvedValue({
+        autoRegisterRepos: false,
+        yoloMode: true,
+      } as any);
       renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
       await waitFor(() => screen.getByRole('checkbox', { name: /yolo mode/i }));
       await userEvent.click(screen.getByRole('checkbox', { name: /yolo mode/i }));
@@ -231,7 +299,10 @@ describe('SettingsPanel', () => {
     });
 
     it('does not call patchArgusSettings when dialog is cancelled', async () => {
-      vi.mocked(api.getArgusSettings).mockResolvedValue({ autoRegisterRepos: false, yoloMode: false } as any);
+      vi.mocked(api.getArgusSettings).mockResolvedValue({
+        autoRegisterRepos: false,
+        yoloMode: false,
+      } as any);
       const patchSpy = vi.mocked(api.patchArgusSettings);
       patchSpy.mockClear();
       renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
@@ -242,8 +313,14 @@ describe('SettingsPanel', () => {
     });
 
     it('calls patchArgusSettings with yoloMode: false when toggled off (no dialog)', async () => {
-      vi.mocked(api.getArgusSettings).mockResolvedValue({ autoRegisterRepos: false, yoloMode: true } as any);
-      vi.mocked(api.patchArgusSettings).mockResolvedValue({ autoRegisterRepos: false, yoloMode: false } as any);
+      vi.mocked(api.getArgusSettings).mockResolvedValue({
+        autoRegisterRepos: false,
+        yoloMode: true,
+      } as any);
+      vi.mocked(api.patchArgusSettings).mockResolvedValue({
+        autoRegisterRepos: false,
+        yoloMode: false,
+      } as any);
       renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
       await waitFor(() => screen.getByRole('checkbox', { name: /yolo mode/i }));
       await userEvent.click(screen.getByRole('checkbox', { name: /yolo mode/i }));
@@ -252,7 +329,10 @@ describe('SettingsPanel', () => {
     });
 
     it('shows warning label when yolo mode is on', async () => {
-      vi.mocked(api.getArgusSettings).mockResolvedValue({ autoRegisterRepos: false, yoloMode: true } as any);
+      vi.mocked(api.getArgusSettings).mockResolvedValue({
+        autoRegisterRepos: false,
+        yoloMode: true,
+      } as any);
       renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
       await waitFor(() => {
         expect(screen.getByText(/all permission checks disabled/i)).toBeInTheDocument();
@@ -260,7 +340,10 @@ describe('SettingsPanel', () => {
     });
 
     it('does not show warning label when yolo mode is off', async () => {
-      vi.mocked(api.getArgusSettings).mockResolvedValue({ autoRegisterRepos: false, yoloMode: false } as any);
+      vi.mocked(api.getArgusSettings).mockResolvedValue({
+        autoRegisterRepos: false,
+        yoloMode: false,
+      } as any);
       renderWithQuery(<SettingsPanel settings={allOff} onToggle={vi.fn()} />);
       await waitFor(() => screen.getByRole('checkbox', { name: /yolo mode/i }));
       expect(screen.queryByText(/all permission checks disabled/i)).not.toBeInTheDocument();

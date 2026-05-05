@@ -14,7 +14,8 @@ const ALWAYS_STEPS: TourStep[] = [
   {
     target: '[data-tour-id="dashboard-add-repo"]',
     title: '📁 Add Repositories',
-    content: "Add a folder of repositories and Argus will sniff out every AI session running inside them.",
+    content:
+      'Add a folder of repositories and Argus will sniff out every AI session running inside them.',
     placement: 'bottom',
     disableBeacon: true,
   },
@@ -27,21 +28,21 @@ const POPULATED_STEPS: TourStep[] = [
   {
     target: '[data-tour-id="dashboard-repo-card"]',
     title: '🗂️ Your Repositories',
-    content: "Each card shows a repo and its active AI sessions, all updating live.",
+    content: 'Each card shows a repo and its active AI sessions, all updating live.',
     placement: 'right',
     disableBeacon: true,
   },
   {
     target: '[data-tour-id="dashboard-session-card"]',
     title: '🤖 AI Sessions',
-    content: "Monitor your AI sessions here. Sessions launched outside of Argus are read-only.",
+    content: 'Monitor your AI sessions here. Sessions launched outside of Argus are read-only.',
     placement: 'right',
     disableBeacon: true,
   },
   {
     target: '[data-tour-id="dashboard-launch"]',
     title: '🚀 Launch with Argus',
-    content: "You can control your AI sessions when launched from Argus.",
+    content: 'You can control your AI sessions when launched from Argus.',
     placement: 'bottom',
     disableBeacon: true,
   },
@@ -51,7 +52,7 @@ const CLOSING_STEPS: TourStep[] = [
   {
     target: '[data-tour-id="dashboard-todo"]',
     title: '📝 To Do or Not To Do',
-    content: "Track your wild ideas here.",
+    content: 'Track your wild ideas here.',
     placement: 'left',
     disableBeacon: true,
   },
@@ -65,11 +66,7 @@ const CLOSING_STEPS: TourStep[] = [
 ];
 
 export function buildDashboardTourSteps(hasRepos: boolean): TourStep[] {
-  return [
-    ...ALWAYS_STEPS,
-    ...(hasRepos ? POPULATED_STEPS : []),
-    ...CLOSING_STEPS,
-  ];
+  return [...ALWAYS_STEPS, ...(hasRepos ? POPULATED_STEPS : []), ...CLOSING_STEPS];
 }
 
 /** Catch-up mini-tour: only the repo/session/launch steps the user missed. */
