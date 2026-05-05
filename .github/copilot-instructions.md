@@ -83,6 +83,18 @@ checklists/      # Domain-specific checklists (requirements.md, etc.)
 
 ---
 
+## Coding Style
+
+All generated code must conform to the ESLint and Prettier configuration in this repo. Key rules:
+
+- **Always use curly braces** for all control-flow bodies (`if`, `else`, `for`, `while`), even single-statement ones. Opening `{` on the same line, closing `}` on its own line (1tbs style).
+- **No unused variables or imports.** Prefix intentionally unused parameters with `_`. Destructured variables that are intentionally skipped must also start with `_`.
+- **No `any` type** in production code (`backend/src/`, `frontend/src/` outside `__tests__`). Use typed assertions or interfaces.
+- **Formatting is owned by Prettier.** Do not manually tune indentation, quotes, or trailing commas — Prettier will reformat on save and on `/merge`.
+- After generating code, run `npm run lint:fix --workspace=backend` or `npm run lint:fix --workspace=frontend` to auto-fix violations before committing.
+
+---
+
 ## Configuration
 
 - **`.specify/init-options.json`**: `ai: "claude"`, `speckit_version: "0.4.3"`, `branch_numbering: "sequential"`, `script: "ps"` (PowerShell).
