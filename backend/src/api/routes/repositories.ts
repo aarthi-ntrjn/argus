@@ -17,13 +17,21 @@ import { broadcast } from '../ws/event-dispatcher.js';
 import { getCurrentBranch, getRemoteUrl } from '../../services/repository-scanner.js';
 
 let _monitor: { triggerScan(force?: boolean): void } | null = null;
-let _cliManager: { removeAllHooks(): void; injectHooksForRepo(path: string): void; removeHooksForRepo(path: string): void } | null = null;
+let _cliManager: {
+  removeAllHooks(): void;
+  injectHooksForRepo(path: string): void;
+  removeHooksForRepo(path: string): void;
+} | null = null;
 
 export function setMonitor(monitor: { triggerScan(force?: boolean): void }): void {
   _monitor = monitor;
 }
 
-export function setCliManager(manager: { removeAllHooks(): void; injectHooksForRepo(path: string): void; removeHooksForRepo(path: string): void }): void {
+export function setCliManager(manager: {
+  removeAllHooks(): void;
+  injectHooksForRepo(path: string): void;
+  removeHooksForRepo(path: string): void;
+}): void {
   _cliManager = manager;
 }
 

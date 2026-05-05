@@ -73,7 +73,10 @@ interface CopilotSessionEntry extends SessionEntry {
  * detection). Active dirs are always re-checked next cycle so session ends are
  * detected promptly.
  */
-export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> implements CliDetector {
+export class CopilotCliDetector
+  extends BaseCliDetector<CopilotSessionEntry>
+  implements CliDetector
+{
   protected readonly jsonlWatcher = new CopilotJsonlWatcher();
   protected readonly sessionsDir: string;
   private lastScanTime: number;
@@ -135,9 +138,13 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
         }
         try {
           if (statSync(dirPath).mtimeMs > this.lastScanTime) dirsToProcess.add(dirPath);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     this.activeDirPaths = new Set();
     this.lastScanTime = t0;
@@ -179,9 +186,10 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
   ): { startedAt: string; lastActivityAt: string; summary: string | null } {
     return {
       startedAt: entry.startedAt,
-      lastActivityAt: existingSession?.lastActivityAt && existingSession.lastActivityAt > entry.updatedAt
-        ? existingSession.lastActivityAt
-        : entry.updatedAt,
+      lastActivityAt:
+        existingSession?.lastActivityAt && existingSession.lastActivityAt > entry.updatedAt
+          ? existingSession.lastActivityAt
+          : entry.updatedAt,
       summary: existingSession?.summary ?? entry.summary,
     };
   }
@@ -199,7 +207,9 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
     try {
       const files = readdirSync(dirPath);
       return files.find((f) => f.startsWith('inuse.') && f.endsWith('.lock')) ?? null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   }
 
   private extractPid(lockFile: string): number | null {
@@ -216,7 +226,9 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
       const lockFile = this.findLockFile(dirPath);
       const pid = lockFile ? this.extractPid(lockFile) : null;
       return { workspace, pid };
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -231,7 +243,9 @@ export class CopilotCliDetector extends BaseCliDetector<CopilotSessionEntry> imp
     const currentIds = new Set(sessions.map((s) => s.id));
     const now = new Date().toISOString();
 
-    const dbActiveSessions = getSessions().filter((s) => s.type === 'copilot-cli' && (s.status === 'active' || s.status === 'idle'));
+    const dbActiveSessions = getSessions().filter(
+      (s) => s.type === 'copilot-cli' && (s.status === 'active' || s.status === 'idle'),
+    );
     for (const session of dbActiveSessions) {
       if (!currentIds.has(session.id)) {
         this.markSessionEnded(session, now, 'no longer detected');

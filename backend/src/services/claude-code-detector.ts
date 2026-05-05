@@ -9,7 +9,6 @@ import type { Session, Repository } from '../models/index.js';
 import type { CliDetector } from './cli-detector.js';
 import { BaseCliDetector, type SessionEntry } from './base-cli-detector.js';
 
-
 /**
  * Under the hood, Claude Code writes a JSON file per session in ~/.claude/sessions/*.json
  * with the PID and CWD, which we can use for detection and tracking.
@@ -93,7 +92,7 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
   constructor(sessionsDir: string = DEFAULT_SESSIONS_DIR) {
     super();
     this.sessionsDir = sessionsDir;
-  } 
+  }
 
   /** Reads ~/.claude/sessions/*.json and returns one parsed entry per valid file. */
   protected async readSessionEntries(_force: boolean): Promise<ClaudeSessionEntry[]> {
@@ -102,10 +101,19 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
     const entries: ClaudeSessionEntry[] = [];
     for (const file of files) {
       try {
-        const data = JSON.parse(readFileSync(join(this.sessionsDir, file), 'utf-8')) as SessionProcessJson;
-        if (typeof data.pid !== 'number' || typeof data.sessionId !== 'string' || typeof data.cwd !== 'string') continue;
+        const data = JSON.parse(
+          readFileSync(join(this.sessionsDir, file), 'utf-8'),
+        ) as SessionProcessJson;
+        if (
+          typeof data.pid !== 'number' ||
+          typeof data.sessionId !== 'string' ||
+          typeof data.cwd !== 'string'
+        )
+          continue;
         entries.push({ sessionId: data.sessionId, pid: data.pid, cwd: data.cwd });
-      } catch { /* skip malformed */ }
+      } catch {
+        /* skip malformed */
+      }
     }
     return entries;
   }
@@ -198,6 +206,8 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
           this.markSessionEnded(session, now, 'process gone');
         }
       }
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
   }
 }

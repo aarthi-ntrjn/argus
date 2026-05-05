@@ -35,9 +35,15 @@ interface CopilotRawPayload {
   [key: string]: unknown;
 }
 
-let _cliManager: { handleClaudeHookPayload(p: HookPayload): Promise<void>; handleCopilotHookPayload(p: HookPayload): Promise<void> } | null = null;
+let _cliManager: {
+  handleClaudeHookPayload(p: HookPayload): Promise<void>;
+  handleCopilotHookPayload(p: HookPayload): Promise<void>;
+} | null = null;
 
-export function setCliManager(manager: { handleClaudeHookPayload(p: HookPayload): Promise<void>; handleCopilotHookPayload(p: HookPayload): Promise<void> }): void {
+export function setCliManager(manager: {
+  handleClaudeHookPayload(p: HookPayload): Promise<void>;
+  handleCopilotHookPayload(p: HookPayload): Promise<void>;
+}): void {
   _cliManager = manager;
 }
 
@@ -88,7 +94,8 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
       if (!event || !VALID_COPILOT_EVENTS.has(event)) {
         return reply.status(400).send({
           error: 'INVALID_HOOK_EVENT',
-          message: 'event query parameter must be one of: sessionStart, sessionEnd, preToolUse, postToolUse',
+          message:
+            'event query parameter must be one of: sessionStart, sessionEnd, preToolUse, postToolUse',
           requestId: req.id,
         });
       }
@@ -133,11 +140,17 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         hook_event_name: EVENT_TO_PASCAL[event]!,
         session_id: typeof rawSessionId === 'string' ? rawSessionId : '',
         cwd,
-        tool_name: typeof body.toolName === 'string' ? (TOOL_NAME_MAP[body.toolName] ?? body.toolName) : undefined,
+        tool_name:
+          typeof body.toolName === 'string'
+            ? (TOOL_NAME_MAP[body.toolName] ?? body.toolName)
+            : undefined,
         tool_input: toolInput,
       };
 
-      req.log.info({ hookEvent: normalized.hook_event_name, sessionId: normalized.session_id }, 'copilot hook received');
+      req.log.info(
+        { hookEvent: normalized.hook_event_name, sessionId: normalized.session_id },
+        'copilot hook received',
+      );
 
       if (_cliManager) {
         await _cliManager.handleCopilotHookPayload(normalized);

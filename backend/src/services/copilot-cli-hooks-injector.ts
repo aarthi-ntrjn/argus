@@ -8,7 +8,7 @@ import type { CliHooksInjector } from './cli-hooks-injector.js';
 const log = createTaggedLogger('[CopilotHooksInjector]', '\x1b[33m');
 
 const EVENTS = ['sessionStart', 'sessionEnd', 'preToolUse', 'postToolUse'] as const;
-type CopilotEvent = typeof EVENTS[number];
+type CopilotEvent = (typeof EVENTS)[number];
 
 interface HookEntry {
   type: string;
@@ -27,7 +27,10 @@ function hooksJsonPath(repoPath: string): string {
 }
 
 function isArgusEntry(entry: HookEntry): boolean {
-  return (entry.bash ?? '').includes('/hooks/copilot') || (entry.powershell ?? '').includes('/hooks/copilot');
+  return (
+    (entry.bash ?? '').includes('/hooks/copilot') ||
+    (entry.powershell ?? '').includes('/hooks/copilot')
+  );
 }
 
 function buildEntry(event: CopilotEvent, port: number): HookEntry {
@@ -94,15 +97,15 @@ export class CopilotHooksInjector implements CliHooksInjector {
       const data = readHooksJson(filePath);
       if (!data.hooks) return;
 
-      let changed = false;
       for (const event of Object.keys(data.hooks)) {
         const entries = (data.hooks[event] ?? []) as HookEntry[];
         const filtered = entries.filter((e) => !isArgusEntry(e));
         data.hooks[event] = filtered;
-        if (filtered.length > 0) changed = true;
       }
 
-      const allEmpty = Object.values(data.hooks).every((arr) => !arr || (arr as HookEntry[]).length === 0);
+      const allEmpty = Object.values(data.hooks).every(
+        (arr) => !arr || (arr as HookEntry[]).length === 0,
+      );
       if (allEmpty) {
         unlinkSync(filePath);
         log.info(`Removed hooks.json (no remaining entries) from ${repoPath}`);

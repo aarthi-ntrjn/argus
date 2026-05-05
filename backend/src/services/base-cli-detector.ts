@@ -1,5 +1,11 @@
 import { existsSync } from 'fs';
-import type { Session, PendingChoice, SessionType, Repository, PidSource } from '../models/index.js';
+import type {
+  Session,
+  PendingChoice,
+  SessionType,
+  Repository,
+  PidSource,
+} from '../models/index.js';
 
 /**
  * Common shape every detector's parsed source record carries. Concrete detectors
@@ -13,7 +19,12 @@ export interface SessionEntry {
 }
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from './pending-choice-events.js';
-import { updateSessionStatus, upsertSession, getRepositoryByPath, getSession } from '../db/database.js';
+import {
+  updateSessionStatus,
+  upsertSession,
+  getRepositoryByPath,
+  getSession,
+} from '../db/database.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
 import { ptyRegistry } from './pty-registry.js';
@@ -174,7 +185,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     if (pid === null) return false;
     if (!isPidRunning(pid)) return false;
     if (!isExpectedProcess(pid, this.toolTypeId)) {
-      logger.info(`${this.logTag} PID reuse detected: pid ${pid} is running with wrong name, skipping (sessionId=${sessionId})`);
+      logger.info(
+        `${this.logTag} PID reuse detected: pid ${pid} is running with wrong name, skipping (sessionId=${sessionId})`,
+      );
       return false;
     }
     return true;
@@ -211,14 +224,18 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       }
       const entryMs = Date.now() - entryStart;
       if (entryMs > 50) {
-        logger.warn(`${this.logTag} slow processSessionEntry (${entryMs}ms): sessionType=${this.toolTypeId} sessionId=${entry.sessionId} pid=${entry.pid}`);
+        logger.warn(
+          `${this.logTag} slow processSessionEntry (${entryMs}ms): sessionType=${this.toolTypeId} sessionId=${entry.sessionId} pid=${entry.pid}`,
+        );
       }
       if (session !== null) sessions.push(session);
     }
     this.dispatchSessionEvents(sessions);
     const scanMs = Date.now() - scanStart;
     if (scanMs > 50) {
-      logger.warn(`${this.logTag} slow scan (${scanMs}ms): entries=${entries.length} sessions=${sessions.length}`);
+      logger.warn(
+        `${this.logTag} slow scan (${scanMs}ms): entries=${entries.length} sessions=${sessions.length}`,
+      );
     }
     return sessions;
   }
@@ -260,12 +277,16 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       let pid = existingSession!.pid;
       let pidSource = existingSession!.pidSource;
       if (diskPid !== null && diskPid !== existingSession!.pid) {
-        logger.warn(`${this.logTag} alreadyClaimed pid mismatch: disk=${diskPid} stored=${existingSession!.pid} sessionId=${sessionId} — correcting to disk pid`);
+        logger.warn(
+          `${this.logTag} alreadyClaimed pid mismatch: disk=${diskPid} stored=${existingSession!.pid} sessionId=${sessionId} — correcting to disk pid`,
+        );
         pid = diskPid;
         pidSource = defaultPidSource;
       }
       if (!registryHas && isRunning) {
-        logger.info(`${this.logTag} alreadyClaimed + WS gone — keeping existing PTY metadata, not re-linking sessionId=${sessionId}`);
+        logger.info(
+          `${this.logTag} alreadyClaimed + WS gone — keeping existing PTY metadata, not re-linking sessionId=${sessionId}`,
+        );
       }
       return {
         launchMode: 'pty',
@@ -285,7 +306,8 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
         pid: parkedPid ?? diskPid,
         hostPid: existingSession?.hostPid ?? null,
         pidSource: 'pty_registry',
-        ptyLaunchId: existingSession?.ptyLaunchId ?? ptyRegistry.getPtyLaunchIdForSession(sessionId) ?? null,
+        ptyLaunchId:
+          existingSession?.ptyLaunchId ?? ptyRegistry.getPtyLaunchIdForSession(sessionId) ?? null,
         freshClaim: null,
       };
     }
@@ -293,7 +315,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     if (isRunning && !existingSession) {
       const claimed = ptyRegistry.claimForSession(sessionId, repoPath, this.toolTypeId);
       if (claimed) {
-        logger.info(`${this.logTag} claimForSession OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
+        logger.info(
+          `${this.logTag} claimForSession OK sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`,
+        );
         return {
           launchMode: 'pty',
           pid: claimed.pid,
@@ -344,23 +368,36 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   protected async buildSessionFromEntry(entry: TEntry, repo: Repository): Promise<Session | null> {
     const now = new Date().toISOString();
     const existingSession = getSession(entry.sessionId);
-    const linkage = this.resolvePtyLinkage(entry.sessionId, existingSession, repo.path, entry.pid, this.defaultPidSource, true);
+    const linkage = this.resolvePtyLinkage(
+      entry.sessionId,
+      existingSession,
+      repo.path,
+      entry.pid,
+      this.defaultPidSource,
+      true,
+    );
     const watchPath = this.resolveWatchPath(entry, repo);
 
     if (!existingSession && linkage.freshClaim) {
-      logger.info(`${this.logTag} session activated via PTY claim sessionId=${entry.sessionId} hostPid=${linkage.freshClaim.hostPid} pid=${linkage.freshClaim.pid}`);
+      logger.info(
+        `${this.logTag} session activated via PTY claim sessionId=${entry.sessionId} hostPid=${linkage.freshClaim.hostPid} pid=${linkage.freshClaim.pid}`,
+      );
       return this.createPtySession(entry.sessionId, repo, linkage.freshClaim, now, watchPath);
     }
 
     if (existingSession?.status === 'active') {
-      const yoloMode = existingSession.yoloMode !== null
-        ? existingSession.yoloMode
-        : detectYoloModeFromPids(linkage.pid, linkage.hostPid, this.toolTypeId);
-      const pidChanged = existingSession.pid !== linkage.pid || existingSession.pidSource !== linkage.pidSource;
+      const yoloMode =
+        existingSession.yoloMode !== null
+          ? existingSession.yoloMode
+          : detectYoloModeFromPids(linkage.pid, linkage.hostPid, this.toolTypeId);
+      const pidChanged =
+        existingSession.pid !== linkage.pid || existingSession.pidSource !== linkage.pidSource;
       const yoloResolved = existingSession.yoloMode === null && yoloMode !== null;
       let session = existingSession;
       if (pidChanged || yoloResolved) {
-        logger.info(`${this.logTag} pid assigned sessionId=${entry.sessionId} pid=${linkage.pid} (was ${existingSession.pid}) yoloMode=${yoloMode}`);
+        logger.info(
+          `${this.logTag} pid assigned sessionId=${entry.sessionId} pid=${linkage.pid} (was ${existingSession.pid}) yoloMode=${yoloMode}`,
+        );
         session = { ...existingSession, pid: linkage.pid, pidSource: linkage.pidSource, yoloMode };
         upsertSession(session);
       }
@@ -372,7 +409,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     // a fresh launcher would be a new CLI process and binding it to the old
     // sessionId would route prompts to the wrong process.
     if (existingSession?.launchMode === 'pty' && !ptyRegistry.has(entry.sessionId)) {
-      logger.info(`${this.logTag} skipping re-activation — PTY launcher gone sessionId=${entry.sessionId}`);
+      logger.info(
+        `${this.logTag} skipping re-activation — PTY launcher gone sessionId=${entry.sessionId}`,
+      );
       return existingSession;
     }
 
@@ -391,11 +430,19 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       expiresAt: null,
       model: null,
       reconciled: true,
-      yoloMode: linkage.pid ? detectYoloModeFromPids(linkage.pid, linkage.hostPid, this.toolTypeId) : null,
+      yoloMode: linkage.pid
+        ? detectYoloModeFromPids(linkage.pid, linkage.hostPid, this.toolTypeId)
+        : null,
       ptyLaunchId: linkage.ptyLaunchId,
       ...fields,
     };
-    const activated = { ...base, status: 'active' as const, endedAt: null as null, pid: linkage.pid, ...fields };
+    const activated = {
+      ...base,
+      status: 'active' as const,
+      endedAt: null as null,
+      pid: linkage.pid,
+      ...fields,
+    };
     logger.info(`${this.logTag} session activated sessionId=${entry.sessionId} pid=${linkage.pid}`);
     upsertSession(activated);
     await this.watchJsonlFile(entry.sessionId, watchPath);
@@ -411,7 +458,13 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
    * resolveWatchPath(entry, repo); hook-path callers omit it and fall back to
    * repo.path (acceptable — the file rarely exists yet when the first hook fires).
    */
-  protected async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string, watchPath?: string): Promise<Session> {
+  protected async createPtySession(
+    sessionId: string,
+    repo: Repository,
+    claimed: { pid: number | null; hostPid: number; ptyLaunchId: string },
+    now: string,
+    watchPath?: string,
+  ): Promise<Session> {
     const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, this.toolTypeId);
     const session: Session = {
       id: sessionId,
@@ -441,7 +494,12 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
    * Builds or refreshes an active session row in response to a hook event.
    * Returns the persisted Session. Does not fire callbacks — caller decides.
    */
-  protected async upsertActiveSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): Promise<Session> {
+  protected async upsertActiveSession(
+    sessionId: string,
+    repo: Repository,
+    existing: Session | null | undefined,
+    now: string,
+  ): Promise<Session> {
     const session: Session = existing ?? {
       id: sessionId,
       repositoryId: repo.id,
@@ -519,7 +577,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
 
     const repo = cwd ? getRepositoryByPath(cwd) : null;
     if (!repo) {
-      logger.warn(`${this.logTag} no repo for cwd="${cwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`);
+      logger.warn(
+        `${this.logTag} no repo for cwd="${cwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`,
+      );
       return;
     }
 
@@ -555,7 +615,11 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     }
   }
 
-  protected handleSessionEnd(existing: Session | null | undefined, sessionId: string, now: string): void {
+  protected handleSessionEnd(
+    existing: Session | null | undefined,
+    sessionId: string,
+    now: string,
+  ): void {
     if (!existing) return;
     updateSessionStatus(sessionId, 'ended', now);
     this.closeJsonlWatcher(sessionId);
@@ -571,15 +635,33 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     });
   }
 
-  protected handlePreAskQuestion(sessionId: string, existing: Session | null | undefined, payload: CliHookPayload, now: string): void {
+  protected handlePreAskQuestion(
+    sessionId: string,
+    existing: Session | null | undefined,
+    payload: CliHookPayload,
+    now: string,
+  ): void {
     if (!existing) return;
     const { question, choices, allQuestions } = parsePendingChoicePayload(payload.tool_input ?? {});
     this.pendingChoices.set(sessionId, { question, choices, allQuestions });
-    broadcast({ type: 'session.pending_choice', timestamp: now, data: { sessionId, question, choices, allQuestions } });
-    pendingChoiceEvents.emit('session.pending_choice', { sessionId, question, choices, allQuestions });
+    broadcast({
+      type: 'session.pending_choice',
+      timestamp: now,
+      data: { sessionId, question, choices, allQuestions },
+    });
+    pendingChoiceEvents.emit('session.pending_choice', {
+      sessionId,
+      question,
+      choices,
+      allQuestions,
+    });
   }
 
-  protected handlePostAskQuestion(sessionId: string, existing: Session | null | undefined, now: string): void {
+  protected handlePostAskQuestion(
+    sessionId: string,
+    existing: Session | null | undefined,
+    now: string,
+  ): void {
     if (!existing) return;
     this.pendingChoices.delete(sessionId);
     broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });

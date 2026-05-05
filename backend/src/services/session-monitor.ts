@@ -2,7 +2,12 @@ import { EventEmitter } from 'events';
 import { RepositoryScanner } from './repository-scanner.js';
 import { CliManager } from './cli-manager.js';
 import { loadConfig } from '../config/config-loader.js';
-import { getSessions, getRepository, getRepositories, updateRepositoryBranch } from '../db/database.js';
+import {
+  getSessions,
+  getRepository,
+  getRepositories,
+  updateRepositoryBranch,
+} from '../db/database.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { getCurrentBranch } from './repository-scanner.js';
 import * as logger from '../utils/logger.js';
@@ -15,9 +20,6 @@ export interface SessionMonitorEvents {
   'repository.added': (repo: Repository) => void;
   'repository.removed': (repo: Repository) => void;
 }
-
-// Must match the default restingThresholdMinutes in config-loader.ts
-const INACTIVE_THRESHOLD_MS = 20 * 60 * 1000;
 
 export class SessionMonitor extends EventEmitter {
   private scanner: RepositoryScanner;
@@ -86,11 +88,17 @@ export class SessionMonitor extends EventEmitter {
             updateRepositoryBranch(repo.id, branch);
             const updated = getRepository(repo.id);
             if (updated) {
-              broadcast({ type: 'repository.updated', timestamp: new Date().toISOString(), data: updated });
+              broadcast({
+                type: 'repository.updated',
+                timestamp: new Date().toISOString(),
+                data: updated,
+              });
             }
           }
-        } catch { /* ignore — branch refresh is best-effort */ }
-      })
+        } catch {
+          /* ignore — branch refresh is best-effort */
+        }
+      }),
     );
   }
 
@@ -113,8 +121,14 @@ export class SessionMonitor extends EventEmitter {
         if (age >= thresholdMs) {
           if (!this.restingNotifiedSessions.has(session.id)) {
             this.restingNotifiedSessions.add(session.id);
-            logger.info(`[SessionMonitor] resting transition sessionId=${session.id} lastActivityAt=${session.lastActivityAt} ageMin=${Math.round(age / 60000)}`);
-            broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: session });
+            logger.info(
+              `[SessionMonitor] resting transition sessionId=${session.id} lastActivityAt=${session.lastActivityAt} ageMin=${Math.round(age / 60000)}`,
+            );
+            broadcast({
+              type: 'session.updated',
+              timestamp: new Date().toISOString(),
+              data: session,
+            });
           }
         } else {
           // Session has recent activity — reset so we broadcast again next time it goes resting

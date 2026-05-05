@@ -94,7 +94,10 @@ export class CliManager {
 
   /** Returns the pending question for a session, checking both detectors. */
   getPendingChoice(sessionId: string): unknown {
-    return this.claudeDetector.getPendingChoice(sessionId) ?? this.copilotDetector.getPendingChoice(sessionId);
+    return (
+      this.claudeDetector.getPendingChoice(sessionId) ??
+      this.copilotDetector.getPendingChoice(sessionId)
+    );
   }
 
   /** Clears the pending choice for a session from both detectors. */
@@ -122,5 +125,4 @@ export class CliManager {
     this.claudeInjector.removeAll();
     this.copilotInjector.removeAll();
   }
-
 }

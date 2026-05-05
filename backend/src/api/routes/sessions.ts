@@ -6,14 +6,25 @@ import { ptyRegistry } from '../../services/pty-registry.js';
 import { telemetryService } from '../../services/telemetry-service.js';
 import { broadcast } from '../ws/event-dispatcher.js';
 
-let _cliManager: { getPendingChoice(sessionId: string): unknown; clearPendingChoice(sessionId: string): void } | null = null;
+let _cliManager: {
+  getPendingChoice(sessionId: string): unknown;
+  clearPendingChoice(sessionId: string): void;
+} | null = null;
 
-export function setCliManager(manager: { getPendingChoice(sessionId: string): unknown; clearPendingChoice(sessionId: string): void }): void {
+export function setCliManager(manager: {
+  getPendingChoice(sessionId: string): unknown;
+  clearPendingChoice(sessionId: string): void;
+}): void {
   _cliManager = manager;
 }
 
-function withPtyConnected<T extends { id: string; launchMode?: string | null }>(session: T): T & { ptyConnected: boolean | null } {
-  return { ...session, ptyConnected: session.launchMode === 'pty' ? ptyRegistry.has(session.id) : null };
+function withPtyConnected<T extends { id: string; launchMode?: string | null }>(
+  session: T,
+): T & { ptyConnected: boolean | null } {
+  return {
+    ...session,
+    ptyConnected: session.launchMode === 'pty' ? ptyRegistry.has(session.id) : null,
+  };
 }
 
 const outputStore = new OutputStore();
@@ -26,152 +37,204 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
       const { repositoryId, status, type } = req.query;
       const sessions = getSessions({ repositoryId, status, type });
       return reply.send(sessions.map(withPtyConnected));
-    }
+    },
   );
 
-  app.get<{ Params: { id: string } }>(
-    '/api/v1/sessions/:id',
-    async (req, reply) => {
-      const session = getSession(req.params.id);
-      if (!session) return reply.status(404).send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
-      return reply.send(withPtyConnected(session));
-    }
-  );
+  app.get<{ Params: { id: string } }>('/api/v1/sessions/:id', async (req, reply) => {
+    const session = getSession(req.params.id);
+    if (!session)
+      return reply
+        .status(404)
+        .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+    return reply.send(withPtyConnected(session));
+  });
 
   app.get<{ Params: { id: string }; Querystring: { limit?: string; before?: string } }>(
     '/api/v1/sessions/:id/output',
     async (req, reply) => {
       const session = getSession(req.params.id);
-      if (!session) return reply.status(404).send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+      if (!session)
+        return reply
+          .status(404)
+          .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
       const limit = Math.min(parseInt(req.query.limit ?? '100', 10), 1000);
       const page = outputStore.getOutputPage(session.id, limit, req.query.before);
       return reply.send(page);
-    }
+    },
   );
 
-  app.post<{ Params: { id: string } }>(
-    '/api/v1/sessions/:id/stop',
-    async (req, reply) => {
-      try {
-        const action = await sessionController.stopSession(req.params.id);
-        return reply.status(202).send({ actionId: action.id, status: action.status });
-      } catch (err: unknown) {
-        const e = err as { code?: string; message?: string };
-        if (e.code === 'NOT_FOUND') return reply.status(404).send({ error: 'NOT_FOUND', message: e.message, requestId: req.id });
-        if (e.code === 'CONFLICT') return reply.status(409).send({ error: 'CONFLICT', message: e.message, requestId: req.id });
-        if (e.code === 'PID_NOT_SET') return reply.status(422).send({ error: 'PID_NOT_SET', message: e.message, requestId: req.id });
-        if (e.code === 'PID_NOT_FOUND') return reply.status(422).send({ error: 'PID_NOT_FOUND', message: e.message, requestId: req.id });
-        if (e.code === 'PID_NOT_AI_TOOL') return reply.status(403).send({ error: 'PID_NOT_AI_TOOL', message: e.message, requestId: req.id });
-        throw err;
-      }
+  app.post<{ Params: { id: string } }>('/api/v1/sessions/:id/stop', async (req, reply) => {
+    try {
+      const action = await sessionController.stopSession(req.params.id);
+      return reply.status(202).send({ actionId: action.id, status: action.status });
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      if (e.code === 'NOT_FOUND')
+        return reply
+          .status(404)
+          .send({ error: 'NOT_FOUND', message: e.message, requestId: req.id });
+      if (e.code === 'CONFLICT')
+        return reply.status(409).send({ error: 'CONFLICT', message: e.message, requestId: req.id });
+      if (e.code === 'PID_NOT_SET')
+        return reply
+          .status(422)
+          .send({ error: 'PID_NOT_SET', message: e.message, requestId: req.id });
+      if (e.code === 'PID_NOT_FOUND')
+        return reply
+          .status(422)
+          .send({ error: 'PID_NOT_FOUND', message: e.message, requestId: req.id });
+      if (e.code === 'PID_NOT_AI_TOOL')
+        return reply
+          .status(403)
+          .send({ error: 'PID_NOT_AI_TOOL', message: e.message, requestId: req.id });
+      throw err;
     }
-  );
+  });
 
-  app.post<{ Params: { id: string } }>(
-    '/api/v1/sessions/:id/interrupt',
-    async (req, reply) => {
-      try {
-        const action = await sessionController.interruptSession(req.params.id);
-        _cliManager?.clearPendingChoice(req.params.id);
-        broadcast({ type: 'session.pending_choice.resolved', timestamp: new Date().toISOString(), data: { sessionId: req.params.id } });
-        return reply.status(202).send({ actionId: action.id, status: action.status });
-      } catch (err: unknown) {
-        const e = err as { code?: string; message?: string };
-        if (e.code === 'NOT_FOUND') return reply.status(404).send({ error: 'NOT_FOUND', message: e.message, requestId: req.id });
-        if (e.code === 'CONFLICT') return reply.status(409).send({ error: 'CONFLICT', message: e.message, requestId: req.id });
-        if (e.code === 'PID_NOT_SET') return reply.status(422).send({ error: 'PID_NOT_SET', message: e.message, requestId: req.id });
-        if (e.code === 'PID_NOT_FOUND') return reply.status(422).send({ error: 'PID_NOT_FOUND', message: e.message, requestId: req.id });
-        if (e.code === 'PID_NOT_AI_TOOL') return reply.status(403).send({ error: 'PID_NOT_AI_TOOL', message: e.message, requestId: req.id });
-        throw err;
-      }
+  app.post<{ Params: { id: string } }>('/api/v1/sessions/:id/interrupt', async (req, reply) => {
+    try {
+      const action = await sessionController.interruptSession(req.params.id);
+      _cliManager?.clearPendingChoice(req.params.id);
+      broadcast({
+        type: 'session.pending_choice.resolved',
+        timestamp: new Date().toISOString(),
+        data: { sessionId: req.params.id },
+      });
+      return reply.status(202).send({ actionId: action.id, status: action.status });
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      if (e.code === 'NOT_FOUND')
+        return reply
+          .status(404)
+          .send({ error: 'NOT_FOUND', message: e.message, requestId: req.id });
+      if (e.code === 'CONFLICT')
+        return reply.status(409).send({ error: 'CONFLICT', message: e.message, requestId: req.id });
+      if (e.code === 'PID_NOT_SET')
+        return reply
+          .status(422)
+          .send({ error: 'PID_NOT_SET', message: e.message, requestId: req.id });
+      if (e.code === 'PID_NOT_FOUND')
+        return reply
+          .status(422)
+          .send({ error: 'PID_NOT_FOUND', message: e.message, requestId: req.id });
+      if (e.code === 'PID_NOT_AI_TOOL')
+        return reply
+          .status(403)
+          .send({ error: 'PID_NOT_AI_TOOL', message: e.message, requestId: req.id });
+      throw err;
     }
-  );
+  });
 
   // Dismiss a session: mark it as ended without killing the process.
   // Used for read-only sessions or sessions whose process is already gone.
-  app.post<{ Params: { id: string } }>(
-    '/api/v1/sessions/:id/dismiss',
-    async (req, reply) => {
-      const session = getSession(req.params.id);
-      if (!session) return reply.status(404).send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
-      if (session.status === 'ended' || session.status === 'completed') {
-        return reply.status(409).send({ error: 'CONFLICT', message: 'Session already ended' });
-      }
-      const now = new Date().toISOString();
-      updateSessionStatus(req.params.id, 'ended', now);
-      const { broadcast: broadcastEvent } = await import('../ws/event-dispatcher.js');
-      const ended = { ...session, status: 'ended' as const, endedAt: now };
-      broadcastEvent({ type: 'session.ended', timestamp: now, data: ended });
-      telemetryService.sendEvent('session_ended', {
-        sessionType: session.type,
-        sessionId: session.id,
-        launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly',
-        yoloMode: session.yoloMode,
-      });
-      return reply.send({ status: 'ended' });
+  app.post<{ Params: { id: string } }>('/api/v1/sessions/:id/dismiss', async (req, reply) => {
+    const session = getSession(req.params.id);
+    if (!session)
+      return reply
+        .status(404)
+        .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+    if (session.status === 'ended' || session.status === 'completed') {
+      return reply.status(409).send({ error: 'CONFLICT', message: 'Session already ended' });
     }
-  );
+    const now = new Date().toISOString();
+    updateSessionStatus(req.params.id, 'ended', now);
+    const { broadcast: broadcastEvent } = await import('../ws/event-dispatcher.js');
+    const ended = { ...session, status: 'ended' as const, endedAt: now };
+    broadcastEvent({ type: 'session.ended', timestamp: now, data: ended });
+    telemetryService.sendEvent('session_ended', {
+      sessionType: session.type,
+      sessionId: session.id,
+      launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly',
+      yoloMode: session.yoloMode,
+    });
+    return reply.send({ status: 'ended' });
+  });
 
   app.post<{ Params: { id: string }; Body: { prompt?: string; raw?: boolean } }>(
     '/api/v1/sessions/:id/send',
     async (req, reply) => {
       const { prompt, raw } = req.body ?? {};
-      if (!prompt) return reply.status(400).send({ error: 'MISSING_PROMPT', message: 'prompt is required' });
+      if (!prompt)
+        return reply.status(400).send({ error: 'MISSING_PROMPT', message: 'prompt is required' });
 
       try {
         const session = getSession(req.params.id);
-        if (!session) return reply.status(404).send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+        if (!session)
+          return reply
+            .status(404)
+            .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
 
         const skipEnter = raw ? true : !!_cliManager?.getPendingChoice(req.params.id);
         const action = await sessionController.sendPrompt(req.params.id, prompt, skipEnter);
         return reply.status(202).send({ actionId: action.id, status: action.status });
       } catch (err: unknown) {
         const e = err as { code?: string; message?: string };
-        if (e.code === 'NOT_FOUND') return reply.status(404).send({ error: 'NOT_FOUND', message: e.message });
-        if (e.code === 'CONFLICT') return reply.status(409).send({ error: 'CONFLICT', message: e.message });
+        if (e.code === 'NOT_FOUND')
+          return reply.status(404).send({ error: 'NOT_FOUND', message: e.message });
+        if (e.code === 'CONFLICT')
+          return reply.status(409).send({ error: 'CONFLICT', message: e.message });
         throw err;
       }
-    }
+    },
   );
 
   app.post<{ Params: { id: string }; Body: { choiceNumber?: string; prompt?: string } }>(
     '/api/v1/sessions/:id/send-with-choice',
     async (req, reply) => {
       const { choiceNumber, prompt } = req.body ?? {};
-      if (!choiceNumber) return reply.status(400).send({ error: 'MISSING_CHOICE_NUMBER', message: 'choiceNumber is required' });
-      if (!prompt) return reply.status(400).send({ error: 'MISSING_PROMPT', message: 'prompt is required' });
+      if (!choiceNumber)
+        return reply
+          .status(400)
+          .send({ error: 'MISSING_CHOICE_NUMBER', message: 'choiceNumber is required' });
+      if (!prompt)
+        return reply.status(400).send({ error: 'MISSING_PROMPT', message: 'prompt is required' });
 
       try {
         const session = getSession(req.params.id);
-        if (!session) return reply.status(404).send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+        if (!session)
+          return reply
+            .status(404)
+            .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
 
-        const action = await sessionController.sendChoiceWithPrompt(req.params.id, choiceNumber, prompt);
+        const action = await sessionController.sendChoiceWithPrompt(
+          req.params.id,
+          choiceNumber,
+          prompt,
+        );
         return reply.status(202).send({ actionId: action.id, status: action.status });
       } catch (err: unknown) {
         const e = err as { code?: string; message?: string };
-        if (e.code === 'NOT_FOUND') return reply.status(404).send({ error: 'NOT_FOUND', message: e.message });
-        if (e.code === 'CONFLICT') return reply.status(409).send({ error: 'CONFLICT', message: e.message });
+        if (e.code === 'NOT_FOUND')
+          return reply.status(404).send({ error: 'NOT_FOUND', message: e.message });
+        if (e.code === 'CONFLICT')
+          return reply.status(409).send({ error: 'CONFLICT', message: e.message });
         throw err;
       }
-    }
+    },
   );
 
-  app.post<{ Params: { id: string } }>(
-    '/api/v1/sessions/:id/reject-tool',
-    async (req, reply) => {
-      const session = getSession(req.params.id);
-      if (!session) return reply.status(404).send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+  app.post<{ Params: { id: string } }>('/api/v1/sessions/:id/reject-tool', async (req, reply) => {
+    const session = getSession(req.params.id);
+    if (!session)
+      return reply
+        .status(404)
+        .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
 
-      try {
-        // Send Ctrl+C to cancel the pending tool in the PTY
-        await sessionController.sendPrompt(req.params.id, '\x03', true);
-      } catch { /* best effort — clear the pending choice regardless */ }
-
-      _cliManager?.clearPendingChoice(req.params.id);
-      broadcast({ type: 'session.pending_choice.resolved', timestamp: new Date().toISOString(), data: { sessionId: req.params.id } });
-      return reply.send({ status: 'rejected' });
+    try {
+      // Send Ctrl+C to cancel the pending tool in the PTY
+      await sessionController.sendPrompt(req.params.id, '\x03', true);
+    } catch {
+      /* best effort — clear the pending choice regardless */
     }
-  );
+
+    _cliManager?.clearPendingChoice(req.params.id);
+    broadcast({
+      type: 'session.pending_choice.resolved',
+      timestamp: new Date().toISOString(),
+      data: { sessionId: req.params.id },
+    });
+    return reply.send({ status: 'rejected' });
+  });
 };
 
 export default sessionsRoutes;

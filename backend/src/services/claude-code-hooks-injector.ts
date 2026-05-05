@@ -16,7 +16,10 @@ const HOOK_EVENTS: Array<{ event: string; matcher: string }> = [
 ];
 
 interface ClaudeSettings {
-  hooks?: Record<string, Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>>;
+  hooks?: Record<
+    string,
+    Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>
+  >;
   [key: string]: unknown;
 }
 

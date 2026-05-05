@@ -158,7 +158,10 @@ export abstract class JsonlWatcherBase {
   }
 
   closeWatcher(sessionId: string): void {
-    this.watchers.get(sessionId)?.close().catch(() => {});
+    this.watchers
+      .get(sessionId)
+      ?.close()
+      .catch(() => {});
     this.watchers.delete(sessionId);
     this.filePositions.delete(sessionId);
     this.sequenceCounters.delete(sessionId);

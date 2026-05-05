@@ -52,7 +52,11 @@ export function parsePendingChoicePayload(toolInput: Record<string, unknown>): {
     const choices = rawChoices
       .map((c) => {
         if (typeof c === 'string') return c;
-        if (c && typeof c === 'object' && typeof (c as Record<string, unknown>).label === 'string') {
+        if (
+          c &&
+          typeof c === 'object' &&
+          typeof (c as Record<string, unknown>).label === 'string'
+        ) {
           return (c as Record<string, unknown>).label as string;
         }
         return null;
