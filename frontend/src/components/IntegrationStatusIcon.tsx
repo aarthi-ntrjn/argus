@@ -9,7 +9,13 @@ interface IntegrationStatusIconProps {
   disabled?: boolean;
 }
 
-export function IntegrationStatusIcon({ type, connected, title, onClick, disabled }: IntegrationStatusIconProps) {
+export function IntegrationStatusIcon({
+  type,
+  connected,
+  title,
+  onClick,
+  disabled,
+}: IntegrationStatusIconProps) {
   const src = type === 'teams' ? teamsUrl : slackUrl;
   const inner = (
     <>

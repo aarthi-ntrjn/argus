@@ -6,7 +6,6 @@ import { randomUUID } from 'crypto';
 import { platform, tmpdir } from 'os';
 import { join } from 'path';
 import { resolveLaunchCommand } from './launch-command-resolver.js';
-import { SessionTypes } from '../models/index.js';
 import { ArgusLaunchClient } from './argus-launch-client.js';
 
 const sessionId = randomUUID();
@@ -60,8 +59,11 @@ if (toolArgs.length === 0) {
 
 cwd = normalizeLaunchCwd(cwd);
 const { sessionType, cmd, cmdArgs } = resolveLaunchCommand(toolArgs);
-const yoloActive = cmdArgs.includes('--dangerously-skip-permissions') || cmdArgs.includes('--allow-all');
-log(`launch started: sessionType=${sessionType} cmd=${cmd} args=${JSON.stringify(cmdArgs)} cwd=${cwd} yoloMode=${yoloActive}`);
+const yoloActive =
+  cmdArgs.includes('--dangerously-skip-permissions') || cmdArgs.includes('--allow-all');
+log(
+  `launch started: sessionType=${sessionType} cmd=${cmd} args=${JSON.stringify(cmdArgs)} cwd=${cwd} yoloMode=${yoloActive}`,
+);
 
 // On Windows, node-pty's ConPTY API requires a real .exe — .cmd/.bat scripts
 // (like claude.cmd, copilot.cmd) must be run through a shell.
@@ -73,9 +75,7 @@ if (isWin) {
   log(`platform: ${platform()} — spawning ${cmd} directly`);
 }
 const ptyFile = isWin ? 'powershell.exe' : cmd;
-const ptyArgs = isWin
-  ? ['-NoProfile', '-Command', [cmd, ...cmdArgs].join(' ')]
-  : cmdArgs;
+const ptyArgs = isWin ? ['-NoProfile', '-Command', [cmd, ...cmdArgs].join(' ')] : cmdArgs;
 
 // Strip parent Claude Code env vars so the child session starts fresh
 // instead of trying to connect to/continue the parent session.
@@ -87,7 +87,9 @@ for (const key of Object.keys(cleanEnv)) {
 }
 
 const spawnStartMs = Date.now();
-log(`spawning PTY: ${ptyFile} ${JSON.stringify(ptyArgs)} at=${new Date(spawnStartMs).toISOString()}`);
+log(
+  `spawning PTY: ${ptyFile} ${JSON.stringify(ptyArgs)} at=${new Date(spawnStartMs).toISOString()}`,
+);
 let pty: ReturnType<typeof spawn>;
 try {
   pty = spawn(ptyFile, ptyArgs, {
@@ -95,7 +97,7 @@ try {
     cols: process.stdout.columns || 80,
     rows: process.stdout.rows || 24,
     cwd,
-    env: cleanEnv as Record<string, string>
+    env: cleanEnv as Record<string, string>,
   });
 } catch (err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
@@ -104,7 +106,7 @@ try {
 log(`PTY spawned: pty.pid=${pty.pid} spawnMs=${Date.now() - spawnStartMs}`);
 
 // Proxy PTY output to the user's terminal
-pty.onData((data: string) => {  
+pty.onData((data: string) => {
   // This is needed. It's the display pipe: PTY output -> onData -> process.stderr -> Windows Terminal tab.
   process.stdout.write(data);
 });
@@ -134,7 +136,9 @@ log(`connecting to Argus WebSocket ws://127.0.0.1:7411/launcher ptyLaunchId=${pt
 const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher', ptyLaunchId, log);
 // On Windows the real tool PID is unknown until the process tree walk resolves it.
 // On non-Windows pty.pid is already the tool directly (no shell wrapper).
-log(`registering session: hostPid=${pty.pid} pid=${isWin ? null : pty.pid} sessionType=${sessionType}`);
+log(
+  `registering session: hostPid=${pty.pid} pid=${isWin ? null : pty.pid} sessionType=${sessionType}`,
+);
 client.setRegisterInfo({ hostPid: pty.pid, pid: isWin ? null : pty.pid, sessionType, cwd });
 
 // Yield Win32 input mode sequences(ESC[Vk;Sc;Uc;Kd;Cs;Rc_) for a single character,
@@ -278,7 +282,9 @@ client.onSendPrompt(async (actionId: string, prompt: string, skipEnter: boolean)
 });
 
 client.onSendChoiceWithPrompt(async (actionId: string, choiceNumber: string, prompt: string) => {
-  log(`onSendChoiceWithPrompt actionId=${actionId} choiceNumber=${choiceNumber} promptLen=${prompt.length}`);
+  log(
+    `onSendChoiceWithPrompt actionId=${actionId} choiceNumber=${choiceNumber} promptLen=${prompt.length}`,
+  );
   try {
     await sendChoiceWithAnswer(choiceNumber, prompt);
     client.ackDelivered(actionId);
@@ -298,7 +304,8 @@ if (isWin) {
     pidAttempts++;
     if (pidAttempts > 10) {
       log(`pid resolver: giving up after 20 attempts`);
-      clearInterval(pidInterval); return;
+      clearInterval(pidInterval);
+      return;
     }
     try {
       // Take one snapshot of all processes, then walk from pty.pid: for each visited
@@ -306,9 +313,14 @@ if (isWin) {
       // and push unmatched ones onto the stack.
       const out = execSync(
         `powershell -NoProfile -Command "$cutoff = [DateTimeOffset]::FromUnixTimeMilliseconds(${spawnStartMs}).LocalDateTime; Get-CimInstance Win32_Process | Where-Object { $_.CreationDate -ge $cutoff } | Select-Object ProcessId,ParentProcessId,Name,CreationDate | ConvertTo-Json -Compress"`,
-        { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] }
+        { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] },
       );
-      type ProcEntry = { ProcessId: number; ParentProcessId: number; Name: string; CreationDate: string | null };
+      type ProcEntry = {
+        ProcessId: number;
+        ParentProcessId: number;
+        Name: string;
+        CreationDate: string | null;
+      };
       const all: ProcEntry[] = JSON.parse(out.trim());
       log(`pid resolver: snapshot has ${all.length} processes`);
       log(`pid resolver: snapshot=${JSON.stringify(all)}`);
@@ -323,7 +335,9 @@ if (isWin) {
       outer: while (stack.length > 0) {
         const current = stack.pop()!;
         for (const p of all) {
-          if (p.ParentProcessId !== current) continue;
+          if (p.ParentProcessId !== current) {
+            continue;
+          }
           const name = p.Name.trim().toLowerCase();
           log(`pid resolver: visiting ${name} PID=${p.ProcessId}`);
           if (name === targetExe) {

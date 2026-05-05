@@ -86,6 +86,7 @@
   "overrides": {
     "vitest": {
       "vite": "6.4.2"
-    }
+    },
+    "eslint": "10.3.0"
   }
 }

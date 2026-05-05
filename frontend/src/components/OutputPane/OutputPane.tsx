@@ -13,7 +13,12 @@ interface Props {
   'data-tour-id'?: string;
 }
 
-export default function OutputPane({ session, onClose, className, 'data-tour-id': dataTourId }: Props) {
+export default function OutputPane({
+  session,
+  onClose,
+  className,
+  'data-tour-id': dataTourId,
+}: Props) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
   const [settings, updateSetting] = useSettings();
@@ -25,8 +30,14 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
   });
 
   useEffect(() => {
-    if (!onClose) return;
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    if (!onClose) {
+      return;
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
@@ -34,13 +45,17 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
   // Scroll to bottom on new data only when pinned.
   useEffect(() => {
     const el = scrollContainerRef.current;
-    if (el && pinnedToBottom.current) el.scrollTop = el.scrollHeight;
+    if (el && pinnedToBottom.current) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [data]);
 
   // Track whether the user is scrolled near the bottom (within 8px = pinned).
   function handleScroll() {
     const el = scrollContainerRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     pinnedToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 8;
   }
 
@@ -56,7 +71,9 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
     >
       <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-gray-200">
         <div className="flex flex-col min-w-0">
-          <span className="text-xs font-medium text-gray-600 truncate">Session <span className="font-mono text-[10px] text-gray-500">{session.id}</span></span>
+          <span className="text-xs font-medium text-gray-600 truncate">
+            Session <span className="font-mono text-[10px] text-gray-500">{session.id}</span>
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -74,19 +91,43 @@ export default function OutputPane({ session, onClose, className, 'data-tour-id'
               aria-label="Close output pane"
               className="icon-btn text-gray-500 hover:text-blue-600"
             >
-              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           )}
         </div>
       </div>
-      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto rounded-b-lg scroll-hover">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto rounded-b-lg scroll-hover"
+      >
         {isError ? (
-          <p className="p-6 text-center text-sm text-red-600">Failed to load output. Is the server running?</p>
+          <p className="p-6 text-center text-sm text-red-600">
+            Failed to load output. Is the server running?
+          </p>
         ) : (
           <>
-            <SessionDetail sessionId={session.id} items={data?.items ?? []} dark displayMode={displayMode} className="max-h-none pb-0" />
+            <SessionDetail
+              sessionId={session.id}
+              items={data?.items ?? []}
+              dark
+              displayMode={displayMode}
+              className="max-h-none pb-0"
+            />
           </>
         )}
       </div>

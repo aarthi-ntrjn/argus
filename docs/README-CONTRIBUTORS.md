@@ -89,6 +89,8 @@ scan files on disk → upsert session in SQLite → start chokidar file watcher 
 
 **Adding a new route:** add a Fastify plugin under `backend/src/api/routes/`, register it in `server.ts`, and add it to the API reference table in this file.
 
+**UpdateService** (`backend/src/services/update-service.ts`): singleton that polls `https://registry.npmjs.org/argus-ai-hub/latest` once per hour to check for newer npm versions. Logger tag: `[UpdateService]`, color: yellow (`\x1b[33m`). Key methods: `checkForUpdates()` (silent on network error), `scheduleChecks()` (call once at startup), `hasUpdate()`, `getStatus()`, `applyUpdate()` (spawns `npm install -g argus-ai-hub@latest`, 25-second timeout resolves instead of rejects so exit always completes). Injected into routes via `setUpdateServiceForRoutes()` and into the health route via `setUpdateService()`. The `autoUpdate` config field (default `true`) controls whether exit handlers call `applyUpdate()` automatically.
+
 **WebSocket events:** `session.created`, `session.updated`, `session.ended`, `session.output`. Dispatched from `event-dispatcher.ts` via `broadcast()`. The frontend's `socket.ts` listens and calls `queryClient.invalidateQueries()` to refresh stale data.
 
 **Frontend data flow:** TanStack Query fetches from REST on mount and re-fetches on WS events. Components read from the query cache; they never call the API directly.
@@ -134,6 +136,8 @@ Tour targets use stable `data-tour-id` attribute selectors (e.g. `[data-tour-id=
 
 | Method | Path | Description |
 |--------|------|-------------|
+| `GET` | `/api/v1/update/status` | Get update status (currentVersion, latestVersion, updateAvailable, lastChecked, updateInProgress) |
+| `POST` | `/api/v1/update/apply` | Trigger immediate npm update. 202 (started), 409 (already in progress), 503 (no update available) |
 | `GET` | `/api/v1/repositories` | List registered repos |
 | `POST` | `/api/v1/repositories` | Add a repository by path |
 | `DELETE` | `/api/v1/repositories/:id` | Remove a repository |

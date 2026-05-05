@@ -8,8 +8,16 @@ interface RegisterInfo {
   cwd: string;
 }
 
-type PromptCallback = (actionId: string, prompt: string, skipEnter: boolean) => void | Promise<void>;
-type ChoiceWithPromptCallback = (actionId: string, choiceNumber: string, prompt: string) => void | Promise<void>;
+type PromptCallback = (
+  actionId: string,
+  prompt: string,
+  skipEnter: boolean,
+) => void | Promise<void>;
+type ChoiceWithPromptCallback = (
+  actionId: string,
+  choiceNumber: string,
+  prompt: string,
+) => void | Promise<void>;
 
 export class ArgusLaunchClient {
   private ws!: WebSocket;
@@ -81,10 +89,16 @@ export class ArgusLaunchClient {
   notifySessionEnded(sessionId: string, exitCode: number | null): Promise<void> {
     this.isClosing = true;
     return new Promise<void>((resolve) => {
-      const done = () => { clearTimeout(timer); resolve(); };
+      const done = () => {
+        clearTimeout(timer);
+        resolve();
+      };
       // Safety timeout so the launcher never hangs if the server is unresponsive
       const timer = setTimeout(done, 2000);
-      if (this.ws.readyState !== WebSocket.OPEN) { done(); return; }
+      if (this.ws.readyState !== WebSocket.OPEN) {
+        done();
+        return;
+      }
       // Use the send callback to know when data is flushed, then close
       this.ws.send(JSON.stringify({ type: 'session_ended', sessionId, exitCode }), () => {
         this.ws.once('close', done);
@@ -98,7 +112,13 @@ export class ArgusLaunchClient {
   }
 
   private handleMessage(data: Buffer): void {
-    let msg: { type: string; actionId?: string; prompt?: string; skipEnter?: boolean; choiceNumber?: string };
+    let msg: {
+      type: string;
+      actionId?: string;
+      prompt?: string;
+      skipEnter?: boolean;
+      choiceNumber?: string;
+    };
     try {
       msg = JSON.parse(data.toString());
     } catch {
@@ -122,7 +142,12 @@ export class ArgusLaunchClient {
       this.promptCallback?.(msg.actionId, msg.prompt, !!msg.skipEnter);
     }
 
-    if (msg.type === 'send_choice_with_prompt' && msg.actionId && msg.choiceNumber !== undefined && msg.prompt !== undefined) {
+    if (
+      msg.type === 'send_choice_with_prompt' &&
+      msg.actionId &&
+      msg.choiceNumber !== undefined &&
+      msg.prompt !== undefined
+    ) {
       this.choiceWithPromptCallback?.(msg.actionId, msg.choiceNumber, msg.prompt);
     }
   }
@@ -133,4 +158,3 @@ export class ArgusLaunchClient {
     }
   }
 }
-

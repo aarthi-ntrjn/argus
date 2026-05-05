@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { stopSession, getSession } from '../services/api';
 
@@ -9,7 +9,9 @@ export function useKillSession(options?: { onKilled?: () => void }) {
   const [isWaitingForExit, setIsWaitingForExit] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onKilledRef = useRef(options?.onKilled);
-  onKilledRef.current = options?.onKilled;
+  useLayoutEffect(() => {
+    onKilledRef.current = options?.onKilled;
+  });
 
   const mutation = useMutation({
     mutationFn: (sessionId: string) => stopSession(sessionId),
@@ -65,7 +67,9 @@ export function useKillSession(options?: { onKilled?: () => void }) {
   }
 
   function cancelKill() {
-    if (isWaitingForExit) return; // can't cancel while killing
+    if (isWaitingForExit) {
+      return;
+    } // can't cancel while killing
     clearPoll();
     setDialogOpen(false);
     setTargetSessionId(null);

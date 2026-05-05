@@ -23,6 +23,8 @@ const DEFAULTS: ArgusConfig = {
   telemetryEnabled: true,
   telemetryPromptSeen: false,
   integrationsEnabled: false,
+  autoUpdate: true,
+  updateCheckIntervalHours: 4,
 };
 
 export function loadConfig(): ArgusConfig {
@@ -40,7 +42,9 @@ export function loadConfig(): ArgusConfig {
     }
   }
   const config = { ...DEFAULTS, ...fileConfig };
-  if (process.env.ARGUS_PORT) config.port = parseInt(process.env.ARGUS_PORT, 10);
+  if (process.env.ARGUS_PORT) {
+    config.port = parseInt(process.env.ARGUS_PORT, 10);
+  }
   return config;
 }
 
@@ -52,8 +56,8 @@ export function saveConfig(config: ArgusConfig): void {
   let existing: Record<string, unknown> = {};
   try {
     existing = JSON.parse(readFileSync(configPath, 'utf-8'));
-  } catch { /* use empty */ }
+  } catch {
+    /* use empty */
+  }
   writeFileSync(configPath, JSON.stringify({ ...existing, ...config }, null, 2), 'utf-8');
 }
-
-

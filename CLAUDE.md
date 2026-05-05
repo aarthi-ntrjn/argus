@@ -29,6 +29,16 @@ This applies to both source files and their corresponding test files.
 
 - **Never use em dashes** (`—`) in any documentation, comments, or content. They are tiresome to read. Use a comma, colon, parentheses, or rewrite the sentence instead.
 
+## Coding Style
+
+All code must pass `npm run lint` and `npm run format` in both the `backend` and `frontend` workspaces. These run automatically on every `/merge`. Key rules enforced:
+
+- **Always use curly braces** for `if`, `else`, `for`, `while` — even single-statement bodies. Opening `{` goes on the same line; closing `}` on its own line (1tbs).
+- **No unused variables or imports.** Prefix intentionally unused function parameters with `_` (e.g., `_monitor`). Destructured variables that are intentionally unused must also start with `_`.
+- **No `any` type** in production code. Use typed assertions (`err as { status?: number }`) or proper interfaces instead. Test files are exempt.
+- Formatting (indentation, spacing, quotes, trailing commas) is owned by **Prettier** — do not fight it. Run `npm run format --workspace=<backend|frontend>` to apply.
+- After generating new code, run `npm run lint:fix --workspace=<backend|frontend>` to auto-fix any violations before committing.
+
 ## Comments
 
 Only add comments when they clarify intent that is not obvious from the code itself. Never describe what the code does — describe why it exists or what decision it encodes.

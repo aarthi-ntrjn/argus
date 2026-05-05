@@ -14,7 +14,12 @@ export function CopyButton({ value }: { value: string }) {
     });
   }, [value]);
   return (
-    <button type="button" onClick={handle} aria-label="Copy to clipboard" className="icon-btn text-gray-400 hover:text-blue-600 shrink-0">
+    <button
+      type="button"
+      onClick={handle}
+      aria-label="Copy to clipboard"
+      className="icon-btn text-gray-400 hover:text-blue-600 shrink-0"
+    >
       {copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
     </button>
   );
@@ -30,11 +35,19 @@ export function CodeBlock({ value }: { value: string }) {
 }
 
 export function Mono({ children }: { children: string }) {
-  return <code className="text-xs font-mono bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded">{children}</code>;
+  return (
+    <code className="text-xs font-mono bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded">
+      {children}
+    </code>
+  );
 }
 
 export function ExternalA({ href, children }: { href: string; children: string }) {
-  return <a href={href} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{children}</a>;
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+      {children}
+    </a>
+  );
 }
 
 // --- Layout ---
@@ -58,9 +71,11 @@ export function SetupPage({ title, subtitle, logoSrc, prerequisites, steps }: Se
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-12">
       <div className="mx-auto max-w-4xl">
-
         <div className="mb-8">
-          <button onClick={() => navigate('/')} className="icon-btn text-sm text-gray-600 hover:text-blue-600 mb-6 flex items-center gap-1.5">
+          <button
+            onClick={() => navigate('/')}
+            className="icon-btn text-sm text-gray-600 hover:text-blue-600 mb-6 flex items-center gap-1.5"
+          >
             <ArrowLeft size={14} aria-hidden="true" /> Back
           </button>
           <div className="flex items-center gap-2.5 mb-1">
@@ -72,7 +87,9 @@ export function SetupPage({ title, subtitle, logoSrc, prerequisites, steps }: Se
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg px-6 py-5 mb-4">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Prerequisites</h2>
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Prerequisites
+          </h2>
           {prerequisites}
         </div>
 
@@ -94,11 +111,13 @@ export function SetupPage({ title, subtitle, logoSrc, prerequisites, steps }: Se
         </div>
 
         <div className="mt-6">
-          <button onClick={() => navigate('/')} className="icon-btn text-sm text-gray-500 hover:text-blue-600 flex items-center gap-1.5">
+          <button
+            onClick={() => navigate('/')}
+            className="icon-btn text-sm text-gray-500 hover:text-blue-600 flex items-center gap-1.5"
+          >
             <ArrowLeft size={13} aria-hidden="true" /> Back to Argus
           </button>
         </div>
-
       </div>
     </div>
   );

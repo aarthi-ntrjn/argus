@@ -3,19 +3,28 @@ import { open as fsOpen, stat as fsStat } from 'fs/promises';
 import chokidar, { type FSWatcher } from 'chokidar';
 import { getMaxSequenceNumber } from '../db/database.js';
 import { OutputStore } from './output-store.js';
-import { applyActivityUpdate, applyModelUpdate, applySummaryUpdate } from './watcher-session-helpers.js';
+import {
+  applyActivityUpdate,
+  applyModelUpdate,
+  applySummaryUpdate,
+} from './watcher-session-helpers.js';
 import * as logger from '../utils/logger.js';
 import type { SessionOutput } from '../models/index.js';
 
 export const TAIL_BYTES = 16 * 1024;
 
 /** Splits a buffer into lines with their absolute byte offset in the source file. */
-function splitLinesWithOffsets(buffer: Buffer, baseOffset: number): Array<{ text: string; byteOffset: number }> {
+function splitLinesWithOffsets(
+  buffer: Buffer,
+  baseOffset: number,
+): Array<{ text: string; byteOffset: number }> {
   const results: Array<{ text: string; byteOffset: number }> = [];
   let pos = 0;
   for (const part of buffer.toString('utf-8').split('\n')) {
     const byteLen = Buffer.byteLength(part, 'utf-8');
-    if (part.trim()) results.push({ text: part, byteOffset: baseOffset + pos });
+    if (part.trim()) {
+      results.push({ text: part, byteOffset: baseOffset + pos });
+    }
     pos += byteLen + 1; // +1 for '\n'
   }
   return results;
@@ -28,19 +37,29 @@ function makeLineId(sessionId: string, byteOffset: number, blockIndex: number): 
 
 /** Extracts the model name from any JSONL line, regardless of format. */
 function parseModelFromLine(line: string): string | null {
-  if (!line.trim()) return null;
+  if (!line.trim()) {
+    return null;
+  }
   try {
     const obj = JSON.parse(line) as Record<string, unknown>;
     // Claude format: message.model on assistant entries
     const msg = obj.message as Record<string, unknown> | undefined;
-    if (typeof msg?.model === 'string') return msg.model;
+    if (typeof msg?.model === 'string') {
+      return msg.model;
+    }
     // Copilot flat format: top-level model on assistant.message events
-    if (typeof obj.model === 'string') return obj.model;
+    if (typeof obj.model === 'string') {
+      return obj.model;
+    }
     // Copilot nested format: data.model on tool.execution_complete events
     const data = obj.data as Record<string, unknown> | undefined;
-    if (typeof data?.model === 'string') return data.model;
+    if (typeof data?.model === 'string') {
+      return data.model;
+    }
     return null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 export abstract class JsonlWatcherBase {
@@ -51,7 +70,12 @@ export abstract class JsonlWatcherBase {
   protected readonly outputStore = new OutputStore();
 
   protected abstract readonly tag: string;
-  protected abstract parseLine(line: string, sessionId: string, seq: number, makeId: (blockIndex: number) => string): SessionOutput[];
+  protected abstract parseLine(
+    line: string,
+    sessionId: string,
+    seq: number,
+    makeId: (blockIndex: number) => string,
+  ): SessionOutput[];
 
   /**
    * Start watching the per-session JSONL output file.
@@ -61,13 +85,19 @@ export abstract class JsonlWatcherBase {
   abstract watchFile(sessionId: string, path: string): Promise<void>;
 
   protected async attachWatcher(sessionId: string, filePath: string): Promise<void> {
-    if (this.watchers.has(sessionId)) return;
-    if (!existsSync(filePath)) return;
+    if (this.watchers.has(sessionId)) {
+      return;
+    }
+    if (!existsSync(filePath)) {
+      return;
+    }
 
     let fileSize: number;
     try {
       ({ size: fileSize } = await fsStat(filePath));
-    } catch { return; }
+    } catch {
+      return;
+    }
 
     this.filePositions.set(sessionId, Math.max(0, fileSize - TAIL_BYTES));
     this.sequenceCounters.set(sessionId, getMaxSequenceNumber(sessionId) + 1);
@@ -86,7 +116,9 @@ export abstract class JsonlWatcherBase {
     try {
       const { size: currentSize } = await fsStat(filePath);
       const lastPos = this.filePositions.get(sessionId) ?? 0;
-      if (currentSize <= lastPos) return;
+      if (currentSize <= lastPos) {
+        return;
+      }
 
       const fh = await fsOpen(filePath, 'r');
       const buffer = Buffer.alloc(currentSize - lastPos);
@@ -103,7 +135,9 @@ export abstract class JsonlWatcherBase {
         seq++;
         const makeId = (blockIndex: number) => makeLineId(sessionId, line.byteOffset, blockIndex);
         outputs.push(...this.parseLine(line.text, sessionId, seq, makeId));
-        if (!detectedModel) detectedModel = parseModelFromLine(line.text);
+        if (!detectedModel) {
+          detectedModel = parseModelFromLine(line.text);
+        }
       }
 
       this.sequenceCounters.set(sessionId, seq);
@@ -114,7 +148,9 @@ export abstract class JsonlWatcherBase {
           this.onNewOutputs(sessionId, outputs);
         }
       }
-      if (detectedModel) applyModelUpdate(sessionId, detectedModel, this.tag);
+      if (detectedModel) {
+        applyModelUpdate(sessionId, detectedModel, this.tag);
+      }
       applySummaryUpdate(sessionId, outputs, this.tag);
     } catch (err) {
       logger.warn(`${this.tag} failed to read JSONL for ${sessionId}: ${err}`);

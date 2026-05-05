@@ -8,26 +8,47 @@ export type ConnectionStatus = 'connected' | 'stopped' | 'unconfigured';
  * If all are present but the notifier is not running, the status is 'stopped'.
  */
 const TEAMS_REQUIRED: (keyof TeamsConfig)[] = [
-  'teamId', 'channelId', 'ownerSenderId', 'clientId', 'clientSecret', 'tenantId',
+  'teamId',
+  'channelId',
+  'ownerSenderId',
+  'clientId',
+  'clientSecret',
+  'tenantId',
 ];
 
-const SLACK_REQUIRED: (keyof SlackConfig)[] = [
-  'botToken', 'channelId', 'ownerSenderId',
-];
+const SLACK_REQUIRED: (keyof SlackConfig)[] = ['botToken', 'channelId', 'ownerSenderId'];
 
-export function getTeamsConnectionStatus(config: Partial<TeamsConfig>, isRunning: boolean): ConnectionStatus {
-  const hasAny = TEAMS_REQUIRED.some(k => Boolean(config[k]));
-  if (!hasAny) return 'unconfigured';
-  const complete = TEAMS_REQUIRED.every(k => Boolean(config[k]));
-  if (!complete) return 'unconfigured';
-  if (!isRunning) return 'stopped';
+export function getTeamsConnectionStatus(
+  config: Partial<TeamsConfig>,
+  isRunning: boolean,
+): ConnectionStatus {
+  const hasAny = TEAMS_REQUIRED.some((k) => Boolean(config[k]));
+  if (!hasAny) {
+    return 'unconfigured';
+  }
+  const complete = TEAMS_REQUIRED.every((k) => Boolean(config[k]));
+  if (!complete) {
+    return 'unconfigured';
+  }
+  if (!isRunning) {
+    return 'stopped';
+  }
   return 'connected';
 }
 
-export function getSlackConnectionStatus(config: SlackConfig | null, isRunning: boolean): ConnectionStatus {
-  if (!config) return 'unconfigured';
-  const complete = SLACK_REQUIRED.every(k => Boolean(config[k as keyof SlackConfig]));
-  if (!complete) return 'unconfigured';
-  if (!isRunning) return 'stopped';
+export function getSlackConnectionStatus(
+  config: SlackConfig | null,
+  isRunning: boolean,
+): ConnectionStatus {
+  if (!config) {
+    return 'unconfigured';
+  }
+  const complete = SLACK_REQUIRED.every((k) => Boolean(config[k as keyof SlackConfig]));
+  if (!complete) {
+    return 'unconfigured';
+  }
+  if (!isRunning) {
+    return 'stopped';
+  }
   return 'connected';
 }

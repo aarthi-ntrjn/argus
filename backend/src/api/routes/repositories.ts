@@ -35,15 +35,30 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Body: { path?: string } }>('/api/v1/repositories', async (req, reply) => {
     const { path: rawPath } = req.body ?? {};
-    if (!rawPath) return reply.status(400).send({ error: 'MISSING_PATH', message: 'path is required', requestId: req.id });
+    if (!rawPath) {
+      return reply
+        .status(400)
+        .send({ error: 'MISSING_PATH', message: 'path is required', requestId: req.id });
+    }
     const repoPath = expandTilde(rawPath);
 
     if (!existsSync(join(repoPath, '.git'))) {
-      return reply.status(400).send({ error: 'NOT_GIT_REPO', message: `The selected folder is not a git repository. To add all repos inside a parent folder, select the parent with "Add Repository".`, requestId: req.id });
+      return reply.status(400).send({
+        error: 'NOT_GIT_REPO',
+        message: `The selected folder is not a git repository. To add all repos inside a parent folder, select the parent with "Add Repository".`,
+        requestId: req.id,
+      });
     }
 
     const existing = getRepositoryByPath(repoPath);
-    if (existing) return reply.status(409).send({ error: 'DUPLICATE', message: 'Repository already registered', repository: existing, requestId: req.id });
+    if (existing) {
+      return reply.status(409).send({
+        error: 'DUPLICATE',
+        message: 'Repository already registered',
+        repository: existing,
+        requestId: req.id,
+      });
+    }
 
     const tRepo = Date.now();
     const t1 = Date.now();
@@ -78,16 +93,22 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
 
   app.post('/api/v1/repositories/rescan-remotes', async (_req, reply) => {
     const repos = getRepositories();
-    const results = await Promise.all(repos.map(async (repo) => {
-      const remoteUrl = await getRemoteUrl(repo.path);
-      if (remoteUrl !== repo.remoteUrl) {
-        updateRepositoryRemoteUrl(repo.id, remoteUrl);
-        const updated = { ...repo, remoteUrl };
-        broadcast({ type: 'repository.updated', timestamp: new Date().toISOString(), data: updated });
-        return true;
-      }
-      return false;
-    }));
+    const results = await Promise.all(
+      repos.map(async (repo) => {
+        const remoteUrl = await getRemoteUrl(repo.path);
+        if (remoteUrl !== repo.remoteUrl) {
+          updateRepositoryRemoteUrl(repo.id, remoteUrl);
+          const updated = { ...repo, remoteUrl };
+          broadcast({
+            type: 'repository.updated',
+            timestamp: new Date().toISOString(),
+            data: updated,
+          });
+          return true;
+        }
+        return false;
+      }),
+    );
     const updated = results.filter(Boolean).length;
     logger.info(`[Repositories] rescan-remotes updated ${updated}/${repos.length} repos`);
     return reply.send({ updated, total: repos.length });
@@ -96,13 +117,21 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
   app.delete<{ Params: { id: string } }>('/api/v1/repositories/:id', async (req, reply) => {
     const { id } = req.params;
     const existing = getRepository(id);
-    if (!existing) return reply.status(404).send({ error: 'NOT_FOUND', message: `Repository ${id} not found`, requestId: req.id });
+    if (!existing) {
+      return reply
+        .status(404)
+        .send({ error: 'NOT_FOUND', message: `Repository ${id} not found`, requestId: req.id });
+    }
 
     try {
       deleteRepository(id);
     } catch (err) {
       logger.error('[Repositories] deleteRepository failed', { id, err });
-      return reply.status(500).send({ error: 'DELETE_FAILED', message: 'Failed to delete repository. Check server logs for details.', requestId: req.id });
+      return reply.status(500).send({
+        error: 'DELETE_FAILED',
+        message: 'Failed to delete repository. Check server logs for details.',
+        requestId: req.id,
+      });
     }
 
     // Remove all hooks if no repositories remain; always remove per-repo hooks.
@@ -118,4 +147,3 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
 };
 
 export default repositoriesRoutes;
-

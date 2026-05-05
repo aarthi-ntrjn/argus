@@ -8,8 +8,6 @@ import { createTaggedLogger } from '../../utils/logger.js';
 
 const log = createTaggedLogger('[SlackListener]', '\x1b[32m'); // green
 
-const SUPPORTED_COMMANDS = ['sessions', 'session', 'status', 'help'];
-
 export class SlackListener implements NotificationListener {
   private readonly config: SlackConfig;
   private readonly webClient: WebClient;
@@ -38,31 +36,58 @@ export class SlackListener implements NotificationListener {
       return true;
     }
     if (!this.config.appToken) {
-      log.info(`Socket Mode disabled: SLACK_APP_TOKEN not configured (inbound routing unavailable)`);
+      log.info(
+        `Socket Mode disabled: SLACK_APP_TOKEN not configured (inbound routing unavailable)`,
+      );
       return false;
     }
 
     this.socketClient = new SocketModeClient({ appToken: this.config.appToken });
 
-    this.socketClient.on('app_mention', async ({ event, ack }: { event: AppMentionEvent; ack: () => Promise<void> }) => {
-      await ack();
-      // Skip DMs: the 'message' handler covers those, avoid double-processing
-      if (event.channel.startsWith('D')) return;
-      await this.handleIncoming(event.text, event.channel, event.ts, event.user, event.thread_ts);
-    });
+    this.socketClient.on(
+      'app_mention',
+      async ({ event, ack }: { event: AppMentionEvent; ack: () => Promise<void> }) => {
+        await ack();
+        // Skip DMs: the 'message' handler covers those, avoid double-processing
+        if (event.channel.startsWith('D')) {
+          return;
+        }
+        await this.handleIncoming(event.text, event.channel, event.ts, event.user, event.thread_ts);
+      },
+    );
 
-    this.socketClient.on('message', async ({ event, ack }: { event: MessageEvent & { channel_type?: string }; ack: () => Promise<void> }) => {
-      await ack();
-      // Only handle direct messages (channel type 'im')
-      if (event.channel_type !== 'im') return;
-      await this.handleIncoming(event.text ?? '', event.channel, event.ts, event.user, event.thread_ts);
-    });
+    this.socketClient.on(
+      'message',
+      async ({
+        event,
+        ack,
+      }: {
+        event: MessageEvent & { channel_type?: string };
+        ack: () => Promise<void>;
+      }) => {
+        await ack();
+        // Only handle direct messages (channel type 'im')
+        if (event.channel_type !== 'im') {
+          return;
+        }
+        await this.handleIncoming(
+          event.text ?? '',
+          event.channel,
+          event.ts,
+          event.user,
+          event.thread_ts,
+        );
+      },
+    );
 
-    this.socketClient.start().then(() => {
-      log.info(`Socket Mode connected, listening for app mentions and DMs`);
-    }).catch((err: unknown) => {
-      log.error(`Failed to start Socket Mode client:`, err);
-    });
+    this.socketClient
+      .start()
+      .then(() => {
+        log.info(`Socket Mode connected, listening for app mentions and DMs`);
+      })
+      .catch((err: unknown) => {
+        log.error(`Failed to start Socket Mode client:`, err);
+      });
     return true;
   }
 
@@ -80,9 +105,17 @@ export class SlackListener implements NotificationListener {
   // Message handling
   // -------------------------------------------------------------------------
 
-  private async handleIncoming(text: string, channel: string, messageTs: string, userId: string | undefined, parentThreadTs?: string): Promise<void> {
+  private async handleIncoming(
+    text: string,
+    channel: string,
+    messageTs: string,
+    userId: string | undefined,
+    parentThreadTs?: string,
+  ): Promise<void> {
     try {
-      log.info(`Incoming message: channel=${channel} ts=${messageTs} thread_ts=${parentThreadTs ?? 'none'} userId=${userId ?? 'unknown'} text=${JSON.stringify(text)}`);
+      log.info(
+        `Incoming message: channel=${channel} ts=${messageTs} thread_ts=${parentThreadTs ?? 'none'} userId=${userId ?? 'unknown'} text=${JSON.stringify(text)}`,
+      );
 
       if (!userId || userId !== this.config.ownerSenderId) {
         log.info(`Rejected message from non-owner userId=${userId ?? 'unknown'}`);
@@ -92,7 +125,12 @@ export class SlackListener implements NotificationListener {
       const replyThreadTs = parentThreadTs ?? messageTs;
       const blocks = await this.handleArgusQuery(text, parentThreadTs);
       if (blocks.length > 0) {
-        await this.webClient.chat.postMessage({ channel, blocks, thread_ts: replyThreadTs, text: 'Argus response' });
+        await this.webClient.chat.postMessage({
+          channel,
+          blocks,
+          thread_ts: replyThreadTs,
+          text: 'Argus response',
+        });
       }
     } catch (err) {
       log.error(`Failed to handle incoming message:`, err);
@@ -129,29 +167,38 @@ export class SlackListener implements NotificationListener {
     ];
 
     if (active.length === 0) {
-      return [{
-        type: 'section',
-        text: { type: 'mrkdwn', text: '*No active sessions* at this time.' },
-      }];
+      return [
+        {
+          type: 'section',
+          text: { type: 'mrkdwn', text: '*No active sessions* at this time.' },
+        },
+      ];
     }
 
-    const rows = active.map((s) =>
-      `*${s.id.slice(0, 8)}...* | ${s.type} | ${s.model ?? 'unknown'} | ${s.status}`
-    ).join('\n');
+    const rows = active
+      .map((s) => `*${s.id.slice(0, 8)}...* | ${s.type} | ${s.model ?? 'unknown'} | ${s.status}`)
+      .join('\n');
 
     return [
-      { type: 'header', text: { type: 'plain_text', text: `Active Sessions (${active.length})`, emoji: false } },
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: `Active Sessions (${active.length})`, emoji: false },
+      },
       { type: 'section', text: { type: 'mrkdwn', text: rows } },
     ];
   }
 
   private buildSessionStatusBlocks(sessionId: string): Block[] {
-    const session = getSession(sessionId) ?? getSessions({ status: 'active' }).find((s) => s.id.startsWith(sessionId));
+    const session =
+      getSession(sessionId) ??
+      getSessions({ status: 'active' }).find((s) => s.id.startsWith(sessionId));
     if (!session) {
-      return [{
-        type: 'section',
-        text: { type: 'mrkdwn', text: `No session found matching \`${sessionId}\`` },
-      }];
+      return [
+        {
+          type: 'section',
+          text: { type: 'mrkdwn', text: `No session found matching \`${sessionId}\`` },
+        },
+      ];
     }
     return [
       { type: 'header', text: { type: 'plain_text', text: 'Session Status', emoji: false } },
@@ -170,36 +217,53 @@ export class SlackListener implements NotificationListener {
 
   private async buildSendPromptBlocks(prompt: string, parentThreadTs?: string): Promise<Block[]> {
     if (!parentThreadTs) {
-      return [{
-        type: 'section',
-        text: { type: 'mrkdwn', text: ':warning: This message must be sent inside a session thread.' },
-      }];
+      return [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ':warning: This message must be sent inside a session thread.',
+          },
+        },
+      ];
     }
 
     const sessionId = this.notifier.getSessionIdByThreadTs(parentThreadTs);
     if (!sessionId) {
-      return [{
-        type: 'section',
-        text: { type: 'mrkdwn', text: ':warning: Could not find an active session for this thread.' },
-      }];
+      return [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ':warning: Could not find an active session for this thread.',
+          },
+        },
+      ];
     }
 
     const session = getSession(sessionId);
     if (!session) {
-      return [{
-        type: 'section',
-        text: { type: 'mrkdwn', text: `:warning: Session \`${sessionId}\` no longer exists.` },
-      }];
+      return [
+        {
+          type: 'section',
+          text: { type: 'mrkdwn', text: `:warning: Session \`${sessionId}\` no longer exists.` },
+        },
+      ];
     }
 
     log.info(`Sending prompt to session ${sessionId}: ${JSON.stringify(prompt)}`);
     const action = await this.sessionController.sendPrompt(sessionId, prompt);
 
     if (action.status === 'failed') {
-      return [{
-        type: 'section',
-        text: { type: 'mrkdwn', text: `:x: Failed to send prompt to \`${sessionId}\`: ${action.result ?? 'unknown error'}` },
-      }];
+      return [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `:x: Failed to send prompt to \`${sessionId}\`: ${action.result ?? 'unknown error'}`,
+          },
+        },
+      ];
     }
 
     return [];
@@ -248,4 +312,3 @@ interface Block {
   type: string;
   [key: string]: unknown;
 }
-

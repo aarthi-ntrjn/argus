@@ -12,7 +12,7 @@ describe('TelemetryBanner', () => {
     render(
       <MemoryRouter>
         <TelemetryBanner onDismiss={onDismiss} onOpenSettings={onOpenSettings} />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await userEvent.click(screen.getByRole('button', { name: /opt out/i }));
@@ -27,7 +27,7 @@ describe('TelemetryBanner', () => {
     render(
       <MemoryRouter>
         <TelemetryBanner onDismiss={onDismiss} onOpenSettings={vi.fn()} />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await userEvent.click(screen.getByRole('button', { name: /dismiss telemetry notice/i }));

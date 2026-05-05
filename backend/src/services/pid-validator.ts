@@ -11,7 +11,9 @@ export interface PidValidationResult {
 
 export function isAiToolProcess(name: string, sessionType: SessionType): boolean {
   const lower = name.toLowerCase();
-  if (sessionType === SessionTypes.CLAUDE_CODE) return lower.includes('claude');
+  if (sessionType === SessionTypes.CLAUDE_CODE) {
+    return lower.includes('claude');
+  }
   // Match only the GitHub Copilot CLI process (copilot / copilot.exe).
   // Broader matches like includes('copilot') hit unrelated processes such as M365Copilot.exe.
   return lower === 'copilot' || lower === 'copilot.exe';
@@ -26,7 +28,7 @@ export async function validatePidOwnership(
   }
 
   const processes = await psList();
-  const proc = processes.find(p => p.pid === pid);
+  const proc = processes.find((p) => p.pid === pid);
 
   if (!proc) {
     return { valid: false, reason: 'process_not_found' };
@@ -38,4 +40,3 @@ export async function validatePidOwnership(
 
   return { valid: true };
 }
-
