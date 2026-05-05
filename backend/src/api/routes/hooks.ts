@@ -49,8 +49,8 @@ export function setCliManager(manager: {
 
 const hooksRoutes: FastifyPluginAsync = async (app) => {
   // Receives hook payloads injected by Claude Code into running sessions.
-  // Only SessionStart, SessionEnd, and AskUserQuestion events are processed;
-  // all others are acknowledged and discarded immediately.
+  // Only SessionStart, SessionEnd, and AskUserQuestion tool events are processed;
+  // AskUserQuestion is only valid on PreToolUse and PostToolUse events.
   app.post<{ Body: HookPayload }>(
     '/hooks/claude',
     { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
@@ -59,8 +59,16 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
       const eventName = payload?.hook_event_name;
       const isLifecycle = eventName === 'SessionStart' || eventName === 'SessionEnd';
 
-      if (!isLifecycle && eventName !== 'AskUserQuestion') {
+      if (!isLifecycle && payload?.tool_name !== 'AskUserQuestion') {
         return reply.send({ ok: true });
+      }
+
+      if (!isLifecycle && eventName !== 'PreToolUse' && eventName !== 'PostToolUse') {
+        return reply.status(400).send({
+          error: 'INVALID_HOOK_EVENT',
+          message: 'AskUserQuestion hooks must use PreToolUse or PostToolUse event',
+          requestId: req.id,
+        });
       }
 
       const sessionId = payload.session_id;
