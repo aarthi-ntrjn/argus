@@ -114,16 +114,19 @@ export default function DashboardPage() {
   const [launchError, setLaunchError] = useState<string | null>(null);
 
   const [infoSnapshot, setInfoSnapshot] = useState<string | null>(null);
-  useEffect(() => {
+  const [prevAddInfo, setPrevAddInfo] = useState(addInfo);
+  if (prevAddInfo !== addInfo) {
+    setPrevAddInfo(addInfo);
     if (addInfo) {
       setInfoSnapshot(addInfo);
     }
-  }, [addInfo]);
+  }
 
   // Auto-launch for first-time users
   useEffect(() => {
     if (tourStatus === 'not_started') {
       startTour('auto');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTourRun(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,6 +182,7 @@ export default function DashboardPage() {
     const selected = sessions.find((s) => s.id === selectedSessionId);
     if (!selected || ENDED_STATUSES.has(selected.status)) {
       const next = sessions.find((s) => ACTIVE_STATUSES.has(s.status));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       selectSession(next?.id ?? null);
     }
     // selectSession is stable (defined once); sessions and selectedSessionId are the reactive deps.
@@ -198,11 +202,13 @@ export default function DashboardPage() {
     return map;
   }, [sessions]);
 
-  const tourSteps = useMemo(() => buildDashboardTourSteps(repos.length > 0), [repos.length > 0]);
+  const hasRepos = repos.length > 0;
+  const tourSteps = useMemo(() => buildDashboardTourSteps(hasRepos), [hasRepos]);
 
   // Auto-trigger catch-up mini-tour when repos appear and user hasn't seen repo steps
   useEffect(() => {
     if (repos.length > 0 && !seenRepoSteps && tourStatus !== 'not_started' && !tourRun) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCatchUpRun(true);
     }
   }, [repos.length, seenRepoSteps, tourStatus, tourRun]);
@@ -236,7 +242,7 @@ export default function DashboardPage() {
           }
           return (sessionsByRepo.get(repo.id) ?? []).some((s) => ACTIVE_STATUSES.has(s.status));
         }),
-    [repos, sessionsByRepo, settings],
+    [repos, sessionsByRepo, settings, argusSettings?.restingThresholdMinutes],
   );
 
   // On mobile tapping a session card navigates to the detail page.

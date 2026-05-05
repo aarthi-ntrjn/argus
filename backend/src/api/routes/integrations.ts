@@ -19,7 +19,6 @@ let slackListener: SlackListener | null = null;
 let teamsNotifier: TeamsNotifier | null = null;
 let teamsListener: TeamsListener | null = null;
 let integrationsEnabled = false;
-let sessionMonitor: SessionMonitor | null = null;
 
 export function setIntegrationServices(
   sn: SlackNotifier | null,
@@ -27,14 +26,13 @@ export function setIntegrationServices(
   tn: TeamsNotifier | null,
   tl: TeamsListener | null,
   enabled: boolean,
-  monitor: SessionMonitor,
+  _monitor: SessionMonitor,
 ): void {
   slackNotifier = sn;
   slackListener = sl;
   teamsNotifier = tn;
   teamsListener = tl;
   integrationsEnabled = enabled;
-  sessionMonitor = monitor;
 }
 
 const integrationsRoutes: FastifyPluginAsync = async (fastify) => {

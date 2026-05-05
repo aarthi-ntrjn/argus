@@ -90,7 +90,6 @@ export class CopilotCliDetector {
     //    sessions whose dir predates the last scan (e.g. after a repo remove+re-add).
     // 2. Dirs that had an active session last scan — detect if they have ended.
     const dirsToProcess = new Set<string>();
-    let totalDirs = 0;
 
     try {
       const entries = readdirSync(this.sessionStateDir, { withFileTypes: true });
@@ -98,7 +97,6 @@ export class CopilotCliDetector {
         if (!entry.isDirectory()) {
           continue;
         }
-        totalDirs++;
         const dirPath = join(this.sessionStateDir, entry.name);
 
         if (this.activeDirPaths.has(dirPath)) {

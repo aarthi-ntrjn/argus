@@ -3,7 +3,7 @@ import { join, basename } from 'path';
 import { randomUUID } from 'crypto';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { getRepositories, insertRepository, getRepositoryByPath } from '../db/database.js';
+import { insertRepository, getRepositoryByPath } from '../db/database.js';
 import type { Repository } from '../models/index.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 

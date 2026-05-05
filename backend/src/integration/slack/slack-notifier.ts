@@ -166,7 +166,8 @@ export class SlackNotifier implements NotificationIntegration {
             // but the message landed as a new top-level post because the parent was deleted
             // (stale anchor after channel cleanup). In case (b), Slack returns success but the
             // message's thread_ts equals its own ts, indicating it became a new thread root.
-            const resultThreadTs = (result.message as any)?.thread_ts as string | undefined;
+            const msg = result.message as { thread_ts?: string } | undefined;
+            const resultThreadTs = msg?.thread_ts;
             const isNewTopLevel = !threadTs || !resultThreadTs || resultThreadTs === result.ts;
             if (isNewTopLevel) {
               this.threadAnchors.set(session.id, result.ts);
@@ -185,7 +186,8 @@ export class SlackNotifier implements NotificationIntegration {
             this.diffTracker.seed(session);
           }
         } catch (err) {
-          if ((err as any)?.data?.error === 'message_not_found') {
+          const slackErr = err as { data?: { error?: string } } | null;
+          if (slackErr?.data?.error === 'message_not_found') {
             // Stale anchor: the parent message was deleted (e.g. after channel cleanup).
             // Clear the stale anchor and retry as a new top-level post.
             log.warn(`slack.thread.stale.detected: session=${session.id}`);

@@ -430,7 +430,8 @@ export class TeamsNotifier implements NotificationIntegration {
 }
 
 function isTeamsThreadNotFound(err: unknown): boolean {
-  const status = (err as any)?.statusCode ?? (err as any)?.status ?? (err as any)?.response?.status;
+  const e = err as { statusCode?: number; status?: number; response?: { status?: number } } | null;
+  const status = e?.statusCode ?? e?.status ?? e?.response?.status;
   if (status === 404) {
     return true;
   }

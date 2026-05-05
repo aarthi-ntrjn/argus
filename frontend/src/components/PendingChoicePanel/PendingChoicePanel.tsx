@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { sendPrompt } from '../../services/api';
 import type { Session } from '../../types';
 import type { PendingChoice, PendingChoiceItem } from '../../utils/sessionUtils';
@@ -29,10 +29,12 @@ export default function PendingChoicePanel({
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => {
+  const [prevPendingChoice, setPrevPendingChoice] = useState(pendingChoice);
+  if (prevPendingChoice !== pendingChoice) {
+    setPrevPendingChoice(pendingChoice);
     setError(null);
     setSubmitted(false);
-  }, [pendingChoice]);
+  }
 
   const canSend = session.launchMode === 'pty' && session.ptyConnected !== false;
   const showSubmitPanel = questions.length > 1;

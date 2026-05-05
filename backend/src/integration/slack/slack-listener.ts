@@ -8,8 +8,6 @@ import { createTaggedLogger } from '../../utils/logger.js';
 
 const log = createTaggedLogger('[SlackListener]', '\x1b[32m'); // green
 
-const SUPPORTED_COMMANDS = ['sessions', 'session', 'status', 'help'];
-
 export class SlackListener implements NotificationListener {
   private readonly config: SlackConfig;
   private readonly webClient: WebClient;

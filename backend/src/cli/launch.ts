@@ -6,7 +6,6 @@ import { randomUUID } from 'crypto';
 import { platform, tmpdir } from 'os';
 import { join } from 'path';
 import { resolveLaunchCommand } from './launch-command-resolver.js';
-import { SessionTypes } from '../models/index.js';
 import { ArgusLaunchClient } from './argus-launch-client.js';
 
 const sessionId = randomUUID();

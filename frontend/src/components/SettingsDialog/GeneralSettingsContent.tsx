@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RotateCcw } from 'lucide-react';
 import type { DashboardSettings } from '../../types';
@@ -32,11 +32,13 @@ export function GeneralSettingsContent({
   );
   const [thresholdError, setThresholdError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const [prevThreshold, setPrevThreshold] = useState(argusSettings?.restingThresholdMinutes);
+  if (prevThreshold !== argusSettings?.restingThresholdMinutes) {
+    setPrevThreshold(argusSettings?.restingThresholdMinutes);
     if (argusSettings?.restingThresholdMinutes != null) {
       setThresholdInput(String(argusSettings.restingThresholdMinutes));
     }
-  }, [argusSettings?.restingThresholdMinutes]);
+  }
 
   const handleYoloChange = (checked: boolean) => {
     if (checked) {

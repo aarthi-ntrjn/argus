@@ -31,9 +31,6 @@ export interface SessionMonitorEvents {
   'repository.removed': (repo: Repository) => void;
 }
 
-// Must match the default restingThresholdMinutes in config-loader.ts
-const INACTIVE_THRESHOLD_MS = 20 * 60 * 1000;
-
 export class SessionMonitor extends EventEmitter {
   private scanner: RepositoryScanner;
   private cliDetector: CopilotCliDetector;

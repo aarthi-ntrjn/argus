@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef } from 'react';
+import { memo, useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -41,10 +41,13 @@ function SessionCard({ session, selected, onSelect }: Props) {
 
   const [questionIdx, setQuestionIdx] = useState(0);
   const [customChoiceNumber, setCustomChoiceNumber] = useState<string | null>(null);
-  useEffect(() => {
+
+  const [prevHookPendingChoice, setPrevHookPendingChoice] = useState(hookPendingChoice);
+  if (prevHookPendingChoice !== hookPendingChoice) {
+    setPrevHookPendingChoice(hookPendingChoice);
     setQuestionIdx(0);
     setCustomChoiceNumber(null);
-  }, [hookPendingChoice]);
+  }
 
   const pendingQuestions =
     hookPendingChoice?.allQuestions ??
