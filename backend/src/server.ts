@@ -242,6 +242,7 @@ export async function startServer(): Promise<FastifyInstance> {
 
   setUpdateService(updateService);
   setUpdateServiceForRoutes(updateService);
+  updateService.setTelemetryService(telemetryService);
   updateService.scheduleChecks(config.updateCheckIntervalHours * 3600_000);
 
   async function runExitUpdate(): Promise<void> {

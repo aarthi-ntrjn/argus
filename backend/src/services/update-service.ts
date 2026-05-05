@@ -3,6 +3,7 @@ import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createTaggedLogger } from '../utils/logger.js';
+import type { TelemetryService } from './telemetry-service.js';
 
 const log = createTaggedLogger('[UpdateService]', '\x1b[33m');
 
@@ -56,9 +57,14 @@ export class UpdateService {
   private lastChecked: string | null = null;
   private _updateInProgress = false;
   private intervalHandle: ReturnType<typeof setInterval> | null = null;
+  private telemetry: TelemetryService | null = null;
 
   constructor(currentVersion: string) {
     this.currentVersion = currentVersion;
+  }
+
+  setTelemetryService(telemetry: TelemetryService): void {
+    this.telemetry = telemetry;
   }
 
   get isUpdateInProgress(): boolean {
@@ -86,11 +92,15 @@ export class UpdateService {
       const data = await res.json() as Record<string, unknown>;
       const latest = typeof data.version === 'string' ? data.version : null;
       if (!latest) return;
+      const wasAvailable = this.updateAvailable;
       this.latestVersion = latest;
       this.updateAvailable = isNewer(latest, this.currentVersion);
       this.lastChecked = new Date().toISOString();
       if (this.updateAvailable) {
         log.info({ latestVersion: latest, currentVersion: this.currentVersion }, 'Update available');
+        if (!wasAvailable) {
+          this.telemetry?.sendEvent('update_available', { currentVersion: this.currentVersion, latestVersion: latest });
+        }
       }
     } catch {
       // silent: network errors must not surface to the user (FR-009)
@@ -116,6 +126,7 @@ export class UpdateService {
     return new Promise<void>((resolve, reject) => {
       const timeoutHandle = setTimeout(() => {
         log.warn('Update timed out after 25 seconds, continuing exit');
+        this.telemetry?.sendEvent('update_failed', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown', exitCode: 'timeout' });
         this._updateInProgress = false;
         resolve();
       }, APPLY_TIMEOUT_MS);
@@ -134,9 +145,11 @@ export class UpdateService {
         this._updateInProgress = false;
         if (code === 0) {
           log.info('Update applied successfully');
+          this.telemetry?.sendEvent('update_succeeded', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown' });
           resolve();
         } else {
           log.warn({ exitCode: code }, 'Update failed with non-zero exit code');
+          this.telemetry?.sendEvent('update_failed', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown', exitCode: String(code ?? -1) });
           reject(new Error(`npm install exited with code ${code}`));
         }
       });
