@@ -126,7 +126,7 @@ export class UpdateService {
     return new Promise<void>((resolve, reject) => {
       const timeoutHandle = setTimeout(() => {
         log.warn('Update timed out after 25 seconds, continuing exit');
-        this.telemetry?.sendEvent('update_failed', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown', exitCode: 'timeout' });
+        this.telemetry?.sendEvent('update_attempt', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown', status: 'failed', exitCode: 'timeout' });
         this._updateInProgress = false;
         resolve();
       }, APPLY_TIMEOUT_MS);
@@ -145,11 +145,11 @@ export class UpdateService {
         this._updateInProgress = false;
         if (code === 0) {
           log.info('Update applied successfully');
-          this.telemetry?.sendEvent('update_succeeded', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown' });
+          this.telemetry?.sendEvent('update_attempt', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown', status: 'succeeded' });
           resolve();
         } else {
           log.warn({ exitCode: code }, 'Update failed with non-zero exit code');
-          this.telemetry?.sendEvent('update_failed', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown', exitCode: String(code ?? -1) });
+          this.telemetry?.sendEvent('update_attempt', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown', status: 'failed', exitCode: String(code ?? -1) });
           reject(new Error(`npm install exited with code ${code}`));
         }
       });

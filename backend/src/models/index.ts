@@ -126,8 +126,7 @@ export type TelemetryEventType =
   | 'session_ended'
   | 'session_prompt_sent'
   | 'update_available'
-  | 'update_succeeded'
-  | 'update_failed'
+  | 'update_attempt'
   | 'session_stopped'
   | 'todo_added'
   | 'repo_diff_opened'
@@ -148,8 +147,7 @@ export const TELEMETRY_EVENT_TYPES = new Set<TelemetryEventType>([
   'integration_started',
   'integration_stopped',
   'update_available',
-  'update_succeeded',
-  'update_failed',
+  'update_attempt',
 ]);
 
 export interface TelemetryEvent {
