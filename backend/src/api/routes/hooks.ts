@@ -76,6 +76,10 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      if (payload.hook_event_name !== 'AskUserQuestion') {
+        return reply.send({ ok: true });
+      }
+
       req.log.debug({ hookEvent: payload.hook_event_name, payload }, 'hook received');
 
       if (_cliManager) {
@@ -123,6 +127,10 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
             requestId: req.id,
           });
         }
+      }
+
+      if (body.toolName !== 'ask_user') {
+        return reply.send({ ok: true });
       }
 
       // Parse toolArgs JSON string into tool_input object
