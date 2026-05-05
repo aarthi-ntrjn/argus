@@ -110,7 +110,7 @@ jobs:
           else
             MESSAGE="Security Audit: $AUDIT_TOTAL vulnerabilities found - $(date +%Y-%m-%d). $AUDIT_CRITICAL critical, $AUDIT_HIGH high, $AUDIT_MODERATE moderate. See GitHub Issues (label: security-audit) for the full report."
           fi
-          PAYLOAD=$(python3 -c "import json, os; print(json.dumps({'text': os.environ['MESSAGE']}))" MESSAGE="$MESSAGE")
+          PAYLOAD=$(jq -n --arg text "$MESSAGE" '{"text": $text}')
           echo "Payload: $PAYLOAD"
           RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST \
             -H "Content-Type: application/json" \
