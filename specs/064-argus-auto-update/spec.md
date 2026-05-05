@@ -82,7 +82,7 @@ A user who manages Argus in a controlled environment (e.g., a team server) wants
 
 ### Functional Requirements
 
-- **FR-001**: System MUST check for a newer published version at startup and at a regular interval while running (no more than once per hour).
+- **FR-001**: System MUST check for a newer published version at startup and at a regular interval while running. The default interval is every 4 hours and is configurable via `updateCheckIntervalHours` in the config file.
 - **FR-002**: System MUST display an update-available indicator as a persistent badge or indicator in the navigation or header, visible from any page in the UI, when a newer version is detected. The indicator MUST show both the current and available version numbers and persist until the update is applied or dismissed. The Settings panel MUST also surface this information.
 - **FR-003**: System MUST apply a pending update during the exit sequence when auto update is enabled and a newer version is available. Before applying the update, the system MUST display a brief message: "Active monitoring paused until update is applied and server is restarted."
 - **FR-004**: System MUST complete the exit sequence and terminate normally even if the update step fails.

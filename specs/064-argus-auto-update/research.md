@@ -41,9 +41,9 @@
 
 ## Check Interval
 
-**Decision**: Check at startup, then every 3600 seconds (1 hour) via `setInterval`.
+**Decision**: Check at startup, then every 4 hours (14400 seconds) via `setInterval`. The interval is configurable via `updateCheckIntervalHours` in `~/.argus/config.json`.
 
-**Rationale**: Matches FR-001 (no more than once per hour). Startup check ensures the badge appears within 60 seconds (SC-001) without waiting an hour.
+**Rationale**: 4 hours is a reasonable default for a background update check that avoids unnecessary npm registry traffic. Startup check ensures the badge appears quickly (SC-001) without waiting for the first interval to elapse.
 
 ## Frontend Polling
 
