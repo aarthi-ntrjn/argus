@@ -1,5 +1,11 @@
 import { test as base, expect } from '@playwright/test';
 import type { Page, BrowserContext } from '@playwright/test';
+import { mkdirSync, writeFileSync } from 'fs';
+import { join, resolve, dirname } from 'path';
+import { randomUUID } from 'crypto';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const SETTINGS_RESPONSE = {
   port: 7411,
@@ -57,6 +63,14 @@ export const test = base.extend({
     );
     await page.routeWebSocket('**/ws', () => {});
     await use(page);
+    if (process.env.VITE_COVERAGE) {
+      const coverage = await page.evaluate(() => (window as unknown as { __coverage__: unknown }).__coverage__).catch(() => null);
+      if (coverage) {
+        const dir = resolve(__dirname, '../../.nyc_output');
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(join(dir, `coverage-${randomUUID()}.json`), JSON.stringify(coverage));
+      }
+    }
   },
 });
 

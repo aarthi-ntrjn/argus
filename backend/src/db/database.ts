@@ -6,14 +6,16 @@ import { SCHEMA_SQL } from './schema.js';
 import type { Repository, Session, SessionOutput, ControlAction, TodoItem, TeamsThread, SlackThread } from '../models/index.js';
 import * as logger from '../utils/logger.js';
 
-const DB_PATH = process.env.ARGUS_DB_PATH ?? join(homedir(), '.argus', 'argus.db');
-
 let db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
   if (!db) {
-    mkdirSync(dirname(DB_PATH), { recursive: true });
-    db = new Database(DB_PATH);
+    const dbPath = process.env.ARGUS_DB_PATH ?? join(homedir(), '.argus', 'argus.db');
+    if (process.env.VITEST && !process.env.ARGUS_DB_PATH) {
+      throw new Error('[database] ARGUS_DB_PATH must be set when running under Vitest to prevent writing to ~/.argus/argus.db');
+    }
+    mkdirSync(dirname(dbPath), { recursive: true });
+    db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     db.pragma('synchronous = NORMAL');
     db.pragma('foreign_keys = ON');

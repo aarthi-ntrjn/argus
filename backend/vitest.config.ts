@@ -1,6 +1,9 @@
 import { defineConfig } from 'vitest/config';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { tmpdir } from 'os';
+import { fileURLToPath } from 'url';
+
+const __dir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   test: {
@@ -13,9 +16,7 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      include: ['src/**/*.ts'],
-      exclude: ['node_modules', 'dist', 'src/**/*.d.ts'],
+      reporter: ['text', 'json', 'json-summary', 'html'],
     },
   },
 });

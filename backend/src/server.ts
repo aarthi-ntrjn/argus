@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import Fastify, { type FastifyError } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyError } from 'fastify';
 import fastifyWebsocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import fastifySwagger from '@fastify/swagger';
@@ -41,7 +41,7 @@ import { loadTeamsConfig } from './config/teams-config-loader.js';
 import { getIntegrationEnabled } from './db/database.js';
 import { pendingChoiceEvents } from './services/pending-choice-events.js';
 import type { PendingChoice } from './services/pending-choice-events.js';
-import type { Session, Repository, SessionOutput } from './models/index.js';
+import type { Session, Repository, SessionOutput, ArgusConfig } from './models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -69,7 +69,7 @@ function extractOrigin(stack: string | undefined): string {
 }
 
 
-export async function buildServer() {
+export async function buildServer(): Promise<{ app: FastifyInstance; config: ArgusConfig; teamsApp: App | null }> {
   const config = loadConfig();
 
   const app = Fastify({
@@ -160,6 +160,11 @@ export async function buildServer() {
   await app.register(integrationsRoutes);
   await app.register(updateRoutes);
 
+  if (process.env.NODE_V8_COVERAGE) {
+    const { registerTestRoutes } = await import('./api/routes/test-utils.js');
+    registerTestRoutes(app);
+  }
+
   app.register(async (fastify) => {
     fastify.get('/ws', { websocket: true }, (socket) => {
       addClient(socket);
@@ -170,7 +175,7 @@ export async function buildServer() {
   return { app, config, teamsApp };
 }
 
-export async function startServer() {
+export async function startServer(): Promise<FastifyInstance> {
   const { app, config, teamsApp } = await buildServer();
 
   monitor = new SessionMonitor();
@@ -180,18 +185,18 @@ export async function startServer() {
   setMonitor(monitor);
 
   monitor.on('session.created', (session: Session) => {
-    broadcast({ type: 'session.created', timestamp: new Date().toISOString(), data: session as unknown as Record<string, unknown> });
+    broadcast({ type: 'session.created', timestamp: new Date().toISOString(), data: session });
     telemetryService.sendEvent('session_started', { sessionType: session.type, sessionId: session.id, launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly', yoloMode: session.yoloMode });
   });
   monitor.on('session.updated', (session: Session) => {
-    broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: session as unknown as Record<string, unknown> });
+    broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: session });
   });
   monitor.on('session.ended', (session: Session) => {
-    broadcast({ type: 'session.ended', timestamp: new Date().toISOString(), data: session as unknown as Record<string, unknown> });
+    broadcast({ type: 'session.ended', timestamp: new Date().toISOString(), data: session });
     telemetryService.sendEvent('session_ended', { sessionType: session.type, sessionId: session.id, launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly', yoloMode: session.yoloMode });
   });
   monitor.on('repository.added', (repo: Repository) => {
-    broadcast({ type: 'repository.added', timestamp: new Date().toISOString(), data: repo as unknown as Record<string, unknown> });
+    broadcast({ type: 'repository.added', timestamp: new Date().toISOString(), data: repo });
   });
 
   await monitor.start();
@@ -256,8 +261,8 @@ export async function startServer() {
 
   await app.listen({ port: config.port, host: '127.0.0.1' });
   app.log.info({ port: config.port }, 'Argus server started');
-  telemetryService.setIntegrationStatus('slack', slackNotifier?.isRunning === true);
-  telemetryService.setIntegrationStatus('teams', teamsNotifier?.isRunning === true);
+  telemetryService.setIntegrationStatus('slack', slackNotifier == null ? 'na' : slackNotifier.isRunning ? 'on' : 'off');
+  telemetryService.setIntegrationStatus('teams', teamsNotifier == null ? 'na' : teamsNotifier.isRunning ? 'on' : 'off');
   telemetryService.sendEvent('app_started');
   return app;
 }

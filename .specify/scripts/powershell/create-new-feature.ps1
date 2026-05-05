@@ -13,6 +13,42 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
+# Accept GNU-style double-dash flags (e.g. --short-name, --number) that PowerShell does not
+# map to named params. They land in $FeatureDescription; extract and remove them here.
+if ($FeatureDescription) {
+    $cleaned = [System.Collections.Generic.List[string]]::new()
+    $i = 0
+    while ($i -lt $FeatureDescription.Count) {
+        $arg = $FeatureDescription[$i]
+        if ($arg -eq '--short-name' -or $arg -eq '--shortname') {
+            if (-not $ShortName -and ($i + 1) -lt $FeatureDescription.Count) {
+                $ShortName = $FeatureDescription[$i + 1]; $i += 2; continue
+            }
+        } elseif ($arg -match '^--short-name=(.+)$' -or $arg -match '^--shortname=(.+)$') {
+            if (-not $ShortName) { $ShortName = $matches[1] }
+            $i++; continue
+        } elseif ($arg -eq '--number') {
+            if ($Number -eq 0 -and ($i + 1) -lt $FeatureDescription.Count) {
+                $Number = [long]$FeatureDescription[$i + 1]; $i += 2; continue
+            }
+        } elseif ($arg -match '^--number=(\d+)$') {
+            if ($Number -eq 0) { $Number = [long]$matches[1] }
+            $i++; continue
+        } elseif ($arg -eq '--timestamp') {
+            $Timestamp = $true; $i++; continue
+        } elseif ($arg -eq '--json') {
+            $Json = $true; $i++; continue
+        } elseif ($arg -eq '--help') {
+            $Help = $true; $i++; continue
+        } elseif ($arg -eq '--description') {
+            # --description is not a real param; skip the flag, keep the value as description text
+            $i++; continue
+        }
+        $cleaned.Add($arg); $i++
+    }
+    $FeatureDescription = if ($cleaned.Count -gt 0) { $cleaned.ToArray() } else { $null }
+}
+
 # Show help if requested
 if ($Help) {
     Write-Host "Usage: ./create-new-feature.ps1 [-Json] [-ShortName <name>] [-Number N] [-Timestamp] <feature description>"
