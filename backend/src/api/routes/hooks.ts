@@ -104,6 +104,14 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         return reply.send({ ok: true });
       }
 
+      if (!isLifecycle && event !== 'preToolUse' && event !== 'postToolUse') {
+        return reply.status(400).send({
+          error: 'INVALID_HOOK_EVENT',
+          message: 'ask_user tool hooks must use preToolUse or postToolUse event',
+          requestId: req.id,
+        });
+      }
+
       if (!event || !VALID_COPILOT_EVENTS.has(event)) {
         return reply.status(400).send({
           error: 'INVALID_HOOK_EVENT',
