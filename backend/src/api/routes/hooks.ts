@@ -4,6 +4,7 @@ import { getSession } from '../../db/database.js';
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HOOK_BODY_LIMIT = 64 * 1024; // 64 KB
 
+// Copilot uses camelCase event names over the wire; normalize to PascalCase internally.
 const EVENT_TO_PASCAL: Record<string, string> = {
   sessionStart: 'SessionStart',
   sessionEnd: 'SessionEnd',
@@ -11,6 +12,7 @@ const EVENT_TO_PASCAL: Record<string, string> = {
   postToolUse: 'PostToolUse',
 };
 
+// Copilot tool names that map to their canonical internal equivalents.
 const TOOL_NAME_MAP: Record<string, string> = {
   ask_user: 'ask_user',
 };
@@ -46,6 +48,9 @@ export function setCliManager(manager: {
 }
 
 const hooksRoutes: FastifyPluginAsync = async (app) => {
+  // Receives hook payloads injected by Claude Code into running sessions.
+  // Only SessionStart, SessionEnd, and AskUserQuestion events are processed;
+  // all others are acknowledged and discarded immediately.
   app.post<{ Body: HookPayload }>(
     '/hooks/claude',
     { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
@@ -60,7 +65,6 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
 
       const sessionId = payload.session_id;
 
-      // FR-006: session_id must be a UUID v4
       if (typeof sessionId !== 'string' || !UUID_V4_RE.test(sessionId)) {
         return reply.status(400).send({
           error: 'INVALID_SESSION_ID',
@@ -69,7 +73,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      // FR-004: reject if payload carries a pid that conflicts with the stored session pid
+      // Reject if the payload's pid conflicts with the pid already stored for this session.
       if ('pid' in payload && typeof payload.pid === 'number') {
         const existing = getSession(sessionId);
         if (existing?.pid !== null && existing?.pid !== undefined && existing.pid !== payload.pid) {
@@ -90,6 +94,10 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  // Receives hook payloads injected by Copilot CLI into running sessions.
+  // Only SessionStart, SessionEnd, and ask_user tool events are processed;
+  // all others are acknowledged and discarded immediately.
+  // ask_user is only valid on preToolUse and postToolUse events.
   app.post<{ Querystring: { event?: string }; Body: CopilotRawPayload }>(
     '/hooks/copilot',
     { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
@@ -121,7 +129,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      // Parse toolArgs JSON string into tool_input object
+      // toolArgs arrives as a JSON string; parse it into a structured object.
       let toolInput: Record<string, unknown> | undefined;
       if (typeof body.toolArgs === 'string') {
         try {
@@ -131,7 +139,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      // Normalize to HookPayload (internal format matching ClaudeCodeDetector)
+      // Normalize Copilot's camelCase wire format to the shared HookPayload shape.
       const normalized: HookPayload = {
         hook_event_name: EVENT_TO_PASCAL[event]!,
         session_id: sessionId,
