@@ -53,8 +53,10 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
     { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
     async (req, reply) => {
       const payload = req.body;
+      const eventName = payload?.hook_event_name;
+      const isLifecycle = eventName === 'SessionStart' || eventName === 'SessionEnd';
 
-      if (payload?.hook_event_name !== 'AskUserQuestion') {
+      if (!isLifecycle && eventName !== 'AskUserQuestion') {
         return reply.send({ ok: true });
       }
 
@@ -95,12 +97,12 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
     { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
     async (req, reply) => {
       const body = req.body ?? {};
+      const event = req.query.event;
+      const isLifecycle = event === 'sessionStart' || event === 'sessionEnd';
 
-      if (body.toolName !== 'ask_user') {
+      if (!isLifecycle && body.toolName !== 'ask_user') {
         return reply.send({ ok: true });
       }
-
-      const event = req.query.event;
 
       if (!event || !VALID_COPILOT_EVENTS.has(event)) {
         return reply.status(400).send({
