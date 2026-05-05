@@ -1,17 +1,13 @@
-import { useState } from 'react';
 import { Settings, Bug, Lightbulb } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import type { DashboardSettings } from '../../types';
-import { getHealth, applyUpdate } from '../../services/api';
+import { getHealth } from '../../services/api';
 import { buildBugReportUrl, buildFeatureRequestUrl, ARGUS_CHANGELOG_URL } from '../../config/feedback';
 import { SectionHeading } from '../SectionHeading';
 import { WebsiteIcon, GitHubIcon, NpmIcon } from '../BrandIcons';
 import { ClaudeIcon, CopilotIcon } from '../SessionTypeIcon/SessionTypeIcon';
 import { GeneralSettingsContent } from '../SettingsDialog/GeneralSettingsContent';
-import { Button } from '../Button';
 import { Checkbox } from '../Checkbox';
-import Badge from '../Badge';
-import { useUpdateStatus } from '../../hooks/useUpdateStatus';
 import { useArgusSettings } from '../../hooks/useArgusSettings';
 
 interface SettingsPanelProps {
@@ -22,25 +18,7 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ settings, onToggle, onOpenAllSettings }: SettingsPanelProps) {
   const { data: healthData } = useQuery({ queryKey: ['health'], queryFn: getHealth, staleTime: Infinity });
-  const updateStatus = useUpdateStatus();
   const { settings: argusSettings, patchSetting } = useArgusSettings();
-
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [updateBanner, setUpdateBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  async function handleUpdateNow() {
-    setIsUpdating(true);
-    setUpdateBanner(null);
-    try {
-      await applyUpdate();
-      setUpdateBanner({ type: 'success', message: 'Update applied. Restart Argus to run the new version.' });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      setUpdateBanner({ type: 'error', message: `Failed to apply update. ${msg || 'Make sure the Argus server is running and you have permission to install packages globally.'}` });
-    } finally {
-      setIsUpdating(false);
-    }
-  }
 
   return (
     <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-5 max-h-[calc(100vh-4rem)] overflow-y-auto">
@@ -94,42 +72,6 @@ export function SettingsPanel({ settings, onToggle, onOpenAllSettings }: Setting
             </a>
           </div>
         </div>
-
-        {updateStatus?.updateAvailable && updateStatus.latestVersion && (
-          <div className="flex items-center gap-2 mb-2">
-            <Badge colorClass="bg-yellow-100 text-yellow-800">
-              Update available: v{updateStatus.latestVersion}
-            </Badge>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => void handleUpdateNow()}
-              disabled={isUpdating}
-            >
-              {isUpdating ? 'Updating...' : 'Update now'}
-            </Button>
-          </div>
-        )}
-
-        {updateBanner && (
-          <div
-            role="alert"
-            className={`mb-2 px-3 py-2 rounded text-xs flex items-start justify-between gap-2 ${
-              updateBanner.type === 'success'
-                ? 'bg-blue-50 border border-blue-200 text-blue-800'
-                : 'bg-red-50 border border-red-200 text-red-700'
-            }`}
-          >
-            <span className="leading-snug">{updateBanner.message}</span>
-            <button
-              onClick={() => setUpdateBanner(null)}
-              aria-label="Dismiss error"
-              className="icon-btn shrink-0 p-0 leading-none"
-            >
-              &times;
-            </button>
-          </div>
-        )}
 
         <Checkbox
           label="Auto-update on exit"
