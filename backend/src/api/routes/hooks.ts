@@ -53,7 +53,12 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
     { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
     async (req, reply) => {
       const payload = req.body;
-      const sessionId = payload?.session_id;
+
+      if (payload?.hook_event_name !== 'AskUserQuestion') {
+        return reply.send({ ok: true });
+      }
+
+      const sessionId = payload.session_id;
 
       // FR-006: session_id must be a UUID v4
       if (typeof sessionId !== 'string' || !UUID_V4_RE.test(sessionId)) {
@@ -76,10 +81,6 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      if (payload.hook_event_name !== 'AskUserQuestion') {
-        return reply.send({ ok: true });
-      }
-
       req.log.debug({ hookEvent: payload.hook_event_name, payload }, 'hook received');
 
       if (_cliManager) {
@@ -93,6 +94,12 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
     '/hooks/copilot',
     { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
     async (req, reply) => {
+      const body = req.body ?? {};
+
+      if (body.toolName !== 'ask_user') {
+        return reply.send({ ok: true });
+      }
+
       const event = req.query.event;
 
       if (!event || !VALID_COPILOT_EVENTS.has(event)) {
@@ -104,7 +111,6 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      const body = req.body ?? {};
       const rawSessionId = body.sessionId;
       const cwd = typeof body.cwd === 'string' ? body.cwd : undefined;
 
@@ -127,10 +133,6 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
             requestId: req.id,
           });
         }
-      }
-
-      if (body.toolName !== 'ask_user') {
-        return reply.send({ ok: true });
       }
 
       // Parse toolArgs JSON string into tool_input object
