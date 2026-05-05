@@ -21,7 +21,7 @@ function renderBar(session: Session) {
   return render(
     <QueryClientProvider client={qc}>
       <SessionPromptBar session={session} />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 

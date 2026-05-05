@@ -17,7 +17,6 @@ export function isPathWithinBoundary(inputPath: string, allowedBoundaries: strin
   }
   const resolved = resolve(inputPath);
   return allowedBoundaries.some(
-    boundary => resolved === boundary || resolved.startsWith(boundary + sep),
+    (boundary) => resolved === boundary || resolved.startsWith(boundary + sep),
   );
 }
-

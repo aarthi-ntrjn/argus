@@ -11,14 +11,20 @@ describe('MobileNav', () => {
 
   it('marks the active tab with aria-pressed=true', () => {
     render(<MobileNav activeTab="sessions" onTabChange={() => {}} />);
-    expect(screen.getByRole('button', { name: /sessions/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /sessions/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(screen.getByRole('button', { name: /tasks/i })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('marks the Tasks tab as active when activeTab is tasks', () => {
     render(<MobileNav activeTab="tasks" onTabChange={() => {}} />);
     expect(screen.getByRole('button', { name: /tasks/i })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: /sessions/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: /sessions/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 
   it('calls onTabChange with sessions when Sessions tab is tapped', () => {

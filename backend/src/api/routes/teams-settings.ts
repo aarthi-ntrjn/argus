@@ -4,7 +4,12 @@ import { getTeamsConnectionStatus } from '../../services/integration-status.js';
 import type { TeamsConfig } from '../../models/index.js';
 
 const EDITABLE_KEYS: (keyof TeamsConfig)[] = [
-  'teamId', 'channelId', 'ownerSenderId', 'clientId', 'clientSecret', 'tenantId',
+  'teamId',
+  'channelId',
+  'ownerSenderId',
+  'clientId',
+  'clientSecret',
+  'tenantId',
 ];
 
 const teamsSettingsRoutes: FastifyPluginAsync = async (app) => {
@@ -19,7 +24,9 @@ const teamsSettingsRoutes: FastifyPluginAsync = async (app) => {
     const current = loadTeamsConfig();
     const update: Partial<TeamsConfig> = {};
     for (const key of EDITABLE_KEYS) {
-      if (key in body) (update as Record<string, unknown>)[key] = body[key];
+      if (key in body) {
+        (update as Record<string, unknown>)[key] = body[key];
+      }
     }
     const saved = { ...current, ...update };
     saveTeamsConfig(saved);

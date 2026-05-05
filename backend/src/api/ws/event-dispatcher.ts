@@ -1,5 +1,11 @@
 import type { WebSocket } from 'ws';
-import type { Session, Repository, SessionOutput, ControlAction, PendingChoiceItem } from '../../models/index.js';
+import type {
+  Session,
+  Repository,
+  SessionOutput,
+  ControlAction,
+  PendingChoiceItem,
+} from '../../models/index.js';
 
 export type WsEventType =
   | 'session.created'
@@ -17,9 +23,22 @@ export type WsEvent =
   | { type: 'session.created'; timestamp: string; data: Session }
   | { type: 'session.updated'; timestamp: string; data: Session }
   | { type: 'session.ended'; timestamp: string; data: Session }
-  | { type: 'session.pending_choice'; timestamp: string; data: { sessionId: string; question: string; choices: string[]; allQuestions?: PendingChoiceItem[] } }
+  | {
+      type: 'session.pending_choice';
+      timestamp: string;
+      data: {
+        sessionId: string;
+        question: string;
+        choices: string[];
+        allQuestions?: PendingChoiceItem[];
+      };
+    }
   | { type: 'session.pending_choice.resolved'; timestamp: string; data: { sessionId: string } }
-  | { type: 'session.output.batch'; timestamp: string; data: { sessionId: string; outputs: SessionOutput[] } }
+  | {
+      type: 'session.output.batch';
+      timestamp: string;
+      data: { sessionId: string; outputs: SessionOutput[] };
+    }
   | { type: 'action.updated'; timestamp: string; data: ControlAction }
   | { type: 'repository.added'; timestamp: string; data: Repository }
   | { type: 'repository.updated'; timestamp: string; data: Repository }
@@ -53,4 +72,3 @@ export function broadcast(event: WsEvent): void {
 export function getClientCount(): number {
   return clients.size;
 }
-

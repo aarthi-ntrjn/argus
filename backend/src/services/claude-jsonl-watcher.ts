@@ -16,7 +16,12 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
   protected readonly tag = '[ClaudeDetector]';
   private readonly pendingAskUserCallIds = new Map<string, string>();
 
-  protected parseLine(line: string, sessionId: string, seq: number, makeId: (blockIndex: number) => string): SessionOutput[] {
+  protected parseLine(
+    line: string,
+    sessionId: string,
+    seq: number,
+    makeId: (blockIndex: number) => string,
+  ): SessionOutput[] {
     return parseClaudeJsonlLine(line, sessionId, seq, makeId);
   }
 
@@ -25,7 +30,11 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
 
     for (const output of outputs) {
       // Record the tool call ID when AskUserQuestion fires so we can match the result
-      if (output.type === 'tool_use' && output.toolName === 'AskUserQuestion' && output.toolCallId) {
+      if (
+        output.type === 'tool_use' &&
+        output.toolName === 'AskUserQuestion' &&
+        output.toolCallId
+      ) {
         this.pendingAskUserCallIds.set(sessionId, output.toolCallId);
       }
 
@@ -35,14 +44,22 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
         const pendingId = this.pendingAskUserCallIds.get(sessionId);
         if (pendingId === output.toolCallId) {
           this.pendingAskUserCallIds.delete(sessionId);
-          broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
+          broadcast({
+            type: 'session.pending_choice.resolved',
+            timestamp: now,
+            data: { sessionId },
+          });
           pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
         }
       }
 
       // Belt-and-suspenders: interrupt sentinel clears any lingering banner even if
       // the tool_use was not yet tracked (e.g. JSONL read started mid-conversation)
-      if (output.type === 'message' && output.role === 'user' && output.content === TOOL_USE_INTERRUPTED_SENTINEL) {
+      if (
+        output.type === 'message' &&
+        output.role === 'user' &&
+        output.content === TOOL_USE_INTERRUPTED_SENTINEL
+      ) {
         broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
         pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
       }
@@ -51,7 +68,9 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
 
   async watchFile(sessionId: string, repoPath: string): Promise<void> {
     const jsonlPath = join(
-      homedir(), '.claude', 'projects',
+      homedir(),
+      '.claude',
+      'projects',
       claudeProjectDirName(repoPath),
       `${sessionId}.jsonl`,
     );
@@ -59,7 +78,10 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
   }
 
   closeWatcher(sessionId: string): void {
-    this.watchers.get(sessionId)?.close().catch(() => {});
+    this.watchers
+      .get(sessionId)
+      ?.close()
+      .catch(() => {});
     this.watchers.delete(sessionId);
     this.filePositions.delete(sessionId);
     this.sequenceCounters.delete(sessionId);

@@ -29,7 +29,7 @@ function renderDropdown(onLaunchError = vi.fn()) {
     ...render(
       <QueryClientProvider client={qc}>
         <LaunchDropdown repoPath="/my/repo" onLaunchError={onLaunchError} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     ),
   };
 }
@@ -49,9 +49,11 @@ describe('LaunchDropdown — error message translation', () => {
     await waitFor(() => screen.getByText('Launch Claude'));
     await userEvent.click(screen.getByText('Launch Claude'));
 
-    await waitFor(() => expect(onLaunchError).toHaveBeenCalledWith(
-      'Failed to launch session. The Argus server is unreachable.'
-    ));
+    await waitFor(() =>
+      expect(onLaunchError).toHaveBeenCalledWith(
+        'Failed to launch session. The Argus server is unreachable.',
+      ),
+    );
   });
 
   it('calls onLaunchError with server-unreachable message when error message is empty', async () => {
@@ -62,9 +64,11 @@ describe('LaunchDropdown — error message translation', () => {
     await waitFor(() => screen.getByText('Launch Claude'));
     await userEvent.click(screen.getByText('Launch Claude'));
 
-    await waitFor(() => expect(onLaunchError).toHaveBeenCalledWith(
-      'Failed to launch session. The Argus server is unreachable.'
-    ));
+    await waitFor(() =>
+      expect(onLaunchError).toHaveBeenCalledWith(
+        'Failed to launch session. The Argus server is unreachable.',
+      ),
+    );
   });
 
   it('calls onLaunchError with prefixed message for other server errors', async () => {
@@ -75,9 +79,9 @@ describe('LaunchDropdown — error message translation', () => {
     await waitFor(() => screen.getByText('Launch Claude'));
     await userEvent.click(screen.getByText('Launch Claude'));
 
-    await waitFor(() => expect(onLaunchError).toHaveBeenCalledWith(
-      'Failed to launch session: Terminal not found'
-    ));
+    await waitFor(() =>
+      expect(onLaunchError).toHaveBeenCalledWith('Failed to launch session: Terminal not found'),
+    );
   });
 
   it('does not call onLaunchError when launch succeeds', async () => {

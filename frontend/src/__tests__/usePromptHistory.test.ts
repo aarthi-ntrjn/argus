@@ -29,15 +29,21 @@ describe('usePromptHistory — navigateUp', () => {
   it('returns currentInput unchanged when no entries exist', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
     let returned: string = '';
-    act(() => { returned = result.current.navigateUp('my draft'); });
+    act(() => {
+      returned = result.current.navigateUp('my draft');
+    });
     expect(returned).toBe('my draft');
     expect(result.current.isNavigating).toBe(false);
   });
 
   it('sets isNavigating to true after first up press when entries exist', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
-    act(() => { result.current.addEntry('first'); });
-    act(() => { result.current.navigateUp(''); });
+    act(() => {
+      result.current.addEntry('first');
+    });
+    act(() => {
+      result.current.navigateUp('');
+    });
     expect(result.current.isNavigating).toBe(true);
   });
 
@@ -48,7 +54,9 @@ describe('usePromptHistory — navigateUp', () => {
       result.current.addEntry('second');
     });
     let returned: string = '';
-    act(() => { returned = result.current.navigateUp(''); });
+    act(() => {
+      returned = result.current.navigateUp('');
+    });
     expect(returned).toBe('second');
   });
 
@@ -60,18 +68,31 @@ describe('usePromptHistory — navigateUp', () => {
       result.current.addEntry('third');
     });
     const results: string[] = [];
-    act(() => { results.push(result.current.navigateUp('')); });
-    act(() => { results.push(result.current.navigateUp('')); });
-    act(() => { results.push(result.current.navigateUp('')); });
+    act(() => {
+      results.push(result.current.navigateUp(''));
+    });
+    act(() => {
+      results.push(result.current.navigateUp(''));
+    });
+    act(() => {
+      results.push(result.current.navigateUp(''));
+    });
     expect(results).toEqual(['third', 'second', 'first']);
   });
 
   it('is a no-op when already at oldest entry', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
-    act(() => { result.current.addEntry('only'); });
-    let r1: string = '', r2: string = '';
-    act(() => { r1 = result.current.navigateUp(''); });
-    act(() => { r2 = result.current.navigateUp(''); });
+    act(() => {
+      result.current.addEntry('only');
+    });
+    let r1: string = '',
+      r2: string = '';
+    act(() => {
+      r1 = result.current.navigateUp('');
+    });
+    act(() => {
+      r2 = result.current.navigateUp('');
+    });
     expect(r1).toBe('only');
     expect(r2).toBe('only');
   });
@@ -85,7 +106,9 @@ describe('usePromptHistory — navigateDown', () => {
   it('returns empty string and stays non-navigating when called without navigating first', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
     let returned: string = 'untouched';
-    act(() => { returned = result.current.navigateDown(); });
+    act(() => {
+      returned = result.current.navigateDown();
+    });
     expect(returned).toBe('');
     expect(result.current.isNavigating).toBe(false);
   });
@@ -96,19 +119,31 @@ describe('usePromptHistory — navigateDown', () => {
       result.current.addEntry('first');
       result.current.addEntry('second');
     });
-    act(() => { result.current.navigateUp(''); });
-    act(() => { result.current.navigateUp(''); });
+    act(() => {
+      result.current.navigateUp('');
+    });
+    act(() => {
+      result.current.navigateUp('');
+    });
     let returned: string = '';
-    act(() => { returned = result.current.navigateDown(); });
+    act(() => {
+      returned = result.current.navigateDown();
+    });
     expect(returned).toBe('second');
   });
 
   it('returns the saved draft and resets isNavigating when called past newest', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
-    act(() => { result.current.addEntry('one'); });
-    act(() => { result.current.navigateUp('my draft text'); });
+    act(() => {
+      result.current.addEntry('one');
+    });
+    act(() => {
+      result.current.navigateUp('my draft text');
+    });
     let returned: string = '';
-    act(() => { returned = result.current.navigateDown(); });
+    act(() => {
+      returned = result.current.navigateDown();
+    });
     expect(returned).toBe('my draft text');
     expect(result.current.isNavigating).toBe(false);
   });
@@ -121,19 +156,31 @@ describe('usePromptHistory — navigateDown', () => {
 describe('usePromptHistory — draft preservation', () => {
   it('saves the currentInput passed to the first navigateUp call', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
-    act(() => { result.current.addEntry('sent'); });
-    act(() => { result.current.navigateUp('half-typed text'); });
+    act(() => {
+      result.current.addEntry('sent');
+    });
+    act(() => {
+      result.current.navigateUp('half-typed text');
+    });
     let returned: string = '';
-    act(() => { returned = result.current.navigateDown(); });
+    act(() => {
+      returned = result.current.navigateDown();
+    });
     expect(returned).toBe('half-typed text');
   });
 
   it('restores empty string draft when input was empty before navigation', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
-    act(() => { result.current.addEntry('sent'); });
-    act(() => { result.current.navigateUp(''); });
+    act(() => {
+      result.current.addEntry('sent');
+    });
+    act(() => {
+      result.current.navigateUp('');
+    });
     let returned: string = '';
-    act(() => { returned = result.current.navigateDown(); });
+    act(() => {
+      returned = result.current.navigateDown();
+    });
     expect(returned).toBe('');
   });
 
@@ -143,11 +190,19 @@ describe('usePromptHistory — draft preservation', () => {
       result.current.addEntry('first');
       result.current.addEntry('second');
     });
-    act(() => { result.current.navigateUp('original draft'); });
-    act(() => { result.current.navigateUp('this should not replace draft'); });
+    act(() => {
+      result.current.navigateUp('original draft');
+    });
+    act(() => {
+      result.current.navigateUp('this should not replace draft');
+    });
     let returned: string = '';
-    act(() => { returned = result.current.navigateDown(); });
-    act(() => { returned = result.current.navigateDown(); });
+    act(() => {
+      returned = result.current.navigateDown();
+    });
+    act(() => {
+      returned = result.current.navigateDown();
+    });
     expect(returned).toBe('original draft');
   });
 });
@@ -159,18 +214,28 @@ describe('usePromptHistory — draft preservation', () => {
 describe('usePromptHistory — addEntry', () => {
   it('adds text to history so it appears on next navigateUp', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
-    act(() => { result.current.addEntry('hello'); });
+    act(() => {
+      result.current.addEntry('hello');
+    });
     let returned: string = '';
-    act(() => { returned = result.current.navigateUp(''); });
+    act(() => {
+      returned = result.current.navigateUp('');
+    });
     expect(returned).toBe('hello');
   });
 
   it('resets isNavigating to false after adding an entry', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
-    act(() => { result.current.addEntry('one'); });
-    act(() => { result.current.navigateUp(''); });
+    act(() => {
+      result.current.addEntry('one');
+    });
+    act(() => {
+      result.current.navigateUp('');
+    });
     expect(result.current.isNavigating).toBe(true);
-    act(() => { result.current.addEntry('two'); });
+    act(() => {
+      result.current.addEntry('two');
+    });
     expect(result.current.isNavigating).toBe(false);
   });
 
@@ -194,9 +259,13 @@ describe('usePromptHistory — addEntry', () => {
 
   it('does not add empty or whitespace-only strings', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
-    act(() => { result.current.addEntry('  '); });
+    act(() => {
+      result.current.addEntry('  ');
+    });
     let returned: string = '';
-    act(() => { returned = result.current.navigateUp('my draft'); });
+    act(() => {
+      returned = result.current.navigateUp('my draft');
+    });
     expect(returned).toBe('my draft');
     expect(result.current.isNavigating).toBe(false);
   });
@@ -219,7 +288,9 @@ describe('usePromptHistory — indicator', () => {
       result.current.addEntry('b');
       result.current.addEntry('c');
     });
-    act(() => { result.current.navigateUp(''); });
+    act(() => {
+      result.current.navigateUp('');
+    });
     expect(result.current.indicator).toBe('1 / 3');
   });
 
@@ -229,25 +300,41 @@ describe('usePromptHistory — indicator', () => {
       result.current.addEntry('a');
       result.current.addEntry('b');
     });
-    act(() => { result.current.navigateUp(''); });
-    act(() => { result.current.navigateUp(''); });
+    act(() => {
+      result.current.navigateUp('');
+    });
+    act(() => {
+      result.current.navigateUp('');
+    });
     expect(result.current.indicator).toBe('2 / 2');
   });
 
   it('returns to null after navigating back to draft', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
-    act(() => { result.current.addEntry('one'); });
-    act(() => { result.current.navigateUp(''); });
+    act(() => {
+      result.current.addEntry('one');
+    });
+    act(() => {
+      result.current.navigateUp('');
+    });
     expect(result.current.indicator).not.toBeNull();
-    act(() => { result.current.navigateDown(); });
+    act(() => {
+      result.current.navigateDown();
+    });
     expect(result.current.indicator).toBeNull();
   });
 
   it('returns to null after addEntry (send)', () => {
     const { result } = renderHook(() => usePromptHistory('s1', NO_OUTPUT));
-    act(() => { result.current.addEntry('one'); });
-    act(() => { result.current.navigateUp(''); });
-    act(() => { result.current.addEntry('two'); });
+    act(() => {
+      result.current.addEntry('one');
+    });
+    act(() => {
+      result.current.navigateUp('');
+    });
+    act(() => {
+      result.current.addEntry('two');
+    });
     expect(result.current.indicator).toBeNull();
   });
 });
@@ -263,9 +350,14 @@ describe('usePromptHistory — backfill from sessionOutputItems', () => {
       makeOutput({ id: 'o2', content: 'terminal msg 2', sequenceNumber: 2 }),
     ];
     const { result } = renderHook(() => usePromptHistory('s1', items));
-    let r1: string = '', r2: string = '';
-    act(() => { r1 = result.current.navigateUp(''); });
-    act(() => { r2 = result.current.navigateUp(''); });
+    let r1: string = '',
+      r2: string = '';
+    act(() => {
+      r1 = result.current.navigateUp('');
+    });
+    act(() => {
+      r2 = result.current.navigateUp('');
+    });
     expect(r1).toBe('terminal msg 2');
     expect(r2).toBe('terminal msg 1');
   });
@@ -277,8 +369,12 @@ describe('usePromptHistory — backfill from sessionOutputItems', () => {
     ];
     const { result } = renderHook(() => usePromptHistory('s1', items));
     let returned: string = '';
-    act(() => { returned = result.current.navigateUp(''); });
-    act(() => { returned = result.current.navigateUp(''); });
+    act(() => {
+      returned = result.current.navigateUp('');
+    });
+    act(() => {
+      returned = result.current.navigateUp('');
+    });
     expect(returned).toBe('real msg');
   });
 
@@ -288,9 +384,14 @@ describe('usePromptHistory — backfill from sessionOutputItems', () => {
       makeOutput({ id: 'o2', content: 'assistant says', sequenceNumber: 2, role: 'assistant' }),
     ];
     const { result } = renderHook(() => usePromptHistory('s1', items));
-    let r1: string = '', r2: string = '';
-    act(() => { r1 = result.current.navigateUp(''); });
-    act(() => { r2 = result.current.navigateUp(''); });
+    let r1: string = '',
+      r2: string = '';
+    act(() => {
+      r1 = result.current.navigateUp('');
+    });
+    act(() => {
+      r2 = result.current.navigateUp('');
+    });
     expect(r1).toBe('user says');
     expect(r2).toBe('user says'); // no older entry — no-op
   });
@@ -301,9 +402,14 @@ describe('usePromptHistory — backfill from sessionOutputItems', () => {
       makeOutput({ id: 'o2', content: '   ', sequenceNumber: 2 }),
     ];
     const { result } = renderHook(() => usePromptHistory('s1', items));
-    let r1: string = '', r2: string = '';
-    act(() => { r1 = result.current.navigateUp(''); });
-    act(() => { r2 = result.current.navigateUp(''); });
+    let r1: string = '',
+      r2: string = '';
+    act(() => {
+      r1 = result.current.navigateUp('');
+    });
+    act(() => {
+      r2 = result.current.navigateUp('');
+    });
     expect(r1).toBe('real');
     expect(r2).toBe('real'); // no-op at oldest
   });
@@ -327,7 +433,9 @@ describe('usePromptHistory — live terminal message sync', () => {
     rerender({ items: newItems });
 
     let returned: string = '';
-    act(() => { returned = result.current.navigateUp(''); });
+    act(() => {
+      returned = result.current.navigateUp('');
+    });
     expect(returned).toBe('live msg');
   });
 
@@ -338,7 +446,9 @@ describe('usePromptHistory — live terminal message sync', () => {
     );
 
     // User sends via bar
-    act(() => { result.current.addEntry('from bar'); });
+    act(() => {
+      result.current.addEntry('from bar');
+    });
 
     // Session output picks it up
     const withBarMsg: SessionOutput[] = [
@@ -348,8 +458,12 @@ describe('usePromptHistory — live terminal message sync', () => {
 
     // Navigate history — should appear exactly once
     const results: string[] = [];
-    act(() => { results.push(result.current.navigateUp('')); });
-    act(() => { results.push(result.current.navigateUp('')); });
+    act(() => {
+      results.push(result.current.navigateUp(''));
+    });
+    act(() => {
+      results.push(result.current.navigateUp(''));
+    });
     // Second navigateUp should be a no-op (only one entry)
     expect(results[0]).toBe('from bar');
     expect(results[1]).toBe('from bar'); // no-op
@@ -376,9 +490,15 @@ describe('usePromptHistory — live terminal message sync', () => {
 
     // Should still be exactly 2 entries (both from bar sends, session output deduplicated)
     const results: string[] = [];
-    act(() => { results.push(result.current.navigateUp('')); });
-    act(() => { results.push(result.current.navigateUp('')); });
-    act(() => { results.push(result.current.navigateUp('')); });
+    act(() => {
+      results.push(result.current.navigateUp(''));
+    });
+    act(() => {
+      results.push(result.current.navigateUp(''));
+    });
+    act(() => {
+      results.push(result.current.navigateUp(''));
+    });
     expect(results[0]).toBe('dup text');
     expect(results[1]).toBe('dup text');
     expect(results[2]).toBe('dup text'); // no-op (still at oldest)

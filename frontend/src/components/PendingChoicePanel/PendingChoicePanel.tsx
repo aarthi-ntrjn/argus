@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { sendPrompt } from '../../services/api';
 import type { Session } from '../../types';
 import type { PendingChoice, PendingChoiceItem } from '../../utils/sessionUtils';
@@ -13,7 +13,14 @@ interface Props {
   onTypeAnswer?: (choiceNumber: string) => void;
 }
 
-export default function PendingChoicePanel({ pendingChoice, session, idx, onAdvance, onFocusPromptBar, onTypeAnswer }: Props) {
+export default function PendingChoicePanel({
+  pendingChoice,
+  session,
+  idx,
+  onAdvance,
+  onFocusPromptBar,
+  onTypeAnswer,
+}: Props) {
   const questions: PendingChoiceItem[] = pendingChoice.allQuestions ?? [
     { question: pendingChoice.question, choices: pendingChoice.choices },
   ];
@@ -22,17 +29,21 @@ export default function PendingChoicePanel({ pendingChoice, session, idx, onAdva
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => {
+  const [prevPendingChoice, setPrevPendingChoice] = useState(pendingChoice);
+  if (prevPendingChoice !== pendingChoice) {
+    setPrevPendingChoice(pendingChoice);
     setError(null);
     setSubmitted(false);
-  }, [pendingChoice]);
+  }
 
   const canSend = session.launchMode === 'pty' && session.ptyConnected !== false;
   const showSubmitPanel = questions.length > 1;
   const allSelected = idx >= questions.length;
   const current = questions[Math.min(idx, questions.length - 1)];
   const handleChoice = async (choice: string) => {
-    if (!canSend) return;
+    if (!canSend) {
+      return;
+    }
     setSending(true);
     setError(null);
     try {
@@ -94,7 +105,10 @@ export default function PendingChoicePanel({ pendingChoice, session, idx, onAdva
                   variant="outline"
                   size="sm"
                   disabled={sending}
-                  onClick={e => { e.stopPropagation(); handleSubmit(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSubmit();
+                  }}
                   className="text-left justify-start"
                 >
                   1. Done
@@ -103,7 +117,10 @@ export default function PendingChoicePanel({ pendingChoice, session, idx, onAdva
                   variant="outline"
                   size="sm"
                   disabled={sending}
-                  onClick={e => { e.stopPropagation(); handleCancel(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancel();
+                  }}
                   className="text-left justify-start"
                 >
                   2. Cancel
@@ -129,22 +146,31 @@ export default function PendingChoicePanel({ pendingChoice, session, idx, onAdva
                     variant="outline"
                     size="sm"
                     disabled={sending}
-                    onClick={e => { e.stopPropagation(); handleChoice(String(i + 1)); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleChoice(String(i + 1));
+                    }}
                     className="text-left flex flex-col items-start h-auto py-1.5"
                   >
-                    <span className="font-semibold">{i + 1}. {c}</span>
+                    <span className="font-semibold">
+                      {i + 1}. {c}
+                    </span>
                     {current.descriptions?.[i] && (
-                      <span className="text-xs text-gray-400 font-normal mt-0.5">{current.descriptions[i]}</span>
+                      <span className="text-xs text-gray-400 font-normal mt-0.5">
+                        {current.descriptions[i]}
+                      </span>
                     )}
                   </Button>
                 ) : (
                   <div key={i} className="text-gray-700">
-                    <div className="font-semibold">{i + 1}. {c}</div>
+                    <div className="font-semibold">
+                      {i + 1}. {c}
+                    </div>
                     {current.descriptions?.[i] && (
                       <div className="text-xs text-gray-400 ml-4">{current.descriptions[i]}</div>
                     )}
                   </div>
-                )
+                ),
               )}
 
               {canSend && (
@@ -153,7 +179,11 @@ export default function PendingChoicePanel({ pendingChoice, session, idx, onAdva
                     variant="outline"
                     size="sm"
                     disabled={sending}
-                    onClick={e => { e.stopPropagation(); onTypeAnswer?.(String(current.choices.length + 1)); onFocusPromptBar?.(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTypeAnswer?.(String(current.choices.length + 1));
+                      onFocusPromptBar?.();
+                    }}
                     className="text-left justify-start"
                   >
                     Type an answer
@@ -162,7 +192,10 @@ export default function PendingChoicePanel({ pendingChoice, session, idx, onAdva
                     variant="outline"
                     size="sm"
                     disabled={sending}
-                    onClick={e => { e.stopPropagation(); void sendPrompt(session.id, '\x1b', { raw: true }); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void sendPrompt(session.id, '\x1b', { raw: true });
+                    }}
                     className="text-left justify-start text-gray-400 border-gray-200"
                   >
                     Press Esc to interrupt

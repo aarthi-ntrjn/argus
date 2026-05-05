@@ -21,10 +21,11 @@ vi.mock('../services/api', () => ({
     reconciled: false,
   }),
   getSessionOutput: vi.fn().mockResolvedValue({ items: [] }),
-  getArgusSettings: vi.fn().mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
+  getArgusSettings: vi
+    .fn()
+    .mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
   getRepositories: vi.fn().mockResolvedValue([]),
 }));
-
 
 function renderSessionPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -35,7 +36,7 @@ function renderSessionPage() {
           <Route path="/sessions/:id" element={<SessionPage />} />
         </Routes>
       </MemoryRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 

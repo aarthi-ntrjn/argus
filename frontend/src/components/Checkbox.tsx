@@ -8,9 +8,17 @@ interface CheckboxProps {
   'aria-label'?: string;
 }
 
-export function Checkbox({ checked = false, onChange, label, className = '', 'aria-label': ariaLabel }: CheckboxProps) {
+export function Checkbox({
+  checked = false,
+  onChange,
+  label,
+  className = '',
+  'aria-label': ariaLabel,
+}: CheckboxProps) {
   const handleClick = () => {
-    if (!onChange) return;
+    if (!onChange) {
+      return;
+    }
     const syntheticEvent = { target: { checked: !checked } } as ChangeEvent<HTMLInputElement>;
     onChange(syntheticEvent);
   };
@@ -29,18 +37,31 @@ export function Checkbox({ checked = false, onChange, label, className = '', 'ar
     >
       {checked && (
         <svg aria-hidden="true" viewBox="0 0 10 10" fill="none" className="h-2.5 w-2.5">
-          <path d="M1.5 5.5l2.5 2.5 4.5-5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M1.5 5.5l2.5 2.5 4.5-5.5"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       )}
     </button>
   );
 
-  if (!label) return checkbox;
+  if (!label) {
+    return checkbox;
+  }
 
   return (
-    <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none" onClick={e => e.preventDefault()}>
+    <label
+      className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none"
+      onClick={(e) => e.preventDefault()}
+    >
       {checkbox}
-      <span onClick={handleClick} className="min-w-0 break-words">{label}</span>
+      <span onClick={handleClick} className="min-w-0 break-words">
+        {label}
+      </span>
     </label>
   );
 }

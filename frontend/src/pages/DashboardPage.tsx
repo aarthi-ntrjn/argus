@@ -12,7 +12,10 @@ import { useRepositoryManagement } from '../hooks/useRepositoryManagement';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Button } from '../components/Button';
 import { SettingsPanel } from '../components/SettingsPanel';
-import { TeamsIntegrationButton, SlackIntegrationButton } from '../components/IntegrationButton/IntegrationButton';
+import {
+  TeamsIntegrationButton,
+  SlackIntegrationButton,
+} from '../components/IntegrationButton/IntegrationButton';
 import { SettingsDialog, type SettingsTab } from '../components/SettingsDialog/SettingsDialog';
 import { TelemetryBanner } from '../components/TelemetryBanner';
 import { RemoveConfirmDialog } from '../components/RemoveConfirmDialog';
@@ -49,25 +52,40 @@ export default function DashboardPage() {
     setSettingsOpen(false);
   };
   const [isDashboardExpanded, setIsDashboardExpanded] = useState(
-    () => localStorage.getItem('isDashboardExpanded') === 'true'
+    () => localStorage.getItem('isDashboardExpanded') === 'true',
   );
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
-    () => localStorage.getItem('selectedSessionId')
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(() =>
+    localStorage.getItem('selectedSessionId'),
   );
 
   const selectSession = (id: string | null) => {
     setSelectedSessionId(id);
-    if (id) localStorage.setItem('selectedSessionId', id);
-    else localStorage.removeItem('selectedSessionId');
+    if (id) {
+      localStorage.setItem('selectedSessionId', id);
+    } else {
+      localStorage.removeItem('selectedSessionId');
+    }
   };
   const [activeMobileTab, setActiveMobileTab] = useState<MobileTab>('sessions');
   const settingsRef = useRef<HTMLDivElement>(null);
 
   const [settings, updateSetting] = useSettings();
-  const { settings: argusSettings, isLoading: argusSettingsLoading, patchSetting } = useArgusSettings();
+  const {
+    settings: argusSettings,
+    isLoading: argusSettingsLoading,
+    patchSetting,
+  } = useArgusSettings();
   const updateStatus = useUpdateStatus();
   const { integrationsEnabled, toggle, isPending } = useIntegrationControl();
-  const { tourStatus, seenRepoSteps, startTour, skipTour, completeTour, markRepoStepsSeen, resetOnboarding } = useOnboarding();
+  const {
+    tourStatus,
+    seenRepoSteps,
+    startTour,
+    skipTour,
+    completeTour,
+    markRepoStepsSeen,
+    resetOnboarding,
+  } = useOnboarding();
   const [tourRun, setTourRun] = useState(false);
   const [catchUpRun, setCatchUpRun] = useState(false);
 
@@ -76,61 +94,108 @@ export default function DashboardPage() {
   };
 
   const {
-    addError, addInfo, adding, showFolderInput, folderInputPath,
-    removeConfirmId, removing, skipConfirm,
-    setFolderInputPath, setRemoveConfirmId, setSkipConfirm,
-    handleAddRepo, handleFolderSubmit, handleRemoveRepoById, handleRemoveRepo,
-    cancelFolderInput, clearAddError,
+    addError,
+    addInfo,
+    adding,
+    showFolderInput,
+    folderInputPath,
+    removeConfirmId,
+    removing,
+    skipConfirm,
+    setFolderInputPath,
+    setRemoveConfirmId,
+    setSkipConfirm,
+    handleAddRepo,
+    handleFolderSubmit,
+    handleRemoveRepoById,
+    handleRemoveRepo,
+    cancelFolderInput,
+    clearAddError,
   } = useRepositoryManagement();
 
   const [launchError, setLaunchError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [updateBanner, setUpdateBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [updateBanner, setUpdateBanner] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   async function handleUpdateNow() {
     setIsUpdating(true);
     setUpdateBanner(null);
     try {
       await applyUpdate();
-      setUpdateBanner({ type: 'success', message: 'Update applied. Restart Argus to run the new version.' });
+      setUpdateBanner({
+        type: 'success',
+        message: 'Update applied. Restart Argus to run the new version.',
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      setUpdateBanner({ type: 'error', message: `Failed to apply update. ${msg || 'Make sure the Argus server is running and you have permission to install packages globally.'}` });
+      setUpdateBanner({
+        type: 'error',
+        message: `Failed to apply update. ${msg || 'Make sure the Argus server is running and you have permission to install packages globally.'}`,
+      });
     } finally {
       setIsUpdating(false);
     }
   }
 
   const [infoSnapshot, setInfoSnapshot] = useState<string | null>(null);
-  useEffect(() => { if (addInfo) setInfoSnapshot(addInfo); }, [addInfo]);
+  const [prevAddInfo, setPrevAddInfo] = useState(addInfo);
+  if (prevAddInfo !== addInfo) {
+    setPrevAddInfo(addInfo);
+    if (addInfo) {
+      setInfoSnapshot(addInfo);
+    }
+  }
 
   // Auto-launch for first-time users
   useEffect(() => {
     if (tourStatus === 'not_started') {
       startTour('auto');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTourRun(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Close settings panel on outside click or Escape
   useEffect(() => {
-    if (!settingsOpen) return;
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSettingsOpen(false); };
+    if (!settingsOpen) {
+      return;
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSettingsOpen(false);
+      }
+    };
     const handleClick = (e: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setSettingsOpen(false);
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
+      }
     };
     document.addEventListener('keydown', handleKey);
     document.addEventListener('mousedown', handleClick);
-    return () => { document.removeEventListener('keydown', handleKey); document.removeEventListener('mousedown', handleClick); };
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.removeEventListener('mousedown', handleClick);
+    };
   }, [settingsOpen]);
 
-  const { data: repos = [], isLoading: reposLoading, isError: reposError } = useQuery({
+  const {
+    data: repos = [],
+    isLoading: reposLoading,
+    isError: reposError,
+  } = useQuery({
     queryKey: ['repositories'],
     queryFn: getRepositories,
   });
 
-  const { data: sessions = [], isLoading: sessionsLoading, isError: sessionsError } = useQuery({
+  const {
+    data: sessions = [],
+    isLoading: sessionsLoading,
+    isError: sessionsError,
+  } = useQuery({
     queryKey: ['sessions'],
     queryFn: () => getSessions(),
   });
@@ -138,14 +203,16 @@ export default function DashboardPage() {
   // When the selected session ends, auto-switch to the first still-active session
   // or close the output pane if none is available.
   useEffect(() => {
-    if (!selectedSessionId || sessions.length === 0) return;
-    const selected = sessions.find(s => s.id === selectedSessionId);
+    if (!selectedSessionId || sessions.length === 0) {
+      return;
+    }
+    const selected = sessions.find((s) => s.id === selectedSessionId);
     if (!selected || ENDED_STATUSES.has(selected.status)) {
-      const next = sessions.find(s => ACTIVE_STATUSES.has(s.status));
+      const next = sessions.find((s) => ACTIVE_STATUSES.has(s.status));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       selectSession(next?.id ?? null);
     }
-  // selectSession is stable (defined once); sessions and selectedSessionId are the reactive deps.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // selectSession is stable (defined once); sessions and selectedSessionId are the reactive deps.
   }, [sessions, selectedSessionId]);
 
   const dashboardWidthClassName = isDashboardExpanded
@@ -162,27 +229,48 @@ export default function DashboardPage() {
     return map;
   }, [sessions]);
 
-  const tourSteps = useMemo(() => buildDashboardTourSteps(repos.length > 0), [repos.length > 0]);
+  const hasRepos = repos.length > 0;
+  const tourSteps = useMemo(() => buildDashboardTourSteps(hasRepos), [hasRepos]);
 
   // Auto-trigger catch-up mini-tour when repos appear and user hasn't seen repo steps
   useEffect(() => {
     if (repos.length > 0 && !seenRepoSteps && tourStatus !== 'not_started' && !tourRun) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCatchUpRun(true);
     }
   }, [repos.length, seenRepoSteps, tourStatus, tourRun]);
 
-  const reposWithSessions = useMemo<RepoWithSessions[]>(() => repos.map((repo) => {
-    const repoSessions = sessionsByRepo.get(repo.id) ?? [];
-    const visibleSessions = repoSessions.filter(s => {
-      if (settings.hideEndedSessions && ENDED_STATUSES.has(s.status)) return false;
-      if (settings.hideInactiveSessions && isInactive(s, (argusSettings?.restingThresholdMinutes ?? 20) * 60_000)) return false;
-      return true;
-    });
-    return { ...repo, sessions: visibleSessions, hasHiddenSessions: visibleSessions.length < repoSessions.length };
-  }).filter((repo) => {
-    if (!settings.hideReposWithNoActiveSessions) return true;
-    return (sessionsByRepo.get(repo.id) ?? []).some(s => ACTIVE_STATUSES.has(s.status));
-  }), [repos, sessionsByRepo, settings]);
+  const reposWithSessions = useMemo<RepoWithSessions[]>(
+    () =>
+      repos
+        .map((repo) => {
+          const repoSessions = sessionsByRepo.get(repo.id) ?? [];
+          const visibleSessions = repoSessions.filter((s) => {
+            if (settings.hideEndedSessions && ENDED_STATUSES.has(s.status)) {
+              return false;
+            }
+            if (
+              settings.hideInactiveSessions &&
+              isInactive(s, (argusSettings?.restingThresholdMinutes ?? 20) * 60_000)
+            ) {
+              return false;
+            }
+            return true;
+          });
+          return {
+            ...repo,
+            sessions: visibleSessions,
+            hasHiddenSessions: visibleSessions.length < repoSessions.length,
+          };
+        })
+        .filter((repo) => {
+          if (!settings.hideReposWithNoActiveSessions) {
+            return true;
+          }
+          return (sessionsByRepo.get(repo.id) ?? []).some((s) => ACTIVE_STATUSES.has(s.status));
+        }),
+    [repos, sessionsByRepo, settings, argusSettings?.restingThresholdMinutes],
+  );
 
   // On mobile tapping a session card navigates to the detail page.
   // On desktop it toggles the inline OutputPane.
@@ -198,7 +286,9 @@ export default function DashboardPage() {
     return (
       <div className="h-screen flex flex-col overflow-hidden bg-slate-50">
         <header className="shrink-0 bg-slate-50 border-b border-gray-200">
-          <div className={`mx-auto ${dashboardWidthClassName} px-4 md:px-8 py-3 flex justify-between items-center`}>
+          <div
+            className={`mx-auto ${dashboardWidthClassName} px-4 md:px-8 py-3 flex justify-between items-center`}
+          >
             <h1 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
               <ArgusLogo size={28} />
               Argus
@@ -206,10 +296,16 @@ export default function DashboardPage() {
           </div>
         </header>
         <div className="flex-1 min-h-0 overflow-hidden">
-          <div className={`mx-auto ${dashboardWidthClassName} h-full px-4 py-4 md:px-8 md:py-6 flex flex-col`}>
+          <div
+            className={`mx-auto ${dashboardWidthClassName} h-full px-4 py-4 md:px-8 md:py-6 flex flex-col`}
+          >
             <div className="animate-pulse flex gap-6 flex-1 min-h-0">
-              <div className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[2]' : 'flex-1') : 'flex-[13]'} bg-gray-200 rounded-lg`} />
-              <div className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[3]' : 'flex-1') : 'flex-[7]'} bg-gray-200 rounded-lg`} />
+              <div
+                className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[2]' : 'flex-1') : 'flex-[13]'} bg-gray-200 rounded-lg`}
+              />
+              <div
+                className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[3]' : 'flex-1') : 'flex-[7]'} bg-gray-200 rounded-lg`}
+              />
             </div>
           </div>
         </div>
@@ -222,7 +318,9 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-slate-50 p-4 md:p-8 flex items-center justify-center">
         <div className="text-center space-y-2">
           <p className="text-lg font-medium text-gray-800">Cannot connect to Argus server</p>
-          <p className="text-sm text-gray-500">Make sure the backend is running, then refresh the page.</p>
+          <p className="text-sm text-gray-500">
+            Make sure the backend is running, then refresh the page.
+          </p>
         </div>
       </div>
     );
@@ -253,7 +351,10 @@ export default function DashboardPage() {
         <>
           <div className="flex-1 flex flex-col justify-center space-y-1">
             <p className="text-xl font-semibold text-gray-400">No repositories added yet.</p>
-            <p className="text-xl text-gray-400">Click "<span className="font-semibold">Add Repositories</span>" to start managing sessions.</p>
+            <p className="text-xl text-gray-400">
+              Click "<span className="font-semibold">Add Repositories</span>" to start managing
+              sessions.
+            </p>
           </div>
           {argusSettings?.telemetryPromptSeen === false && (
             <div className="pt-8 max-w-lg mx-auto w-full text-left">
@@ -267,7 +368,9 @@ export default function DashboardPage() {
       ) : (
         <div className="flex-1 flex flex-col justify-center space-y-1">
           <p className="text-base text-gray-400">No repositories to show.</p>
-          <p className="text-sm text-gray-400">All repositories are hidden by your current settings.</p>
+          <p className="text-sm text-gray-400">
+            All repositories are hidden by your current settings.
+          </p>
         </div>
       )}
     </div>
@@ -276,8 +379,13 @@ export default function DashboardPage() {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-slate-50">
       <header className="shrink-0 bg-slate-50 border-b border-gray-200">
-        <div className={`mx-auto ${dashboardWidthClassName} px-4 md:px-8 py-3 flex justify-between items-center`}>
-          <h1 data-tour-id="dashboard-header" className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+        <div
+          className={`mx-auto ${dashboardWidthClassName} px-4 md:px-8 py-3 flex justify-between items-center`}
+        >
+          <h1
+            data-tour-id="dashboard-header"
+            className="flex items-center gap-2 text-xl font-semibold text-gray-900"
+          >
             <ArgusLogo size={28} />
             Argus
           </h1>
@@ -324,46 +432,73 @@ export default function DashboardPage() {
                   onClick={() => void handleUpdateNow()}
                   disabled={isUpdating}
                 >
-                  {isUpdating ? 'Updating...' : `Update to v${updateStatus.latestVersion ?? 'latest'}`}
+                  {isUpdating
+                    ? 'Updating...'
+                    : `Update to v${updateStatus.latestVersion ?? 'latest'}`}
                 </Button>
               )}
               <div className="relative">
-              <button
-                data-tour-id="dashboard-settings"
-                onClick={() => setSettingsOpen(o => !o)}
-                aria-label="Settings"
-                aria-expanded={settingsOpen}
-                aria-haspopup="true"
-                title="Settings"
-                className="icon-btn rounded-md text-gray-500 hover:text-blue-600"
-              >
-                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-              {settingsOpen && (
-                <SettingsPanel
-                  settings={settings}
-                  onToggle={(key, value) => updateSetting(key, value)}
-                  onOpenAllSettings={() => openDialog('general')}
-                />
-              )}
+                <button
+                  data-tour-id="dashboard-settings"
+                  onClick={() => setSettingsOpen((o) => !o)}
+                  aria-label="Settings"
+                  aria-expanded={settingsOpen}
+                  aria-haspopup="true"
+                  title="Settings"
+                  className="icon-btn rounded-md text-gray-500 hover:text-blue-600"
+                >
+                  <svg
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                </button>
+                {settingsOpen && (
+                  <SettingsPanel
+                    settings={settings}
+                    onToggle={(key, value) => updateSetting(key, value)}
+                    onOpenAllSettings={() => openDialog('general')}
+                  />
+                )}
               </div>
             </div>
             <button
               type="button"
-              onClick={() => setIsDashboardExpanded(v => {
-                const next = !v;
-                localStorage.setItem('isDashboardExpanded', String(next));
-                return next;
-              })}
-              aria-label={isDashboardExpanded ? 'Collapse dashboard width' : 'Expand dashboard width'}
+              onClick={() =>
+                setIsDashboardExpanded((v) => {
+                  const next = !v;
+                  localStorage.setItem('isDashboardExpanded', String(next));
+                  return next;
+                })
+              }
+              aria-label={
+                isDashboardExpanded ? 'Collapse dashboard width' : 'Expand dashboard width'
+              }
               aria-pressed={isDashboardExpanded}
               title={isDashboardExpanded ? 'Collapse dashboard width' : 'Expand dashboard width'}
               className="icon-btn text-gray-500 hover:text-blue-600"
             >
-              {isDashboardExpanded ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
+              {isDashboardExpanded ? (
+                <Minimize2 size={16} aria-hidden="true" />
+              ) : (
+                <Maximize2 size={16} aria-hidden="true" />
+              )}
             </button>
           </div>
         </div>
@@ -371,47 +506,71 @@ export default function DashboardPage() {
 
       {/* Page content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className={`mx-auto ${dashboardWidthClassName} h-full px-4 py-4 md:px-8 md:py-6 flex flex-col`}>
+        <div
+          className={`mx-auto ${dashboardWidthClassName} h-full px-4 py-4 md:px-8 md:py-6 flex flex-col`}
+        >
+          {addError && (
+            <div
+              role="alert"
+              className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm flex items-center justify-between gap-3"
+            >
+              <span className="leading-snug">{addError}</span>
+              <button
+                onClick={clearAddError}
+                aria-label="Dismiss error"
+                className="icon-btn shrink-0 p-0 leading-none"
+              >
+                &times;
+              </button>
+            </div>
+          )}
 
-        {updateBanner && (
-          <div
-            role="alert"
-            className={`mb-4 px-3 py-2 rounded text-sm flex items-center justify-between gap-3 ${
-              updateBanner.type === 'success'
-                ? 'bg-blue-50 border border-blue-200 text-blue-800'
-                : 'bg-red-50 border border-red-200 text-red-700'
-            }`}
-          >
-            <span className="leading-snug">{updateBanner.message}</span>
-            <button onClick={() => setUpdateBanner(null)} aria-label="Dismiss" className="icon-btn shrink-0 p-0 leading-none">&times;</button>
-          </div>
-        )}
+          {updateBanner && (
+            <div
+              role="alert"
+              className={`mb-4 px-3 py-2 rounded text-sm flex items-center justify-between gap-3 ${
+                updateBanner.type === 'success'
+                  ? 'bg-blue-50 border border-blue-200 text-blue-800'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}
+            >
+              <span className="leading-snug">{updateBanner.message}</span>
+              <button
+                onClick={() => setUpdateBanner(null)}
+                aria-label="Dismiss"
+                className="icon-btn shrink-0 p-0 leading-none"
+              >
+                &times;
+              </button>
+            </div>
+          )}
 
-        {addError && (
-          <div role="alert" className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm flex items-center justify-between gap-3">
-            <span className="leading-snug">{addError}</span>
-            <button onClick={clearAddError} aria-label="Dismiss error" className="icon-btn shrink-0 p-0 leading-none">&times;</button>
-          </div>
-        )}
+          {launchError && (
+            <div
+              role="alert"
+              className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm flex items-center justify-between gap-3"
+            >
+              <span className="leading-snug">{launchError}</span>
+              <button
+                onClick={() => setLaunchError(null)}
+                aria-label="Dismiss error"
+                className="icon-btn shrink-0 p-0 leading-none"
+              >
+                &times;
+              </button>
+            </div>
+          )}
 
-        {launchError && (
-          <div role="alert" className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm flex items-center justify-between gap-3">
-            <span className="leading-snug">{launchError}</span>
-            <button onClick={() => setLaunchError(null)} aria-label="Dismiss error" className="icon-btn shrink-0 p-0 leading-none">&times;</button>
-          </div>
-        )}
-
-        {/* Mobile layout: single column with bottom tab navigation */}
-        {isMobile ? (
-          <div className="flex-1 min-h-0 overflow-y-auto pb-20 scroll-hover">
-            {activeMobileTab === 'sessions' ? (
-              reposWithSessions.length === 0 ? emptyState : repoList
-            ) : (
-              !settings.hideTodoPanel && <TodoPanel />
-            )}
-          </div>
-        ) : (
-          /* Desktop layout: two-column */
+          {/* Mobile layout: single column with bottom tab navigation */}
+          {isMobile ? (
+            <div className="flex-1 min-h-0 overflow-y-auto pb-20 scroll-hover">
+              {activeMobileTab === 'sessions'
+                ? reposWithSessions.length === 0
+                  ? emptyState
+                  : repoList
+                : !settings.hideTodoPanel && <TodoPanel />}
+            </div>
+          ) : /* Desktop layout: two-column */
           reposWithSessions.length === 0 ? (
             <div className="flex-1 min-h-0 flex gap-6">
               <div className="flex-[13] overflow-y-auto">{emptyState}</div>
@@ -423,39 +582,45 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="flex-1 min-h-0 flex gap-6">
-              <div className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[2]' : 'flex-1') : 'flex-[13]'} min-w-0 overflow-y-auto scroll-hover`}>
+              <div
+                className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[2]' : 'flex-1') : 'flex-[13]'} min-w-0 overflow-y-auto scroll-hover`}
+              >
                 {repoList}
               </div>
               {(!settings.hideTodoPanel || selectedSessionId) && (
-                <div className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[3]' : 'flex-1') : 'flex-[7]'} flex flex-col gap-4 min-h-0 min-w-0`}>
-                  {selectedSessionId && (() => {
-                    const selectedSession = sessions.find(s => s.id === selectedSessionId);
-                    return selectedSession ? (
-                      <div className={settings.hideTodoPanel ? 'flex-1 min-h-0' : 'flex-[3] min-h-0'}>
-                        <OutputPane
-                          session={selectedSession}
-                          onClose={() => selectSession(null)}
-                        />
-                      </div>
-                    ) : null;
-                  })()}
+                <div
+                  className={`${selectedSessionId ? (isDashboardExpanded ? 'flex-[3]' : 'flex-1') : 'flex-[7]'} flex flex-col gap-4 min-h-0 min-w-0`}
+                >
+                  {selectedSessionId &&
+                    (() => {
+                      const selectedSession = sessions.find((s) => s.id === selectedSessionId);
+                      return selectedSession ? (
+                        <div
+                          className={settings.hideTodoPanel ? 'flex-1 min-h-0' : 'flex-[3] min-h-0'}
+                        >
+                          <OutputPane
+                            session={selectedSession}
+                            onClose={() => selectSession(null)}
+                          />
+                        </div>
+                      ) : null;
+                    })()}
                   {!settings.hideTodoPanel && (
-                    <div className={`${selectedSessionId ? 'flex-[1]' : 'flex-1'} min-h-0 overflow-hidden`}>
+                    <div
+                      className={`${selectedSessionId ? 'flex-[1]' : 'flex-1'} min-h-0 overflow-hidden`}
+                    >
                       <TodoPanel />
                     </div>
                   )}
                 </div>
               )}
             </div>
-          )
-        )}
-      </div>
+          )}
+        </div>
       </div>
 
       {/* Mobile bottom tab bar */}
-      {isMobile && (
-        <MobileNav activeTab={activeMobileTab} onTabChange={setActiveMobileTab} />
-      )}
+      {isMobile && <MobileNav activeTab={activeMobileTab} onTabChange={setActiveMobileTab} />}
 
       {showFolderInput && (
         <FolderInputDialog
@@ -468,7 +633,7 @@ export default function DashboardPage() {
 
       {removeConfirmId && (
         <RemoveConfirmDialog
-          repoName={reposWithSessions.find(r => r.id === removeConfirmId)?.name}
+          repoName={reposWithSessions.find((r) => r.id === removeConfirmId)?.name}
           removing={removing}
           skipConfirm={skipConfirm}
           onSkipConfirmChange={setSkipConfirm}
@@ -480,16 +645,34 @@ export default function DashboardPage() {
       <OnboardingTour
         run={tourRun}
         steps={tourSteps}
-        onComplete={() => { completeTour(); if (repos.length > 0) markRepoStepsSeen(); setTourRun(false); }}
-        onSkip={(reason) => { skipTour(reason); if (repos.length > 0) markRepoStepsSeen(); setTourRun(false); }}
+        onComplete={() => {
+          completeTour();
+          if (repos.length > 0) {
+            markRepoStepsSeen();
+          }
+          setTourRun(false);
+        }}
+        onSkip={(reason) => {
+          skipTour(reason);
+          if (repos.length > 0) {
+            markRepoStepsSeen();
+          }
+          setTourRun(false);
+        }}
       />
 
       {catchUpRun && (
         <OnboardingTour
           run={catchUpRun}
           steps={REPO_CATCH_UP_STEPS}
-          onComplete={() => { markRepoStepsSeen(); setCatchUpRun(false); }}
-          onSkip={() => { markRepoStepsSeen(); setCatchUpRun(false); }}
+          onComplete={() => {
+            markRepoStepsSeen();
+            setCatchUpRun(false);
+          }}
+          onSkip={() => {
+            markRepoStepsSeen();
+            setCatchUpRun(false);
+          }}
         />
       )}
 

@@ -36,7 +36,7 @@ describe('KillSessionDialog', () => {
         sessionId="abcdef12-3456-7890-abcd-ef1234567890"
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
-      />
+      />,
     );
     expect(screen.getByRole('dialog')).toHaveTextContent('claude-code');
     expect(screen.getByRole('dialog')).toHaveTextContent('abcdef12');
@@ -44,7 +44,7 @@ describe('KillSessionDialog', () => {
 
   it('shows spinner with "Killing session" text when isPending', () => {
     render(
-      <KillSessionDialog open={true} isPending={true} onConfirm={vi.fn()} onCancel={vi.fn()} />
+      <KillSessionDialog open={true} isPending={true} onConfirm={vi.fn()} onCancel={vi.fn()} />,
     );
     expect(screen.getByText(/killing session/i)).toBeInTheDocument();
     expect(screen.getByText(/waiting for the process to exit/i)).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe('KillSessionDialog', () => {
         error={new Error('Session already ended')}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
-      />
+      />,
     );
     expect(screen.getByText('Session already ended')).toBeInTheDocument();
   });
@@ -78,7 +78,7 @@ describe('KillSessionDialog event propagation', () => {
     render(
       <div onClick={parentClick}>
         <KillSessionDialog open={true} onConfirm={vi.fn()} onCancel={vi.fn()} />
-      </div>
+      </div>,
     );
     await userEvent.click(screen.getByRole('button', { name: /kill session/i }));
     expect(parentClick).not.toHaveBeenCalled();
@@ -89,7 +89,7 @@ describe('KillSessionDialog event propagation', () => {
     render(
       <div onClick={parentClick}>
         <KillSessionDialog open={true} onConfirm={vi.fn()} onCancel={vi.fn()} />
-      </div>
+      </div>,
     );
     await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(parentClick).not.toHaveBeenCalled();
@@ -104,7 +104,7 @@ describe('KillSessionDialog error scenarios', () => {
         error={new Error('Session not found')}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
-      />
+      />,
     );
     expect(screen.getByText('Session not found')).toBeInTheDocument();
   });
@@ -116,7 +116,7 @@ describe('KillSessionDialog error scenarios', () => {
         error={new Error('Session has already ended')}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
-      />
+      />,
     );
     expect(screen.getByText('Session has already ended')).toBeInTheDocument();
   });
@@ -128,7 +128,7 @@ describe('KillSessionDialog error scenarios', () => {
         error={new Error('Not permitted to kill this session')}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
-      />
+      />,
     );
     expect(screen.getByText('Not permitted to kill this session')).toBeInTheDocument();
   });
@@ -140,7 +140,7 @@ describe('KillSessionDialog error scenarios', () => {
         error={new Error('Network Error')}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
-      />
+      />,
     );
     expect(screen.getByText('Network Error')).toBeInTheDocument();
   });
@@ -153,7 +153,7 @@ describe('KillSessionDialog error scenarios', () => {
         isPending={false}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
-      />
+      />,
     );
     expect(screen.getByRole('button', { name: /kill session/i })).not.toBeDisabled();
   });

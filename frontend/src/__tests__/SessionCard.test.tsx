@@ -5,11 +5,15 @@ import type { Session, SessionOutput } from '../types';
 import type { PendingChoice } from '../utils/sessionUtils';
 
 vi.mock('react-router-dom', () => ({
-  Link: ({ children, ...props }: React.PropsWithChildren<{ to: string }>) => <a {...props}>{children}</a>,
+  Link: ({ children, ...props }: React.PropsWithChildren<{ to: string }>) => (
+    <a {...props}>{children}</a>
+  ),
 }));
 
 vi.mock('../services/api', () => ({
-  getArgusSettings: vi.fn().mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
+  getArgusSettings: vi
+    .fn()
+    .mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
   getSessionOutput: vi.fn(),
 }));
 
@@ -53,8 +57,16 @@ function makeSession(overrides: Partial<Session> = {}): Session {
   };
 }
 
-function renderCard(session: Session, items: SessionOutput[] = [], pendingChoice?: PendingChoice | null) {
-  vi.mocked(api.getSessionOutput).mockResolvedValue({ items, nextBefore: null, total: items.length });
+function renderCard(
+  session: Session,
+  items: SessionOutput[] = [],
+  pendingChoice?: PendingChoice | null,
+) {
+  vi.mocked(api.getSessionOutput).mockResolvedValue({
+    items,
+    nextBefore: null,
+    total: items.length,
+  });
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   if (pendingChoice !== undefined) {
     qc.setQueryData(['session-pending-choice', session.id], pendingChoice);
@@ -62,12 +74,14 @@ function renderCard(session: Session, items: SessionOutput[] = [], pendingChoice
   return render(
     <QueryClientProvider client={qc}>
       <SessionCard session={session} />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 
 describe('SessionCard — prompt bar keyboard isolation', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('space key inside prompt input does not bubble up and toggle card selection', async () => {
     const onSelect = vi.fn();
@@ -76,7 +90,7 @@ describe('SessionCard — prompt bar keyboard isolation', () => {
     render(
       <QueryClientProvider client={qc}>
         <SessionCard session={makeSession({ launchMode: 'pty' })} onSelect={onSelect} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
     const input = screen.getByPlaceholderText('Send a prompt…');
     fireEvent.keyDown(input, { key: ' ', code: 'Space', bubbles: true });
@@ -85,7 +99,9 @@ describe('SessionCard — prompt bar keyboard isolation', () => {
 });
 
 describe('SessionCard — launchMode badge', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('shows "connected" badge when launchMode is "pty"', () => {
     renderCard(makeSession({ launchMode: 'pty' }));
@@ -104,34 +120,33 @@ describe('SessionCard — launchMode badge', () => {
 });
 
 describe('SessionCard — ATTENTION NEEDED alert', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('shows ATTENTION NEEDED when session has a pending choice (readonly)', async () => {
-    renderCard(
-      makeSession({ launchMode: null, status: 'active' }),
-      [],
-      { question: 'Which option?', choices: ['A', 'B'] },
-    );
+    renderCard(makeSession({ launchMode: null, status: 'active' }), [], {
+      question: 'Which option?',
+      choices: ['A', 'B'],
+    });
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(screen.getByText(/ATTENTION NEEDED/)).toBeInTheDocument();
   });
 
   it('shows the question text in the alert', async () => {
-    renderCard(
-      makeSession({ status: 'active' }),
-      [],
-      { question: 'Which option?', choices: ['A', 'B'] },
-    );
+    renderCard(makeSession({ status: 'active' }), [], {
+      question: 'Which option?',
+      choices: ['A', 'B'],
+    });
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(screen.getByRole('alert')).toHaveTextContent('Which option?');
   });
 
   it('shows labelled choices in the alert', async () => {
-    renderCard(
-      makeSession({ status: 'active' }),
-      [],
-      { question: 'Pick one', choices: ['Alpha', 'Beta'] },
-    );
+    renderCard(makeSession({ status: 'active' }), [], {
+      question: 'Pick one',
+      choices: ['Alpha', 'Beta'],
+    });
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent('1. Alpha');
@@ -139,11 +154,10 @@ describe('SessionCard — ATTENTION NEEDED alert', () => {
   });
 
   it('shows ATTENTION NEEDED for connected (PTY) session with pending choice', async () => {
-    renderCard(
-      makeSession({ launchMode: 'pty', status: 'active' }),
-      [],
-      { question: 'Choose?', choices: ['X'] },
-    );
+    renderCard(makeSession({ launchMode: 'pty', status: 'active' }), [], {
+      question: 'Choose?',
+      choices: ['X'],
+    });
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(screen.getByText(/ATTENTION NEEDED/)).toBeInTheDocument();
   });
@@ -159,7 +173,13 @@ describe('SessionCard — ATTENTION NEEDED alert', () => {
   it('does NOT show ATTENTION NEEDED when session status is ended', async () => {
     const content = JSON.stringify({ question: 'Pick?', choices: ['A'] });
     renderCard(makeSession({ status: 'ended' }), [
-      makeOutput({ type: 'tool_use', toolName: 'ask_user', toolCallId: 'tc-3', content, sequenceNumber: 1 }),
+      makeOutput({
+        type: 'tool_use',
+        toolName: 'ask_user',
+        toolCallId: 'tc-3',
+        content,
+        sequenceNumber: 1,
+      }),
     ]);
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
   });
@@ -167,7 +187,13 @@ describe('SessionCard — ATTENTION NEEDED alert', () => {
   it('does NOT show ATTENTION NEEDED when ask_user has a subsequent tool_result', async () => {
     const content = JSON.stringify({ question: 'Pick?', choices: ['A'] });
     renderCard(makeSession({ status: 'active' }), [
-      makeOutput({ type: 'tool_use', toolName: 'ask_user', toolCallId: 'tc-4', content, sequenceNumber: 3 }),
+      makeOutput({
+        type: 'tool_use',
+        toolName: 'ask_user',
+        toolCallId: 'tc-4',
+        content,
+        sequenceNumber: 3,
+      }),
       makeOutput({ type: 'tool_result', toolCallId: 'tc-4', content: 'A', sequenceNumber: 4 }),
     ]);
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
@@ -175,18 +201,30 @@ describe('SessionCard — ATTENTION NEEDED alert', () => {
 });
 
 describe('SessionCard — last output preview', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('shows assistant message content in the preview', async () => {
     renderCard(makeSession(), [
-      makeOutput({ type: 'message', role: 'assistant', content: 'Here is my reply', sequenceNumber: 1 }),
+      makeOutput({
+        type: 'message',
+        role: 'assistant',
+        content: 'Here is my reply',
+        sequenceNumber: 1,
+      }),
     ]);
     await waitFor(() => expect(screen.getByText('Here is my reply')).toBeInTheDocument());
   });
 
   it('does not show tool_result content in the preview', async () => {
     renderCard(makeSession(), [
-      makeOutput({ type: 'tool_result', role: null, content: 'some tool output', sequenceNumber: 1 }),
+      makeOutput({
+        type: 'tool_result',
+        role: null,
+        content: 'some tool output',
+        sequenceNumber: 1,
+      }),
     ]);
     await waitFor(() => expect(screen.queryByText('some tool output')).not.toBeInTheDocument());
   });
@@ -202,7 +240,12 @@ describe('SessionCard — last output preview', () => {
     renderCard(makeSession(), [
       makeOutput({ type: 'message', role: 'assistant', content: 'first reply', sequenceNumber: 1 }),
       makeOutput({ type: 'tool_result', role: null, content: 'tool output', sequenceNumber: 2 }),
-      makeOutput({ type: 'message', role: 'assistant', content: 'second reply', sequenceNumber: 3 }),
+      makeOutput({
+        type: 'message',
+        role: 'assistant',
+        content: 'second reply',
+        sequenceNumber: 3,
+      }),
     ]);
     await waitFor(() => expect(screen.getByText('second reply')).toBeInTheDocument());
     expect(screen.queryByText('tool output')).not.toBeInTheDocument();
@@ -210,7 +253,9 @@ describe('SessionCard — last output preview', () => {
 });
 
 describe('SessionCard — hook-aware pending choice (T016)', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('shows ATTENTION NEEDED from hook cache even when getSessionOutput returns no pending tool_use', async () => {
     const session = makeSession({ status: 'active' });
@@ -223,7 +268,7 @@ describe('SessionCard — hook-aware pending choice (T016)', () => {
     render(
       <QueryClientProvider client={qc}>
         <SessionCard session={session} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(screen.getByRole('alert')).toHaveTextContent('Hook-sourced question?');
@@ -238,7 +283,15 @@ describe('SessionCard — hook-aware pending choice (T016)', () => {
     const session = makeSession({ status: 'active' });
     const content = JSON.stringify({ question: 'No fallback question?', choices: ['X', 'Y'] });
     vi.mocked(api.getSessionOutput).mockResolvedValue({
-      items: [makeOutput({ type: 'tool_use', toolName: 'ask_user', toolCallId: 'fb-1', content, sequenceNumber: 1 })],
+      items: [
+        makeOutput({
+          type: 'tool_use',
+          toolName: 'ask_user',
+          toolCallId: 'fb-1',
+          content,
+          sequenceNumber: 1,
+        }),
+      ],
       nextBefore: null,
       total: 1,
     });
@@ -247,7 +300,7 @@ describe('SessionCard — hook-aware pending choice (T016)', () => {
     render(
       <QueryClientProvider client={qc}>
         <SessionCard session={session} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
   });
@@ -263,7 +316,7 @@ describe('SessionCard — hook-aware pending choice (T016)', () => {
     render(
       <QueryClientProvider client={qc}>
         <SessionCard session={session} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
   });

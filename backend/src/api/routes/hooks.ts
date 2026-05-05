@@ -16,7 +16,9 @@ interface HookPayload {
 
 let _claudeDetector: { handleHookPayload(p: HookPayload): Promise<void> } | null = null;
 
-export function setClaudeDetector(detector: { handleHookPayload(p: HookPayload): Promise<void> }): void {
+export function setClaudeDetector(detector: {
+  handleHookPayload(p: HookPayload): Promise<void>;
+}): void {
   _claudeDetector = detector;
 }
 
@@ -60,4 +62,3 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
 };
 
 export default hooksRoutes;
-

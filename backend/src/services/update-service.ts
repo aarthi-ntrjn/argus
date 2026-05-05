@@ -89,7 +89,7 @@ export class UpdateService {
     try {
       const res = await fetch(NPM_REGISTRY_URL, { signal: AbortSignal.timeout(5000) });
       if (!res.ok) return;
-      const data = await res.json() as Record<string, unknown>;
+      const data = (await res.json()) as Record<string, unknown>;
       const latest = typeof data.version === 'string' ? data.version : null;
       if (!latest) return;
       const wasAvailable = this.updateAvailable;
@@ -97,9 +97,15 @@ export class UpdateService {
       this.updateAvailable = isNewer(latest, this.currentVersion);
       this.lastChecked = new Date().toISOString();
       if (this.updateAvailable) {
-        log.info({ latestVersion: latest, currentVersion: this.currentVersion }, 'Update available');
+        log.info(
+          { latestVersion: latest, currentVersion: this.currentVersion },
+          'Update available',
+        );
         if (!wasAvailable) {
-          this.telemetry?.sendEvent('update_available', { currentVersion: this.currentVersion, latestVersion: latest });
+          this.telemetry?.sendEvent('update_available', {
+            currentVersion: this.currentVersion,
+            latestVersion: latest,
+          });
         }
       }
     } catch {
@@ -126,7 +132,12 @@ export class UpdateService {
     return new Promise<void>((resolve, reject) => {
       const timeoutHandle = setTimeout(() => {
         log.warn('Update timed out after 25 seconds, continuing exit');
-        this.telemetry?.sendEvent('update_attempt', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown', status: 'failed', exitCode: 'timeout' });
+        this.telemetry?.sendEvent('update_attempt', {
+          currentVersion: this.currentVersion,
+          latestVersion: this.latestVersion ?? 'unknown',
+          status: 'failed',
+          exitCode: 'timeout',
+        });
         this._updateInProgress = false;
         resolve();
       }, APPLY_TIMEOUT_MS);
@@ -145,11 +156,20 @@ export class UpdateService {
         this._updateInProgress = false;
         if (code === 0) {
           log.info('Update applied successfully');
-          this.telemetry?.sendEvent('update_attempt', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown', status: 'succeeded' });
+          this.telemetry?.sendEvent('update_attempt', {
+            currentVersion: this.currentVersion,
+            latestVersion: this.latestVersion ?? 'unknown',
+            status: 'succeeded',
+          });
           resolve();
         } else {
           log.warn({ exitCode: code }, 'Update failed with non-zero exit code');
-          this.telemetry?.sendEvent('update_attempt', { currentVersion: this.currentVersion, latestVersion: this.latestVersion ?? 'unknown', status: 'failed', exitCode: String(code ?? -1) });
+          this.telemetry?.sendEvent('update_attempt', {
+            currentVersion: this.currentVersion,
+            latestVersion: this.latestVersion ?? 'unknown',
+            status: 'failed',
+            exitCode: String(code ?? -1),
+          });
           reject(new Error(`npm install exited with code ${code}`));
         }
       });

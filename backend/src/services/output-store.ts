@@ -1,5 +1,8 @@
 import { EventEmitter } from 'events';
-import { insertOutput as dbInsertOutput, getOutputForSession as dbGetOutput } from '../db/database.js';
+import {
+  insertOutput as dbInsertOutput,
+  getOutputForSession as dbGetOutput,
+} from '../db/database.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
 import { getDb } from '../db/database.js';
 import type { SessionOutput } from '../models/index.js';
@@ -26,8 +29,12 @@ export class OutputStore {
   }
 
   /** Returns true if at least one output was newly inserted (not a duplicate). */
-  insertOutput(sessionId: string, outputs: SessionOutput[], options?: { skipNotifications?: boolean }): boolean {
-    const inserted = outputs.filter(o => dbInsertOutput(o));
+  insertOutput(
+    sessionId: string,
+    outputs: SessionOutput[],
+    options?: { skipNotifications?: boolean },
+  ): boolean {
+    const inserted = outputs.filter((o) => dbInsertOutput(o));
     if (inserted.length > 0 && !options?.skipNotifications) {
       broadcast({
         type: 'session.output.batch',
@@ -35,7 +42,9 @@ export class OutputStore {
         data: { sessionId, outputs: inserted },
       });
       outputEvents.emit('session.output.batch', sessionId, outputs);
-      for (const fn of this.listeners) fn(sessionId, inserted);
+      for (const fn of this.listeners) {
+        fn(sessionId, inserted);
+      }
     }
     return inserted.length > 0;
   }
@@ -57,17 +66,23 @@ export class OutputStore {
       .prepare('SELECT SUM(length(content)) as total FROM session_output WHERE session_id = ?')
       .get(sessionId) as { total: number | null };
     const total = totalRow?.total ?? 0;
-    if (total <= maxBytes) return;
+    if (total <= maxBytes) {
+      return;
+    }
 
     const rows = db
-      .prepare('SELECT id, length(content) as size FROM session_output WHERE session_id = ? ORDER BY sequence_number ASC')
+      .prepare(
+        'SELECT id, length(content) as size FROM session_output WHERE session_id = ? ORDER BY sequence_number ASC',
+      )
       .all(sessionId) as Array<{ id: string; size: number }>;
 
     let remaining = total;
     const toDelete: string[] = [];
 
     for (const row of rows) {
-      if (remaining <= maxBytes) break;
+      if (remaining <= maxBytes) {
+        break;
+      }
       toDelete.push(row.id);
       remaining -= row.size;
     }

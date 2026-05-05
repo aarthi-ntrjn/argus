@@ -5,13 +5,24 @@ import { getSlackConnectionStatus } from '../../services/integration-status.js';
 import type { ArgusConfig, SlackConfig } from '../../models/index.js';
 
 const ALLOWED_KEYS = new Set<keyof ArgusConfig>([
-  'port', 'watchDirectories', 'sessionRetentionHours',
-  'outputRetentionMbPerSession', 'autoRegisterRepos', 'yoloMode', 'restingThresholdMinutes',
-  'telemetryEnabled', 'telemetryPromptSeen', 'autoUpdate', 'updateCheckIntervalHours',
+  'port',
+  'watchDirectories',
+  'sessionRetentionHours',
+  'outputRetentionMbPerSession',
+  'autoRegisterRepos',
+  'yoloMode',
+  'restingThresholdMinutes',
+  'telemetryEnabled',
+  'telemetryPromptSeen',
+  'autoUpdate',
+  'updateCheckIntervalHours',
 ]);
 
 const SLACK_EDITABLE_KEYS: (keyof SlackConfig)[] = [
-  'botToken', 'appToken', 'channelId', 'ownerSenderId',
+  'botToken',
+  'appToken',
+  'channelId',
+  'ownerSenderId',
 ];
 
 const settingsRoutes: FastifyPluginAsync = async (app) => {
@@ -36,16 +47,27 @@ const settingsRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/api/v1/settings/slack', async (_req, reply) => {
     const config = loadSlackConfig();
-    if (!config) return reply.status(404).send({ error: 'NOT_CONFIGURED', message: 'Slack integration is not configured' });
+    if (!config) {
+      return reply
+        .status(404)
+        .send({ error: 'NOT_CONFIGURED', message: 'Slack integration is not configured' });
+    }
     return reply.send({ ...config, connectionStatus: getSlackConnectionStatus(config, false) });
   });
 
   app.patch<{ Body: Record<string, unknown> }>('/api/v1/settings/slack', async (req, reply) => {
     const body = req.body ?? {};
-    const current = loadSlackConfig() ?? { botToken: '', channelId: '', ownerSenderId: '', enabled: true };
+    const current = loadSlackConfig() ?? {
+      botToken: '',
+      channelId: '',
+      ownerSenderId: '',
+      enabled: true,
+    };
     const update: Partial<SlackConfig> = {};
     for (const key of SLACK_EDITABLE_KEYS) {
-      if (key in body) (update as Record<string, unknown>)[key] = body[key];
+      if (key in body) {
+        (update as Record<string, unknown>)[key] = body[key];
+      }
     }
     const saved = { ...current, ...update };
     saveSlackConfig(saved);
@@ -54,4 +76,3 @@ const settingsRoutes: FastifyPluginAsync = async (app) => {
 };
 
 export default settingsRoutes;
-

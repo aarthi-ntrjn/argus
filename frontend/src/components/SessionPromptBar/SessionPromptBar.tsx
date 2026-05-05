@@ -20,17 +20,25 @@ export interface SessionPromptBarHandle {
 
 type ConnectionState = 'readonly' | 'connecting' | 'connected';
 
-const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function SessionPromptBar({ session, customChoiceNumber, implicitChoiceNumber, onCustomAnswerSent, onPromptSent }, ref) {
+const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function SessionPromptBar(
+  { session, customChoiceNumber, implicitChoiceNumber, onCustomAnswerSent, onPromptSent },
+  ref,
+) {
   const connectionState: ConnectionState =
-    session.launchMode !== 'pty' ? 'readonly' :
-    session.ptyConnected === false ? 'connecting' : 'connected';
+    session.launchMode !== 'pty'
+      ? 'readonly'
+      : session.ptyConnected === false
+        ? 'connecting'
+        : 'connected';
   const [prompt, setPrompt] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useImperativeHandle(ref, () => ({
-    focusInput() { inputRef.current?.focus(); },
+    focusInput() {
+      inputRef.current?.focus();
+    },
   }));
 
   const { data: outputData } = useQuery({
@@ -43,7 +51,9 @@ const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function Sess
 
   const handleSend = async () => {
     const text = prompt.trim();
-    if (!text) return;
+    if (!text) {
+      return;
+    }
     setError(null);
     setSending(true);
     try {
@@ -59,7 +69,11 @@ const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function Sess
       onPromptSent?.();
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      setError(msg === 'Failed to fetch' ? 'Failed to send — server not reachable' : (msg || 'Failed to send'));
+      setError(
+        msg === 'Failed to fetch'
+          ? 'Failed to send — server not reachable'
+          : msg || 'Failed to send',
+      );
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 0);
@@ -92,7 +106,10 @@ const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function Sess
 
   if (connectionState === 'readonly') {
     return (
-      <p className="text-xs text-gray-600 italic" title="Start this session with argus launch to enable prompt injection">
+      <p
+        className="text-xs text-gray-600 italic"
+        title="Start this session with argus launch to enable prompt injection"
+      >
         read-only - start with argus launch to send prompts
       </p>
     );
@@ -102,16 +119,14 @@ const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function Sess
 
   return (
     <div className="mt-2">
-      {isConnecting && (
-        <p className="text-xs text-amber-600 italic mb-1">Connecting to session…</p>
-      )}
+      {isConnecting && <p className="text-xs text-amber-600 italic mb-1">Connecting to session…</p>}
       <div className="flex gap-1 items-center">
         <div className="relative flex-1">
           <input
             ref={inputRef}
             type="text"
             value={prompt}
-            onChange={e => setPrompt(e.target.value)}
+            onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
             aria-label="Send a prompt to this session"
             placeholder={isConnecting ? 'Connecting…' : 'Send a prompt…'}
@@ -138,7 +153,11 @@ const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function Sess
           <CornerDownLeft size={13} aria-hidden="true" />
         </Button>
       </div>
-      {error && <p role="alert" className="text-xs text-red-600 mt-0.5">{error}</p>}
+      {error && (
+        <p role="alert" className="text-xs text-red-600 mt-0.5">
+          {error}
+        </p>
+      )}
     </div>
   );
 });

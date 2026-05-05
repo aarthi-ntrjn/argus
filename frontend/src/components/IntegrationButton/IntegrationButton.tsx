@@ -17,37 +17,59 @@ interface DropdownProps {
 
 const STATUS_DOT: Record<'not-configured' | 'connected', string> = {
   'not-configured': 'bg-gray-300',
-  'connected':      'bg-green-500',
+  connected: 'bg-green-500',
 };
 
-function IntegrationDropdown({ type, label, status, onToggle, disabled, onOpenSettings }: DropdownProps) {
+function IntegrationDropdown({
+  type,
+  label,
+  status,
+  onToggle,
+  disabled,
+  onOpenSettings,
+}: DropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const src = type === 'teams' ? teamsUrl : slackUrl;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    if (!open) {
+      return;
+    }
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+      }
+    };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [open]);
 
-  const handleOpenSettings = () => { setOpen(false); onOpenSettings(); };
+  const handleOpenSettings = () => {
+    setOpen(false);
+    onOpenSettings();
+  };
 
   const iconOpacity = status === 'not-configured' ? 'opacity-30' : 'opacity-90';
   const toggleTitle =
-    status === 'connected' ? `${label}: running - click to stop`
-    : status === 'stopped' ? `${label}: stopped - click to start`
-    : `${label}: not configured`;
+    status === 'connected'
+      ? `${label}: running - click to stop`
+      : status === 'stopped'
+        ? `${label}: stopped - click to start`
+        : `${label}: not configured`;
 
   return (
     <div className="relative" ref={ref}>
@@ -61,31 +83,69 @@ function IntegrationDropdown({ type, label, status, onToggle, disabled, onOpenSe
             aria-label={toggleTitle}
             className="relative flex items-center justify-center p-1.5 rounded-l-md hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <img src={src} alt="" width={16} height={16} aria-hidden="true" className={`transition-opacity ${iconOpacity}`} />
-            {status === 'stopped'
-              ? <X size={8} className="absolute bottom-0.5 right-0.5 text-red-500 drop-shadow-[0_0_0_1px_white]" aria-hidden="true" />
-              : <span className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-white ${STATUS_DOT[status]}`} aria-hidden="true" />
-            }
+            <img
+              src={src}
+              alt=""
+              width={16}
+              height={16}
+              aria-hidden="true"
+              className={`transition-opacity ${iconOpacity}`}
+            />
+            {status === 'stopped' ? (
+              <X
+                size={8}
+                className="absolute bottom-0.5 right-0.5 text-red-500 drop-shadow-[0_0_0_1px_white]"
+                aria-hidden="true"
+              />
+            ) : (
+              <span
+                className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-white ${STATUS_DOT[status]}`}
+                aria-hidden="true"
+              />
+            )}
           </button>
         ) : (
-          <div className="relative flex items-center justify-center p-1.5 rounded-l-md" title={toggleTitle} aria-label={toggleTitle}>
-            <img src={src} alt="" width={16} height={16} aria-hidden="true" className={`transition-opacity ${iconOpacity}`} />
-            {status === 'stopped'
-              ? <X size={8} className="absolute bottom-0.5 right-0.5 text-red-500 drop-shadow-[0_0_0_1px_white]" aria-hidden="true" />
-              : <span className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-white ${STATUS_DOT[status]}`} aria-hidden="true" />
-            }
+          <div
+            className="relative flex items-center justify-center p-1.5 rounded-l-md"
+            title={toggleTitle}
+            aria-label={toggleTitle}
+          >
+            <img
+              src={src}
+              alt=""
+              width={16}
+              height={16}
+              aria-hidden="true"
+              className={`transition-opacity ${iconOpacity}`}
+            />
+            {status === 'stopped' ? (
+              <X
+                size={8}
+                className="absolute bottom-0.5 right-0.5 text-red-500 drop-shadow-[0_0_0_1px_white]"
+                aria-hidden="true"
+              />
+            ) : (
+              <span
+                className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-white ${STATUS_DOT[status]}`}
+                aria-hidden="true"
+              />
+            )}
           </div>
         )}
         <div className="w-px self-stretch bg-gray-200" aria-hidden="true" />
         <button
           type="button"
-          onClick={() => setOpen(o => !o)}
+          onClick={() => setOpen((o) => !o)}
           aria-label={`${label} settings`}
           aria-expanded={open}
           aria-haspopup="true"
           className="flex items-center justify-center px-1 py-1.5 rounded-r-md hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400"
         >
-          <ChevronDown size={10} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+          <ChevronDown
+            size={10}
+            className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
         </button>
       </div>
 
@@ -110,7 +170,9 @@ function IntegrationDropdown({ type, label, status, onToggle, disabled, onOpenSe
             <div className="flex flex-col gap-2">
               <p className="text-sm font-medium text-gray-700">{label}</p>
               <p className="text-xs text-gray-500">
-                {status === 'connected' ? 'Integration is running.' : 'Integration is stopped. Click to start.'}
+                {status === 'connected'
+                  ? 'Integration is running.'
+                  : 'Integration is stopped. Click to start.'}
               </p>
               <button
                 type="button"
@@ -134,9 +196,14 @@ interface TeamsIntegrationButtonProps {
   onOpenSettings: () => void;
 }
 
-export function TeamsIntegrationButton({ disabled, onToggle, onOpenSettings }: TeamsIntegrationButtonProps) {
+export function TeamsIntegrationButton({
+  disabled,
+  onToggle,
+  onOpenSettings,
+}: TeamsIntegrationButtonProps) {
   const { teamsStatus } = useIntegrationControl();
-  const status: IntegrationVisibleStatus = teamsStatus === 'unconfigured' ? 'not-configured' : teamsStatus;
+  const status: IntegrationVisibleStatus =
+    teamsStatus === 'unconfigured' ? 'not-configured' : teamsStatus;
   return (
     <IntegrationDropdown
       type="teams"
@@ -155,9 +222,14 @@ interface SlackIntegrationButtonProps {
   onOpenSettings: () => void;
 }
 
-export function SlackIntegrationButton({ disabled, onToggle, onOpenSettings }: SlackIntegrationButtonProps) {
+export function SlackIntegrationButton({
+  disabled,
+  onToggle,
+  onOpenSettings,
+}: SlackIntegrationButtonProps) {
   const { slackStatus } = useIntegrationControl();
-  const status: IntegrationVisibleStatus = slackStatus === 'unconfigured' ? 'not-configured' : slackStatus;
+  const status: IntegrationVisibleStatus =
+    slackStatus === 'unconfigured' ? 'not-configured' : slackStatus;
   return (
     <IntegrationDropdown
       type="slack"
