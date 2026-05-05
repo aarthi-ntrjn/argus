@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.16] - 2026-05-04
+
+### Added
+
+- **Auto-update**: Argus now checks for new versions automatically on a configurable schedule (default: every 4 hours). An update badge appears in the header when a new release is available, and an auto-update toggle in the Settings panel lets users enable or disable automatic updates.
+
+### Fixed
+
+- **Update button placement**: The update button has been moved to the header with a corrected badge layout for consistent positioning.
+
+---
+
 ## [0.1.15] - 2026-05-03
 
 ### Added
