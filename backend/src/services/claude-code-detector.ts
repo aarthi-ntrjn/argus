@@ -144,9 +144,9 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
    *      means the session file vanished. End the matching DB session.
    *   2. sigCache diff (shared): fire created/updated callbacks via the base
    *      fireCreatedAndUpdated helper.
-   *   3. Reconcile safety net: catches sessions not visible in the session-file
-   *      scan (e.g. PTY sessions whose session file never appeared) by checking
-   *      PID liveness and repo existence directly.
+   *   3. reconcileActiveSessions safety net: catches sessions that pid-tracking
+   *      cannot reach — repo removed while Claude runs, or Argus restart with
+   *      a stale active session whose process and session file are both gone.
    */
   protected dispatchSessionEvents(sessions: Session[]): void {
     const now = new Date().toISOString();
@@ -168,16 +168,17 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
   }
 
   /**
-   * Liveness safety net for sessions not visible in the session-file scan (e.g.
-   * PTY sessions whose session file never appeared, or sessions whose repo was
-   * removed). Walks all active+idle Claude sessions in the DB and:
+   * Ends active/idle Claude sessions that can't be caught by the pid-tracking
+   * disappearance detection in dispatchSessionEvents:
    *
-   * - Repo removed: end the session.
-   * - Process dead: end the session.
-   * - Field change since last cycle: fire sessionUpdatedCallback (deduped via sigCache).
+   * - Repo removed while Claude is running: the session file and process are
+   *   still alive so the pid stays in currentAlivePids, but resolveRepoOrWarn
+   *   filters the entry out so it never enters the scan results.
    *
-   * The sigCache diff here only catches drifts that processSessionEntry didn't
-   * already update for — those will already have been dispatched above.
+   * - Dead process with no visible session file: happens after an Argus restart
+   *   when Claude crashed while Argus was down. previousAlivePids is empty on
+   *   first scan so the pid-diff can't fire; the session file is gone so
+   *   processSessionEntry is never called.
    */
   private reconcileActiveSessions(): void {
     try {
@@ -186,28 +187,15 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
         ...getSessions({ status: 'idle', type: SessionTypes.CLAUDE_CODE }),
       ];
       if (liveSessions.length === 0) return;
-
       const repos = getRepositories();
       const now = new Date().toISOString();
-
       for (const session of liveSessions) {
-        const repo = repos.find((r) => r.id === session.repositoryId);
-        if (!repo) {
+        if (!repos.some((r) => r.id === session.repositoryId)) {
           this.markSessionEnded(session, now, 'repo removed');
           continue;
         }
-
         if (session.pid != null && !isPidRunning(session.pid)) {
           this.markSessionEnded(session, now, 'process gone');
-          continue;
-        }
-
-        const sig = this.sessionSignature(session);
-        if (!this.sigCache.has(session.id)) {
-          this.sigCache.set(session.id, sig);
-        } else if (this.sigCache.get(session.id) !== sig) {
-          this.sigCache.set(session.id, sig);
-          this.sessionUpdatedCallback?.(session);
         }
       }
     } catch { /* best-effort */ }
