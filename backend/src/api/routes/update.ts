@@ -46,11 +46,17 @@ const updateRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    updateServiceRef.applyUpdate().catch((err: unknown) => {
+    try {
+      await updateServiceRef.applyUpdate();
+      return reply.status(200).send({ applied: true });
+    } catch (err) {
       app.log.warn({ err }, 'Manual update failed');
-    });
-
-    return reply.status(202).send({ started: true });
+      return reply.status(500).send({
+        error: 'UPDATE_FAILED',
+        message: err instanceof Error ? err.message : 'Update failed.',
+        requestId: req.id,
+      });
+    }
   });
 };
 

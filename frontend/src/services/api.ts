@@ -243,8 +243,8 @@ export async function getUpdateStatus(): Promise<UpdateStatus> {
   return apiFetch<UpdateStatus>('/update/status');
 }
 
-export async function applyUpdate(): Promise<{ started: boolean }> {
-  return apiFetch<{ started: boolean }>('/update/apply', { method: 'POST' });
+export async function applyUpdate(): Promise<{ applied: boolean }> {
+  return apiFetch<{ applied: boolean }>('/update/apply', { method: 'POST' });
 }
 
 export function postTelemetryEvent(type: string): void {
