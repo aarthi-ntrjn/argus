@@ -1,0 +1,175 @@
+# Daily vulnerability audit — runs on a schedule and on manual dispatch.
+# Checks all severity levels (moderate and above), unlike the CI pipeline
+# which only fails on critical CVEs.
+#
+# Reports findings via:
+#   - GitHub Issues (always, when vulnerabilities are found)
+#   - Teams (if TEAMS_WEBHOOK_URL secret is set)
+#   - Slack  (if SLACK_WEBHOOK_URL secret is set)
+
+name: Security Audit
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # 09:00 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (lockfile-enforced, scripts suppressed)
+        run: npm ci --ignore-scripts --engine-strict
+
+      - name: Run audit and capture results
+        id: audit
+        run: |
+          npm audit --json > audit.json 2>/dev/null || true
+          npm audit > audit.txt 2>&1 || true
+          python3 - <<'EOF'
+          import json, os
+          try:
+              with open("audit.json") as f:
+                  data = json.load(f)
+              vulns = data.get("metadata", {}).get("vulnerabilities", {})
+          except Exception:
+              vulns = {}
+          total = sum(vulns.get(s, 0) for s in ["moderate", "high", "critical"])
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"total={total}\n")
+              out.write(f"critical={vulns.get('critical', 0)}\n")
+              out.write(f"high={vulns.get('high', 0)}\n")
+              out.write(f"moderate={vulns.get('moderate', 0)}\n")
+          EOF
+
+      - name: Create GitHub Issue
+        if: steps.audit.outputs.total != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUDIT_TOTAL: ${{ steps.audit.outputs.total }}
+          AUDIT_CRITICAL: ${{ steps.audit.outputs.critical }}
+          AUDIT_HIGH: ${{ steps.audit.outputs.high }}
+          AUDIT_MODERATE: ${{ steps.audit.outputs.moderate }}
+        run: |
+          gh label create "security-audit" --color "FF0000" --description "Automated security audit findings" --force 2>/dev/null || true
+          python3 - <<'EOF'
+          import os, subprocess, datetime
+          date = datetime.date.today().isoformat()
+          total    = os.environ["AUDIT_TOTAL"]
+          critical = os.environ["AUDIT_CRITICAL"]
+          high     = os.environ["AUDIT_HIGH"]
+          moderate = os.environ["AUDIT_MODERATE"]
+          with open("audit.txt") as f:
+              report = f.read().strip()
+          body = (
+              f"## npm Audit Report — {date}\n\n"
+              f"**{total} vulnerabilities found:** {critical} critical, {high} high, {moderate} moderate\n\n"
+              f"```\n{report}\n```\n\n"
+              f"Run `npm audit` locally for details, or `npm audit fix --force` to attempt automatic fixes."
+          )
+          with open("issue-body.md", "w") as f:
+              f.write(body)
+          subprocess.run([
+              "gh", "issue", "create",
+              "--title", f"Security Audit ({date}): {total} vulnerabilities found",
+              "--body-file", "issue-body.md",
+              "--label", "security-audit",
+          ], check=True)
+          EOF
+
+      - name: Notify Teams
+        # Uses the Power Automate "Post to a channel when a webhook request is received"
+        # template, which reads the "text" field from the request body and posts it
+        # to the configured channel. Set TEAMS_WEBHOOK_URL in repo secrets.
+        if: env.TEAMS_WEBHOOK_URL != ''
+        env:
+          AUDIT_TOTAL: ${{ steps.audit.outputs.total }}
+          AUDIT_CRITICAL: ${{ steps.audit.outputs.critical }}
+          AUDIT_HIGH: ${{ steps.audit.outputs.high }}
+          AUDIT_MODERATE: ${{ steps.audit.outputs.moderate }}
+        run: |
+          python3 - <<'EOF'
+          import json, urllib.request, os, datetime
+          total = int(os.environ.get("AUDIT_TOTAL", "0"))
+          date  = datetime.date.today().isoformat()
+          if total == 0:
+              text = f"Security Audit Clean - {date}: npm audit found no moderate, high, or critical vulnerabilities."
+          else:
+              critical = os.environ.get("AUDIT_CRITICAL", "0")
+              high     = os.environ.get("AUDIT_HIGH", "0")
+              moderate = os.environ.get("AUDIT_MODERATE", "0")
+              text = (
+                  f"Security Audit: {total} vulnerabilities found - {date}\n"
+                  f"{critical} critical, {high} high, {moderate} moderate.\n"
+                  f"See GitHub Issues (label: security-audit) for the full report."
+              )
+          payload = {"text": text}
+          req = urllib.request.Request(
+              os.environ["TEAMS_WEBHOOK_URL"],
+              data=json.dumps(payload).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          urllib.request.urlopen(req)
+          EOF
+
+      - name: Notify Slack
+        if: env.SLACK_WEBHOOK_URL != ''
+        env:
+          AUDIT_TOTAL: ${{ steps.audit.outputs.total }}
+          AUDIT_CRITICAL: ${{ steps.audit.outputs.critical }}
+          AUDIT_HIGH: ${{ steps.audit.outputs.high }}
+          AUDIT_MODERATE: ${{ steps.audit.outputs.moderate }}
+        run: |
+          python3 - <<'EOF'
+          import json, urllib.request, os, datetime
+          total = int(os.environ.get("AUDIT_TOTAL", "0"))
+          date  = datetime.date.today().isoformat()
+          if total == 0:
+              header = f"Security Audit Clean - {date}"
+              body   = "npm audit found no moderate, high, or critical vulnerabilities."
+          else:
+              critical = os.environ.get("AUDIT_CRITICAL", "0")
+              high     = os.environ.get("AUDIT_HIGH", "0")
+              moderate = os.environ.get("AUDIT_MODERATE", "0")
+              header = f"Security Audit: {total} vulnerabilities - {date}"
+              body   = f"*{critical}* critical, *{high}* high, *{moderate}* moderate\nSee GitHub Issues for the full report."
+          payload = {
+              "blocks": [
+                  {"type": "header",  "text": {"type": "plain_text", "text": header}},
+                  {"type": "section", "text": {"type": "mrkdwn",     "text": body}},
+              ]
+          }
+          req = urllib.request.Request(
+              os.environ["SLACK_WEBHOOK_URL"],
+              data=json.dumps(payload).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          urllib.request.urlopen(req)
+          EOF
+
+      - name: Fail if vulnerabilities found
+        # Fail the workflow run so it shows as red in the Actions UI and
+        # triggers any branch notification emails GitHub sends on failure.
+        if: steps.audit.outputs.total != '0'
+        run: |
+          echo "Found ${{ steps.audit.outputs.total }} vulnerabilities (see GitHub Issue for details)."
+          exit 1
