@@ -70,6 +70,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
 
       const sessionId = payload.session_id;
 
+      // Validate that session_id is a well-formed UUID v4 string.
       if (typeof sessionId !== 'string' || !UUID_V4_RE.test(sessionId)) {
         return reply.status(400).send({
           error: 'INVALID_SESSION_ID',
@@ -90,7 +91,10 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      req.log.debug({ hookEvent: payload.hook_event_name, payload }, 'hook received');
+      req.log.debug(
+        { hookEvent: payload.hook_event_name, payload }, 
+        'claude-code hook received'
+      );
 
       if (_cliManager) {
         await _cliManager.handleClaudeHookPayload(payload);
@@ -121,8 +125,8 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const sessionId = body.sessionId;
-      const cwd = typeof body.cwd === 'string' ? body.cwd : undefined;
-
+      
+      // Validate that sessionId is a well-formed UUID v4 string.
       if (typeof sessionId !== 'string' || !UUID_V4_RE.test(sessionId)) {
         return reply.status(400).send({
           error: 'INVALID_SESSION_ID',
@@ -142,6 +146,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
       }
 
       // Normalize Copilot's camelCase wire format to the shared HookPayload shape.
+      const cwd = typeof body.cwd === 'string' ? body.cwd : undefined;
       const normalized: HookPayload = {
         hook_event_name: EVENT_TO_PASCAL[event]!,
         session_id: sessionId,
@@ -155,7 +160,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
 
       req.log.debug(
         { hookEvent: normalized.hook_event_name, sessionId: normalized.session_id },
-        'copilot hook received',
+        'copilot-cli hook received',
       );
 
       if (_cliManager) {
