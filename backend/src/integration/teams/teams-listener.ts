@@ -28,19 +28,23 @@ export class TeamsListener implements NotificationListener {
   async initialize(): Promise<boolean> {
     this.active = true;
     if (this.handlerRegistered) {
-return true;
-}
+      return true;
+    }
     this.handlerRegistered = true;
     this.teamsApp.on('message', async ({ activity, send }) => {
       if (!this.active) {
-return;
-}
+        return;
+      }
       const teamsConfig = loadTeamsConfig();
-      const senderAadObjectId = (activity.from as Record<string, unknown>)?.['aadObjectId'] as string | undefined;
+      const senderAadObjectId = (activity.from as Record<string, unknown>)?.['aadObjectId'] as
+        | string
+        | undefined;
       log.info(`teams.listener.message.received: senderAadObjectId=${senderAadObjectId}`);
 
       if (!senderAadObjectId || senderAadObjectId !== teamsConfig.ownerSenderId) {
-        log.info(`teams.listener.message.rejected.non-owner: senderAadObjectId=${senderAadObjectId}`);
+        log.info(
+          `teams.listener.message.rejected.non-owner: senderAadObjectId=${senderAadObjectId}`,
+        );
         return;
       }
 
@@ -48,8 +52,8 @@ return;
       const raw = activity.text ?? '';
       const text = raw.replace(/<at>[^<]*<\/at>/g, '').trim();
       if (!text) {
-return;
-}
+        return;
+      }
 
       log.info(`teams.listener.message.command.received: text=${text}`);
 
@@ -65,34 +69,58 @@ return;
 
     this.teamsApp.on('card.action', async ({ activity, send }) => {
       if (!this.active) {
-return;
-}
+        return;
+      }
       const data = activity.value?.action?.data as Record<string, unknown> | undefined;
       if (data?.action !== 'pending_choice') {
-return;
-}
+        return;
+      }
 
       const teamsConfig = loadTeamsConfig();
-      const senderAadObjectId = (activity.from as Record<string, unknown>)?.['aadObjectId'] as string | undefined;
+      const senderAadObjectId = (activity.from as Record<string, unknown>)?.['aadObjectId'] as
+        | string
+        | undefined;
       if (!senderAadObjectId || senderAadObjectId !== teamsConfig.ownerSenderId) {
-        log.info(`teams.listener.card.action.rejected.non-owner: senderAadObjectId=${senderAadObjectId}`);
-        return { statusCode: 200, type: 'application/vnd.microsoft.activity.message' as const, value: 'Unauthorized' };
+        log.info(
+          `teams.listener.card.action.rejected.non-owner: senderAadObjectId=${senderAadObjectId}`,
+        );
+        return {
+          statusCode: 200,
+          type: 'application/vnd.microsoft.activity.message' as const,
+          value: 'Unauthorized',
+        };
       }
 
       const sessionId = data.sessionId as string;
       const choiceText = data.choiceText as string;
-      log.info(`teams.listener.card.action.pending_choice: session=${sessionId} choiceText=${choiceText}`);
+      log.info(
+        `teams.listener.card.action.pending_choice: session=${sessionId} choiceText=${choiceText}`,
+      );
 
       try {
         const action = await this.sessionController.sendPrompt(sessionId, choiceText);
         if (action.status === 'failed') {
-          await send(new MessageActivity(`Failed to send choice: ${action.result ?? 'unknown error'}`));
-          return { statusCode: 200, type: 'application/vnd.microsoft.activity.message' as const, value: 'Failed' };
+          await send(
+            new MessageActivity(`Failed to send choice: ${action.result ?? 'unknown error'}`),
+          );
+          return {
+            statusCode: 200,
+            type: 'application/vnd.microsoft.activity.message' as const,
+            value: 'Failed',
+          };
         }
-        return { statusCode: 200, type: 'application/vnd.microsoft.activity.message' as const, value: `Sent: ${choiceText}` };
+        return {
+          statusCode: 200,
+          type: 'application/vnd.microsoft.activity.message' as const,
+          value: `Sent: ${choiceText}`,
+        };
       } catch (err) {
         log.error(`teams.listener.card.action.failed: session=${sessionId}`, err);
-        return { statusCode: 200, type: 'application/vnd.microsoft.activity.message' as const, value: 'Error processing choice' };
+        return {
+          statusCode: 200,
+          type: 'application/vnd.microsoft.activity.message' as const,
+          value: 'Error processing choice',
+        };
       }
     });
     return true;
@@ -142,15 +170,17 @@ return;
       return 'No active sessions at this time.';
     }
 
-    const rows = active.map((s) =>
-      `\`${s.id.slice(0, 8)}...\` | ${s.type} | ${s.model ?? 'unknown'} | ${s.status}`
-    ).join('\n');
+    const rows = active
+      .map((s) => `\`${s.id.slice(0, 8)}...\` | ${s.type} | ${s.model ?? 'unknown'} | ${s.status}`)
+      .join('\n');
 
     return `**Active Sessions (${active.length})**\n---\n${rows}`;
   }
 
   private formatSessionStatus(sessionId: string): string {
-    const session = getSession(sessionId) ?? getSessions({ status: 'active' }).find((s) => s.id.startsWith(sessionId));
+    const session =
+      getSession(sessionId) ??
+      getSessions({ status: 'active' }).find((s) => s.id.startsWith(sessionId));
     if (!session) {
       return `No session found matching \`${sessionId}\``;
     }
@@ -165,7 +195,10 @@ return;
     ].join('\n');
   }
 
-  private async formatSendPrompt(prompt: string, conversationId: string | undefined): Promise<string> {
+  private async formatSendPrompt(
+    prompt: string,
+    conversationId: string | undefined,
+  ): Promise<string> {
     const threadId = extractThreadId(conversationId);
     if (!threadId) {
       return 'This message must be sent inside a session thread.';
@@ -205,9 +238,8 @@ return;
 
 function extractThreadId(conversationId: string | undefined): string | null {
   if (!conversationId) {
-return null;
-}
+    return null;
+  }
   const match = conversationId.match(/messageid=([^;]+)/);
   return match ? match[1] : null;
 }
-

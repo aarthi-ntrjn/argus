@@ -7,7 +7,7 @@ const outputStore = new OutputStore();
 function pruneExpiredSessions(): void {
   const db = getDb();
   const now = new Date().toISOString();
-  db.prepare("DELETE FROM sessions WHERE expires_at IS NOT NULL AND expires_at < ?").run(now);
+  db.prepare('DELETE FROM sessions WHERE expires_at IS NOT NULL AND expires_at < ?').run(now);
 }
 
 function pruneAllOutputs(): void {
@@ -23,11 +23,14 @@ function pruneAllOutputs(): void {
 export function startPruningJob(intervalMs = 60000): ReturnType<typeof setInterval> {
   return setInterval(() => {
     try {
- pruneExpiredSessions(); 
-} catch { /* ignore */ }
+      pruneExpiredSessions();
+    } catch {
+      /* ignore */
+    }
     try {
- pruneAllOutputs(); 
-} catch { /* ignore */ }
+      pruneAllOutputs();
+    } catch {
+      /* ignore */
+    }
   }, intervalMs);
 }
-

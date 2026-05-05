@@ -1,4 +1,5 @@
 import tseslint from 'typescript-eslint';
+import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   ...tseslint.configs.recommended,
@@ -8,7 +9,7 @@ export default tseslint.config(
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       'curly': ['error', 'all'],
-      'brace-style': ['error', '1tbs'],
     },
   },
+  prettier,
 );

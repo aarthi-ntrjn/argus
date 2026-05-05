@@ -7,7 +7,10 @@ import { setIntegrationEnabled } from '../../db/database.js';
 import { telemetryService } from '../../services/telemetry-service.js';
 import { loadSlackConfig } from '../../config/slack-config-loader.js';
 import { loadTeamsConfig } from '../../config/teams-config-loader.js';
-import { getSlackConnectionStatus, getTeamsConnectionStatus } from '../../services/integration-status.js';
+import {
+  getSlackConnectionStatus,
+  getTeamsConnectionStatus,
+} from '../../services/integration-status.js';
 import { setSlackServices } from './health.js';
 import type { SessionMonitor } from '../../services/session-monitor.js';
 
@@ -57,8 +60,10 @@ const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.post('/api/v1/integrations/slack/start', async (_request, reply) => {
     if (!slackNotifier) {
-return reply.status(503).send({ error: 'Slack integration not available. Enable integrations in settings.' });
-}
+      return reply
+        .status(503)
+        .send({ error: 'Slack integration not available. Enable integrations in settings.' });
+    }
     const started = await slackNotifier.initialize();
     // Create listener on demand if not yet created and notifier is now connected
     if (started && !slackListener && slackNotifier.webClient) {
@@ -69,8 +74,8 @@ return reply.status(503).send({ error: 'Slack integration not available. Enable 
       }
     }
     if (slackListener) {
-await slackListener.initialize();
-}
+      await slackListener.initialize();
+    }
     setIntegrationEnabled('slack', true);
     telemetryService.setIntegrationStatus('slack', 'on');
     telemetryService.sendEvent('integration_started', { integration_platform: 'slack' });
@@ -79,8 +84,8 @@ await slackListener.initialize();
 
   fastify.post('/api/v1/integrations/slack/stop', async (_request, reply) => {
     if (!slackNotifier) {
-return reply.status(503).send({ error: 'Slack not configured' });
-}
+      return reply.status(503).send({ error: 'Slack not configured' });
+    }
     slackListener?.shutdown();
     slackNotifier.shutdown();
     setIntegrationEnabled('slack', false);
@@ -91,8 +96,8 @@ return reply.status(503).send({ error: 'Slack not configured' });
 
   fastify.post('/api/v1/integrations/teams/start', async (_request, reply) => {
     if (!teamsNotifier) {
-return reply.status(503).send({ error: 'Teams not configured' });
-}
+      return reply.status(503).send({ error: 'Teams not configured' });
+    }
     const started = await teamsNotifier.initialize();
     teamsListener?.initialize();
     setIntegrationEnabled('teams', true);
@@ -103,8 +108,8 @@ return reply.status(503).send({ error: 'Teams not configured' });
 
   fastify.post('/api/v1/integrations/teams/stop', async (_request, reply) => {
     if (!teamsNotifier) {
-return reply.status(503).send({ error: 'Teams not configured' });
-}
+      return reply.status(503).send({ error: 'Teams not configured' });
+    }
     teamsListener?.shutdown();
     teamsNotifier.shutdown();
     setIntegrationEnabled('teams', false);

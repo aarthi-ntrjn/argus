@@ -25,18 +25,26 @@ export class SessionController {
       throw Object.assign(new Error('Session has no PID on record'), { code: 'PID_NOT_SET' });
     }
 
-    logger.info(`[stopSession] validating PID ownership sessionId=${sessionId} pid=${session.pid} type=${session.type}`);
+    logger.info(
+      `[stopSession] validating PID ownership sessionId=${sessionId} pid=${session.pid} type=${session.type}`,
+    );
     const validation = await validatePidOwnership(session.pid, session.type);
     if (!validation.valid) {
-      const code = validation.reason === 'process_not_ai_tool' ? 'PID_NOT_AI_TOOL' : 'PID_NOT_FOUND';
-      const message = validation.reason === 'process_not_ai_tool'
-        ? 'PID does not belong to a monitored AI process'
-        : 'Process is no longer running';
-      logger.info(`[stopSession] validation failed sessionId=${sessionId} pid=${session.pid} reason=${validation.reason}`);
+      const code =
+        validation.reason === 'process_not_ai_tool' ? 'PID_NOT_AI_TOOL' : 'PID_NOT_FOUND';
+      const message =
+        validation.reason === 'process_not_ai_tool'
+          ? 'PID does not belong to a monitored AI process'
+          : 'Process is no longer running';
+      logger.info(
+        `[stopSession] validation failed sessionId=${sessionId} pid=${session.pid} reason=${validation.reason}`,
+      );
       throw Object.assign(new Error(message), { code });
     }
 
-    logger.info(`[stopSession] validation passed, killing pid=${session.pid} sessionId=${sessionId}`);
+    logger.info(
+      `[stopSession] validation passed, killing pid=${session.pid} sessionId=${sessionId}`,
+    );
     const action: ControlAction = {
       id: randomUUID(),
       sessionId,
@@ -53,17 +61,35 @@ export class SessionController {
 
     try {
       await this.killProcess(session.pid);
-      const completed = { ...action, status: 'completed' as const, completedAt: new Date().toISOString() };
+      const completed = {
+        ...action,
+        status: 'completed' as const,
+        completedAt: new Date().toISOString(),
+      };
       updateControlAction(action.id, 'completed', completed.completedAt, null);
       this.broadcastAction(completed);
-      logger.info(`[stopSession] COMPLETED actionId=${action.id} sessionId=${sessionId} pid=${session.pid}`);
-      telemetryService.sendEvent('session_stopped', { sessionType: session.type, sessionId, launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly', yoloMode: session.yoloMode });
+      logger.info(
+        `[stopSession] COMPLETED actionId=${action.id} sessionId=${sessionId} pid=${session.pid}`,
+      );
+      telemetryService.sendEvent('session_stopped', {
+        sessionType: session.type,
+        sessionId,
+        launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly',
+        yoloMode: session.yoloMode,
+      });
       return completed;
     } catch (err) {
-      const failed = { ...action, status: 'failed' as const, completedAt: new Date().toISOString(), result: String(err) };
+      const failed = {
+        ...action,
+        status: 'failed' as const,
+        completedAt: new Date().toISOString(),
+        result: String(err),
+      };
       updateControlAction(action.id, 'failed', failed.completedAt, failed.result);
       this.broadcastAction(failed);
-      logger.info(`[stopSession] FAILED actionId=${action.id} sessionId=${sessionId} pid=${session.pid} error=${String(err)}`);
+      logger.info(
+        `[stopSession] FAILED actionId=${action.id} sessionId=${sessionId} pid=${session.pid} error=${String(err)}`,
+      );
       return failed;
     }
   }
@@ -71,13 +97,15 @@ export class SessionController {
   async sendPrompt(sessionId: string, prompt: string, skipEnter = false): Promise<ControlAction> {
     const session = getSession(sessionId);
     if (!session) {
-throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
-}
+      throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
+    }
     if (session.status === 'ended' || session.status === 'completed') {
       throw Object.assign(new Error('Session already ended'), { code: 'CONFLICT' });
     }
 
-    logger.info(`[sendPrompt] sessionId=${sessionId} type=${session.type} launchMode=${session.launchMode} ptyRegistryHas=${ptyRegistry.has(sessionId)}`);
+    logger.info(
+      `[sendPrompt] sessionId=${sessionId} type=${session.type} launchMode=${session.launchMode} ptyRegistryHas=${ptyRegistry.has(sessionId)}`,
+    );
 
     // Only PTY-launched sessions have a delivery channel
     if (session.launchMode !== 'pty') {
@@ -129,37 +157,60 @@ throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FO
     this.broadcastAction(action);
 
     // Deliver asynchronously; HTTP response returns immediately with pending action
-    ptyRegistry.sendPrompt(sessionId, action.id, prompt, undefined, skipEnter)
+    ptyRegistry
+      .sendPrompt(sessionId, action.id, prompt, undefined, skipEnter)
       .then(() => {
         const now = new Date().toISOString();
         logger.info(`[sendPrompt] DELIVERED actionId=${action.id} sessionId=${sessionId}`);
-        telemetryService.sendEvent('session_prompt_sent', { sessionType: session.type, sessionId, launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly', yoloMode: session.yoloMode });
+        telemetryService.sendEvent('session_prompt_sent', {
+          sessionType: session.type,
+          sessionId,
+          launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly',
+          yoloMode: session.yoloMode,
+        });
         updateControlAction(action.id, 'completed', now, null);
         this.broadcastAction({ ...action, status: 'completed', completedAt: now });
       })
       .catch((err: Error) => {
         const now = new Date().toISOString();
-        logger.info(`[sendPrompt] FAILED actionId=${action.id} sessionId=${sessionId} error=${err.message}`);
+        logger.info(
+          `[sendPrompt] FAILED actionId=${action.id} sessionId=${sessionId} error=${err.message}`,
+        );
         updateControlAction(action.id, 'failed', now, err.message);
-        this.broadcastAction({ ...action, status: 'failed', completedAt: now, result: err.message });
+        this.broadcastAction({
+          ...action,
+          status: 'failed',
+          completedAt: now,
+          result: err.message,
+        });
       });
 
     return action;
   }
 
-  async sendChoiceWithPrompt(sessionId: string, choiceNumber: string, prompt: string): Promise<ControlAction> {
+  async sendChoiceWithPrompt(
+    sessionId: string,
+    choiceNumber: string,
+    prompt: string,
+  ): Promise<ControlAction> {
     const session = getSession(sessionId);
     if (!session) {
-throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
-}
+      throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
+    }
     if (session.status === 'ended' || session.status === 'completed') {
       throw Object.assign(new Error('Session already ended'), { code: 'CONFLICT' });
     }
     if (session.launchMode !== 'pty' || !ptyRegistry.has(sessionId)) {
       const action: ControlAction = {
-        id: randomUUID(), sessionId, type: 'send_prompt', payload: { choiceNumber, prompt },
-        status: 'failed', createdAt: new Date().toISOString(), completedAt: new Date().toISOString(),
-        result: 'Prompt delivery requires starting this session via argus launch', source: null,
+        id: randomUUID(),
+        sessionId,
+        type: 'send_prompt',
+        payload: { choiceNumber, prompt },
+        status: 'failed',
+        createdAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        result: 'Prompt delivery requires starting this session via argus launch',
+        source: null,
       };
       insertControlAction(action);
       this.broadcastAction(action);
@@ -167,24 +218,41 @@ throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FO
     }
 
     const action: ControlAction = {
-      id: randomUUID(), sessionId, type: 'send_prompt', payload: { choiceNumber, prompt },
-      status: 'pending', createdAt: new Date().toISOString(), completedAt: null, result: null, source: null,
+      id: randomUUID(),
+      sessionId,
+      type: 'send_prompt',
+      payload: { choiceNumber, prompt },
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      completedAt: null,
+      result: null,
+      source: null,
     };
     insertControlAction(action);
     this.broadcastAction(action);
 
-    ptyRegistry.sendChoiceWithPrompt(sessionId, action.id, choiceNumber, prompt)
+    ptyRegistry
+      .sendChoiceWithPrompt(sessionId, action.id, choiceNumber, prompt)
       .then(() => {
         const now = new Date().toISOString();
-        logger.info(`[sendChoiceWithPrompt] DELIVERED actionId=${action.id} sessionId=${sessionId}`);
+        logger.info(
+          `[sendChoiceWithPrompt] DELIVERED actionId=${action.id} sessionId=${sessionId}`,
+        );
         updateControlAction(action.id, 'completed', now, null);
         this.broadcastAction({ ...action, status: 'completed', completedAt: now });
       })
       .catch((err: Error) => {
         const now = new Date().toISOString();
-        logger.info(`[sendChoiceWithPrompt] FAILED actionId=${action.id} sessionId=${sessionId} error=${err.message}`);
+        logger.info(
+          `[sendChoiceWithPrompt] FAILED actionId=${action.id} sessionId=${sessionId} error=${err.message}`,
+        );
         updateControlAction(action.id, 'failed', now, err.message);
-        this.broadcastAction({ ...action, status: 'failed', completedAt: now, result: err.message });
+        this.broadcastAction({
+          ...action,
+          status: 'failed',
+          completedAt: now,
+          result: err.message,
+        });
       });
 
     return action;
@@ -193,8 +261,8 @@ throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FO
   async interruptSession(sessionId: string): Promise<ControlAction> {
     const session = getSession(sessionId);
     if (!session) {
-throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
-}
+      throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FOUND' });
+    }
     if (session.status === 'ended' || session.status === 'completed') {
       throw Object.assign(new Error('Session already ended'), { code: 'CONFLICT' });
     }
@@ -204,10 +272,12 @@ throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FO
 
     const validation = await validatePidOwnership(session.pid, session.type);
     if (!validation.valid) {
-      const code = validation.reason === 'process_not_ai_tool' ? 'PID_NOT_AI_TOOL' : 'PID_NOT_FOUND';
-      const message = validation.reason === 'process_not_ai_tool'
-        ? 'PID does not belong to a monitored AI process'
-        : 'Process is no longer running';
+      const code =
+        validation.reason === 'process_not_ai_tool' ? 'PID_NOT_AI_TOOL' : 'PID_NOT_FOUND';
+      const message =
+        validation.reason === 'process_not_ai_tool'
+          ? 'PID does not belong to a monitored AI process'
+          : 'Process is no longer running';
       throw Object.assign(new Error(message), { code });
     }
 
@@ -227,12 +297,21 @@ throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FO
 
     try {
       await this.interruptProcess(session.pid);
-      const completed = { ...action, status: 'completed' as const, completedAt: new Date().toISOString() };
+      const completed = {
+        ...action,
+        status: 'completed' as const,
+        completedAt: new Date().toISOString(),
+      };
       updateControlAction(action.id, 'completed', completed.completedAt, null);
       this.broadcastAction(completed);
       return completed;
     } catch (err) {
-      const failed = { ...action, status: 'failed' as const, completedAt: new Date().toISOString(), result: String(err) };
+      const failed = {
+        ...action,
+        status: 'failed' as const,
+        completedAt: new Date().toISOString(),
+        result: String(err),
+      };
       updateControlAction(action.id, 'failed', failed.completedAt, failed.result);
       this.broadcastAction(failed);
       return failed;
@@ -266,4 +345,3 @@ throw Object.assign(new Error(`Session ${sessionId} not found`), { code: 'NOT_FO
     });
   }
 }
-

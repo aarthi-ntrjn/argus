@@ -5,20 +5,38 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { IntegrationConfigContent } from '../components/SettingsDialog/IntegrationConfigContent';
 import * as api from '../services/api';
 
-const notRunning = { integrationsEnabled: true, slack: { connectionStatus: 'unconfigured' as const, notifier: null, listener: null }, teams: { connectionStatus: 'unconfigured' as const, notifier: null, listener: null } };
-const slackRunning = { integrationsEnabled: true, slack: { connectionStatus: 'connected' as const, notifier: { running: true }, listener: null }, teams: { connectionStatus: 'unconfigured' as const, notifier: null, listener: null } };
+const notRunning = {
+  integrationsEnabled: true,
+  slack: { connectionStatus: 'unconfigured' as const, notifier: null, listener: null },
+  teams: { connectionStatus: 'unconfigured' as const, notifier: null, listener: null },
+};
+const slackRunning = {
+  integrationsEnabled: true,
+  slack: { connectionStatus: 'connected' as const, notifier: { running: true }, listener: null },
+  teams: { connectionStatus: 'unconfigured' as const, notifier: null, listener: null },
+};
 
 vi.mock('../services/api', () => ({
   getTeamsSettings: vi.fn().mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' }),
   getSlackSettings: vi.fn().mockRejectedValue(new Error('not configured')),
-  getIntegrationStatus: vi.fn().mockResolvedValue({ integrationsEnabled: true, slack: { connectionStatus: 'unconfigured', notifier: null, listener: null }, teams: { connectionStatus: 'unconfigured', notifier: null, listener: null } }),
+  getIntegrationStatus: vi
+    .fn()
+    .mockResolvedValue({
+      integrationsEnabled: true,
+      slack: { connectionStatus: 'unconfigured', notifier: null, listener: null },
+      teams: { connectionStatus: 'unconfigured', notifier: null, listener: null },
+    }),
   startIntegration: vi.fn().mockResolvedValue(undefined),
   stopIntegration: vi.fn().mockResolvedValue(undefined),
 }));
 
 function renderWithQuery(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<MemoryRouter><QueryClientProvider client={qc}>{ui}</QueryClientProvider></MemoryRouter>);
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 describe('SettingsPanel - Slack integration section', () => {
@@ -44,7 +62,11 @@ describe('SettingsPanel - Slack integration section', () => {
   });
 
   it('shows field labels for Bot Token, App Token, Channel ID', async () => {
-    vi.mocked(api.getSlackSettings).mockResolvedValue({ botToken: '***', channelId: 'C01234ABCDE', enabled: true });
+    vi.mocked(api.getSlackSettings).mockResolvedValue({
+      botToken: '***',
+      channelId: 'C01234ABCDE',
+      enabled: true,
+    });
     renderWithQuery(<IntegrationConfigContent type="slack" />);
     await waitFor(() => {
       expect(screen.getByText('Bot Token')).toBeInTheDocument();
@@ -54,7 +76,11 @@ describe('SettingsPanel - Slack integration section', () => {
   });
 
   it('shows connected badge when integration is running', async () => {
-    vi.mocked(api.getSlackSettings).mockResolvedValue({ botToken: '***', channelId: 'C01234ABCDE', enabled: true });
+    vi.mocked(api.getSlackSettings).mockResolvedValue({
+      botToken: '***',
+      channelId: 'C01234ABCDE',
+      enabled: true,
+    });
     vi.mocked(api.getIntegrationStatus).mockResolvedValue(slackRunning);
     renderWithQuery(<IntegrationConfigContent type="slack" />);
     await waitFor(() => {
@@ -63,7 +89,11 @@ describe('SettingsPanel - Slack integration section', () => {
   });
 
   it('displays channel ID value when config is loaded', async () => {
-    vi.mocked(api.getSlackSettings).mockResolvedValue({ botToken: '***', channelId: 'C09876ZYXWV', enabled: true });
+    vi.mocked(api.getSlackSettings).mockResolvedValue({
+      botToken: '***',
+      channelId: 'C09876ZYXWV',
+      enabled: true,
+    });
     renderWithQuery(<IntegrationConfigContent type="slack" />);
     await waitFor(() => {
       expect(screen.getByDisplayValue('C09876ZYXWV')).toBeInTheDocument();
@@ -71,14 +101,22 @@ describe('SettingsPanel - Slack integration section', () => {
   });
 
   it('shows empty app token field when appToken is absent', async () => {
-    vi.mocked(api.getSlackSettings).mockResolvedValue({ botToken: '***', channelId: 'C01234', enabled: true });
+    vi.mocked(api.getSlackSettings).mockResolvedValue({
+      botToken: '***',
+      channelId: 'C01234',
+      enabled: true,
+    });
     renderWithQuery(<IntegrationConfigContent type="slack" />);
     await waitFor(() => screen.getByText(/^slack$/i));
     expect(screen.getByLabelText(/app token/i)).toHaveValue('');
   });
 
   it('does not render a save or edit button for Slack', async () => {
-    vi.mocked(api.getSlackSettings).mockResolvedValue({ botToken: '***', channelId: 'C01234', enabled: true });
+    vi.mocked(api.getSlackSettings).mockResolvedValue({
+      botToken: '***',
+      channelId: 'C01234',
+      enabled: true,
+    });
     renderWithQuery(<IntegrationConfigContent type="slack" />);
     await waitFor(() => screen.getByText(/^slack$/i));
     expect(screen.queryByRole('button', { name: /save slack/i })).not.toBeInTheDocument();

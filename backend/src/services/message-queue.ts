@@ -10,9 +10,7 @@ export class MessageQueue {
   private static readonly MAX_QUEUE_DEPTH = 50;
   private static readonly MIN_SEND_INTERVAL_MS = 1100;
 
-  constructor(
-    private readonly onDrop: (eventType: string, sessionId: string) => void,
-  ) {}
+  constructor(private readonly onDrop: (eventType: string, sessionId: string) => void) {}
 
   enqueue(fn: () => Promise<void>, eventType: string, sessionId: string): void {
     if (this.queue.length >= MessageQueue.MAX_QUEUE_DEPTH) {
@@ -29,13 +27,16 @@ export class MessageQueue {
 
   private process(): void {
     if (this.isSending || this.queue.length === 0) {
-return;
-}
+      return;
+    }
     const job = this.queue.shift()!;
     this.isSending = true;
     const start = Date.now();
-    job.fn()
-      .catch(() => { /* errors handled inside fn() */ })
+    job
+      .fn()
+      .catch(() => {
+        /* errors handled inside fn() */
+      })
       .finally(() => {
         const elapsed = Date.now() - start;
         const delay = Math.max(0, MessageQueue.MIN_SEND_INTERVAL_MS - elapsed);

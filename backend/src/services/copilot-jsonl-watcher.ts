@@ -8,7 +8,12 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
   protected readonly tag = '[CopilotDetector]';
   private readonly pendingAskUserCallIds = new Map<string, string>();
 
-  protected parseLine(line: string, sessionId: string, seq: number, makeId: (blockIndex: number) => string): SessionOutput[] {
+  protected parseLine(
+    line: string,
+    sessionId: string,
+    seq: number,
+    makeId: (blockIndex: number) => string,
+  ): SessionOutput[] {
     return parseJsonlLine(line, sessionId, seq, makeId);
   }
 
@@ -21,10 +26,12 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
         try {
           const parsed = JSON.parse(output.content) as Record<string, unknown>;
           if (typeof parsed.question === 'string') {
-question = parsed.question;
-}
+            question = parsed.question;
+          }
           if (Array.isArray(parsed.choices)) {
-            choices = (parsed.choices as unknown[]).filter((c): c is string => typeof c === 'string');
+            choices = (parsed.choices as unknown[]).filter(
+              (c): c is string => typeof c === 'string',
+            );
           }
         } catch {
           // content is the raw question string (single-arg ask_user with no choices)
@@ -35,12 +42,20 @@ question = parsed.question;
           this.pendingAskUserCallIds.set(sessionId, output.toolCallId);
         }
         const allQuestions = [{ question, choices }];
-        broadcast({ type: 'session.pending_choice', timestamp: now, data: { sessionId, question, choices, allQuestions } });
+        broadcast({
+          type: 'session.pending_choice',
+          timestamp: now,
+          data: { sessionId, question, choices, allQuestions },
+        });
       } else if (output.type === 'tool_result' && output.toolCallId) {
         const pendingId = this.pendingAskUserCallIds.get(sessionId);
         if (pendingId === output.toolCallId) {
           this.pendingAskUserCallIds.delete(sessionId);
-          broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
+          broadcast({
+            type: 'session.pending_choice.resolved',
+            timestamp: now,
+            data: { sessionId },
+          });
         }
       }
     }

@@ -4,7 +4,9 @@ import userEvent from '@testing-library/user-event';
 import type { Session } from '../types';
 
 vi.mock('react-router-dom', () => ({
-  Link: ({ children, ...props }: React.PropsWithChildren<{ to: string }>) => <a {...props}>{children}</a>,
+  Link: ({ children, ...props }: React.PropsWithChildren<{ to: string }>) => (
+    <a {...props}>{children}</a>
+  ),
 }));
 
 vi.mock('../hooks/useArgusSettings', () => ({

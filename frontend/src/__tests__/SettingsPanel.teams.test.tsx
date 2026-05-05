@@ -5,26 +5,51 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { IntegrationConfigContent } from '../components/SettingsDialog/IntegrationConfigContent';
 import * as api from '../services/api';
 
-const notRunning = { integrationsEnabled: true, slack: { connectionStatus: 'unconfigured' as const, notifier: null, listener: null }, teams: { connectionStatus: 'unconfigured' as const, notifier: { running: false }, listener: null } };
-const teamsRunning = { integrationsEnabled: true, slack: { connectionStatus: 'unconfigured' as const, notifier: null, listener: null }, teams: { connectionStatus: 'connected' as const, notifier: { running: true }, listener: null } };
+const notRunning = {
+  integrationsEnabled: true,
+  slack: { connectionStatus: 'unconfigured' as const, notifier: null, listener: null },
+  teams: {
+    connectionStatus: 'unconfigured' as const,
+    notifier: { running: false },
+    listener: null,
+  },
+};
+const teamsRunning = {
+  integrationsEnabled: true,
+  slack: { connectionStatus: 'unconfigured' as const, notifier: null, listener: null },
+  teams: { connectionStatus: 'connected' as const, notifier: { running: true }, listener: null },
+};
 
 vi.mock('../services/api', () => ({
   getTeamsSettings: vi.fn().mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' }),
   getSlackSettings: vi.fn().mockRejectedValue(new Error('not configured')),
-  getIntegrationStatus: vi.fn().mockResolvedValue({ integrationsEnabled: true, slack: { connectionStatus: 'unconfigured', notifier: null, listener: null }, teams: { connectionStatus: 'unconfigured', notifier: { running: false }, listener: null } }),
+  getIntegrationStatus: vi
+    .fn()
+    .mockResolvedValue({
+      integrationsEnabled: true,
+      slack: { connectionStatus: 'unconfigured', notifier: null, listener: null },
+      teams: { connectionStatus: 'unconfigured', notifier: { running: false }, listener: null },
+    }),
   startIntegration: vi.fn().mockResolvedValue(undefined),
   stopIntegration: vi.fn().mockResolvedValue(undefined),
 }));
 
 function renderWithQuery(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<MemoryRouter><QueryClientProvider client={qc}>{ui}</QueryClientProvider></MemoryRouter>);
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 describe('SettingsPanel - Teams integration section', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(api.getTeamsSettings).mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' });
+    vi.mocked(api.getTeamsSettings).mockResolvedValue({
+      enabled: false,
+      connectionStatus: 'unconfigured',
+    });
     vi.mocked(api.getIntegrationStatus).mockResolvedValue(notRunning);
   });
 

@@ -7,7 +7,12 @@ interface ToggleIconButtonProps {
   children: ReactNode;
 }
 
-export default function ToggleIconButton({ pressed, onToggle, label, children }: ToggleIconButtonProps) {
+export default function ToggleIconButton({
+  pressed,
+  onToggle,
+  label,
+  children,
+}: ToggleIconButtonProps) {
   return (
     <button
       onClick={onToggle}

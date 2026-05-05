@@ -6,7 +6,9 @@ import type { Session } from '../../types';
 import { getSessionOutput } from '../../services/api';
 import { isInactive, type PendingChoice } from '../../utils/sessionUtils';
 import { useArgusSettings } from '../../hooks/useArgusSettings';
-import SessionPromptBar, { type SessionPromptBarHandle } from '../SessionPromptBar/SessionPromptBar';
+import SessionPromptBar, {
+  type SessionPromptBarHandle,
+} from '../SessionPromptBar/SessionPromptBar';
 import SessionMetaRow from '../SessionMetaRow/SessionMetaRow';
 import { useKillSession } from '../../hooks/useKillSession';
 import { KillSessionDialog } from '../KillSessionDialog/KillSessionDialog';
@@ -17,7 +19,6 @@ interface Props {
   selected?: boolean;
   onSelect?: (id: string) => void;
 }
-
 
 function SessionCard({ session, selected, onSelect }: Props) {
   const { settings: argusSettings } = useArgusSettings();
@@ -41,21 +42,30 @@ function SessionCard({ session, selected, onSelect }: Props) {
   const [questionIdx, setQuestionIdx] = useState(0);
   const [customChoiceNumber, setCustomChoiceNumber] = useState<string | null>(null);
   useEffect(() => {
- setQuestionIdx(0); setCustomChoiceNumber(null); 
-}, [hookPendingChoice]);
+    setQuestionIdx(0);
+    setCustomChoiceNumber(null);
+  }, [hookPendingChoice]);
 
-  const pendingQuestions = hookPendingChoice?.allQuestions ?? (hookPendingChoice ? [{ question: hookPendingChoice.question, choices: hookPendingChoice.choices }] : []);
+  const pendingQuestions =
+    hookPendingChoice?.allQuestions ??
+    (hookPendingChoice
+      ? [{ question: hookPendingChoice.question, choices: hookPendingChoice.choices }]
+      : []);
   const currentQuestion = pendingQuestions[Math.min(questionIdx, pendingQuestions.length - 1)];
-  const implicitChoiceNumber = currentQuestion && currentQuestion.choices.length > 0
-    ? String(currentQuestion.choices.length + 1)
-    : null;
+  const implicitChoiceNumber =
+    currentQuestion && currentQuestion.choices.length > 0
+      ? String(currentQuestion.choices.length + 1)
+      : null;
 
   const promptBarRef = useRef<SessionPromptBarHandle>(null);
 
   const items = lastOutput?.items ?? [];
   const previewItem =
-    [...items].reverse().find((i: import('../../types').SessionOutput) => i.type === 'message' && i.role === 'assistant') ??
-    null;
+    [...items]
+      .reverse()
+      .find(
+        (i: import('../../types').SessionOutput) => i.type === 'message' && i.role === 'assistant',
+      ) ?? null;
   const previewContent = previewItem?.content?.trim() ?? null;
   const isTerminated = session.status === 'ended' || session.status === 'completed';
   const pendingChoice = isTerminated ? null : hookPendingChoice;
@@ -68,42 +78,78 @@ function SessionCard({ session, selected, onSelect }: Props) {
       aria-label={`Session ${session.id.slice(0, 8)} — ${session.status}. Press Enter to ${selected ? 'close' : 'view'} output.`}
       className={`interactive-card p-4 ${selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-neutral-400 hover:bg-neutral-100'} ${isInactive(session, thresholdMs) && !selected ? 'opacity-75' : ''}`}
       onClick={() => onSelect?.(session.id)}
-      onKeyDown={e => {
- if (e.key === 'Enter' || e.key === ' ') {
- e.preventDefault(); onSelect?.(session.id); 
-} 
-}}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect?.(session.id);
+        }
+      }}
     >
       {/* Header row */}
-      <SessionMetaRow session={session} showLink onKill={kill.requestKill} killPending={kill.isPending} />
+      <SessionMetaRow
+        session={session}
+        showLink
+        onKill={kill.requestKill}
+        killPending={kill.isPending}
+      />
 
       {/* Summary / topic */}
       {pendingChoice !== null ? (
-        <PendingChoicePanel pendingChoice={pendingChoice} session={session} idx={questionIdx} onAdvance={() => setQuestionIdx(i => i + 1)} onFocusPromptBar={() => promptBarRef.current?.focusInput()} onTypeAnswer={(n) => {
- setCustomChoiceNumber(n); promptBarRef.current?.focusInput(); 
-}} />
+        <PendingChoicePanel
+          pendingChoice={pendingChoice}
+          session={session}
+          idx={questionIdx}
+          onAdvance={() => setQuestionIdx((i) => i + 1)}
+          onFocusPromptBar={() => promptBarRef.current?.focusInput()}
+          onTypeAnswer={(n) => {
+            setCustomChoiceNumber(n);
+            promptBarRef.current?.focusInput();
+          }}
+        />
       ) : (
-        <p className={`text-sm mt-2 truncate ${session.summary ? 'text-gray-600' : 'text-gray-500 italic'}`}>
+        <p
+          className={`text-sm mt-2 truncate ${session.summary ? 'text-gray-600' : 'text-gray-500 italic'}`}
+        >
           {session.summary || 'Nothing sent yet'}
         </p>
       )}
 
       {/* Last output preview — fixed 2-line height */}
-      <div className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 break-words font-mono min-h-[2.5rem] ${previewContent ? 'text-gray-300' : 'text-gray-500 italic'}`}>
-        {previewContent
-          ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+      <div
+        className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 break-words font-mono min-h-[2.5rem] ${previewContent ? 'text-gray-300' : 'text-gray-500 italic'}`}
+      >
+        {previewContent ? (
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
               p: ({ children }) => <span>{children}</span>,
-              code: ({ children }) => <code className="bg-gray-700 rounded px-0.5">{children}</code>,
-              strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+              code: ({ children }) => (
+                <code className="bg-gray-700 rounded px-0.5">{children}</code>
+              ),
+              strong: ({ children }) => (
+                <strong className="text-white font-semibold">{children}</strong>
+              ),
               em: ({ children }) => <em>{children}</em>,
               a: ({ children }) => <span className="text-blue-400 underline">{children}</span>,
-            }}>{previewContent}</ReactMarkdown>
-          : 'Waiting for output...'}
+            }}
+          >
+            {previewContent}
+          </ReactMarkdown>
+        ) : (
+          'Waiting for output...'
+        )}
       </div>
 
       {session.launchMode === 'pty' && (
-        <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-          <SessionPromptBar ref={promptBarRef} session={session} customChoiceNumber={customChoiceNumber} implicitChoiceNumber={pendingChoice ? implicitChoiceNumber : null} onCustomAnswerSent={() => setCustomChoiceNumber(null)} onPromptSent={pendingChoice ? () => setQuestionIdx(i => i + 1) : undefined} />
+        <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+          <SessionPromptBar
+            ref={promptBarRef}
+            session={session}
+            customChoiceNumber={customChoiceNumber}
+            implicitChoiceNumber={pendingChoice ? implicitChoiceNumber : null}
+            onCustomAnswerSent={() => setCustomChoiceNumber(null)}
+            onPromptSent={pendingChoice ? () => setQuestionIdx((i) => i + 1) : undefined}
+          />
         </div>
       )}
 

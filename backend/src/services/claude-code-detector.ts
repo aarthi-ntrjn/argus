@@ -2,7 +2,13 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import * as logger from '../utils/logger.js';
 import { join, dirname, normalize } from 'path';
 import { homedir } from 'os';
-import { getSession, upsertSession, updateSessionStatus, getRepositoryByPath } from '../db/database.js';
+
+import {
+  getSession,
+  upsertSession,
+  updateSessionStatus,
+  getRepositoryByPath,
+} from '../db/database.js';
 import { ptyRegistry } from './pty-registry.js';
 import { ClaudeSessionRegistry } from './claude-session-registry.js';
 import { ClaudeJsonlWatcher } from './claude-jsonl-watcher.js';
@@ -13,7 +19,8 @@ import { pendingChoiceEvents } from './pending-choice-events.js';
 import { telemetryService } from './telemetry-service.js';
 
 const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json');
-const HOOK_COMMAND = 'curl -sf -X POST http://127.0.0.1:7411/hooks/claude -H "Content-Type: application/json" -d @- 2>/dev/null || true';
+const HOOK_COMMAND =
+  'curl -sf -X POST http://127.0.0.1:7411/hooks/claude -H "Content-Type: application/json" -d @- 2>/dev/null || true';
 const HOOK_EVENTS: Array<{ event: string; matcher: string }> = [
   { event: 'SessionStart', matcher: '' },
   { event: 'SessionEnd', matcher: '' },
@@ -22,7 +29,10 @@ const HOOK_EVENTS: Array<{ event: string; matcher: string }> = [
 ];
 
 interface ClaudeSettings {
-  hooks?: Record<string, Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>>;
+  hooks?: Record<
+    string,
+    Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>
+  >;
   [key: string]: unknown;
 }
 
@@ -51,8 +61,8 @@ export class ClaudeCodeDetector {
 
   clearPendingChoice(sessionId: string): void {
     if (!this.pendingChoices.has(sessionId)) {
-return;
-}
+      return;
+    }
     this.pendingChoices.delete(sessionId);
     const now = new Date().toISOString();
     broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
@@ -67,8 +77,8 @@ return;
         settings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
       }
       if (!settings.hooks) {
-settings.hooks = {};
-}
+        settings.hooks = {};
+      }
       let changed = false;
 
       // Remove Argus hook entries whose (event, matcher) pair is no longer in HOOK_EVENTS.
@@ -83,8 +93,8 @@ settings.hooks = {};
         const after = before.filter((entry) => {
           const isArgusEntry = entry.hooks?.some((h) => h.command === HOOK_COMMAND);
           if (!isArgusEntry) {
-return true;
-}
+            return true;
+          }
           return HOOK_EVENTS.some((he) => he.event === event && he.matcher === entry.matcher);
         });
         if (after.length !== before.length) {
@@ -96,35 +106,40 @@ return true;
       for (const { event, matcher } of HOOK_EVENTS) {
         if (!this.hasHook(settings, event, matcher)) {
           if (!settings.hooks[event]) {
-settings.hooks[event] = [];
-}
-          settings.hooks[event].push({ matcher, hooks: [{ type: 'command', command: HOOK_COMMAND }] });
+            settings.hooks[event] = [];
+          }
+          settings.hooks[event].push({
+            matcher,
+            hooks: [{ type: 'command', command: HOOK_COMMAND }],
+          });
           changed = true;
         }
       }
       if (changed) {
-writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
-}
-    } catch { /* ignore if settings file inaccessible */ }
+        writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
+      }
+    } catch {
+      /* ignore if settings file inaccessible */
+    }
   }
 
   removeAllHooks(): void {
     try {
       if (!existsSync(CLAUDE_SETTINGS_PATH)) {
-return;
-}
+        return;
+      }
       const settings: ClaudeSettings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
       if (!settings.hooks) {
-return;
-}
+        return;
+      }
       let changed = false;
       for (const { event } of HOOK_EVENTS) {
         const entries = settings.hooks[event];
         if (!entries) {
-continue;
-}
+          continue;
+        }
         const filtered = entries.filter(
-          (entry) => !entry.hooks?.some((h) => h.command === HOOK_COMMAND)
+          (entry) => !entry.hooks?.some((h) => h.command === HOOK_COMMAND),
         );
         if (filtered.length !== entries.length) {
           settings.hooks[event] = filtered;
@@ -132,18 +147,20 @@ continue;
         }
       }
       if (changed) {
-writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
-}
-    } catch { /* ignore */ }
+        writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   private hasHook(settings: ClaudeSettings, event: string, matcher: string): boolean {
     const eventHooks = settings.hooks?.[event];
     if (!eventHooks) {
-return false;
-}
-    return eventHooks.some((entry) =>
-      entry.matcher === matcher && entry.hooks?.some((h) => h.command === HOOK_COMMAND)
+      return false;
+    }
+    return eventHooks.some(
+      (entry) => entry.matcher === matcher && entry.hooks?.some((h) => h.command === HOOK_COMMAND),
     );
   }
 
@@ -157,35 +174,42 @@ return false;
       //   stale registry entries pointing to recycled PIDs (PID reuse by an unrelated process).
       const existingSession = getSession(entry.sessionId);
       if (!isPidRunning(entry.pid)) {
-continue;
-}
+        continue;
+      }
       if (!isExpectedProcess(entry.pid, 'claude-code')) {
-        logger.info(`[ClaudeDetector] PID reuse detected: pid ${entry.pid} is running with wrong name, skipping (sessionId=${entry.sessionId} existingStatus=${existingSession?.status ?? 'new'})`);
+        logger.info(
+          `[ClaudeDetector] PID reuse detected: pid ${entry.pid} is running with wrong name, skipping (sessionId=${entry.sessionId} existingStatus=${existingSession?.status ?? 'new'})`,
+        );
         continue;
       }
 
       const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
       const repo = getRepositoryByPath(normalizedCwd);
       if (!repo) {
- logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`); continue; 
-}
+        logger.warn(
+          `[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`,
+        );
+        continue;
+      }
 
       await this.activateFoundSession(entry.sessionId, repo, null);
     }
-
   }
 
   async handleHookPayload(payload: HookPayload): Promise<void> {
     const { hook_event_name, session_id, cwd } = payload;
     if (!session_id) {
-return;
-}
+      return;
+    }
 
     const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
     const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
     if (!repo) {
- logger.warn(`[ClaudeDetector] no repo for cwd="${normalizedCwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`); return; 
-}
+      logger.warn(
+        `[ClaudeDetector] no repo for cwd="${normalizedCwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`,
+      );
+      return;
+    }
 
     const existing = getSession(session_id);
     const now = new Date().toISOString();
@@ -201,7 +225,9 @@ return;
     }
 
     if (!existing) {
-      const claimed = normalizedCwd ? ptyRegistry.claimForSession(session_id, normalizedCwd, 'claude-code') : null;
+      const claimed = normalizedCwd
+        ? ptyRegistry.claimForSession(session_id, normalizedCwd, 'claude-code')
+        : null;
       if (claimed) {
         return this.createPtySession(session_id, repo, claimed, now);
       }
@@ -211,10 +237,14 @@ return;
     await this.jsonlWatcher.watchFile(session_id, repo.path);
   }
 
-  private handleSessionEnd(existing: Session | null | undefined, sessionId: string, now: string): void {
+  private handleSessionEnd(
+    existing: Session | null | undefined,
+    sessionId: string,
+    now: string,
+  ): void {
     if (!existing) {
-return;
-}
+      return;
+    }
     updateSessionStatus(sessionId, 'ended', now);
     this.jsonlWatcher.closeWatcher(sessionId);
     const ended = { ...existing, status: 'ended' as const, endedAt: now };
@@ -227,13 +257,20 @@ return;
     });
   }
 
-  private handlePreAskQuestion(sessionId: string, existing: Session | null | undefined, payload: HookPayload, now: string): void {
+  private handlePreAskQuestion(
+    sessionId: string,
+    existing: Session | null | undefined,
+    payload: HookPayload,
+    now: string,
+  ): void {
     if (!existing) {
-return;
-}
+      return;
+    }
     const toolInput = payload.tool_input ?? {};
 
-    const rawQs = Array.isArray(toolInput.questions) ? toolInput.questions as Record<string, unknown>[] : [];
+    const rawQs = Array.isArray(toolInput.questions)
+      ? (toolInput.questions as Record<string, unknown>[])
+      : [];
     const allQuestions: PendingChoiceItem[] = rawQs.map((q) => {
       const qText = typeof q.question === 'string' ? q.question : '';
       const rawOpts: unknown[] = Array.isArray(q.options) ? q.options : [];
@@ -251,7 +288,7 @@ return;
           }
         }
       }
-      const hasDescriptions = qDescriptions.some(d => d !== '');
+      const hasDescriptions = qDescriptions.some((d) => d !== '');
       return {
         question: qText,
         choices: qChoices,
@@ -264,34 +301,58 @@ return;
     if (allQuestions.length === 0) {
       const question = typeof toolInput.question === 'string' ? toolInput.question : '';
       const rawChoices: unknown[] = Array.isArray(toolInput.choices) ? toolInput.choices : [];
-      const choices = rawChoices.map((c) => {
-        if (typeof c === 'string') {
-return c;
-}
-        if (c && typeof c === 'object' && typeof (c as Record<string, unknown>).label === 'string') {
-          return (c as Record<string, unknown>).label as string;
-        }
-        return null;
-      }).filter((c): c is string => c !== null);
+      const choices = rawChoices
+        .map((c) => {
+          if (typeof c === 'string') {
+            return c;
+          }
+          if (
+            c &&
+            typeof c === 'object' &&
+            typeof (c as Record<string, unknown>).label === 'string'
+          ) {
+            return (c as Record<string, unknown>).label as string;
+          }
+          return null;
+        })
+        .filter((c): c is string => c !== null);
       allQuestions.push({ question, choices });
     }
 
     const { question, choices } = allQuestions[0];
     this.pendingChoices.set(sessionId, { question, choices, allQuestions });
-    broadcast({ type: 'session.pending_choice', timestamp: now, data: { sessionId, question, choices, allQuestions } });
-    pendingChoiceEvents.emit('session.pending_choice', { sessionId, question, choices, allQuestions });
+    broadcast({
+      type: 'session.pending_choice',
+      timestamp: now,
+      data: { sessionId, question, choices, allQuestions },
+    });
+    pendingChoiceEvents.emit('session.pending_choice', {
+      sessionId,
+      question,
+      choices,
+      allQuestions,
+    });
   }
 
-  private handlePostAskQuestion(sessionId: string, existing: Session | null | undefined, now: string): void {
+  private handlePostAskQuestion(
+    sessionId: string,
+    existing: Session | null | undefined,
+    now: string,
+  ): void {
     if (!existing) {
-return;
-}
+      return;
+    }
     this.pendingChoices.delete(sessionId);
     broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
     pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
   }
 
-  private async createPtySession(sessionId: string, repo: Repository, claimed: { pid: number | null; hostPid: number; ptyLaunchId: string }, now: string): Promise<void> {
+  private async createPtySession(
+    sessionId: string,
+    repo: Repository,
+    claimed: { pid: number | null; hostPid: number; ptyLaunchId: string },
+    now: string,
+  ): Promise<void> {
     const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'claude-code');
     const session: Session = {
       id: sessionId,
@@ -317,7 +378,12 @@ return;
     await this.jsonlWatcher.watchFile(sessionId, repo.path);
   }
 
-  private upsertAndBroadcastSession(sessionId: string, repo: Repository, existing: Session | null | undefined, now: string): void {
+  private upsertAndBroadcastSession(
+    sessionId: string,
+    repo: Repository,
+    existing: Session | null | undefined,
+    now: string,
+  ): void {
     const session: Session = existing ?? {
       id: sessionId,
       repositoryId: repo.id,
@@ -346,14 +412,20 @@ return;
     }
   }
 
-  private async activateFoundSession(sessionId: string, repo: Repository, claudePid: number | null): Promise<void> {
+  private async activateFoundSession(
+    sessionId: string,
+    repo: Repository,
+    claudePid: number | null,
+  ): Promise<void> {
     const now = new Date().toISOString();
     const existingSession = getSession(sessionId);
 
     if (!existingSession) {
       const claimed = ptyRegistry.claimForSession(sessionId, repo.path, 'claude-code');
       if (claimed) {
-        logger.info(`[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`);
+        logger.info(
+          `[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`,
+        );
         await this.createPtySession(sessionId, repo, claimed, now);
         return;
       }
@@ -368,7 +440,9 @@ return;
     // When the terminal closes, the WS close handler calls ptyRegistry.unregister(),
     // so has() being false means the launcher is gone and the session should stay ended.
     if (existingSession?.launchMode === 'pty' && !ptyRegistry.has(sessionId)) {
-      logger.info(`[ClaudeDetector] skipping re-activation — PTY launcher gone sessionId=${sessionId}`);
+      logger.info(
+        `[ClaudeDetector] skipping re-activation — PTY launcher gone sessionId=${sessionId}`,
+      );
       return;
     }
     this.jsonlWatcher.closeWatcher(sessionId);
@@ -391,7 +465,13 @@ return;
       yoloMode: claudePid ? detectYoloModeFromPids(claudePid, null, 'claude-code') : null,
     };
     const isNewSession = !existingSession;
-    const activated = { ...base, status: 'active' as const, endedAt: null as null, lastActivityAt: now, pid: claudePid };
+    const activated = {
+      ...base,
+      status: 'active' as const,
+      endedAt: null as null,
+      lastActivityAt: now,
+      pid: claudePid,
+    };
     logger.info(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
     upsertSession(activated);
     if (isNewSession) {
@@ -408,4 +488,3 @@ return;
     this.jsonlWatcher.stopAll();
   }
 }
-

@@ -13,37 +13,69 @@ vi.mock('../services/api', () => ({
   getRepositories: vi.fn().mockResolvedValue([]),
   getSessions: vi.fn().mockResolvedValue([]),
   getTodos: vi.fn().mockResolvedValue([]),
-  getArgusSettings: vi.fn().mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
-  patchArgusSettings: vi.fn().mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
-  getIntegrationStatus: vi.fn().mockResolvedValue({ integrationsEnabled: false, slack: { notifier: null, listener: null }, teams: { notifier: null, listener: null } }),
+  getArgusSettings: vi
+    .fn()
+    .mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
+  patchArgusSettings: vi
+    .fn()
+    .mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
+  getIntegrationStatus: vi
+    .fn()
+    .mockResolvedValue({
+      integrationsEnabled: false,
+      slack: { notifier: null, listener: null },
+      teams: { notifier: null, listener: null },
+    }),
   startIntegration: vi.fn().mockResolvedValue(undefined),
   stopIntegration: vi.fn().mockResolvedValue(undefined),
   getHealth: vi.fn().mockResolvedValue({ status: 'ok', version: '1.2.3', uptime: 0 }),
 }));
 
 vi.mock('../hooks/useSettings', () => ({
-  useSettings: vi.fn().mockReturnValue([
-    { hideEndedSessions: false, hideInactiveSessions: false, hideReposWithNoActiveSessions: false },
-    vi.fn(),
-  ]),
+  useSettings: vi
+    .fn()
+    .mockReturnValue([
+      {
+        hideEndedSessions: false,
+        hideInactiveSessions: false,
+        hideReposWithNoActiveSessions: false,
+      },
+      vi.fn(),
+    ]),
 }));
 
 vi.mock('../hooks/useOnboarding', () => ({
   useOnboarding: vi.fn().mockReturnValue({
-    tourStatus: 'completed', startTour: vi.fn(), skipTour: vi.fn(), completeTour: vi.fn(),
-    resetOnboarding: vi.fn(), dismissedHints: [], dismissHint: vi.fn(),
+    tourStatus: 'completed',
+    startTour: vi.fn(),
+    skipTour: vi.fn(),
+    completeTour: vi.fn(),
+    resetOnboarding: vi.fn(),
+    dismissedHints: [],
+    dismissHint: vi.fn(),
   }),
 }));
 
 vi.mock('../hooks/useRepositoryManagement', () => ({
   useRepositoryManagement: vi.fn().mockReturnValue({
-    addError: null, addInfo: null, adding: false,
-    showFolderInput: false, folderInputPath: '',
-    removeConfirmId: null, removing: false, skipConfirm: false,
-    setFolderInputPath: vi.fn(), setRemoveConfirmId: vi.fn(), setSkipConfirm: vi.fn(),
-    handleAddRepo: vi.fn(), handleFolderSubmit: vi.fn(),
-    handleRemoveRepoById: vi.fn(), handleRemoveRepo: vi.fn(),
-    cancelFolderInput: vi.fn(), clearAddError: vi.fn(), clearAddInfo: vi.fn(),
+    addError: null,
+    addInfo: null,
+    adding: false,
+    showFolderInput: false,
+    folderInputPath: '',
+    removeConfirmId: null,
+    removing: false,
+    skipConfirm: false,
+    setFolderInputPath: vi.fn(),
+    setRemoveConfirmId: vi.fn(),
+    setSkipConfirm: vi.fn(),
+    handleAddRepo: vi.fn(),
+    handleFolderSubmit: vi.fn(),
+    handleRemoveRepoById: vi.fn(),
+    handleRemoveRepo: vi.fn(),
+    cancelFolderInput: vi.fn(),
+    clearAddError: vi.fn(),
+    clearAddInfo: vi.fn(),
   }),
 }));
 
@@ -63,7 +95,7 @@ function renderDashboard() {
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -74,7 +106,9 @@ describe('DashboardPage — mobile layout', () => {
 
   it('renders the MobileNav with Sessions and Tasks tabs on mobile', async () => {
     renderDashboard();
-    expect(await screen.findByRole('navigation', { name: /mobile navigation/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('navigation', { name: /mobile navigation/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sessions/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /tasks/i })).toBeInTheDocument();
   });
@@ -99,7 +133,9 @@ describe('DashboardPage — mobile layout', () => {
     renderDashboard();
     // Wait for loading to finish
     await waitFor(() => expect(screen.queryByText('animate-pulse')).not.toBeInTheDocument());
-    expect(screen.queryByRole('navigation', { name: /mobile navigation/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('navigation', { name: /mobile navigation/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('toggles dashboard width from the header control on desktop', async () => {

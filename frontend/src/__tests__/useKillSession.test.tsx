@@ -13,7 +13,9 @@ import { stopSession } from '../services/api';
 const mockedStop = vi.mocked(stopSession);
 
 function createWrapper() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={qc}>{children}</QueryClientProvider>
   );
@@ -21,8 +23,8 @@ function createWrapper() {
 
 describe('useKillSession', () => {
   beforeEach(() => {
- vi.clearAllMocks(); 
-});
+    vi.clearAllMocks();
+  });
 
   it('starts with dialog closed and no target', () => {
     const { result } = renderHook(() => useKillSession(), { wrapper: createWrapper() });
@@ -57,9 +59,11 @@ describe('useKillSession', () => {
 
   it('sets isPending while mutation is in flight', async () => {
     let resolve!: (v: { actionId: string; status: string }) => void;
-    mockedStop.mockReturnValueOnce(new Promise(r => {
- resolve = r; 
-}));
+    mockedStop.mockReturnValueOnce(
+      new Promise((r) => {
+        resolve = r;
+      }),
+    );
     const { result } = renderHook(() => useKillSession(), { wrapper: createWrapper() });
     act(() => result.current.requestKill('sess-789'));
     act(() => result.current.confirmKill());

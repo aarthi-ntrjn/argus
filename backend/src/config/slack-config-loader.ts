@@ -20,8 +20,8 @@ export function loadSlackConfig(): SlackConfig | null {
       const channelId = parsed.channelId ?? '';
       const ownerSenderId = parsed.ownerSenderId ?? '';
       if (!botToken && !channelId) {
-return null;
-}
+        return null;
+      }
       return {
         botToken,
         appToken: parsed.appToken,
@@ -30,7 +30,9 @@ return null;
         ownerSenderId,
         enabledEventTypes: parsed.enabledEventTypes,
       };
-    } catch { /* file unreadable */ }
+    } catch {
+      /* file unreadable */
+    }
   }
   return null;
 }
@@ -41,9 +43,10 @@ export function saveSlackConfig(config: Partial<SlackConfig>): void {
   let existing: Partial<SlackConfig> = {};
   if (existsSync(filePath)) {
     try {
- existing = JSON.parse(readFileSync(filePath, 'utf-8')); 
-} catch { /* use empty */ }
+      existing = JSON.parse(readFileSync(filePath, 'utf-8'));
+    } catch {
+      /* use empty */
+    }
   }
   writeFileSync(filePath, JSON.stringify({ ...existing, ...config }, null, 2), 'utf-8');
 }
-

@@ -21,11 +21,14 @@ describe('useSettings', () => {
   });
 
   it('loads stored settings from localStorage on mount', () => {
-    localStorage.setItem(KEY, JSON.stringify({
-      hideEndedSessions: true,
-      hideReposWithNoActiveSessions: false,
-      hideInactiveSessions: true,
-    }));
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        hideEndedSessions: true,
+        hideReposWithNoActiveSessions: false,
+        hideInactiveSessions: true,
+      }),
+    );
     const { result } = renderHook(() => useSettings());
     expect(result.current[0].hideEndedSessions).toBe(true);
     expect(result.current[0].hideInactiveSessions).toBe(true);

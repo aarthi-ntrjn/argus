@@ -17,7 +17,11 @@ interface Dirs {
 // For copilot-cli: scans ~/.copilot/session-state/ for a dir whose inuse.<pid>.lock matches,
 // then reads workspace.yaml for the session id.
 // Returns null if no match is found (e.g. file not yet written — caller should retry later).
-export function resolveSessionIdByPid(pid: number, sessionType: SessionType, dirs?: Dirs): string | null {
+export function resolveSessionIdByPid(
+  pid: number,
+  sessionType: SessionType,
+  dirs?: Dirs,
+): string | null {
   if (sessionType === 'claude-code') {
     return resolveClaudeSessionId(pid, dirs?.claude ?? CLAUDE_SESSIONS_DIR);
   }
@@ -29,49 +33,57 @@ export function resolveSessionIdByPid(pid: number, sessionType: SessionType, dir
 
 function resolveClaudeSessionId(pid: number, sessionsDir: string): string | null {
   if (!existsSync(sessionsDir)) {
-return null;
-}
+    return null;
+  }
   try {
     for (const file of readdirSync(sessionsDir)) {
       if (!file.endsWith('.json')) {
-continue;
-}
+        continue;
+      }
       try {
         const data = JSON.parse(readFileSync(join(sessionsDir, file), 'utf-8'));
         if (data.pid === pid && typeof data.sessionId === 'string') {
-return data.sessionId as string;
-}
-      } catch { /* skip malformed */ }
+          return data.sessionId as string;
+        }
+      } catch {
+        /* skip malformed */
+      }
     }
-  } catch { /* sessionsDir unreadable */ }
+  } catch {
+    /* sessionsDir unreadable */
+  }
   return null;
 }
 
 function resolveCopilotSessionId(pid: number, sessionStateDir: string): string | null {
   if (!existsSync(sessionStateDir)) {
-return null;
-}
+    return null;
+  }
   try {
     for (const entry of readdirSync(sessionStateDir, { withFileTypes: true })) {
       if (!entry.isDirectory()) {
-continue;
-}
+        continue;
+      }
       const dirPath = join(sessionStateDir, entry.name);
       try {
         const files = readdirSync(dirPath);
         if (!files.includes(`inuse.${pid}.lock`)) {
-continue;
-}
+          continue;
+        }
         const workspaceFile = join(dirPath, 'workspace.yaml');
         if (!existsSync(workspaceFile)) {
-continue;
-}
+          continue;
+        }
         const workspace = yamlLoad(readFileSync(workspaceFile, 'utf-8')) as { id?: string };
         if (workspace.id) {
-return workspace.id;
-}
-      } catch { /* skip */ }
+          return workspace.id;
+        }
+      } catch {
+        /* skip */
+      }
     }
-  } catch { /* sessionStateDir unreadable */ }
+  } catch {
+    /* sessionStateDir unreadable */
+  }
   return null;
 }

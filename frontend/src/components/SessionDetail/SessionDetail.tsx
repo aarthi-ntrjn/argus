@@ -16,22 +16,46 @@ interface Props {
 type BadgeStyle = { label: string; light: string; dark: string };
 
 const TYPE_LABELS: Record<string, BadgeStyle> = {
-  tool_use:      { label: 'TOOL',   light: 'bg-purple-100 text-purple-700', dark: 'bg-purple-900 text-purple-300' },
-  tool_result:   { label: 'RESULT', light: 'bg-green-100 text-green-700',   dark: 'bg-green-900 text-green-300' },
-  error:         { label: 'ERR',    light: 'bg-red-100 text-red-700',       dark: 'bg-red-900 text-red-300' },
-  status_change: { label: 'STATUS', light: 'bg-yellow-100 text-yellow-700', dark: 'bg-yellow-900 text-yellow-300' },
+  tool_use: {
+    label: 'TOOL',
+    light: 'bg-purple-100 text-purple-700',
+    dark: 'bg-purple-900 text-purple-300',
+  },
+  tool_result: {
+    label: 'RESULT',
+    light: 'bg-green-100 text-green-700',
+    dark: 'bg-green-900 text-green-300',
+  },
+  error: { label: 'ERR', light: 'bg-red-100 text-red-700', dark: 'bg-red-900 text-red-300' },
+  status_change: {
+    label: 'STATUS',
+    light: 'bg-yellow-100 text-yellow-700',
+    dark: 'bg-yellow-900 text-yellow-300',
+  },
 };
 
 const ROLE_LABELS: Record<string, BadgeStyle> = {
-  user:      { label: 'YOU', light: 'bg-gray-100 text-gray-600', dark: 'bg-gray-700 text-gray-300' },
-  assistant: { label: 'AI',  light: 'bg-blue-100 text-blue-700', dark: 'bg-blue-900 text-blue-300' },
+  user: { label: 'YOU', light: 'bg-gray-100 text-gray-600', dark: 'bg-gray-700 text-gray-300' },
+  assistant: { label: 'AI', light: 'bg-blue-100 text-blue-700', dark: 'bg-blue-900 text-blue-300' },
 };
 
 function getBadge(item: SessionOutput): BadgeStyle {
   if (item.type === 'message') {
-    return ROLE_LABELS[item.role ?? ''] ?? { label: 'MSG', light: 'bg-blue-100 text-blue-700', dark: 'bg-blue-900 text-blue-300' };
+    return (
+      ROLE_LABELS[item.role ?? ''] ?? {
+        label: 'MSG',
+        light: 'bg-blue-100 text-blue-700',
+        dark: 'bg-blue-900 text-blue-300',
+      }
+    );
   }
-  return TYPE_LABELS[item.type] ?? { label: item.type.toUpperCase(), light: 'bg-gray-100 text-gray-700', dark: 'bg-gray-700 text-gray-300' };
+  return (
+    TYPE_LABELS[item.type] ?? {
+      label: item.type.toUpperCase(),
+      light: 'bg-gray-100 text-gray-700',
+      dark: 'bg-gray-700 text-gray-300',
+    }
+  );
 }
 
 function formatTime(timestamp: string): string {
@@ -47,7 +71,9 @@ function renderBadgeCol(item: SessionOutput, dark: boolean) {
   const badgeColor = dark ? typeInfo.dark : typeInfo.light;
   return (
     <div className="flex flex-col gap-0.5 w-24 shrink-0">
-      <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}>
+      <span
+        className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}
+      >
         {typeInfo.label}
       </span>
       <span className={`text-[10px] whitespace-nowrap ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -59,11 +85,13 @@ function renderBadgeCol(item: SessionOutput, dark: boolean) {
 
 function renderToolNameBadge(toolName: string | null | undefined, dark: boolean) {
   if (!toolName) {
-return null;
-}
+    return null;
+  }
   const badgeColor = dark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700';
   return (
-    <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap shrink-0 ${badgeColor}`}>
+    <span
+      className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap shrink-0 ${badgeColor}`}
+    >
       {toolName}
     </span>
   );
@@ -80,14 +108,25 @@ interface ContentCellProps {
   markdownComponents: Components;
 }
 
-function ContentCell({ item, dark, displayMode, expandedIds, expandedFullIds, onToggle, onExpandFull, markdownComponents }: ContentCellProps) {
+function ContentCell({
+  item,
+  dark,
+  displayMode,
+  expandedIds,
+  expandedFullIds,
+  onToggle,
+  onExpandFull,
+  markdownComponents,
+}: ContentCellProps) {
   const isFocused = displayMode === 'focused';
   const isExpanded = expandedIds.has(item.id);
   const isToolUse = item.type === 'tool_use';
 
   if (item.type === 'message') {
     return (
-      <div className={`max-w-none break-words leading-snug ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
+      <div
+        className={`max-w-none break-words leading-snug ${dark ? 'text-gray-200' : 'text-gray-800'}`}
+      >
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
           {item.content}
         </ReactMarkdown>
@@ -99,7 +138,9 @@ function ContentCell({ item, dark, displayMode, expandedIds, expandedFullIds, on
     return (
       <div className="flex items-center gap-2">
         {renderToolNameBadge(item.toolName, dark)}
-        <span className={`break-words ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{summariseToolUse(item)}</span>
+        <span className={`break-words ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
+          {summariseToolUse(item)}
+        </span>
         <button
           aria-label="Show details"
           onClick={() => onToggle(item.id)}
@@ -115,14 +156,17 @@ function ContentCell({ item, dark, displayMode, expandedIds, expandedFullIds, on
   const lines = item.content.split('\n');
   const isTruncatable = !isFocused && item.type === 'tool_result' && lines.length > MAX_LINES;
   const isFullyExpanded = expandedFullIds.has(item.id);
-  const displayContent = isTruncatable && !isFullyExpanded
-    ? lines.slice(0, MAX_LINES).join('\n')
-    : item.content;
+  const displayContent =
+    isTruncatable && !isFullyExpanded ? lines.slice(0, MAX_LINES).join('\n') : item.content;
 
   return (
     <div>
       {item.toolName && <div className="mb-0.5">{renderToolNameBadge(item.toolName, dark)}</div>}
-      <span className={`min-w-0 break-words whitespace-pre-wrap ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{displayContent}</span>
+      <span
+        className={`min-w-0 break-words whitespace-pre-wrap ${dark ? 'text-gray-200' : 'text-gray-800'}`}
+      >
+        {displayContent}
+      </span>
       {isTruncatable && !isFullyExpanded && (
         <button
           aria-label="Show more"
@@ -145,44 +189,76 @@ function ContentCell({ item, dark, displayMode, expandedIds, expandedFullIds, on
   );
 }
 
-export default function SessionDetail({ items, dark = false, className, displayMode = 'focused' }: Props) {
+export default function SessionDetail({
+  items,
+  dark = false,
+  className,
+  displayMode = 'focused',
+}: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [expandedFullIds, setExpandedFullIds] = useState<Set<string>>(new Set());
 
   function toggleExpand(id: string) {
-    setExpandedIds(prev => {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
- next.delete(id); 
-} else {
- next.add(id); 
-}
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
 
   function expandFull(id: string) {
-    setExpandedFullIds(prev => new Set(prev).add(id));
+    setExpandedFullIds((prev) => new Set(prev).add(id));
   }
 
-  const markdownComponents = useMemo<Components>(() => ({
-    p: ({ children }) => <p className="my-0 leading-snug whitespace-pre-wrap">{children}</p>,
-    code: ({ children, className: cn }) => {
-      const isBlock = cn?.includes('language-');
-      return isBlock
-        ? <code className={`block text-xs p-2 rounded my-1 overflow-x-auto ${dark ? 'bg-gray-800 text-green-300' : 'bg-gray-100 text-gray-800'} ${cn ?? ''}`}>{children}</code>
-        : <code className={`text-xs px-1 rounded ${dark ? 'bg-gray-800 text-green-300' : 'bg-gray-100 text-gray-800'}`}>{children}</code>;
-    },
-    pre: ({ children }) => <pre className="my-1 overflow-x-auto">{children}</pre>,
-    ul: ({ children }) => <ul className="list-disc list-inside my-0.5 space-y-0">{children}</ul>,
-    ol: ({ children }) => <ol className="list-decimal list-inside my-0.5 space-y-0">{children}</ol>,
-    li: ({ children }) => <li className="text-xs leading-snug">{children}</li>,
-    h1: ({ children }) => <h1 className="text-xs font-bold my-0.5 uppercase tracking-wide">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-xs font-bold my-0.5">{children}</h2>,
-    h3: ({ children }) => <h3 className="text-xs font-semibold my-0.5">{children}</h3>,
-    blockquote: ({ children }) => <blockquote className={`border-l-2 pl-2 my-0.5 ${dark ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-600'}`}>{children}</blockquote>,
-    a: ({ children, href }) => <a href={href} className={`underline ${dark ? 'text-blue-400' : 'text-blue-600'}`}>{children}</a>,
-  }), [dark]);
+  const markdownComponents = useMemo<Components>(
+    () => ({
+      p: ({ children }) => <p className="my-0 leading-snug whitespace-pre-wrap">{children}</p>,
+      code: ({ children, className: cn }) => {
+        const isBlock = cn?.includes('language-');
+        return isBlock ? (
+          <code
+            className={`block text-xs p-2 rounded my-1 overflow-x-auto ${dark ? 'bg-gray-800 text-green-300' : 'bg-gray-100 text-gray-800'} ${cn ?? ''}`}
+          >
+            {children}
+          </code>
+        ) : (
+          <code
+            className={`text-xs px-1 rounded ${dark ? 'bg-gray-800 text-green-300' : 'bg-gray-100 text-gray-800'}`}
+          >
+            {children}
+          </code>
+        );
+      },
+      pre: ({ children }) => <pre className="my-1 overflow-x-auto">{children}</pre>,
+      ul: ({ children }) => <ul className="list-disc list-inside my-0.5 space-y-0">{children}</ul>,
+      ol: ({ children }) => (
+        <ol className="list-decimal list-inside my-0.5 space-y-0">{children}</ol>
+      ),
+      li: ({ children }) => <li className="text-xs leading-snug">{children}</li>,
+      h1: ({ children }) => (
+        <h1 className="text-xs font-bold my-0.5 uppercase tracking-wide">{children}</h1>
+      ),
+      h2: ({ children }) => <h2 className="text-xs font-bold my-0.5">{children}</h2>,
+      h3: ({ children }) => <h3 className="text-xs font-semibold my-0.5">{children}</h3>,
+      blockquote: ({ children }) => (
+        <blockquote
+          className={`border-l-2 pl-2 my-0.5 ${dark ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-600'}`}
+        >
+          {children}
+        </blockquote>
+      ),
+      a: ({ children, href }) => (
+        <a href={href} className={`underline ${dark ? 'text-blue-400' : 'text-blue-600'}`}>
+          {children}
+        </a>
+      ),
+    }),
+    [dark],
+  );
 
   const displayItems = useMemo(
     () => buildDisplayItems(items, displayMode === 'focused'),
@@ -191,42 +267,69 @@ export default function SessionDetail({ items, dark = false, className, displayM
 
   if (items.length === 0) {
     return (
-      <div className={`p-8 text-center min-h-full ${dark ? 'bg-gray-900 text-gray-400' : 'text-gray-500'}`}>
+      <div
+        className={`p-8 text-center min-h-full ${dark ? 'bg-gray-900 text-gray-400' : 'text-gray-500'}`}
+      >
         No output yet. Waiting for session activity...
       </div>
     );
   }
 
   return (
-    <div className={`overflow-y-auto p-4 space-y-1 font-mono text-xs min-h-full ${dark ? 'bg-gray-900' : ''} ${className ?? ''}`}>
+    <div
+      className={`overflow-y-auto p-4 space-y-1 font-mono text-xs min-h-full ${dark ? 'bg-gray-900' : ''} ${className ?? ''}`}
+    >
       {displayItems.map((di) => {
         if (di.kind === 'tool_group') {
-          const pairs = di.groupItems.filter(gi => gi.kind === 'tool_pair') as Array<{ kind: 'tool_pair'; toolUse: SessionOutput; toolResult: SessionOutput }>;
+          const pairs = di.groupItems.filter((gi) => gi.kind === 'tool_pair') as Array<{
+            kind: 'tool_pair';
+            toolUse: SessionOutput;
+            toolResult: SessionOutput;
+          }>;
           const groupId = pairs[0].toolUse.id;
           const isExpanded = expandedIds.has(groupId);
-          const toolNames = pairs.map(p => p.toolUse.toolName).filter(Boolean);
+          const toolNames = pairs.map((p) => p.toolUse.toolName).filter(Boolean);
           const uniqueNames = [...new Set(toolNames)];
-          const nameSummary = uniqueNames.slice(0, 3).join(', ') + (uniqueNames.length > 3 ? ', …' : '');
+          const nameSummary =
+            uniqueNames.slice(0, 3).join(', ') + (uniqueNames.length > 3 ? ', …' : '');
           const summary = `${pairs.length} tool call${pairs.length === 1 ? '' : 's'}${nameSummary ? `: ${nameSummary}` : ''}`;
           return (
-            <div key={groupId} className={`rounded border ${dark ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-gray-50'}`}>
+            <div
+              key={groupId}
+              className={`rounded border ${dark ? 'border-gray-700 bg-gray-800/40' : 'border-gray-200 bg-gray-50'}`}
+            >
               <button
                 aria-label={isExpanded ? 'Collapse tool calls' : 'Expand tool calls'}
                 onClick={() => toggleExpand(groupId)}
                 className={`icon-btn w-full flex items-center gap-2 px-3 py-1.5 text-left ${dark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100'}`}
               >
-                <span className={`text-[10px] ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{isExpanded ? '▾' : '▸'}</span>
-                <span className={`text-xs font-medium ${dark ? 'text-gray-300' : 'text-gray-600'}`}>{summary}</span>
+                <span className={`text-[10px] ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {isExpanded ? '▾' : '▸'}
+                </span>
+                <span className={`text-xs font-medium ${dark ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {summary}
+                </span>
               </button>
               {isExpanded && (
-                <div className={`border-t px-3 py-2 space-y-2 ${dark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <div
+                  className={`border-t px-3 py-2 space-y-2 ${dark ? 'border-gray-700' : 'border-gray-200'}`}
+                >
                   {di.groupItems.map((gi) => {
                     if (gi.kind === 'single') {
                       return (
                         <div key={gi.item.id} className="flex gap-3 items-start">
                           {renderBadgeCol(gi.item, dark)}
                           <div className="min-w-0 flex-1">
-                            <ContentCell item={gi.item} dark={dark} displayMode={displayMode} expandedIds={expandedIds} expandedFullIds={expandedFullIds} onToggle={toggleExpand} onExpandFull={expandFull} markdownComponents={markdownComponents} />
+                            <ContentCell
+                              item={gi.item}
+                              dark={dark}
+                              displayMode={displayMode}
+                              expandedIds={expandedIds}
+                              expandedFullIds={expandedFullIds}
+                              onToggle={toggleExpand}
+                              onExpandFull={expandFull}
+                              markdownComponents={markdownComponents}
+                            />
                           </div>
                         </div>
                       );
@@ -238,17 +341,23 @@ export default function SessionDetail({ items, dark = false, className, displayM
                     return (
                       <div key={toolUse.id} className="flex gap-3 items-start">
                         <div className="flex flex-col gap-0.5 w-24 shrink-0">
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}>
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}
+                          >
                             {typeInfo.label}
                           </span>
-                          <span className={`text-[10px] whitespace-nowrap ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          <span
+                            className={`text-[10px] whitespace-nowrap ${dark ? 'text-gray-400' : 'text-gray-600'}`}
+                          >
                             {formatTime(toolUse.timestamp)}
                           </span>
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             {renderToolNameBadge(toolUse.toolName, dark)}
-                            <span className={`break-words ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
+                            <span
+                              className={`break-words ${dark ? 'text-gray-200' : 'text-gray-800'}`}
+                            >
                               {pairExpanded ? fullToolUseText(toolUse) : summariseToolUse(toolUse)}
                             </span>
                             <button
@@ -260,7 +369,9 @@ export default function SessionDetail({ items, dark = false, className, displayM
                             </button>
                           </div>
                           {pairExpanded && (
-                            <div className={`mt-1 whitespace-pre-wrap break-words ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+                            <div
+                              className={`mt-1 whitespace-pre-wrap break-words ${dark ? 'text-gray-300' : 'text-gray-700'}`}
+                            >
                               {toolResult.content}
                             </div>
                           )}
@@ -282,10 +393,14 @@ export default function SessionDetail({ items, dark = false, className, displayM
           return (
             <div key={toolUse.id} className="flex gap-3 items-start">
               <div className="flex flex-col gap-0.5 w-24 shrink-0">
-                <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}
+                >
                   {typeInfo.label}
                 </span>
-                <span className={`text-[10px] whitespace-nowrap ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <span
+                  className={`text-[10px] whitespace-nowrap ${dark ? 'text-gray-400' : 'text-gray-600'}`}
+                >
                   {formatTime(toolUse.timestamp)}
                 </span>
               </div>
@@ -304,7 +419,9 @@ export default function SessionDetail({ items, dark = false, className, displayM
                   </button>
                 </div>
                 {isExpanded && (
-                  <div className={`mt-1 whitespace-pre-wrap break-words ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <div
+                    className={`mt-1 whitespace-pre-wrap break-words ${dark ? 'text-gray-300' : 'text-gray-700'}`}
+                  >
                     {toolResult.content}
                   </div>
                 )}
@@ -318,7 +435,16 @@ export default function SessionDetail({ items, dark = false, className, displayM
           <div key={item.id} className="flex gap-3 items-start">
             {renderBadgeCol(item, dark)}
             <div className="min-w-0 flex-1">
-              <ContentCell item={item} dark={dark} displayMode={displayMode} expandedIds={expandedIds} expandedFullIds={expandedFullIds} onToggle={toggleExpand} onExpandFull={expandFull} markdownComponents={markdownComponents} />
+              <ContentCell
+                item={item}
+                dark={dark}
+                displayMode={displayMode}
+                expandedIds={expandedIds}
+                expandedFullIds={expandedFullIds}
+                onToggle={toggleExpand}
+                onExpandFull={expandFull}
+                markdownComponents={markdownComponents}
+              />
             </div>
           </div>
         );

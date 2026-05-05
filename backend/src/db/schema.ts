@@ -65,4 +65,3 @@ CREATE TABLE IF NOT EXISTS server_state (
   value TEXT NOT NULL
 );
 `;
-

@@ -13,7 +13,9 @@ export interface UsePromptHistoryResult {
 const HISTORY_CAP = 50;
 
 function isUserMessage(item: SessionOutput): boolean {
-  return item.role === 'user' && item.type === 'message' && !item.isMeta && item.content.trim() !== '';
+  return (
+    item.role === 'user' && item.type === 'message' && !item.isMeta && item.content.trim() !== ''
+  );
 }
 
 export function usePromptHistory(
@@ -47,8 +49,8 @@ export function usePromptHistory(
       .sort((a, b) => a.sequenceNumber - b.sequenceNumber);
 
     if (newItems.length === 0) {
-return;
-}
+      return;
+    }
 
     lastSeenSequence.current = newItems.reduce(
       (max, item) => Math.max(max, item.sequenceNumber),
@@ -79,16 +81,15 @@ return;
 
   const isNavigating = historyIndex !== null;
 
-  const indicator =
-    historyIndex === null ? null : `${historyIndex + 1} / ${entries.length}`;
+  const indicator = historyIndex === null ? null : `${historyIndex + 1} / ${entries.length}`;
 
   function navigateUp(currentInput: string): string {
     const current = entriesRef.current;
     const currentIndex = historyIndexRef.current;
 
     if (current.length === 0) {
-return currentInput;
-}
+      return currentInput;
+    }
 
     let nextIndex: number;
     if (currentIndex === null) {
@@ -109,8 +110,8 @@ return currentInput;
     const savedDraft = draftRef.current;
 
     if (currentIndex === null) {
-return savedDraft;
-}
+      return savedDraft;
+    }
 
     if (currentIndex === 0) {
       historyIndexRef.current = null;
@@ -127,13 +128,10 @@ return savedDraft;
   function addEntry(text: string): void {
     const trimmed = text.trim();
     if (!trimmed) {
-return;
-}
+      return;
+    }
 
-    pendingBarSends.current.set(
-      trimmed,
-      (pendingBarSends.current.get(trimmed) ?? 0) + 1,
-    );
+    pendingBarSends.current.set(trimmed, (pendingBarSends.current.get(trimmed) ?? 0) + 1);
 
     setEntries((prev) => {
       const next = [...prev, trimmed].slice(-HISTORY_CAP);

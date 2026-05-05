@@ -38,10 +38,13 @@ export async function getRemoteUrl(repoPath: string): Promise<string | null> {
 
 const DEFAULT_BRANCHES = new Set(['master', 'main']);
 
-export function buildGitHubCompareUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null {
+export function buildGitHubCompareUrl(
+  remoteUrl: string | null | undefined,
+  branch: string | null | undefined,
+): string | null {
   if (!remoteUrl || !branch) {
-return null;
-}
+    return null;
+  }
 
   let baseUrl: string | null = null;
 
@@ -53,8 +56,8 @@ return null;
   }
 
   if (!baseUrl) {
-return null;
-}
+    return null;
+  }
 
   if (DEFAULT_BRANCHES.has(branch)) {
     return `${baseUrl}/compare`;
@@ -70,20 +73,22 @@ export class RepositoryScanner {
     const found: Repository[] = [];
     for (const dir of this.watchDirectories) {
       if (!existsSync(dir)) {
-continue;
-}
+        continue;
+      }
       try {
         const entries = await fs.readdir(dir, { withFileTypes: true });
         for (const entry of entries) {
           if (!entry.isDirectory()) {
-continue;
-}
+            continue;
+          }
           const fullPath = join(dir, entry.name);
           if (this.hasGit(fullPath)) {
             found.push(await this.registerIfNew(fullPath, 'config'));
           }
         }
-      } catch { /* ignore permission errors */ }
+      } catch {
+        /* ignore permission errors */
+      }
     }
     return found;
   }
@@ -102,8 +107,8 @@ continue;
   private async registerIfNew(repoPath: string, source: 'config' | 'ui'): Promise<Repository> {
     const existing = getRepositoryByPath(repoPath);
     if (existing) {
-return existing;
-}
+      return existing;
+    }
 
     const [branch, remoteUrl] = await Promise.all([
       getCurrentBranch(repoPath),

@@ -36,7 +36,7 @@ function renderOutputPane(session: Session) {
   return render(
     <QueryClientProvider client={qc}>
       <OutputPane session={session} onClose={vi.fn()} />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 

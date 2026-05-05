@@ -11,11 +11,17 @@ import type { IntegrationVisibleStatus } from '../IntegrationButton/IntegrationB
 
 const STATUS_BADGE: Record<IntegrationVisibleStatus, { text: string; colorClass: string }> = {
   'not-configured': { text: 'not configured', colorClass: 'bg-gray-100 text-gray-600' },
-  'stopped':        { text: 'stopped',         colorClass: 'bg-red-100 text-red-700' },
-  'connected':      { text: 'connected',        colorClass: 'bg-green-100 text-green-700' },
+  stopped: { text: 'stopped', colorClass: 'bg-red-100 text-red-700' },
+  connected: { text: 'connected', colorClass: 'bg-green-100 text-green-700' },
 };
 
-function IntegrationHeader({ label, badge }: { label: string; badge: { text: string; colorClass: string } }) {
+function IntegrationHeader({
+  label,
+  badge,
+}: {
+  label: string;
+  badge: { text: string; colorClass: string };
+}) {
   return (
     <div className="flex items-center gap-2 mb-3">
       <SectionHeading>{label}</SectionHeading>
@@ -65,29 +71,36 @@ function ConfigForm({
   const [saved, setSaved] = useState(false);
 
   const handleChange = useCallback((key: string, val: string) => {
-    setDraft(prev => ({ ...prev, [key]: val }));
+    setDraft((prev) => ({ ...prev, [key]: val }));
     setSaved(false);
   }, []);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await onSave(draft);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch { /* saveError shown via prop */ }
-  }, [draft, onSave]);
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+        await onSave(draft);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } catch {
+        /* saveError shown via prop */
+      }
+    },
+    [draft, onSave],
+  );
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
       {fields.map(({ key, label, placeholder, secret, hint }) => (
         <div key={key}>
-          <label className="block text-xs text-gray-500 mb-0.5" htmlFor={`cfg-${key}`}>{label}</label>
+          <label className="block text-xs text-gray-500 mb-0.5" htmlFor={`cfg-${key}`}>
+            {label}
+          </label>
           <input
             id={`cfg-${key}`}
             type={secret ? 'password' : 'text'}
             value={draft[key] ?? ''}
-            onChange={e => handleChange(key, e.target.value)}
+            onChange={(e) => handleChange(key, e.target.value)}
             placeholder={placeholder ?? ''}
             autoComplete="off"
             className="w-full text-xs font-mono border border-gray-200 rounded px-2 py-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
@@ -96,7 +109,9 @@ function ConfigForm({
         </div>
       ))}
       {saveError && (
-        <p role="alert" className="text-xs text-red-600">{saveError}</p>
+        <p role="alert" className="text-xs text-red-600">
+          {saveError}
+        </p>
       )}
       <div className="flex items-center gap-2 mt-1">
         <Button type="submit" variant="primary" size="sm" disabled={saving}>
@@ -112,25 +127,31 @@ function TeamsConfigContent({ showSetupGuide }: { showSetupGuide: boolean }) {
   const { config, saving, saveError, save } = useTeamsSettings();
   const { teamsStatus } = useIntegrationControl();
   const status: IntegrationVisibleStatus =
-    teamsStatus === 'unconfigured' ? 'not-configured'
-    : teamsStatus === 'connected' ? 'connected'
-    : 'stopped';
+    teamsStatus === 'unconfigured'
+      ? 'not-configured'
+      : teamsStatus === 'connected'
+        ? 'connected'
+        : 'stopped';
 
   const fields: FieldDef[] = [
-    { key: 'teamId',           label: 'Team ID',               placeholder: 'e.g. 19:...' },
-    { key: 'channelId',        label: 'Channel ID',            placeholder: 'e.g. 19:...' },
-    { key: 'clientId',         label: 'Client ID (App)',        placeholder: 'Azure app client ID' },
-    { key: 'tenantId',         label: 'Tenant ID',             placeholder: 'Azure tenant ID' },
-    { key: 'ownerSenderId', label: 'Owner Sender ID',   placeholder: 'e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-      hint: 'Restricts inbound command access to you only — Argus ignores messages from anyone else. To find: open graph.microsoft.com/v1.0/me in your browser, sign in with your Microsoft account, and copy the "id" field.' },
+    { key: 'teamId', label: 'Team ID', placeholder: 'e.g. 19:...' },
+    { key: 'channelId', label: 'Channel ID', placeholder: 'e.g. 19:...' },
+    { key: 'clientId', label: 'Client ID (App)', placeholder: 'Azure app client ID' },
+    { key: 'tenantId', label: 'Tenant ID', placeholder: 'Azure tenant ID' },
+    {
+      key: 'ownerSenderId',
+      label: 'Owner Sender ID',
+      placeholder: 'e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+      hint: 'Restricts inbound command access to you only — Argus ignores messages from anyone else. To find: open graph.microsoft.com/v1.0/me in your browser, sign in with your Microsoft account, and copy the "id" field.',
+    },
   ];
 
   const values: Record<string, string> = {
-    teamId:           config?.teamId ?? '',
-    channelId:        config?.channelId ?? '',
+    teamId: config?.teamId ?? '',
+    channelId: config?.channelId ?? '',
     ownerSenderId: config?.ownerSenderId ?? '',
-    clientId:         config?.clientId ?? '',
-    tenantId:         config?.tenantId ?? '',
+    clientId: config?.clientId ?? '',
+    tenantId: config?.tenantId ?? '',
   };
 
   return (
@@ -145,7 +166,10 @@ function TeamsConfigContent({ showSetupGuide }: { showSetupGuide: boolean }) {
         onSave={save}
       />
       <div className="mt-2">
-        <p className="text-xs text-gray-400">Webhook URL: <span className="font-mono">{window.location.origin}/api/v1/teams/webhook</span></p>
+        <p className="text-xs text-gray-400">
+          Webhook URL:{' '}
+          <span className="font-mono">{window.location.origin}/api/v1/teams/webhook</span>
+        </p>
       </div>
       {showSetupGuide && <SetupGuideLink to="/setup/teams" />}
     </>
@@ -156,22 +180,28 @@ function SlackConfigContent({ showSetupGuide }: { showSetupGuide: boolean }) {
   const { config, saving, saveError, save } = useSlackSettings();
   const { slackStatus } = useIntegrationControl();
   const status: IntegrationVisibleStatus =
-    slackStatus === 'unconfigured' ? 'not-configured'
-    : slackStatus === 'connected' ? 'connected'
-    : 'stopped';
+    slackStatus === 'unconfigured'
+      ? 'not-configured'
+      : slackStatus === 'connected'
+        ? 'connected'
+        : 'stopped';
 
   const fields: FieldDef[] = [
-    { key: 'botToken',    label: 'Bot Token',    placeholder: 'xoxb-...', secret: true },
-    { key: 'appToken',    label: 'App Token',    placeholder: 'xapp-...', secret: true },
-    { key: 'channelId',   label: 'Channel ID',   placeholder: 'C...' },
-    { key: 'ownerSenderId', label: 'Owner Sender ID', placeholder: 'U...',
-      hint: 'Restricts inbound command access to you only — Argus ignores messages from anyone else. To find: in Slack, click your profile picture → View profile → ⋯ menu → Copy member ID.' },
+    { key: 'botToken', label: 'Bot Token', placeholder: 'xoxb-...', secret: true },
+    { key: 'appToken', label: 'App Token', placeholder: 'xapp-...', secret: true },
+    { key: 'channelId', label: 'Channel ID', placeholder: 'C...' },
+    {
+      key: 'ownerSenderId',
+      label: 'Owner Sender ID',
+      placeholder: 'U...',
+      hint: 'Restricts inbound command access to you only — Argus ignores messages from anyone else. To find: in Slack, click your profile picture → View profile → ⋯ menu → Copy member ID.',
+    },
   ];
 
   const values: Record<string, string> = {
-    botToken:      config?.botToken ?? '',
-    appToken:      config?.appToken ?? '',
-    channelId:     config?.channelId ?? '',
+    botToken: config?.botToken ?? '',
+    appToken: config?.appToken ?? '',
+    channelId: config?.channelId ?? '',
     ownerSenderId: config?.ownerSenderId ?? '',
   };
 
@@ -191,8 +221,16 @@ function SlackConfigContent({ showSetupGuide }: { showSetupGuide: boolean }) {
   );
 }
 
-export function IntegrationConfigContent({ type, showSetupGuide = true }: { type: 'teams' | 'slack'; showSetupGuide?: boolean }) {
-  return type === 'teams'
-    ? <TeamsConfigContent showSetupGuide={showSetupGuide} />
-    : <SlackConfigContent showSetupGuide={showSetupGuide} />;
+export function IntegrationConfigContent({
+  type,
+  showSetupGuide = true,
+}: {
+  type: 'teams' | 'slack';
+  showSetupGuide?: boolean;
+}) {
+  return type === 'teams' ? (
+    <TeamsConfigContent showSetupGuide={showSetupGuide} />
+  ) : (
+    <SlackConfigContent showSetupGuide={showSetupGuide} />
+  );
 }

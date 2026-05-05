@@ -14,17 +14,21 @@ export class ClaudeSessionRegistry {
 
   scanEntries(): ClaudeSessionRegistryEntry[] {
     if (!existsSync(this.sessionsDir)) {
-return [];
-}
+      return [];
+    }
 
-    const files = readdirSync(this.sessionsDir).filter(f => f.endsWith('.json'));
+    const files = readdirSync(this.sessionsDir).filter((f) => f.endsWith('.json'));
     const entries: ClaudeSessionRegistryEntry[] = [];
 
     for (const file of files) {
       try {
         const raw = readFileSync(join(this.sessionsDir, file), 'utf-8');
         const data = JSON.parse(raw);
-        if (typeof data.pid !== 'number' || typeof data.sessionId !== 'string' || typeof data.cwd !== 'string') {
+        if (
+          typeof data.pid !== 'number' ||
+          typeof data.sessionId !== 'string' ||
+          typeof data.cwd !== 'string'
+        ) {
           continue;
         }
         entries.push({
@@ -43,4 +47,3 @@ return [];
     return entries;
   }
 }
-

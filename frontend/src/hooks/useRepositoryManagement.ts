@@ -35,7 +35,9 @@ export function useRepositoryManagement(): RepositoryManagement {
   const [folderInputPath, setFolderInputPath] = useState('');
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
-  const [skipConfirm, setSkipConfirmRaw] = useState(() => localStorage.getItem(SKIP_REMOVE_CONFIRM_KEY) === 'true');
+  const [skipConfirm, setSkipConfirmRaw] = useState(
+    () => localStorage.getItem(SKIP_REMOVE_CONFIRM_KEY) === 'true',
+  );
 
   const showInfo = (msg: string) => {
     setAddInfo(msg);
@@ -52,16 +54,16 @@ export function useRepositoryManagement(): RepositoryManagement {
   const handleFolderSubmit = async (repos: Repository[]) => {
     const folderPath = folderInputPath.trim();
     if (!folderPath) {
-return;
-}
+      return;
+    }
     setShowFolderInput(false);
     setAddError(null);
     setAddInfo(null);
     setAdding(true);
     try {
       const found = await scanFolder(folderPath);
-      const registeredPaths = new Set(repos.map(r => r.path));
-      const newRepos = found.filter(r => !registeredPaths.has(r.path));
+      const registeredPaths = new Set(repos.map((r) => r.path));
+      const newRepos = found.filter((r) => !registeredPaths.has(r.path));
       if (newRepos.length === 0) {
         showInfo('No new git repositories found in the specified folder.');
         return;
@@ -94,11 +96,13 @@ return;
     setRemoving(true);
     try {
       await removeRepository(id);
-      queryClient.setQueryData<Repository[]>(['repositories'], (old = []) => old.filter(r => r.id !== id));
+      queryClient.setQueryData<Repository[]>(['repositories'], (old = []) =>
+        old.filter((r) => r.id !== id),
+      );
     } catch (err: unknown) {
       const rawMsg = err instanceof Error ? err.message : 'Unknown error';
       setAddError(`Sorry, removing the repository failed. Details: ${rawMsg}`);
-    }finally {
+    } finally {
       setRemoving(false);
       setRemoveConfirmId(null);
     }
@@ -126,8 +130,9 @@ return;
     handleRemoveRepoById,
     handleRemoveRepo: () => handleRemoveRepoById(removeConfirmId!),
     cancelFolderInput: () => {
- setShowFolderInput(false); setFolderInputPath(''); 
-},
+      setShowFolderInput(false);
+      setFolderInputPath('');
+    },
     clearAddError: () => setAddError(null),
     clearAddInfo: () => setAddInfo(null),
   };

@@ -54,30 +54,36 @@ const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi
 const ABS_PATH_RE = /([A-Za-z]:[\\/]|\/)[^\s:)]+[\\/]([^\s:)]+)/g;
 
 function sanitizeForTelemetry(value: string): string {
-  return value
-    .replace(ABS_PATH_RE, '$2')
-    .replace(UUID_RE, '[id]')
-    .slice(0, 300);
+  return value.replace(ABS_PATH_RE, '$2').replace(UUID_RE, '[id]').slice(0, 300);
 }
 
 function extractOrigin(stack: string | undefined): string {
   if (!stack) {
-return 'unknown';
-}
-  const frame = stack.split('\n').find(line => line.includes(' at ') && !line.includes('node_modules'));
+    return 'unknown';
+  }
+  const frame = stack
+    .split('\n')
+    .find((line) => line.includes(' at ') && !line.includes('node_modules'));
   return frame ? sanitizeForTelemetry(frame.trim()) : 'unknown';
 }
 
-
-export async function buildServer(): Promise<{ app: FastifyInstance; config: ArgusConfig; teamsApp: App | null }> {
+export async function buildServer(): Promise<{
+  app: FastifyInstance;
+  config: ArgusConfig;
+  teamsApp: App | null;
+}> {
   const config = loadConfig();
 
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? 'info',
-      transport: process.env.NODE_ENV !== 'production'
-        ? { target: 'pino-pretty', options: { colorize: true, singleLine: true, translateTime: 'SYS:HH:MM:ss.l' } }
-        : undefined,
+      transport:
+        process.env.NODE_ENV !== 'production'
+          ? {
+              target: 'pino-pretty',
+              options: { colorize: true, singleLine: true, translateTime: 'SYS:HH:MM:ss.l' },
+            }
+          : undefined,
     },
     genReqId: () => randomUUID(),
     requestIdHeader: 'x-request-id',
@@ -185,14 +191,24 @@ export async function startServer(): Promise<FastifyInstance> {
 
   monitor.on('session.created', (session: Session) => {
     broadcast({ type: 'session.created', timestamp: new Date().toISOString(), data: session });
-    telemetryService.sendEvent('session_started', { sessionType: session.type, sessionId: session.id, launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly', yoloMode: session.yoloMode });
+    telemetryService.sendEvent('session_started', {
+      sessionType: session.type,
+      sessionId: session.id,
+      launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly',
+      yoloMode: session.yoloMode,
+    });
   });
   monitor.on('session.updated', (session: Session) => {
     broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: session });
   });
   monitor.on('session.ended', (session: Session) => {
     broadcast({ type: 'session.ended', timestamp: new Date().toISOString(), data: session });
-    telemetryService.sendEvent('session_ended', { sessionType: session.type, sessionId: session.id, launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly', yoloMode: session.yoloMode });
+    telemetryService.sendEvent('session_ended', {
+      sessionType: session.type,
+      sessionId: session.id,
+      launchMode: session.launchMode === 'pty' ? 'connected' : 'readonly',
+      yoloMode: session.yoloMode,
+    });
   });
   monitor.on('repository.added', (repo: Repository) => {
     broadcast({ type: 'repository.added', timestamp: new Date().toISOString(), data: repo });
@@ -217,39 +233,76 @@ export async function startServer(): Promise<FastifyInstance> {
     if (teamsApp) {
       teamsNotifier = new TeamsNotifier(teamsApp);
 
-      if (getIntegrationEnabled('teams') !== false && await teamsNotifier.initialize()) {
+      if (getIntegrationEnabled('teams') !== false && (await teamsNotifier.initialize())) {
         monitor.on('session.created', (session: Session) => {
-          teamsNotifier!.onSessionCreated(session).catch(err => app.log.error({ err }, 'teams.session.created.error'));
+          teamsNotifier!
+            .onSessionCreated(session)
+            .catch((err) => app.log.error({ err }, 'teams.session.created.error'));
         });
         monitor.on('session.updated', (session: Session) => {
-          teamsNotifier!.onSessionUpdated(session).catch(err => app.log.error({ err }, 'teams.session.updated.error'));
+          teamsNotifier!
+            .onSessionUpdated(session)
+            .catch((err) => app.log.error({ err }, 'teams.session.updated.error'));
         });
         monitor.on('session.ended', (session: Session) => {
-          teamsNotifier!.onSessionEnded(session).catch(err => app.log.error({ err }, 'teams.session.ended.error'));
+          teamsNotifier!
+            .onSessionEnded(session)
+            .catch((err) => app.log.error({ err }, 'teams.session.ended.error'));
         });
         outputEvents.on('session.output.batch', (sessionId: string, outputs: SessionOutput[]) => {
-          teamsNotifier!.onSessionOutput(sessionId, outputs).catch(err => app.log.error({ err }, 'teams.session.output.error'));
+          teamsNotifier!
+            .onSessionOutput(sessionId, outputs)
+            .catch((err) => app.log.error({ err }, 'teams.session.output.error'));
         });
         pendingChoiceEvents.on('session.pending_choice', (choice: PendingChoice) => {
-          teamsNotifier!.onPendingChoice(choice).catch(err => app.log.error({ err }, 'teams.pending_choice.error'));
+          teamsNotifier!
+            .onPendingChoice(choice)
+            .catch((err) => app.log.error({ err }, 'teams.pending_choice.error'));
         });
       }
     }
   }
 
-  setIntegrationServices(slackNotifier, slackListener, teamsNotifier, teamsListener, config.integrationsEnabled, monitor);
+  setIntegrationServices(
+    slackNotifier,
+    slackListener,
+    teamsNotifier,
+    teamsListener,
+    config.integrationsEnabled,
+    monitor,
+  );
 
   process.on('SIGTERM', async () => {
- telemetryService.sendEvent('app_ended'); teamsNotifier?.shutdown(); teamsListener?.shutdown(); slackListener?.shutdown(); slackNotifier?.shutdown(); monitor?.stop(); await app.close(); process.exit(0); 
-});
+    telemetryService.sendEvent('app_ended');
+    teamsNotifier?.shutdown();
+    teamsListener?.shutdown();
+    slackListener?.shutdown();
+    slackNotifier?.shutdown();
+    monitor?.stop();
+    await app.close();
+    process.exit(0);
+  });
   process.on('SIGINT', async () => {
- telemetryService.sendEvent('app_ended'); teamsNotifier?.shutdown(); teamsListener?.shutdown(); slackListener?.shutdown(); slackNotifier?.shutdown(); monitor?.stop(); await app.close(); process.exit(0); 
-});
+    telemetryService.sendEvent('app_ended');
+    teamsNotifier?.shutdown();
+    teamsListener?.shutdown();
+    slackListener?.shutdown();
+    slackNotifier?.shutdown();
+    monitor?.stop();
+    await app.close();
+    process.exit(0);
+  });
 
   await app.listen({ port: config.port, host: '127.0.0.1' });
   app.log.info({ port: config.port }, 'Argus server started');
-  telemetryService.setIntegrationStatus('slack', slackNotifier == null ? 'na' : slackNotifier.isRunning ? 'on' : 'off');
-  telemetryService.setIntegrationStatus('teams', teamsNotifier == null ? 'na' : teamsNotifier.isRunning ? 'on' : 'off');
+  telemetryService.setIntegrationStatus(
+    'slack',
+    slackNotifier == null ? 'na' : slackNotifier.isRunning ? 'on' : 'off',
+  );
+  telemetryService.setIntegrationStatus(
+    'teams',
+    teamsNotifier == null ? 'na' : teamsNotifier.isRunning ? 'on' : 'off',
+  );
   telemetryService.sendEvent('app_started');
   return app;
 }

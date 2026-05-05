@@ -27,31 +27,52 @@ interface ClaudeEntry {
 
 function stringifyContent(content: unknown): string {
   if (typeof content === 'string') {
-return content;
-}
+    return content;
+  }
   return JSON.stringify(content);
 }
 
-function parseUserEntry(entry: ClaudeEntry, sessionId: string, sequenceNumber: number, makeId?: (blockIndex: number) => string): SessionOutput[] {
+function parseUserEntry(
+  entry: ClaudeEntry,
+  sessionId: string,
+  sequenceNumber: number,
+  makeId?: (blockIndex: number) => string,
+): SessionOutput[] {
   const content = entry.message?.content;
   const timestamp = entry.timestamp ?? new Date().toISOString();
   const isMeta = entry.isMeta === true ? true : undefined;
   const results: SessionOutput[] = [];
   let blockIndex = 0;
-  const nextId = () => makeId ? makeId(blockIndex++) : randomUUID();
+  const nextId = () => (makeId ? makeId(blockIndex++) : randomUUID());
 
   if (typeof content === 'string') {
     results.push({
-      id: nextId(), sessionId, timestamp,
-      type: 'message', role: 'user', content, toolName: null, toolCallId: null, sequenceNumber, isMeta,
+      id: nextId(),
+      sessionId,
+      timestamp,
+      type: 'message',
+      role: 'user',
+      content,
+      toolName: null,
+      toolCallId: null,
+      sequenceNumber,
+      isMeta,
     });
     return results;
   }
 
   if (!Array.isArray(content)) {
     results.push({
-      id: nextId(), sessionId, timestamp,
-      type: 'message', role: 'user', content: '', toolName: null, toolCallId: null, sequenceNumber, isMeta,
+      id: nextId(),
+      sessionId,
+      timestamp,
+      type: 'message',
+      role: 'user',
+      content: '',
+      toolName: null,
+      toolCallId: null,
+      sequenceNumber,
+      isMeta,
     });
     return results;
   }
@@ -59,13 +80,24 @@ function parseUserEntry(entry: ClaudeEntry, sessionId: string, sequenceNumber: n
   for (const block of content) {
     if (block.type === 'text') {
       results.push({
-        id: nextId(), sessionId, timestamp,
-        type: 'message', role: 'user', content: block.text ?? '', toolName: null, toolCallId: null, sequenceNumber, isMeta,
+        id: nextId(),
+        sessionId,
+        timestamp,
+        type: 'message',
+        role: 'user',
+        content: block.text ?? '',
+        toolName: null,
+        toolCallId: null,
+        sequenceNumber,
+        isMeta,
       });
     } else if (block.type === 'tool_result') {
       results.push({
-        id: nextId(), sessionId, timestamp,
-        type: 'tool_result', role: null,
+        id: nextId(),
+        sessionId,
+        timestamp,
+        type: 'tool_result',
+        role: null,
         content: stringifyContent(block.content),
         toolName: null,
         toolCallId: block.tool_use_id ?? null,
@@ -77,27 +109,42 @@ function parseUserEntry(entry: ClaudeEntry, sessionId: string, sequenceNumber: n
   return results;
 }
 
-function parseAssistantEntry(entry: ClaudeEntry, sessionId: string, sequenceNumber: number, makeId?: (blockIndex: number) => string): SessionOutput[] {
+function parseAssistantEntry(
+  entry: ClaudeEntry,
+  sessionId: string,
+  sequenceNumber: number,
+  makeId?: (blockIndex: number) => string,
+): SessionOutput[] {
   const content = entry.message?.content;
   const timestamp = entry.timestamp ?? new Date().toISOString();
   const results: SessionOutput[] = [];
   let blockIndex = 0;
-  const nextId = () => makeId ? makeId(blockIndex++) : randomUUID();
+  const nextId = () => (makeId ? makeId(blockIndex++) : randomUUID());
 
   if (!Array.isArray(content)) {
-return results;
-}
+    return results;
+  }
 
   for (const block of content) {
     if (block.type === 'text') {
       results.push({
-        id: nextId(), sessionId, timestamp,
-        type: 'message', role: 'assistant' as OutputRole, content: block.text ?? '', toolName: null, toolCallId: null, sequenceNumber,
+        id: nextId(),
+        sessionId,
+        timestamp,
+        type: 'message',
+        role: 'assistant' as OutputRole,
+        content: block.text ?? '',
+        toolName: null,
+        toolCallId: null,
+        sequenceNumber,
       });
     } else if (block.type === 'tool_use') {
       results.push({
-        id: nextId(), sessionId, timestamp,
-        type: 'tool_use', role: null,
+        id: nextId(),
+        sessionId,
+        timestamp,
+        type: 'tool_use',
+        role: null,
         content: JSON.stringify(block.input ?? {}),
         toolName: block.name ?? null,
         toolCallId: block.id ?? null,
@@ -113,21 +160,26 @@ return results;
  * Parse a single line from a Claude Code JSONL conversation file.
  * Returns an array because one entry (e.g. assistant with text + tool_use) can yield multiple outputs.
  */
-export function parseClaudeJsonlLine(line: string, sessionId: string, sequenceNumber: number, makeId?: (blockIndex: number) => string): SessionOutput[] {
+export function parseClaudeJsonlLine(
+  line: string,
+  sessionId: string,
+  sequenceNumber: number,
+  makeId?: (blockIndex: number) => string,
+): SessionOutput[] {
   if (!line.trim()) {
-return [];
-}
+    return [];
+  }
   try {
     const entry = JSON.parse(line) as ClaudeEntry;
     if (entry.type === 'file-history-snapshot') {
-return [];
-}
+      return [];
+    }
     if (entry.type === 'user') {
-return parseUserEntry(entry, sessionId, sequenceNumber, makeId);
-}
+      return parseUserEntry(entry, sessionId, sequenceNumber, makeId);
+    }
     if (entry.type === 'assistant') {
-return parseAssistantEntry(entry, sessionId, sequenceNumber, makeId);
-}
+      return parseAssistantEntry(entry, sessionId, sequenceNumber, makeId);
+    }
     return [];
   } catch {
     return [];
@@ -140,16 +192,15 @@ return parseAssistantEntry(entry, sessionId, sequenceNumber, makeId);
  */
 export function parseModel(line: string): string | null {
   if (!line.trim()) {
-return null;
-}
+    return null;
+  }
   try {
     const entry = JSON.parse(line) as ClaudeEntry;
     if (entry.type === 'assistant' && entry.message?.model) {
-return entry.message.model;
-}
+      return entry.message.model;
+    }
     return null;
   } catch {
     return null;
   }
 }
-

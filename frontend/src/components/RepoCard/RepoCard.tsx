@@ -23,8 +23,14 @@ interface RepoCardProps {
 }
 
 export default function RepoCard({
-  repo, skipConfirm, selectedSessionId, isMobile,
-  onRemoveById, onSetRemoveConfirm, onSelectSession, onLaunchError,
+  repo,
+  skipConfirm,
+  selectedSessionId,
+  isMobile,
+  onRemoveById,
+  onSetRemoveConfirm,
+  onSelectSession,
+  onLaunchError,
 }: RepoCardProps) {
   return (
     <div data-tour-id="dashboard-repo-card" className="bg-white rounded-lg shadow p-4 md:p-6">
@@ -50,8 +56,20 @@ export default function RepoCard({
               title="Remove repository"
               className="icon-btn text-gray-500 hover:text-red-500"
             >
-              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
             </button>
           </div>
@@ -71,9 +89,10 @@ export default function RepoCard({
               title="View diff on GitHub"
               aria-label="View diff on GitHub"
               className="inline-flex items-center text-gray-400 hover:text-gray-700"
-              onClick={e => {
- e.stopPropagation(); postTelemetryEvent('repo_diff_opened'); 
-}}
+              onClick={(e) => {
+                e.stopPropagation();
+                postTelemetryEvent('repo_diff_opened');
+              }}
             >
               <GitCompare size={14} aria-hidden="true" />
             </a>

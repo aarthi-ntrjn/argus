@@ -8,7 +8,9 @@ export function useSlackSettings() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    getSlackSettings().then(cfg => setConfig(cfg)).catch(e => setError(e.message));
+    getSlackSettings()
+      .then((cfg) => setConfig(cfg))
+      .catch((e) => setError(e.message));
   }, []);
 
   const save = useCallback(async (patch: Partial<Omit<SlackSettings, 'enabled'>>) => {

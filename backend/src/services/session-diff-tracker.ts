@@ -17,32 +17,35 @@ type TrackedState = {
 };
 
 const TRACKED_FIELDS: { key: keyof TrackedState; label: string }[] = [
-  { key: 'status',     label: 'Status' },
-  { key: 'model',      label: 'Model'  },
-  { key: 'yoloMode',   label: 'Yolo'   },
-  { key: 'pid',        label: 'PID'    },
-  { key: 'launchMode', label: 'Mode'   },
+  { key: 'status', label: 'Status' },
+  { key: 'model', label: 'Model' },
+  { key: 'yoloMode', label: 'Yolo' },
+  { key: 'pid', label: 'PID' },
+  { key: 'launchMode', label: 'Mode' },
   // summary is intentionally excluded: it surfaces through the output stream instead
 ];
 
 function extract(session: Session): TrackedState {
   return {
-    status:     session.status,
-    model:      session.model,
-    yoloMode:   session.yoloMode,
-    pid:        session.pid,
+    status: session.status,
+    model: session.model,
+    yoloMode: session.yoloMode,
+    pid: session.pid,
     launchMode: session.launchMode,
   };
 }
 
 function format(key: keyof TrackedState, value: unknown): string {
   if (value == null) {
-return 'none';
-}
+    return 'none';
+  }
   switch (key) {
-    case 'yoloMode':   return value ? 'yes' : 'no';
-    case 'launchMode': return value === 'pty' ? 'connected' : 'readonly';
-    default: return String(value);
+    case 'yoloMode':
+      return value ? 'yes' : 'no';
+    case 'launchMode':
+      return value === 'pty' ? 'connected' : 'readonly';
+    default:
+      return String(value);
   }
 }
 
@@ -92,7 +95,12 @@ export class SessionDiffTracker {
     const changes: SessionChange[] = [];
     for (const { key, label } of TRACKED_FIELDS) {
       if (prev[key] !== curr[key]) {
-        changes.push({ field: key, label, from: format(key, prev[key]), to: format(key, curr[key]) });
+        changes.push({
+          field: key,
+          label,
+          from: format(key, prev[key]),
+          to: format(key, curr[key]),
+        });
       }
     }
 
