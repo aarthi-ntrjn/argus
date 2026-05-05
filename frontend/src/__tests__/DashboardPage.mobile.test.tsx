@@ -19,30 +19,34 @@ vi.mock('../services/api', () => ({
   patchArgusSettings: vi
     .fn()
     .mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
-  getIntegrationStatus: vi
-    .fn()
-    .mockResolvedValue({
-      integrationsEnabled: false,
-      slack: { notifier: null, listener: null },
-      teams: { notifier: null, listener: null },
-    }),
+  getIntegrationStatus: vi.fn().mockResolvedValue({
+    integrationsEnabled: false,
+    slack: { notifier: null, listener: null },
+    teams: { notifier: null, listener: null },
+  }),
   startIntegration: vi.fn().mockResolvedValue(undefined),
   stopIntegration: vi.fn().mockResolvedValue(undefined),
   getHealth: vi.fn().mockResolvedValue({ status: 'ok', version: '1.2.3', uptime: 0 }),
-  getUpdateStatus: vi.fn().mockResolvedValue({ currentVersion: '1.2.3', latestVersion: null, updateAvailable: false, lastChecked: null, updateInProgress: false }),
+  getUpdateStatus: vi
+    .fn()
+    .mockResolvedValue({
+      currentVersion: '1.2.3',
+      latestVersion: null,
+      updateAvailable: false,
+      lastChecked: null,
+      updateInProgress: false,
+    }),
 }));
 
 vi.mock('../hooks/useSettings', () => ({
-  useSettings: vi
-    .fn()
-    .mockReturnValue([
-      {
-        hideEndedSessions: false,
-        hideInactiveSessions: false,
-        hideReposWithNoActiveSessions: false,
-      },
-      vi.fn(),
-    ]),
+  useSettings: vi.fn().mockReturnValue([
+    {
+      hideEndedSessions: false,
+      hideInactiveSessions: false,
+      hideReposWithNoActiveSessions: false,
+    },
+    vi.fn(),
+  ]),
 }));
 
 vi.mock('../hooks/useOnboarding', () => ({

@@ -39,25 +39,21 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
     const repoPath = expandTilde(rawPath);
 
     if (!existsSync(join(repoPath, '.git'))) {
-      return reply
-        .status(400)
-        .send({
-          error: 'NOT_GIT_REPO',
-          message: `The selected folder is not a git repository. To add all repos inside a parent folder, select the parent with "Add Repository".`,
-          requestId: req.id,
-        });
+      return reply.status(400).send({
+        error: 'NOT_GIT_REPO',
+        message: `The selected folder is not a git repository. To add all repos inside a parent folder, select the parent with "Add Repository".`,
+        requestId: req.id,
+      });
     }
 
     const existing = getRepositoryByPath(repoPath);
     if (existing) {
-      return reply
-        .status(409)
-        .send({
-          error: 'DUPLICATE',
-          message: 'Repository already registered',
-          repository: existing,
-          requestId: req.id,
-        });
+      return reply.status(409).send({
+        error: 'DUPLICATE',
+        message: 'Repository already registered',
+        repository: existing,
+        requestId: req.id,
+      });
     }
 
     const tRepo = Date.now();
@@ -128,13 +124,11 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
       deleteRepository(id);
     } catch (err) {
       logger.error('[Repositories] deleteRepository failed', { id, err });
-      return reply
-        .status(500)
-        .send({
-          error: 'DELETE_FAILED',
-          message: 'Failed to delete repository. Check server logs for details.',
-          requestId: req.id,
-        });
+      return reply.status(500).send({
+        error: 'DELETE_FAILED',
+        message: 'Failed to delete repository. Check server logs for details.',
+        requestId: req.id,
+      });
     }
 
     // Remove Claude hooks if no repositories remain

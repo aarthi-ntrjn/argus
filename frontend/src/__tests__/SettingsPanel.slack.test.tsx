@@ -19,13 +19,11 @@ const slackRunning = {
 vi.mock('../services/api', () => ({
   getTeamsSettings: vi.fn().mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' }),
   getSlackSettings: vi.fn().mockRejectedValue(new Error('not configured')),
-  getIntegrationStatus: vi
-    .fn()
-    .mockResolvedValue({
-      integrationsEnabled: true,
-      slack: { connectionStatus: 'unconfigured', notifier: null, listener: null },
-      teams: { connectionStatus: 'unconfigured', notifier: null, listener: null },
-    }),
+  getIntegrationStatus: vi.fn().mockResolvedValue({
+    integrationsEnabled: true,
+    slack: { connectionStatus: 'unconfigured', notifier: null, listener: null },
+    teams: { connectionStatus: 'unconfigured', notifier: null, listener: null },
+  }),
   startIntegration: vi.fn().mockResolvedValue(undefined),
   stopIntegration: vi.fn().mockResolvedValue(undefined),
 }));

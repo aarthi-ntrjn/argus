@@ -9,22 +9,18 @@ import type { DashboardSettings } from '../types';
 import * as api from '../services/api';
 
 vi.mock('../services/api', () => ({
-  getArgusSettings: vi
-    .fn()
-    .mockResolvedValue({
-      autoRegisterRepos: false,
-      yoloMode: false,
-      restingThresholdMinutes: 20,
-      autoUpdate: true,
-    } as any),
-  patchArgusSettings: vi
-    .fn()
-    .mockResolvedValue({
-      autoRegisterRepos: false,
-      yoloMode: false,
-      restingThresholdMinutes: 20,
-      autoUpdate: true,
-    } as any),
+  getArgusSettings: vi.fn().mockResolvedValue({
+    autoRegisterRepos: false,
+    yoloMode: false,
+    restingThresholdMinutes: 20,
+    autoUpdate: true,
+  } as any),
+  patchArgusSettings: vi.fn().mockResolvedValue({
+    autoRegisterRepos: false,
+    yoloMode: false,
+    restingThresholdMinutes: 20,
+    autoUpdate: true,
+  } as any),
   getTeamsSettings: vi.fn().mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' }),
   patchTeamsSettings: vi
     .fn()
@@ -32,7 +28,15 @@ vi.mock('../services/api', () => ({
   getSlackSettings: vi.fn().mockRejectedValue(new Error('not configured')),
   getHealth: vi.fn().mockResolvedValue({ status: 'ok', version: '1.2.3', uptime: 0 }),
   rescanRemoteUrls: vi.fn().mockResolvedValue(undefined),
-  getUpdateStatus: vi.fn().mockResolvedValue({ currentVersion: '1.2.3', latestVersion: null, updateAvailable: false, lastChecked: null, updateInProgress: false }),
+  getUpdateStatus: vi
+    .fn()
+    .mockResolvedValue({
+      currentVersion: '1.2.3',
+      latestVersion: null,
+      updateAvailable: false,
+      lastChecked: null,
+      updateInProgress: false,
+    }),
   applyUpdate: vi.fn().mockResolvedValue({ started: true }),
 }));
 

@@ -51,13 +51,11 @@ export async function fsRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (!existsSync(scanPath)) {
-      return reply
-        .status(404)
-        .send({
-          error: 'PATH_NOT_FOUND',
-          message: 'The specified folder does not exist.',
-          requestId: request.id,
-        });
+      return reply.status(404).send({
+        error: 'PATH_NOT_FOUND',
+        message: 'The specified folder does not exist.',
+        requestId: request.id,
+      });
     }
     app.log.info({ scanPath }, 'Starting recursive git repo scan');
     try {
@@ -66,14 +64,12 @@ export async function fsRoutes(app: FastifyInstance): Promise<void> {
       return reply.send({ repos });
     } catch (err: unknown) {
       app.log.error({ scanPath, err }, 'Scan failed');
-      return reply
-        .status(500)
-        .send({
-          error: 'SCAN_FAILED',
-          message: 'Failed to scan folder.',
-          requestId: request.id,
-          repos: [],
-        });
+      return reply.status(500).send({
+        error: 'SCAN_FAILED',
+        message: 'Failed to scan folder.',
+        requestId: request.id,
+        repos: [],
+      });
     }
   });
 }

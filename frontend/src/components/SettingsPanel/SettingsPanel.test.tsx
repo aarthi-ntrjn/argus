@@ -38,7 +38,7 @@ function renderPanel(overrides?: Partial<DashboardSettings>) {
   return render(
     <QueryClientProvider client={qc}>
       <SettingsPanel settings={{ ...defaultSettings, ...overrides }} onToggle={() => {}} />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -70,7 +70,9 @@ describe('SettingsPanel — auto-update toggle (T020)', () => {
     fireEvent.click(checkbox);
 
     await waitFor(() => {
-      expect(patchArgusSettings).toHaveBeenCalledWith(expect.objectContaining({ autoUpdate: false }));
+      expect(patchArgusSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ autoUpdate: false }),
+      );
     });
   });
 });

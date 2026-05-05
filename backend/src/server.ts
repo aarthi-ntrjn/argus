@@ -317,7 +317,6 @@ export async function startServer(): Promise<FastifyInstance> {
     process.exit(0);
   });
 
-
   await app.listen({ port: config.port, host: '127.0.0.1' });
   app.log.info({ port: config.port }, 'Argus server started');
   telemetryService.setIntegrationStatus(
