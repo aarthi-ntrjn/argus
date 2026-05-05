@@ -11,7 +11,7 @@ name: Security Audit
 
 on:
   schedule:
-    - cron: "0 9 * * *" # 09:00 UTC daily
+    - cron: "0 3 * * *" # 20:00 PDT (UTC-7) daily
   workflow_dispatch:
 
 permissions:
