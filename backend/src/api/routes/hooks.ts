@@ -1,10 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { getRepositoryByPath, getSession } from '../../db/database.js';
+import { getSession } from '../../db/database.js';
 
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HOOK_BODY_LIMIT = 64 * 1024; // 64 KB
-
-const VALID_COPILOT_EVENTS = new Set(['sessionStart', 'sessionEnd', 'preToolUse', 'postToolUse']);
 
 const EVENT_TO_PASCAL: Record<string, string> = {
   sessionStart: 'SessionStart',
@@ -112,37 +110,15 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      if (!event || !VALID_COPILOT_EVENTS.has(event)) {
-        return reply.status(400).send({
-          error: 'INVALID_HOOK_EVENT',
-          message:
-            'event query parameter must be one of: sessionStart, sessionEnd, preToolUse, postToolUse',
-          requestId: req.id,
-        });
-      }
-
-      const rawSessionId = body.sessionId;
+      const sessionId = body.sessionId;
       const cwd = typeof body.cwd === 'string' ? body.cwd : undefined;
 
-      // Validate sessionId: if present, must be UUID v4; if absent, cwd must match a repo
-      if (rawSessionId !== undefined) {
-        if (typeof rawSessionId !== 'string' || !UUID_V4_RE.test(rawSessionId)) {
-          return reply.status(400).send({
-            error: 'INVALID_SESSION_ID',
-            message: 'sessionId must be a valid UUID v4, or cwd must match a registered repository',
-            requestId: req.id,
-          });
-        }
-      } else {
-        // No sessionId — require cwd to match a repo
-        const repo = cwd ? getRepositoryByPath(cwd) : null;
-        if (!repo) {
-          return reply.status(400).send({
-            error: 'INVALID_SESSION_ID',
-            message: 'sessionId must be a valid UUID v4, or cwd must match a registered repository',
-            requestId: req.id,
-          });
-        }
+      if (typeof sessionId !== 'string' || !UUID_V4_RE.test(sessionId)) {
+        return reply.status(400).send({
+          error: 'INVALID_SESSION_ID',
+          message: 'sessionId must be a valid UUID v4',
+          requestId: req.id,
+        });
       }
 
       // Parse toolArgs JSON string into tool_input object
@@ -158,7 +134,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
       // Normalize to HookPayload (internal format matching ClaudeCodeDetector)
       const normalized: HookPayload = {
         hook_event_name: EVENT_TO_PASCAL[event]!,
-        session_id: typeof rawSessionId === 'string' ? rawSessionId : '',
+        session_id: sessionId,
         cwd,
         tool_name:
           typeof body.toolName === 'string'
