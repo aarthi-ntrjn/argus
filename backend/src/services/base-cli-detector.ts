@@ -135,7 +135,11 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
         this.sigCache.set(session.id, sig);
         this.sessionCreatedCallback?.(session);
       } else if (this.sigCache.get(session.id) !== sig) {
+        const prev = this.sigCache.get(session.id)!;
         this.sigCache.set(session.id, sig);
+        logger.info(
+          `${this.logTag} session.updated sessionId=${session.id} changed=${this.signatureDiff(prev, sig)}`,
+        );
         this.sessionUpdatedCallback?.(session);
       }
     }
@@ -563,7 +567,6 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   protected sessionSignature(session: Session): string {
     return JSON.stringify({
       status: session.status,
-      lastActivityAt: session.lastActivityAt,
       summary: session.summary,
       model: session.model,
       pid: session.pid,
@@ -572,6 +575,14 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       launchMode: session.launchMode,
       endedAt: session.endedAt,
     });
+  }
+
+  protected signatureDiff(prev: string, next: string): string {
+    const a = JSON.parse(prev) as Record<string, unknown>;
+    const b = JSON.parse(next) as Record<string, unknown>;
+    return Object.keys(b)
+      .filter((k) => a[k] !== b[k])
+      .join(',');
   }
 
   /**
