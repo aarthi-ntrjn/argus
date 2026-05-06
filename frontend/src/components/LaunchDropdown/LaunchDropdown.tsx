@@ -27,6 +27,7 @@ export default function LaunchDropdown({ repoPath, onLaunchError }: Props) {
     queryKey: ['available-tools'],
     queryFn: getAvailableTools,
     staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   // Close on outside click

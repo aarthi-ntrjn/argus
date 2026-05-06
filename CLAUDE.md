@@ -19,6 +19,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Never use em dashes** (`—`) in any documentation, comments, or content. They are tiresome to read. Use a comma, colon, parentheses, or rewrite the sentence instead.
 
+## React Query Rules
+
+**`refetchOnWindowFocus` must always be `false`.** Never write a `useQuery` without `refetchOnWindowFocus: false`. The default (`true`) silently fires HTTP requests every time the user switches back to the tab, even when the data is kept current by WebSocket push or by mutations that call `setQueryData`. This has caused repeated bugs in this codebase. If you believe a query genuinely needs focus-refetch, stop and get explicit approval from the user before omitting the flag.
+
 ## Coding Style
 
 All code must pass `npm run lint` and `npm run format` in both the `backend` and `frontend` workspaces. These run automatically on every `/merge`. Key rules enforced:
