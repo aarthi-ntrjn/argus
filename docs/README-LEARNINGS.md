@@ -409,3 +409,12 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: The default is silent — no warning, no log, just extra requests visible only in the network inspector. WebSocket and polling can coexist without error, so the redundancy goes unnoticed until someone checks network traffic.
 **How to prevent**: When a query's cache is kept fresh by a WebSocket handler in `socket.ts`, add `refetchOnWindowFocus: false` at the same time the WebSocket handler is wired up. The two changes are coupled: adding push without disabling focus-refetch leaves the redundancy in place. Code review should check that any `useQuery` for a WebSocket-pushed key carries this flag.
 **Fix summary**: Added `refetchOnWindowFocus: false` to seven `useQuery` calls: `['sessions']` and `['repositories']` in `DashboardPage.tsx`; `['session', id]` and `['repositories']` in `SessionPage.tsx`; `['update-status']` in `useUpdateStatus.ts`; `['session-output', id]` in `OutputPane.tsx` and `SessionPromptBar.tsx`.
+
+## T129 — argus-settings refetches on window focus despite mutations keeping cache current
+
+**Date**: 2026-05-06
+**Symptom**: Tabbing back to Argus 30+ seconds after last using the settings panel triggered a `GET /api/v1/settings` request even though nothing had changed.
+**Root cause**: `useArgusSettings.ts` had `staleTime: 30_000` but no `refetchOnWindowFocus: false`. Every settings write goes through `patchSetting`, which calls `queryClient.setQueryData` on success, so the cache is always current — but React Query still considers data stale after 30 seconds and fires a focus-refetch regardless.
+**Why it was missed**: The mutation-updates-cache pattern prevents staleness in practice but does not signal to React Query that external changes cannot occur. The focus-refetch behaviour is invisible unless you watch the network inspector around the time you switch tabs.
+**How to prevent**: Any query whose only mutation path calls `setQueryData` (not just `invalidateQueries`) on success effectively owns its own freshness. Add `refetchOnWindowFocus: false` to those queries — the mutation is the source of truth, not a background refetch.
+**Fix summary**: Added `refetchOnWindowFocus: false` to the `useQuery` in `useArgusSettings.ts`.

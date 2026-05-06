@@ -480,7 +480,7 @@ Each phase checkpoint delivers independently demonstrable value:
 
 ### Addendum: Bug — argus-settings refetches on window focus despite mutations keeping cache current
 
-- [ ] T129 Fix `frontend/src/hooks/useArgusSettings.ts`: the `useQuery` for `['argus-settings']` has `staleTime: 30_000` but no `refetchOnWindowFocus: false`. Settings have no external source of change and no WebSocket push — every write goes through `patchSetting`, which calls `queryClient.setQueryData(ARGUS_SETTINGS_QUERY_KEY, updated)` on success, keeping the cache permanently current. A tab-focus refetch 30+ seconds after the last write just re-fetches the same value already in cache. Fix: add `refetchOnWindowFocus: false` to the `useQuery` call at line 17 of `useArgusSettings.ts`.
+- [X] T129 Fix `frontend/src/hooks/useArgusSettings.ts`: the `useQuery` for `['argus-settings']` has `staleTime: 30_000` but no `refetchOnWindowFocus: false`. Settings have no external source of change and no WebSocket push — every write goes through `patchSetting`, which calls `queryClient.setQueryData(ARGUS_SETTINGS_QUERY_KEY, updated)` on success, keeping the cache permanently current. A tab-focus refetch 30+ seconds after the last write just re-fetches the same value already in cache. Fix: add `refetchOnWindowFocus: false` to the `useQuery` call at line 17 of `useArgusSettings.ts`.
 
 ### Addendum: Bug — update status polled every 60 s instead of being pushed via WebSocket
 
