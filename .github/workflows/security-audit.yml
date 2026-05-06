@@ -160,10 +160,23 @@ jobs:
                       vulns = json.load(f)
               except Exception:
                   vulns = []
-              facts = [
+              rows = [
                   {
-                      "title": f"{emoji.get(v['severity'], '⚪')} {v['name']} ({v['severity']})",
-                      "value": (v["title"] or "No description") + (" — fix available" if v["fixAvailable"] else ""),
+                      "type": "ColumnSet",
+                      "columns": [
+                          {
+                              "type": "Column", "width": "auto",
+                              "items": [{"type": "TextBlock", "weight": "Bolder",
+                                         "text": f"{emoji.get(v['severity'], '⚪')} {v['name']}",
+                                         "wrap": True}],
+                          },
+                          {
+                              "type": "Column", "width": "stretch",
+                              "items": [{"type": "TextBlock",
+                                         "text": (v["title"] or "No description") + (" *(fix available)*" if v["fixAvailable"] else ""),
+                                         "wrap": True, "isSubtle": True}],
+                          },
+                      ],
                   }
                   for v in vulns
               ]
@@ -172,7 +185,7 @@ jobs:
                    "text": f"🔴 Security Audit: {total} vulnerabilities found - {date}"},
                   {"type": "TextBlock", "wrap": True,
                    "text": f"{critical} critical, {high} high, {moderate} moderate."},
-                  {"type": "FactSet", "facts": facts},
+                  {"type": "Container", "separator": True, "items": rows},
               ]
           card = {
               "type":    "AdaptiveCard",
