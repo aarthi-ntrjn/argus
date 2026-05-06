@@ -58,6 +58,7 @@ export class UpdateService {
   private _updateInProgress = false;
   private intervalHandle: ReturnType<typeof setInterval> | null = null;
   private telemetry: TelemetryService | null = null;
+  private broadcastFn: ((status: UpdateStatus) => void) | null = null;
 
   constructor(currentVersion: string) {
     this.currentVersion = currentVersion;
@@ -65,6 +66,10 @@ export class UpdateService {
 
   setTelemetryService(telemetry: TelemetryService): void {
     this.telemetry = telemetry;
+  }
+
+  setBroadcastCallback(fn: (status: UpdateStatus) => void): void {
+    this.broadcastFn = fn;
   }
 
   get isUpdateInProgress(): boolean {
@@ -108,6 +113,7 @@ export class UpdateService {
           });
         }
       }
+      this.broadcastFn?.(this.getStatus());
     } catch {
       // silent: network errors must not surface to the user (FR-009)
     }

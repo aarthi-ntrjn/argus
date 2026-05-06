@@ -279,6 +279,9 @@ export async function startServer(): Promise<FastifyInstance> {
   setUpdateServiceForRoutes(updateService);
   updateService.setTelemetryService(telemetryService);
   updateService.scheduleChecks(config.updateCheckIntervalHours * 3600_000);
+  updateService.setBroadcastCallback((status) => {
+    broadcast({ type: 'update.status', timestamp: new Date().toISOString(), data: status });
+  });
 
   async function runExitUpdate(): Promise<void> {
     if (config.autoUpdate && updateService.hasUpdate() && !updateService.isUpdateInProgress) {

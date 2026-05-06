@@ -184,4 +184,7 @@ export function initSocketHandlers(qc: QueryClient): void {
       null,
     );
   });
+  onEvent('update.status', (data) => {
+    qc.setQueryData(['update-status'], data);
+  });
 }
