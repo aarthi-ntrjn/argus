@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { loadConfig, saveConfig } from '../../config/config-loader.js';
 import { loadSlackConfig, saveSlackConfig } from '../../config/slack-config-loader.js';
-import { getSlackConnectionStatus } from '../../services/integration-status.js';
+import { getSlackConnectionStatus } from '../../integration/integration-status.js';
 import type { ArgusConfig, SlackConfig } from '../../models/index.js';
 
 const ALLOWED_KEYS = new Set<keyof ArgusConfig>([

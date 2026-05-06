@@ -32,13 +32,10 @@ const baseSession: Session = {
 };
 
 const mockPostMessage = vi.fn();
-const mockMonitor = { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as any;
 
 function makeNotifier() {
-  const notifier = new SlackNotifier(
-    { botToken: 'xoxb-test', channelId: 'C01234', enabled: true } as any,
-    mockMonitor,
-  );
+  const notifier = new SlackNotifier();
+  (notifier as any).config = { botToken: 'xoxb-test', channelId: 'C01234', enabled: true };
   (notifier as any).client = { chat: { postMessage: mockPostMessage } };
   (notifier as any).active = true;
   return notifier;
@@ -64,11 +61,9 @@ describe('SlackNotifier - session lifecycle', () => {
     await vi.advanceTimersByTimeAsync(0); // flush microtasks: sets thread anchor + upsertSlackThread
     expect(mockPostMessage).toHaveBeenCalledTimes(1);
 
-    // Set up for update: seed baseline so diff produces changes
-    (notifier as any).diffTracker.seed(baseSession);
     const updatedSession = { ...baseSession, status: 'idle' as const };
 
-    await notifier.onSessionUpdated(updatedSession);
+    await notifier.onSessionUpdated(updatedSession, [{ label: 'Status', from: 'active', to: 'idle' }]);
     await vi.advanceTimersByTimeAsync(1200); // fire rate-limit timer and process update job
     expect(mockPostMessage).toHaveBeenCalledTimes(2);
     const updateCall = mockPostMessage.mock.calls[1][0];
@@ -106,10 +101,10 @@ describe('SlackNotifier - session lifecycle', () => {
     expect(deleteSlackThread).toHaveBeenCalledWith(baseSession.id);
   });
 
-  it('postSessionUpdate with no previous state is a no-op', async () => {
+  it('postSessionUpdate with empty changes is a no-op', async () => {
     const notifier = makeNotifier();
 
-    await notifier.onSessionUpdated(baseSession);
+    await notifier.onSessionUpdated(baseSession, []);
     await vi.advanceTimersByTimeAsync(1200);
 
     expect(mockPostMessage).not.toHaveBeenCalled();

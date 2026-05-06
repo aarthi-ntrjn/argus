@@ -231,7 +231,7 @@ const sendPromptInterwriteDelayV2 = async (prompt: string, skipEnter = false): P
   log(`focus-in`);
   pty.write('\x1b[I');
   await delay(WRITE_DELAY_MS);
-  log(`pty.write promptLen=${prompt.length} prompt=${JSON.stringify(prompt)}`);
+  log(`pty.write promptLen=${prompt.length}`);
   pty.write(prompt);
   await delay(WRITE_DELAY_MS);
   // Single-char prompts (choice index digits) respect skipEnter; longer prompts always need Enter.

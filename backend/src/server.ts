@@ -10,10 +10,7 @@ import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import { App } from '@microsoft/teams.apps';
 import { loadConfig } from './config/config-loader.js';
-import { loadSlackConfig } from './config/slack-config-loader.js';
 import * as logger from './utils/logger.js';
-import { SlackNotifier } from './integration/slack/slack-notifier.js';
-import { SlackListener } from './integration/slack/slack-listener.js';
 import { addClient, removeClient, broadcast } from './api/ws/event-dispatcher.js';
 import repositoriesRoutes, {
   setMonitor,
@@ -21,10 +18,14 @@ import repositoriesRoutes, {
 } from './api/routes/repositories.js';
 import sessionsRoutes, { setCliManager as setSessionsCliManager } from './api/routes/sessions.js';
 import hooksRoutes, { setCliManager as setHooksCliManager } from './api/routes/hooks.js';
-import healthRoutes, { setSlackServices, setUpdateService } from './api/routes/health.js';
+import healthRoutes, { setUpdateService } from './api/routes/health.js';
 import updateRoutes, { setUpdateServiceForRoutes } from './api/routes/update.js';
 import { updateService } from './services/update-service.js';
-import integrationsRoutes, { setIntegrationServices } from './api/routes/integrations.js';
+import integrationsRoutes, {
+  initializeIntegrations,
+  shutdownIntegrations,
+  getIntegrationRunningStatus,
+} from './integration/integration-manager.js';
 import metricsRoutes from './api/routes/metrics.js';
 import { fsRoutes } from './api/routes/fs.js';
 import todosRoutes from './api/routes/todos.js';
@@ -36,24 +37,14 @@ import telemetryRoutes from './api/routes/telemetry.js';
 import { telemetryService } from './services/telemetry-service.js';
 import { SessionMonitor } from './services/session-monitor.js';
 import { startPruningJob } from './services/pruning-job.js';
-import { TeamsNotifier } from './integration/teams/teams-notifier.js';
-import { TeamsListener } from './integration/teams/teams-listener.js';
 import { FastifyTeamsAdapter } from './integration/teams/teams-sdk-adapter.js';
-import { outputEvents } from './services/output-store.js';
 import { loadTeamsConfig } from './config/teams-config-loader.js';
-import { getIntegrationEnabled } from './db/database.js';
-import { pendingChoiceEvents } from './services/pending-choice-events.js';
-import type { PendingChoice } from './services/pending-choice-events.js';
-import type { Session, Repository, SessionOutput, ArgusConfig } from './models/index.js';
+import type { Session, Repository, ArgusConfig } from './models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 let monitor: SessionMonitor | null = null;
-let slackNotifier: SlackNotifier | null = null;
-let slackListener: SlackListener | null = null;
-let teamsNotifier: TeamsNotifier | null = null;
-let teamsListener: TeamsListener | null = null;
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const ABS_PATH_RE = /([A-Za-z]:[\\/]|\/)[^\s:)]+[\\/]([^\s:)]+)/g;
@@ -124,8 +115,6 @@ export async function buildServer(): Promise<{
       clientSecret: teamsBootConfig.clientSecret,
       tenantId: teamsBootConfig.tenantId,
     });
-    teamsListener = new TeamsListener(teamsApp);
-    await teamsListener.initialize();
     await teamsApp.initialize();
   }
 
@@ -229,71 +218,7 @@ export async function startServer(): Promise<FastifyInstance> {
   await monitor.start();
   startPruningJob();
 
-  if (config.integrationsEnabled) {
-    // Always create SlackNotifier; initialize() loads config from file at connect time
-    slackNotifier = new SlackNotifier(monitor);
-    if (getIntegrationEnabled('slack') !== false) {
-      const initialized = await slackNotifier.initialize();
-      if (initialized && slackNotifier.webClient) {
-        const slackConfig = loadSlackConfig()!;
-        slackListener = new SlackListener(slackConfig, slackNotifier.webClient, slackNotifier);
-        await slackListener.initialize();
-      }
-    }
-    setSlackServices(slackNotifier, slackListener);
-
-    if (teamsApp) {
-      teamsNotifier = new TeamsNotifier(teamsApp);
-
-      const teamsEnabledInDb = getIntegrationEnabled('teams');
-      app.log.info(
-        { teamsEnabledInDb },
-        'teams.startup: checking integration enabled flag and config',
-      );
-      if (teamsEnabledInDb !== false && (await teamsNotifier.initialize())) {
-        app.log.info('teams.startup: subscriptions registered on monitor');
-        monitor.on('session.created', (session: Session) => {
-          teamsNotifier!
-            .onSessionCreated(session)
-            .catch((err) => app.log.error({ err }, 'teams.session.created.error'));
-        });
-        monitor.on('session.updated', (session: Session) => {
-          teamsNotifier!
-            .onSessionUpdated(session)
-            .catch((err) => app.log.error({ err }, 'teams.session.updated.error'));
-        });
-        monitor.on('session.ended', (session: Session) => {
-          teamsNotifier!
-            .onSessionEnded(session)
-            .catch((err) => app.log.error({ err }, 'teams.session.ended.error'));
-        });
-        outputEvents.on('session.output.batch', (sessionId: string, outputs: SessionOutput[]) => {
-          teamsNotifier!
-            .onSessionOutput(sessionId, outputs)
-            .catch((err) => app.log.error({ err }, 'teams.session.output.error'));
-        });
-        pendingChoiceEvents.on('session.pending_choice', (choice: PendingChoice) => {
-          teamsNotifier!
-            .onPendingChoice(choice)
-            .catch((err) => app.log.error({ err }, 'teams.pending_choice.error'));
-        });
-      } else {
-        app.log.warn(
-          { teamsEnabledInDb },
-          'teams.startup: subscriptions NOT registered (disabled in DB or config incomplete)',
-        );
-      }
-    }
-  }
-
-  setIntegrationServices(
-    slackNotifier,
-    slackListener,
-    teamsNotifier,
-    teamsListener,
-    config.integrationsEnabled,
-    monitor,
-  );
+  await initializeIntegrations(config.integrationsEnabled, teamsApp, monitor);
 
   setUpdateService(updateService);
   setUpdateServiceForRoutes(updateService);
@@ -320,10 +245,7 @@ export async function startServer(): Promise<FastifyInstance> {
   process.on('SIGTERM', async () => {
     telemetryService.sendEvent('app_ended');
     await runExitUpdate();
-    teamsNotifier?.shutdown();
-    teamsListener?.shutdown();
-    slackListener?.shutdown();
-    slackNotifier?.shutdown();
+    shutdownIntegrations();
     monitor?.stop();
     await app.close();
     process.exit(0);
@@ -331,10 +253,7 @@ export async function startServer(): Promise<FastifyInstance> {
   process.on('SIGINT', async () => {
     telemetryService.sendEvent('app_ended');
     await runExitUpdate();
-    teamsNotifier?.shutdown();
-    teamsListener?.shutdown();
-    slackListener?.shutdown();
-    slackNotifier?.shutdown();
+    shutdownIntegrations();
     monitor?.stop();
     await app.close();
     process.exit(0);
@@ -342,14 +261,9 @@ export async function startServer(): Promise<FastifyInstance> {
 
   await app.listen({ port: config.port, host: '127.0.0.1' });
   app.log.info({ port: config.port }, 'Argus server started');
-  telemetryService.setIntegrationStatus(
-    'slack',
-    slackNotifier == null ? 'na' : slackNotifier.isRunning ? 'on' : 'off',
-  );
-  telemetryService.setIntegrationStatus(
-    'teams',
-    teamsNotifier == null ? 'na' : teamsNotifier.isRunning ? 'on' : 'off',
-  );
+  const integrationStatus = getIntegrationRunningStatus();
+  telemetryService.setIntegrationStatus('slack', integrationStatus.slack);
+  telemetryService.setIntegrationStatus('teams', integrationStatus.teams);
   telemetryService.sendEvent('app_started');
   return app;
 }

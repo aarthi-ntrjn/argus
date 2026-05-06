@@ -1,5 +1,4 @@
 import { WebClient } from '@slack/web-api';
-import type { SessionMonitor } from '../../services/session-monitor.js';
 import type {
   Session,
   Repository,
@@ -14,13 +13,9 @@ import {
   getSlackThreadByTs,
   upsertSlackThread,
   deleteSlackThread,
-  getSessions,
 } from '../../db/database.js';
 import { MessageQueue } from '../../services/message-queue.js';
-import { SessionDiffTracker } from '../../services/session-diff-tracker.js';
 import type { SessionChange } from '../../services/session-diff-tracker.js';
-import { outputEvents } from '../../services/output-store.js';
-import { pendingChoiceEvents } from '../../services/pending-choice-events.js';
 import type { PendingChoice } from '../../services/pending-choice-events.js';
 import {
   SESSION_CREATED,
@@ -36,9 +31,14 @@ import { loadSlackConfig } from '../../config/slack-config-loader.js';
 
 const log = createTaggedLogger('[SlackNotifier]', '\x1b[32m'); // green
 
+/**
+ * Sends Argus session events to a Slack channel as threaded messages.
+ * Each session owns one parent message (the thread anchor); updates and output post as replies.
+ * Thread anchors are kept in memory and persisted to the DB so they survive server restarts.
+ * Supports configurable event filtering via `enabledEventTypes` in the Slack config.
+ */
 export class SlackNotifier implements NotificationIntegration {
   private config: SlackConfig;
-  private readonly sessionMonitor: SessionMonitor;
   private client: WebClient | null = null;
   private active = false;
   private workspaceId = '';
@@ -46,13 +46,10 @@ export class SlackNotifier implements NotificationIntegration {
   // Thread anchor map: sessionId -> Slack message ts of the parent message
   private readonly threadAnchors = new Map<string, string>();
 
-  private readonly diffTracker = new SessionDiffTracker();
   private readonly queue: MessageQueue;
-  private subscribed = false;
 
-  constructor(sessionMonitor: SessionMonitor) {
+  constructor() {
     this.config = { botToken: '', channelId: '', ownerSenderId: '', enabled: false };
-    this.sessionMonitor = sessionMonitor;
     this.queue = new MessageQueue((eventType, sessionId) => {
       log.warn(`Send queue full, dropping ${eventType} for session ${sessionId}`);
     });
@@ -66,6 +63,7 @@ export class SlackNotifier implements NotificationIntegration {
   // Lifecycle
   // -------------------------------------------------------------------------
 
+  /** Loads config, authenticates the bot, and marks the integration active. */
   async initialize(): Promise<boolean> {
     this.active = false;
     const freshConfig = loadSlackConfig();
@@ -94,12 +92,11 @@ export class SlackNotifier implements NotificationIntegration {
     }
 
     this.active = true;
-    this.subscribeToEvents();
-    this.seedActiveSessions();
     log.info(`Initialized, posting to channel ${this.config.channelId}`);
     return true;
   }
 
+  /** Stops accepting new events and drains the send queue. */
   shutdown(): void {
     this.active = false;
     this.client = null;
@@ -111,6 +108,7 @@ export class SlackNotifier implements NotificationIntegration {
     return this.client;
   }
 
+  /** Looks up the Argus session that owns the given Slack thread timestamp. */
   getSessionIdByThreadTs(threadTs: string): string | undefined {
     for (const [sessionId, ts] of this.threadAnchors) {
       if (ts === threadTs) {
@@ -130,6 +128,7 @@ export class SlackNotifier implements NotificationIntegration {
   // Session lifecycle
   // -------------------------------------------------------------------------
 
+  /** Opens a new Slack thread for the session, or reconnects to an existing one after a server restart. */
   async onSessionCreated(session: Session): Promise<void> {
     log.info(`slack.session.created.received: session=${session.id} status=${session.status}`);
     if (!this.active || !this.client) {
@@ -185,7 +184,6 @@ export class SlackNotifier implements NotificationIntegration {
             } else {
               log.info(`slack.thread.reused.notified: session=${session.id} ts=${result.ts}`);
             }
-            this.diffTracker.seed(session);
           }
         } catch (err) {
           const slackErr = err as { data?: { error?: string } } | null;
@@ -211,7 +209,6 @@ export class SlackNotifier implements NotificationIntegration {
                   workspaceId: this.workspaceId,
                   createdAt: new Date().toISOString(),
                 });
-                this.diffTracker.seed(session);
                 log.info(`slack.thread.stale.recovered: session=${session.id} ts=${result.ts}`);
               }
             } catch (retryErr) {
@@ -227,6 +224,7 @@ export class SlackNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts a final status reply to the session thread and removes its thread anchor. */
   async onSessionEnded(session: Session): Promise<void> {
     log.info(`slack.session.ended.received: session=${session.id} status=${session.status}`);
     if (!this.active || !this.client) {
@@ -252,7 +250,6 @@ export class SlackNotifier implements NotificationIntegration {
             ...(threadTs ? { thread_ts: threadTs } : {}),
           });
           this.threadAnchors.delete(session.id);
-          this.diffTracker.clear(session.id);
           deleteSlackThread(session.id);
           log.info(`slack.session.ended.posted: session=${session.id} status=${session.status}`);
         } catch (err) {
@@ -264,24 +261,16 @@ export class SlackNotifier implements NotificationIntegration {
     );
   }
 
-  async onSessionUpdated(session: Session): Promise<void> {
-    log.info(`slack.session.updated.received: session=${session.id} status=${session.status}`);
+  /** Posts a reply to the session thread if any tracked fields changed since the last update. */
+  async onSessionUpdated(session: Session, changes: SessionChange[]): Promise<void> {
+    log.debug(`slack.session.updated.received: session=${session.id} status=${session.status}`);
     if (!this.active || !this.client) {
       return;
     }
-    if (!this.isEventEnabled(SESSION_UPDATED)) {
-      return;
-    }
-
-    const changes = this.diffTracker.update(session);
-    if (changes === null) {
-      log.info(
-        `slack.session.updated.skipped: no baseline, recording current state for session=${session.id}`,
-      );
-      return;
-    }
     if (changes.length === 0) {
-      log.info(`slack.session.updated.skipped: no meaningful changes for session=${session.id}`);
+      return;
+    }
+    if (!this.isEventEnabled(SESSION_UPDATED)) {
       return;
     }
 
@@ -312,7 +301,7 @@ export class SlackNotifier implements NotificationIntegration {
             blocks,
             thread_ts: threadTs,
           });
-          log.info(`slack.session.updated.posted: session=${session.id}`);
+          log.debug(`slack.session.updated.posted: session=${session.id}`);
         } catch (err) {
           log.error(`slack.session.update.notify.failed: session=${session.id}`, err);
         }
@@ -322,6 +311,7 @@ export class SlackNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts pre-filtered assistant/user messages as a reply to the session thread. */
   async onSessionOutput(sessionId: string, outputs: SessionOutput[]): Promise<void> {
     if (!this.active || !this.client) {
       return;
@@ -330,18 +320,7 @@ export class SlackNotifier implements NotificationIntegration {
       return;
     }
 
-    const relevant = outputs.filter(
-      (o) =>
-        o.type === 'message' &&
-        o.content.trim() &&
-        !o.isMeta &&
-        (o.role === 'assistant' || o.role === 'user'),
-    );
-    if (relevant.length === 0) {
-      return;
-    }
-
-    const text = relevant
+    const text = outputs
       .map((o) => (o.role === 'user' ? `*You said:* ${o.content}` : o.content))
       .join('\n\n');
     this.queue.enqueue(
@@ -366,6 +345,7 @@ export class SlackNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts an interactive Block Kit message to the session thread asking the user to choose. */
   async onPendingChoice(choice: PendingChoice): Promise<void> {
     if (!this.active || !this.client) {
       return;
@@ -396,6 +376,16 @@ export class SlackNotifier implements NotificationIntegration {
       SESSION_PENDING_CHOICE,
       choice.sessionId,
     );
+  }
+
+  /** Broadcasts a repository-added event to the channel. */
+  async onRepositoryAdded(repo: Repository): Promise<void> {
+    await this.postEvent('', REPOSITORY_ADDED, repo);
+  }
+
+  /** Broadcasts a repository-removed event to the channel. */
+  async onRepositoryRemoved(repo: Repository): Promise<void> {
+    await this.postEvent('', REPOSITORY_REMOVED, repo);
   }
 
   // -------------------------------------------------------------------------
@@ -449,60 +439,6 @@ export class SlackNotifier implements NotificationIntegration {
       return true;
     }
     return this.config.enabledEventTypes.includes(eventType);
-  }
-
-  private subscribeToEvents(): void {
-    if (this.subscribed) {
-      return;
-    }
-    this.subscribed = true;
-    this.sessionMonitor.on(SESSION_CREATED, (session: Session) => {
-      this.onSessionCreated(session).catch((err) => {
-        log.error(`Unhandled error in session.created handler:`, err);
-      });
-    });
-    this.sessionMonitor.on(SESSION_ENDED, (session: Session) => {
-      this.onSessionEnded(session).catch((err) => {
-        log.error(`Unhandled error in session.ended handler:`, err);
-      });
-    });
-    this.sessionMonitor.on(SESSION_UPDATED, (session: Session) => {
-      this.onSessionUpdated(session).catch((err) => {
-        log.error(`Unhandled error in session.updated handler:`, err);
-      });
-    });
-    this.sessionMonitor.on(REPOSITORY_ADDED, (repo: Repository) => {
-      this.postEvent('', REPOSITORY_ADDED, repo).catch((err) => {
-        log.error(`Unhandled error in repository.added handler:`, err);
-      });
-    });
-    this.sessionMonitor.on(REPOSITORY_REMOVED, (repo: Repository) => {
-      this.postEvent('', REPOSITORY_REMOVED, repo).catch((err) => {
-        log.error(`Unhandled error in repository.removed handler:`, err);
-      });
-    });
-    outputEvents.on('session.output.batch', (sessionId: string, outputs: SessionOutput[]) => {
-      this.onSessionOutput(sessionId, outputs).catch((err) => {
-        log.error(`Unhandled error in session.output.batch handler:`, err);
-      });
-    });
-    pendingChoiceEvents.on('session.pending_choice', (choice: PendingChoice) => {
-      this.onPendingChoice(choice).catch((err) => {
-        log.error(`Unhandled error in session.pending_choice handler:`, err);
-      });
-    });
-  }
-
-  // Seed diff tracker baselines for sessions that were already active when this
-  // integration started, so onSessionUpdated can detect meaningful changes immediately.
-  private seedActiveSessions(): void {
-    const active = getSessions({ status: 'active' });
-    for (const session of active) {
-      this.diffTracker.seed(session);
-    }
-    if (active.length > 0) {
-      log.info(`slack.seed: seeded ${active.length} already-active sessions`);
-    }
   }
 }
 

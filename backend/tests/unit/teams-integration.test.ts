@@ -138,17 +138,6 @@ describe('TeamsNotifier', () => {
       expect(callArg.text).toContain('hello');
     });
 
-    it('skips non-assistant outputs', async () => {
-      vi.mocked(loadTeamsConfig).mockReturnValue(enabledConfig);
-      const outputs = [
-        { id: '1', sessionId: baseSession.id, timestamp: '', type: 'message' as const, content: 'tool output', toolName: 'bash', toolCallId: null, role: 'tool' as const, sequenceNumber: 1 },
-      ];
-
-      await service.onSessionOutput(baseSession.id, outputs);
-
-      expect(mockActivitiesCreate).not.toHaveBeenCalled();
-    });
-
     it('skips when not enabled', async () => {
       vi.mocked(loadTeamsConfig).mockReturnValue({ enabled: false });
       const outputs = [
@@ -276,41 +265,17 @@ describe('TeamsNotifier', () => {
       vi.mocked(getTeamsThread).mockReturnValue(null);
       mockTeamsApp.send.mockResolvedValue({ id: 'new-thread' });
 
-      await service.onSessionUpdated(baseSession);
+      await service.onSessionUpdated(baseSession, [{ label: 'Status', from: 'active', to: 'idle' }]);
 
       expect(mockTeamsApp.send).toHaveBeenCalledOnce();
-    });
-
-    it('records baseline and skips posting when no previous state exists (server restart recovery)', async () => {
-      vi.mocked(loadTeamsConfig).mockReturnValue(enabledConfig);
-      vi.mocked(getTeamsThread).mockReturnValue(existingThread);
-      // No baseline seeded: simulates server restart mid-session
-
-      await service.onSessionUpdated(baseSession);
-
-      expect(mockActivitiesCreate).not.toHaveBeenCalled();
-      // Baseline should now be recorded so future updates can diff against it
-      expect((service as any).diffTracker.hasBaseline(baseSession.id)).toBe(true);
-    });
-
-    it('skips posting when only untracked fields changed (e.g. lastActivityAt)', async () => {
-      vi.mocked(loadTeamsConfig).mockReturnValue(enabledConfig);
-      vi.mocked(getTeamsThread).mockReturnValue(existingThread);
-      (service as any).diffTracker.seed(baseSession);
-
-      const updatedSession = { ...baseSession, lastActivityAt: '2024-06-01T00:00:00.000Z' };
-      await service.onSessionUpdated(updatedSession);
-
-      expect(mockActivitiesCreate).not.toHaveBeenCalled();
     });
 
     it('posts a reply with changed fields when status changes', async () => {
       vi.mocked(loadTeamsConfig).mockReturnValue(enabledConfig);
       vi.mocked(getTeamsThread).mockReturnValue(existingThread);
-      (service as any).diffTracker.seed(baseSession); // baseline: status = 'active'
       mockActivitiesCreate.mockResolvedValue({ id: 'update-msg' });
 
-      await service.onSessionUpdated({ ...baseSession, status: 'completed' });
+      await service.onSessionUpdated({ ...baseSession, status: 'completed' }, [{ label: 'Status', from: 'active', to: 'completed' }]);
 
       expect(mockActivitiesCreate).toHaveBeenCalledOnce();
       const callArg = mockActivitiesCreate.mock.calls[0][0] as { type: string; text: string };
@@ -321,7 +286,7 @@ describe('TeamsNotifier', () => {
     it('skips when not configured', async () => {
       vi.mocked(loadTeamsConfig).mockReturnValue({ enabled: false });
 
-      await service.onSessionUpdated(baseSession);
+      await service.onSessionUpdated(baseSession, []);
 
       expect(mockActivitiesCreate).not.toHaveBeenCalled();
       expect(mockTeamsApp.send).not.toHaveBeenCalled();

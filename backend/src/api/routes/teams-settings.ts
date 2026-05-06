@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { loadTeamsConfig, saveTeamsConfig } from '../../config/teams-config-loader.js';
-import { getTeamsConnectionStatus } from '../../services/integration-status.js';
+import { getTeamsConnectionStatus } from '../../integration/integration-status.js';
 import type { TeamsConfig } from '../../models/index.js';
 
 const EDITABLE_KEYS: (keyof TeamsConfig)[] = [
