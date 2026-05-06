@@ -45,6 +45,7 @@ const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function Sess
     queryKey: ['session-output', session.id],
     queryFn: () => getSessionOutput(session.id, { limit: 100 }),
     enabled: connectionState !== 'readonly',
+    refetchOnWindowFocus: false,
   });
 
   const history = usePromptHistory(session.id, outputData?.items ?? []);
