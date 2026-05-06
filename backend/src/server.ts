@@ -86,7 +86,12 @@ export async function buildServer(): Promise<{
         process.env.NODE_ENV !== 'production'
           ? {
               target: 'pino-pretty',
-              options: { colorize: true, singleLine: true, translateTime: 'SYS:HH:MM:ss.l' },
+              options: {
+                colorize: true,
+                singleLine: true,
+                translateTime: 'SYS:HH:MM:ss.l',
+                messageFormat: '{req.method} {req.url} {msg}',
+              },
             }
           : undefined,
     },
