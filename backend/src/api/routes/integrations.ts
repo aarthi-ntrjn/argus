@@ -1,9 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify';
-import type { SlackNotifier } from '../../integration/slack/slack-notifier.js';
+import { SlackNotifier } from '../../integration/slack/slack-notifier.js';
 import { SlackListener } from '../../integration/slack/slack-listener.js';
-import type { TeamsNotifier } from '../../integration/teams/teams-notifier.js';
-import type { TeamsListener } from '../../integration/teams/teams-listener.js';
-import { setIntegrationEnabled } from '../../db/database.js';
+import { TeamsNotifier } from '../../integration/teams/teams-notifier.js';
+import { TeamsListener } from '../../integration/teams/teams-listener.js';
+import { setIntegrationEnabled, getIntegrationEnabled } from '../../db/database.js';
 import { telemetryService } from '../../services/telemetry-service.js';
 import { loadSlackConfig } from '../../config/slack-config-loader.js';
 import { loadTeamsConfig } from '../../config/teams-config-loader.js';
@@ -26,6 +26,7 @@ import {
   REPOSITORY_ADDED,
   REPOSITORY_REMOVED,
 } from '../../constants/slack-events.js';
+import type { App } from '@microsoft/teams.apps';
 
 const log = createTaggedLogger('[Integrations]', '\x1b[33m'); // yellow
 
@@ -92,21 +93,54 @@ function wireEvents(): void {
   });
 }
 
-export function setIntegrationServices(
-  sn: SlackNotifier | null,
-  sl: SlackListener | null,
-  tn: TeamsNotifier | null,
-  tl: TeamsListener | null,
+export async function initializeIntegrations(
   enabled: boolean,
-  m: SessionMonitor,
-): void {
-  slackNotifier = sn;
-  slackListener = sl;
-  teamsNotifier = tn;
-  teamsListener = tl;
+  teamsApp: App | null,
+  mon: SessionMonitor,
+): Promise<void> {
   integrationsEnabled = enabled;
-  monitor = m;
+  monitor = mon;
+
+  if (!enabled) {
+    wireEvents();
+    return;
+  }
+
+  slackNotifier = new SlackNotifier();
+  if (getIntegrationEnabled('slack') !== false) {
+    const initialized = await slackNotifier.initialize();
+    if (initialized && slackNotifier.webClient) {
+      const slackConfig = loadSlackConfig()!;
+      slackListener = new SlackListener(slackConfig, slackNotifier.webClient, slackNotifier);
+      await slackListener.initialize();
+    }
+  }
+  setSlackServices(slackNotifier, slackListener);
+
+  if (teamsApp) {
+    teamsNotifier = new TeamsNotifier(teamsApp);
+    teamsListener = new TeamsListener(teamsApp);
+    await teamsListener.initialize();
+    if (getIntegrationEnabled('teams') !== false) {
+      await teamsNotifier.initialize();
+    }
+  }
+
   wireEvents();
+}
+
+export function shutdownIntegrations(): void {
+  teamsNotifier?.shutdown();
+  teamsListener?.shutdown();
+  slackListener?.shutdown();
+  slackNotifier?.shutdown();
+}
+
+export function getIntegrationRunningStatus(): { slack: string; teams: string } {
+  return {
+    slack: slackNotifier == null ? 'na' : slackNotifier.isRunning ? 'on' : 'off',
+    teams: teamsNotifier == null ? 'na' : teamsNotifier.isRunning ? 'on' : 'off',
+  };
 }
 
 function buildStatusPayload(): IntegrationStatusPayload {
