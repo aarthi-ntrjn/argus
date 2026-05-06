@@ -33,6 +33,12 @@ import { loadSlackConfig } from '../../config/slack-config-loader.js';
 
 const log = createTaggedLogger('[SlackNotifier]', '\x1b[32m'); // green
 
+/**
+ * Sends Argus session events to a Slack channel as threaded messages.
+ * Each session owns one parent message (the thread anchor); updates and output post as replies.
+ * Thread anchors are kept in memory and persisted to the DB so they survive server restarts.
+ * Supports configurable event filtering via `enabledEventTypes` in the Slack config.
+ */
 export class SlackNotifier implements NotificationIntegration {
   private config: SlackConfig;
   private client: WebClient | null = null;
@@ -60,6 +66,7 @@ export class SlackNotifier implements NotificationIntegration {
   // Lifecycle
   // -------------------------------------------------------------------------
 
+  /** Loads config, authenticates the bot, and marks the integration active. */
   async initialize(): Promise<boolean> {
     this.active = false;
     const freshConfig = loadSlackConfig();
@@ -93,6 +100,7 @@ export class SlackNotifier implements NotificationIntegration {
     return true;
   }
 
+  /** Stops accepting new events and drains the send queue. */
   shutdown(): void {
     this.active = false;
     this.client = null;
@@ -104,6 +112,7 @@ export class SlackNotifier implements NotificationIntegration {
     return this.client;
   }
 
+  /** Looks up the Argus session that owns the given Slack thread timestamp. */
   getSessionIdByThreadTs(threadTs: string): string | undefined {
     for (const [sessionId, ts] of this.threadAnchors) {
       if (ts === threadTs) {
@@ -123,6 +132,7 @@ export class SlackNotifier implements NotificationIntegration {
   // Session lifecycle
   // -------------------------------------------------------------------------
 
+  /** Opens a new Slack thread for the session, or reconnects to an existing one after a server restart. */
   async onSessionCreated(session: Session): Promise<void> {
     log.info(`slack.session.created.received: session=${session.id} status=${session.status}`);
     if (!this.active || !this.client) {
@@ -220,6 +230,7 @@ export class SlackNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts a final status reply to the session thread and removes its thread anchor. */
   async onSessionEnded(session: Session): Promise<void> {
     log.info(`slack.session.ended.received: session=${session.id} status=${session.status}`);
     if (!this.active || !this.client) {
@@ -257,6 +268,7 @@ export class SlackNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts a reply to the session thread if any tracked fields changed since the last update. */
   async onSessionUpdated(session: Session): Promise<void> {
     log.info(`slack.session.updated.received: session=${session.id} status=${session.status}`);
     if (!this.active || !this.client) {
@@ -315,6 +327,7 @@ export class SlackNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts pre-filtered assistant/user messages as a reply to the session thread. */
   async onSessionOutput(sessionId: string, outputs: SessionOutput[]): Promise<void> {
     if (!this.active || !this.client) {
       return;
@@ -323,18 +336,7 @@ export class SlackNotifier implements NotificationIntegration {
       return;
     }
 
-    const relevant = outputs.filter(
-      (o) =>
-        o.type === 'message' &&
-        o.content.trim() &&
-        !o.isMeta &&
-        (o.role === 'assistant' || o.role === 'user'),
-    );
-    if (relevant.length === 0) {
-      return;
-    }
-
-    const text = relevant
+    const text = outputs
       .map((o) => (o.role === 'user' ? `*You said:* ${o.content}` : o.content))
       .join('\n\n');
     this.queue.enqueue(
@@ -359,6 +361,7 @@ export class SlackNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts an interactive Block Kit message to the session thread asking the user to choose. */
   async onPendingChoice(choice: PendingChoice): Promise<void> {
     if (!this.active || !this.client) {
       return;
@@ -391,10 +394,12 @@ export class SlackNotifier implements NotificationIntegration {
     );
   }
 
+  /** Broadcasts a repository-added event to the channel. */
   async onRepositoryAdded(repo: Repository): Promise<void> {
     await this.postEvent('', REPOSITORY_ADDED, repo);
   }
 
+  /** Broadcasts a repository-removed event to the channel. */
   async onRepositoryRemoved(repo: Repository): Promise<void> {
     await this.postEvent('', REPOSITORY_REMOVED, repo);
   }

@@ -38,7 +38,9 @@ let monitor: SessionMonitor | null = null;
 let eventsWired = false;
 
 function activeNotifiers(): NotificationIntegration[] {
-  return [slackNotifier, teamsNotifier].filter((n): n is NotificationIntegration => n !== null);
+  return [slackNotifier, teamsNotifier].filter(
+    (n): n is NotificationIntegration => n !== null && n.isRunning,
+  );
 }
 
 function dispatch(
@@ -73,7 +75,17 @@ function wireEvents(): void {
     dispatch('repository.removed', (n) => n.onRepositoryRemoved(repo));
   });
   outputEvents.on('session.output.batch', (sessionId: string, outputs: SessionOutput[]) => {
-    dispatch('session.output', (n) => n.onSessionOutput(sessionId, outputs));
+    const relevant = outputs.filter(
+      (o) =>
+        o.type === 'message' &&
+        o.content.trim() &&
+        !o.isMeta &&
+        (o.role === 'assistant' || o.role === 'user'),
+    );
+    if (relevant.length === 0) {
+      return;
+    }
+    dispatch('session.output', (n) => n.onSessionOutput(sessionId, relevant));
   });
   pendingChoiceEvents.on('session.pending_choice', (choice: PendingChoice) => {
     dispatch('pending_choice', (n) => n.onPendingChoice(choice));

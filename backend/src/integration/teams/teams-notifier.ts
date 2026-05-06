@@ -26,6 +26,11 @@ function code(value: string): string {
   return `\`${value}\``;
 }
 
+/**
+ * Sends Argus session events to a Microsoft Teams channel as threaded messages.
+ * Each session owns one parent thread; updates and output post as replies to that thread.
+ * Thread records are persisted to the DB so they survive server restarts.
+ */
 export class TeamsNotifier implements NotificationIntegration {
   private readonly diffTracker = new SessionDiffTracker();
   private active = false;
@@ -40,6 +45,7 @@ export class TeamsNotifier implements NotificationIntegration {
     });
   }
 
+  /** Validates config and marks the integration active. */
   async initialize(): Promise<boolean> {
     if (!this.isConfigured()) {
       const config = loadTeamsConfig();
@@ -82,6 +88,7 @@ export class TeamsNotifier implements NotificationIntegration {
     }
   }
 
+  /** Opens a new Teams thread for the session, or reconnects to an existing one after a server restart. */
   async onSessionCreated(session: Session): Promise<void> {
     this.log.info(
       `teams.session.created.received: session=${session.id} type=${session.type} status=${session.status}`,
@@ -181,6 +188,7 @@ export class TeamsNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts a reply to the session thread if any tracked fields changed since the last update. */
   async onSessionUpdated(session: Session): Promise<void> {
     this.log.info(
       `teams.session.updated.received: session=${session.id} status=${session.status} model=${session.model} pid=${session.pid}`,
@@ -240,6 +248,7 @@ export class TeamsNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts pre-filtered assistant/user messages as a reply to the session thread. */
   async onSessionOutput(sessionId: string, outputs: SessionOutput[]): Promise<void> {
     if (!this.active) {
       return;
@@ -248,17 +257,7 @@ export class TeamsNotifier implements NotificationIntegration {
     if (!config.enabled) {
       return;
     }
-    const relevant = outputs.filter(
-      (o) =>
-        o.type === 'message' &&
-        o.content.trim() &&
-        !o.isMeta &&
-        (o.role === 'assistant' || o.role === 'user'),
-    );
-    if (relevant.length === 0) {
-      return;
-    }
-    const text = relevant
+    const text = outputs
       .map((o) => (o.role === 'user' ? `**You said:** ${o.content}` : o.content))
       .join('\n\n');
     const { channelId } = config as { channelId: string };
@@ -284,6 +283,7 @@ export class TeamsNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts an Adaptive Card to the session thread prompting the user to choose. */
   async onPendingChoice(choice: PendingChoice): Promise<void> {
     if (!this.active) {
       return;
@@ -315,6 +315,7 @@ export class TeamsNotifier implements NotificationIntegration {
     );
   }
 
+  /** Posts a final status reply to the session thread and removes the thread record. */
   async onSessionEnded(session: Session): Promise<void> {
     this.log.info(`teams.session.ended.received: session=${session.id} status=${session.status}`);
     if (!this.active) {
@@ -362,6 +363,7 @@ export class TeamsNotifier implements NotificationIntegration {
     return this.active;
   }
 
+  /** Stops accepting new events and drains the send queue. */
   shutdown(): void {
     this.active = false;
     this.queue.drain();
