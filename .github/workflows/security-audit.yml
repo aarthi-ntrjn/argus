@@ -48,15 +48,36 @@ jobs:
           try:
               with open("audit.json") as f:
                   data = json.load(f)
-              vulns = data.get("metadata", {}).get("vulnerabilities", {})
           except Exception:
-              vulns = {}
-          total = sum(vulns.get(s, 0) for s in ["moderate", "high", "critical"])
+              data = {}
+          meta  = data.get("metadata", {}).get("vulnerabilities", {})
+          total = sum(meta.get(s, 0) for s in ["moderate", "high", "critical"])
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"total={total}\n")
-              out.write(f"critical={vulns.get('critical', 0)}\n")
-              out.write(f"high={vulns.get('high', 0)}\n")
-              out.write(f"moderate={vulns.get('moderate', 0)}\n")
+              out.write(f"critical={meta.get('critical', 0)}\n")
+              out.write(f"high={meta.get('high', 0)}\n")
+              out.write(f"moderate={meta.get('moderate', 0)}\n")
+          # Write per-package details for the Teams card
+          severity_order = {"critical": 0, "high": 1, "moderate": 2}
+          details = []
+          for name, info in data.get("vulnerabilities", {}).items():
+              sev = info.get("severity", "")
+              if sev not in severity_order:
+                  continue
+              titles = [
+                  v.get("title", "")
+                  for v in info.get("via", [])
+                  if isinstance(v, dict) and v.get("title")
+              ]
+              details.append({
+                  "name":         name,
+                  "severity":     sev,
+                  "title":        titles[0] if titles else "",
+                  "fixAvailable": bool(info.get("fixAvailable")),
+              })
+          details.sort(key=lambda x: severity_order.get(x["severity"], 9))
+          with open("vuln-details.json", "w") as f:
+              json.dump(details, f)
           EOF
 
       - name: Create GitHub Issue
@@ -105,38 +126,59 @@ jobs:
           AUDIT_HIGH: ${{ steps.audit.outputs.high }}
           AUDIT_MODERATE: ${{ steps.audit.outputs.moderate }}
         run: |
-          DATE=$(date +%Y-%m-%d)
-          if [ "$AUDIT_TOTAL" -eq "0" ]; then
-            TITLE="Security Audit Clean - $DATE"
-            BODY="npm audit found no moderate, high, or critical vulnerabilities."
-          else
-            TITLE="Security Audit: $AUDIT_TOTAL vulnerabilities found - $DATE"
-            BODY="$AUDIT_CRITICAL critical, $AUDIT_HIGH high, $AUDIT_MODERATE moderate. See GitHub Issues (label: security-audit) for the full report."
-          fi
-          PAYLOAD=$(jq -n \
-            --arg title "$TITLE" \
-            --arg body  "$BODY" \
-            '{
-              "type": "AdaptiveCard",
+          python3 - <<'EOF'
+          import json, os, datetime, urllib.request, urllib.error
+          total    = int(os.environ.get("AUDIT_TOTAL", "0"))
+          critical = os.environ.get("AUDIT_CRITICAL", "0")
+          high     = os.environ.get("AUDIT_HIGH", "0")
+          moderate = os.environ.get("AUDIT_MODERATE", "0")
+          date     = datetime.date.today().isoformat()
+          emoji    = {"critical": "🔴", "high": "🟠", "moderate": "🟡"}
+          if total == 0:
+              card_body = [
+                  {"type": "TextBlock", "size": "Medium", "weight": "Bolder",
+                   "text": f"✅ Security Audit Clean - {date}"},
+                  {"type": "TextBlock", "wrap": True,
+                   "text": "npm audit found no moderate, high, or critical vulnerabilities."},
+              ]
+          else:
+              try:
+                  with open("vuln-details.json") as f:
+                      vulns = json.load(f)
+              except Exception:
+                  vulns = []
+              facts = [
+                  {
+                      "title": f"{emoji.get(v['severity'], '⚪')} {v['name']} ({v['severity']})",
+                      "value": (v["title"] or "No description") + (" — fix available" if v["fixAvailable"] else ""),
+                  }
+                  for v in vulns
+              ]
+              card_body = [
+                  {"type": "TextBlock", "size": "Medium", "weight": "Bolder", "color": "Attention",
+                   "text": f"🔴 Security Audit: {total} vulnerabilities found - {date}"},
+                  {"type": "TextBlock", "wrap": True,
+                   "text": f"{critical} critical, {high} high, {moderate} moderate. See GitHub Issues (label: security-audit) for the full report."},
+                  {"type": "FactSet", "facts": facts},
+              ]
+          card = {
+              "type":    "AdaptiveCard",
               "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
               "version": "1.4",
-              "body": [
-                {"type": "TextBlock", "size": "Medium", "weight": "Bolder", "text": $title},
-                {"type": "TextBlock", "text": $body, "wrap": true}
-              ]
-            }')
-          echo "Payload: $PAYLOAD"
-          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD" \
-            "$TEAMS_WEBHOOK_URL")
-          HTTP_STATUS=$(echo "$RESPONSE" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
-          BODY_RESP=$(echo "$RESPONSE" | grep -v "HTTP_STATUS:")
-          echo "Status: $HTTP_STATUS"
-          echo "Response: $BODY_RESP"
-          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "202" ]; then
-            exit 1
-          fi
+              "body":    card_body,
+          }
+          req = urllib.request.Request(
+              os.environ["TEAMS_WEBHOOK_URL"],
+              data=json.dumps(card).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              urllib.request.urlopen(req)
+          except urllib.error.HTTPError as e:
+              print(f"HTTP {e.code}: {e.reason} — {e.read().decode()}")
+              raise
+          EOF
 
       - name: Notify Slack
         if: env.SLACK_WEBHOOK_URL != ''
