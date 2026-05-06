@@ -10,7 +10,7 @@ import { loadTeamsConfig } from '../config/teams-config-loader.js';
 import {
   getSlackConnectionStatus,
   getTeamsConnectionStatus,
-} from '../services/integration-status.js';
+} from './integration-status.js';
 import { setSlackServices } from '../api/routes/health.js';
 import type { SessionMonitor } from '../services/session-monitor.js';
 import { broadcast, type IntegrationStatusPayload } from '../api/ws/event-dispatcher.js';
