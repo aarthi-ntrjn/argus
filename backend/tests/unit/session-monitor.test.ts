@@ -430,4 +430,30 @@ describe('SessionMonitor.reconcileClaudeCodeSessions — active/ended logic', ()
     const result = (getSessions({}) as Array<{ id: string; status: string }>).find(s => s.id === id);
     expect(result?.status).toBe('active');
   });
+
+  // T131 regression: lastActivityAt change alone must not trigger a duplicate session.updated emit
+  it('T131: should not emit session.updated when only lastActivityAt changes between scans', async () => {
+    const id = `t131-${randomUUID()}`;
+    const livePid = 54321;
+
+    mockPsListResult = [{ pid: livePid, name: 'claude', cmd: 'claude' }];
+
+    const sessionData = baseSession(id, 'active', livePid);
+    upsertSession({ ...sessionData, lastActivityAt: new Date(Date.now() - 60_000).toISOString() });
+
+    const emittedUpdates: unknown[] = [];
+    const monitor = new SessionMonitor();
+    monitor.on('session.updated', (s) => emittedUpdates.push(s));
+    await monitor.start();
+
+    // Simulate applyActivityUpdate(): only lastActivityAt changes in the DB
+    upsertSession({ ...sessionData, lastActivityAt: new Date().toISOString() });
+
+    // Second scan: signature must be unchanged since lastActivityAt is not in sessionSignature
+    await (monitor as unknown as { runScan(): Promise<void> }).runScan();
+
+    monitor.stop();
+
+    expect(emittedUpdates).toHaveLength(0);
+  });
 });

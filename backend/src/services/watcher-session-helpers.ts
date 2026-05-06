@@ -40,7 +40,7 @@ export function applySummaryUpdate(sessionId: string, outputs: SessionOutput[], 
   if (existing.summary === summary) {
     return;
   }
-  logger.info(`${tag} summary updated sessionId=${sessionId}`);
+  logger.info(`${tag} summary updated sessionId=${sessionId} summary=${summary}`);
   const updated = { ...existing, summary };
   upsertSession(updated);
   broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated });

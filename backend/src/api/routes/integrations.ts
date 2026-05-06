@@ -57,7 +57,11 @@ function buildStatusPayload(): IntegrationStatusPayload {
 }
 
 function broadcastStatus(): void {
-  broadcast({ type: 'integration.status', timestamp: new Date().toISOString(), data: buildStatusPayload() });
+  broadcast({
+    type: 'integration.status',
+    timestamp: new Date().toISOString(),
+    data: buildStatusPayload(),
+  });
 }
 
 const integrationsRoutes: FastifyPluginAsync = async (fastify) => {

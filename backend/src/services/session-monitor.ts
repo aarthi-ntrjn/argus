@@ -200,8 +200,12 @@ export class SessionMonitor extends EventEmitter {
         }
 
         const sig = this.sessionSignature(session);
-        if (this.lastEmittedSessions.get(session.id) !== sig) {
+        const prev = this.lastEmittedSessions.get(session.id);
+        if (prev !== sig) {
           this.lastEmittedSessions.set(session.id, sig);
+          logger.info(
+            `[SessionMonitor] session.updated sessionId=${session.id} changed=${this.signatureDiff(prev ?? sig, sig)}`,
+          );
           this.emit('session.updated', session);
         }
       }
@@ -213,15 +217,23 @@ export class SessionMonitor extends EventEmitter {
   private sessionSignature(session: Session): string {
     return JSON.stringify({
       status: session.status,
-      lastActivityAt: session.lastActivityAt,
-      summary: session.summary,
       model: session.model,
       pid: session.pid,
       hostPid: session.hostPid,
       pidSource: session.pidSource,
       launchMode: session.launchMode,
+      summary: session.summary,
+      yoloMode: session.yoloMode,
       endedAt: session.endedAt,
     });
+  }
+
+  private signatureDiff(prev: string, next: string): string {
+    const a = JSON.parse(prev) as Record<string, unknown>;
+    const b = JSON.parse(next) as Record<string, unknown>;
+    return Object.keys(b)
+      .filter((k) => a[k] !== b[k])
+      .join(',');
   }
 
   triggerScan(): void {
@@ -405,8 +417,12 @@ export class SessionMonitor extends EventEmitter {
           this.emit('session.created', session);
         } else {
           const sig = this.sessionSignature(session);
-          if (this.lastEmittedSessions.get(session.id) !== sig) {
+          const prev = this.lastEmittedSessions.get(session.id);
+          if (prev !== sig) {
             this.lastEmittedSessions.set(session.id, sig);
+            logger.info(
+              `[SessionMonitor] session.updated sessionId=${session.id} changed=${this.signatureDiff(prev ?? sig, sig)}`,
+            );
             this.emit('session.updated', session);
           }
         }
@@ -440,15 +456,16 @@ export class SessionMonitor extends EventEmitter {
             logger.info(
               `[SessionMonitor] resting transition sessionId=${session.id} lastActivityAt=${session.lastActivityAt} ageMin=${Math.round(age / 60000)}`,
             );
-            broadcast({
-              type: 'session.updated',
-              timestamp: new Date().toISOString(),
-              data: session,
-            });
+            this.emit('session.updated', { ...session, isResting: true });
           }
         } else {
-          // Session has recent activity — reset so we broadcast again next time it goes resting
-          this.restingNotifiedSessions.delete(session.id);
+          if (this.restingNotifiedSessions.has(session.id)) {
+            this.restingNotifiedSessions.delete(session.id);
+            logger.info(
+              `[SessionMonitor] session.updated sessionId=${session.id} reason=activity-resumed`,
+            );
+            this.emit('session.updated', { ...session, isResting: false });
+          }
         }
       }
     } catch (err) {

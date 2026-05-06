@@ -28,15 +28,13 @@ vi.mock('../services/api', () => ({
   getSlackSettings: vi.fn().mockRejectedValue(new Error('not configured')),
   getHealth: vi.fn().mockResolvedValue({ status: 'ok', version: '1.2.3', uptime: 0 }),
   rescanRemoteUrls: vi.fn().mockResolvedValue(undefined),
-  getUpdateStatus: vi
-    .fn()
-    .mockResolvedValue({
-      currentVersion: '1.2.3',
-      latestVersion: null,
-      updateAvailable: false,
-      lastChecked: null,
-      updateInProgress: false,
-    }),
+  getUpdateStatus: vi.fn().mockResolvedValue({
+    currentVersion: '1.2.3',
+    latestVersion: null,
+    updateAvailable: false,
+    lastChecked: null,
+    updateInProgress: false,
+  }),
   applyUpdate: vi.fn().mockResolvedValue({ started: true }),
 }));
 
