@@ -6,6 +6,7 @@ vi.mock('../../src/db/database.js', () => ({
   deleteTeamsThread: vi.fn(),
   getRepository: vi.fn(),
   getSession: vi.fn(),
+  getSessions: vi.fn().mockReturnValue([]),
 }));
 
 vi.mock('../../src/config/teams-config-loader.js', () => ({

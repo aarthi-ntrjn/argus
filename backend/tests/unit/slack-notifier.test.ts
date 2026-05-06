@@ -6,6 +6,7 @@ vi.mock('../../src/db/database.js', () => ({
   getSlackThreadByTs: vi.fn(),
   upsertSlackThread: vi.fn(),
   deleteSlackThread: vi.fn(),
+  getSessions: vi.fn().mockReturnValue([]),
 }));
 
 vi.mock('../../src/config/slack-config-loader.js', () => ({

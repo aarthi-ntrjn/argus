@@ -212,5 +212,3 @@ describe('SessionMonitor.refreshRepositoryBranches', () => {
     expect(updatedCall).toBeUndefined();
   });
 });
-
-});
