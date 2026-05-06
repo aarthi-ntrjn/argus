@@ -263,7 +263,7 @@ export class SlackNotifier implements NotificationIntegration {
 
   /** Posts a reply to the session thread if any tracked fields changed since the last update. */
   async onSessionUpdated(session: Session, changes: SessionChange[]): Promise<void> {
-    log.info(`slack.session.updated.received: session=${session.id} status=${session.status}`);
+    log.debug(`slack.session.updated.received: session=${session.id} status=${session.status}`);
     if (!this.active || !this.client) {
       return;
     }
@@ -271,7 +271,7 @@ export class SlackNotifier implements NotificationIntegration {
       return;
     }
 
-    log.info(
+    log.debug(
       `slack.session.updated.posting: session=${session.id} changes=${changes.map((c) => c.label).join(',')}`,
     );
     const blocks = buildSessionUpdatedBlocks(session, changes);
@@ -298,7 +298,7 @@ export class SlackNotifier implements NotificationIntegration {
             blocks,
             thread_ts: threadTs,
           });
-          log.info(`slack.session.updated.posted: session=${session.id}`);
+          log.debug(`slack.session.updated.posted: session=${session.id}`);
         } catch (err) {
           log.error(`slack.session.update.notify.failed: session=${session.id}`, err);
         }

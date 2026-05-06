@@ -170,7 +170,7 @@ export class TeamsNotifier implements NotificationIntegration {
 
   /** Posts a reply to the session thread if any tracked fields changed since the last update. */
   async onSessionUpdated(session: Session, changes: SessionChange[]): Promise<void> {
-    this.log.info(
+    this.log.debug(
       `teams.session.updated.received: session=${session.id} status=${session.status} model=${session.model} pid=${session.pid}`,
     );
     if (!this.active) {
@@ -182,7 +182,7 @@ export class TeamsNotifier implements NotificationIntegration {
     }
 
     const thread = getTeamsThread(session.id);
-    this.log.info(
+    this.log.debug(
       `teams.session.updated.thread-lookup: session=${session.id} threadFound=${!!thread} teamsThreadId=${thread?.teamsThreadId}`,
     );
     if (!thread) {
@@ -193,7 +193,7 @@ export class TeamsNotifier implements NotificationIntegration {
       return;
     }
 
-    this.log.info(
+    this.log.debug(
       `teams.session.updated.posting: session=${session.id} changes=${changes.map((c) => c.label).join(',')}`,
     );
 
@@ -206,7 +206,7 @@ export class TeamsNotifier implements NotificationIntegration {
         try {
           const threadConvId = `${channelId};messageid=${thread.teamsThreadId}`;
           await this.teamsApp.api.conversations.activities(threadConvId).create(activity);
-          this.log.info(`teams.session.updated.posted: session=${session.id}`);
+          this.log.debug(`teams.session.updated.posted: session=${session.id}`);
         } catch (err) {
           this.log.error(`teams.session.update.notify.failed: session=${session.id}`, err);
         }
