@@ -427,3 +427,25 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: Integration status was treated the same as purely frontend-owned data (settings, todos) but it is not — the backend can independently lose a connection. The missing broadcast was never noticed because focus-refetch masked it.
 **How to prevent**: Any backend state that can change independently of a frontend action needs a WebSocket event. When adding a start/stop route, add the broadcast at the same time. The pattern: extract a `buildStatusPayload()` helper shared by the GET handler and the broadcast so the shapes stay in sync.
 **Fix summary**: Added `IntegrationStatusPayload` type and `'integration.status'` WsEvent to `event-dispatcher.ts`; extracted `buildStatusPayload()` and `broadcastStatus()` helpers in `integrations.ts` and called `broadcastStatus()` in all four start/stop handlers; added `integration.status` handler in `socket.ts`; added `refetchOnWindowFocus: false` to `useIntegrationControl.ts`.
+
+---
+
+## T131 — Duplicate session.updated broadcasts on every activity
+
+**Date**: 2026-05-06
+**Symptom**: Every time Claude Code emitted a tool use or message (triggering `applyActivityUpdate()`), the frontend received a redundant `session.updated` WebSocket event roughly 5 seconds later from the scan cycle.
+**Root cause**: `applyActivityUpdate()` in `watcher-session-helpers.ts` updates `lastActivityAt` in the DB and calls `broadcast()` directly, but never updates `lastEmittedSessions` in `SessionMonitor`. Because `sessionSignature()` included `lastActivityAt`, the next scan cycle saw the changed signature and fired a second `monitor.emit('session.updated')`, which produced a second `broadcast()` to all clients.
+**Why it was missed**: The two broadcast paths (direct broadcast in the watcher vs. scan-based emit from SessionMonitor) were never audited together. There was also no test that verified the scan does not re-emit when only activity-timestamp fields change.
+**How to prevent**: `sessionSignature()` must only include fields that represent meaningful UI state changes: status, model, pid, launchMode, etc. Fields that are updated continuously during normal operation (lastActivityAt) must not be in the signature or the scan will always re-broadcast after activity.
+**Fix summary**: Removed `lastActivityAt` from `sessionSignature()` in `session-monitor.ts` and added `yoloMode` (which was tracked by SessionDiffTracker but missing from scan dedup); added regression test verifying the scan does not emit session.updated when only lastActivityAt changes.
+
+---
+
+## T132 — Resting state never delivered to Teams/Slack
+
+**Date**: 2026-05-06
+**Symptom**: When a Claude Code session crossed the resting threshold, the Teams/Slack notifier never posted a "session is resting" update, even though the frontend did correctly show the resting badge.
+**Root cause**: The resting block in `SessionMonitor.runScan()` called `broadcast()` directly to push the WebSocket event, bypassing `monitor.emit('session.updated')`. Teams/Slack notifiers subscribe to `monitor.on('session.updated')` in `server.ts`, so they never received the resting transition. Similarly, when activity resumed, the `restingNotifiedSessions.delete()` call happened unconditionally with no corresponding emit, so notifiers had no way to send an "activity resumed" message.
+**Why it was missed**: The resting block was added as a WebSocket-only feature with no thought given to integration notifiers. The two delivery paths (direct broadcast vs. event emitter) diverged silently.
+**How to prevent**: Any SessionMonitor state change that should reach integrations must go through `this.emit('session.updated', session)`. Never call `broadcast()` directly from inside SessionMonitor for session state that integrations care about. The rule: SessionMonitor owns the event bus; notifiers subscribe to it.
+**Fix summary**: Added `isResting?: boolean` to the `Session` interface; changed resting block to `this.emit('session.updated', { ...session, isResting: true })` and activity-resumed block to guard with `has()` then emit `isResting: false`; added `isResting` field to `SessionDiffTracker` with special handling to skip comparison when `session.isResting === undefined` (DB sessions), preserving the baseline across regular scan-based emits.

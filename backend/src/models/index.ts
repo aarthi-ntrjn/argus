@@ -59,6 +59,7 @@ export interface Session {
   yoloMode: boolean | null;
   ptyLaunchId?: string | null;
   ptyConnected?: boolean | null;
+  isResting?: boolean;
 }
 
 export interface SessionOutput {
