@@ -213,13 +213,13 @@ export class SessionMonitor extends EventEmitter {
   private sessionSignature(session: Session): string {
     return JSON.stringify({
       status: session.status,
-      lastActivityAt: session.lastActivityAt,
-      summary: session.summary,
       model: session.model,
       pid: session.pid,
       hostPid: session.hostPid,
       pidSource: session.pidSource,
       launchMode: session.launchMode,
+      summary: session.summary,
+      yoloMode: session.yoloMode,
       endedAt: session.endedAt,
     });
   }
@@ -440,15 +440,13 @@ export class SessionMonitor extends EventEmitter {
             logger.info(
               `[SessionMonitor] resting transition sessionId=${session.id} lastActivityAt=${session.lastActivityAt} ageMin=${Math.round(age / 60000)}`,
             );
-            broadcast({
-              type: 'session.updated',
-              timestamp: new Date().toISOString(),
-              data: session,
-            });
+            this.emit('session.updated', { ...session, isResting: true });
           }
         } else {
-          // Session has recent activity — reset so we broadcast again next time it goes resting
-          this.restingNotifiedSessions.delete(session.id);
+          if (this.restingNotifiedSessions.has(session.id)) {
+            this.restingNotifiedSessions.delete(session.id);
+            this.emit('session.updated', { ...session, isResting: false });
+          }
         }
       }
     } catch (err) {
