@@ -18,7 +18,12 @@ import { createTaggedLogger } from '../../utils/logger.js';
 import { outputEvents } from '../../services/output-store.js';
 import { pendingChoiceEvents } from '../../services/pending-choice-events.js';
 import type { PendingChoice } from '../../services/pending-choice-events.js';
-import type { Session, Repository, SessionOutput, NotificationIntegration } from '../../models/index.js';
+import type {
+  Session,
+  Repository,
+  SessionOutput,
+  NotificationIntegration,
+} from '../../models/index.js';
 import { SessionDiffTracker } from '../../services/session-diff-tracker.js';
 import { getSessions } from '../../db/database.js';
 import {
@@ -47,10 +52,7 @@ function activeNotifiers(): NotificationIntegration[] {
   );
 }
 
-function dispatch(
-  label: string,
-  fn: (n: NotificationIntegration) => Promise<void>,
-): void {
+function dispatch(label: string, fn: (n: NotificationIntegration) => Promise<void>): void {
   for (const notifier of activeNotifiers()) {
     fn(notifier).catch((err) => {
       log.error(`${label} error`, err);

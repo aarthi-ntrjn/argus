@@ -71,7 +71,6 @@ export class TeamsNotifier implements NotificationIntegration {
     );
   }
 
-
   /** Opens a new Teams thread for the session, or reconnects to an existing one after a server restart. */
   async onSessionCreated(session: Session): Promise<void> {
     this.log.info(
@@ -121,7 +120,7 @@ export class TeamsNotifier implements NotificationIntegration {
                   tenantId: loadTeamsConfig().tenantId ?? '',
                   createdAt: new Date().toISOString(),
                 });
-                          this.log.info(
+                this.log.info(
                   `teams.thread.stale.recovered: session=${session.id} teamsThreadId=${sent.id}`,
                 );
               } catch (retryErr) {
@@ -160,7 +159,7 @@ export class TeamsNotifier implements NotificationIntegration {
             createdAt: new Date().toISOString(),
           });
           this.log.info(`teams.thread.created: session=${session.id} teamsThreadId=${sent.id}`);
-            } catch (err) {
+        } catch (err) {
           this.log.error(`teams.thread.create.failed: session=${session.id}`, err);
         }
       },

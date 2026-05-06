@@ -209,7 +209,7 @@ export class SlackNotifier implements NotificationIntegration {
                   workspaceId: this.workspaceId,
                   createdAt: new Date().toISOString(),
                 });
-                    log.info(`slack.thread.stale.recovered: session=${session.id} ts=${result.ts}`);
+                log.info(`slack.thread.stale.recovered: session=${session.id} ts=${result.ts}`);
               }
             } catch (retryErr) {
               log.error(`slack.thread.stale.recover.failed: session=${session.id}`, retryErr);
@@ -437,9 +437,7 @@ export class SlackNotifier implements NotificationIntegration {
     }
     return this.config.enabledEventTypes.includes(eventType);
   }
-
 }
-
 
 // -------------------------------------------------------------------------
 // Block Kit builders
