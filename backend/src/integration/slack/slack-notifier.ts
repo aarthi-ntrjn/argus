@@ -271,7 +271,7 @@ export class SlackNotifier implements NotificationIntegration {
       return;
     }
 
-    log.debug(
+    log.info(
       `slack.session.updated.posting: session=${session.id} changes=${changes.map((c) => c.label).join(',')}`,
     );
     const blocks = buildSessionUpdatedBlocks(session, changes);

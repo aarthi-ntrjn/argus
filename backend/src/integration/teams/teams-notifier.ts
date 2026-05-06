@@ -193,7 +193,7 @@ export class TeamsNotifier implements NotificationIntegration {
       return;
     }
 
-    this.log.debug(
+    this.log.info(
       `teams.session.updated.posting: session=${session.id} changes=${changes.map((c) => c.label).join(',')}`,
     );
 
