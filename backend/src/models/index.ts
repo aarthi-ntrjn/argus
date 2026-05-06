@@ -1,3 +1,6 @@
+import type { PendingChoice } from '../services/pending-choice-events.js';
+export type { PendingChoice };
+
 export type SessionType = 'copilot-cli' | 'claude-code';
 
 export const SessionTypes = {
@@ -198,6 +201,9 @@ export interface NotificationIntegration {
   onSessionUpdated(session: Session): Promise<void>;
   onSessionEnded(session: Session): Promise<void>;
   onSessionOutput(sessionId: string, outputs: SessionOutput[]): Promise<void>;
+  onPendingChoice(choice: PendingChoice): Promise<void>;
+  onRepositoryAdded(repo: Repository): Promise<void>;
+  onRepositoryRemoved(repo: Repository): Promise<void>;
   shutdown(): void;
 }
 

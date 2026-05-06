@@ -14,12 +14,71 @@ import {
 import { setSlackServices } from './health.js';
 import type { SessionMonitor } from '../../services/session-monitor.js';
 import { broadcast, type IntegrationStatusPayload } from '../ws/event-dispatcher.js';
+import { createTaggedLogger } from '../../utils/logger.js';
+import { outputEvents } from '../../services/output-store.js';
+import { pendingChoiceEvents } from '../../services/pending-choice-events.js';
+import type { PendingChoice } from '../../services/pending-choice-events.js';
+import type { Session, Repository, SessionOutput, NotificationIntegration } from '../../models/index.js';
+import {
+  SESSION_CREATED,
+  SESSION_UPDATED,
+  SESSION_ENDED,
+  REPOSITORY_ADDED,
+  REPOSITORY_REMOVED,
+} from '../../constants/slack-events.js';
+
+const log = createTaggedLogger('[Integrations]', '\x1b[33m'); // yellow
 
 let slackNotifier: SlackNotifier | null = null;
 let slackListener: SlackListener | null = null;
 let teamsNotifier: TeamsNotifier | null = null;
 let teamsListener: TeamsListener | null = null;
 let integrationsEnabled = false;
+let monitor: SessionMonitor | null = null;
+let eventsWired = false;
+
+function activeNotifiers(): NotificationIntegration[] {
+  return [slackNotifier, teamsNotifier].filter((n): n is NotificationIntegration => n !== null);
+}
+
+function dispatch(
+  label: string,
+  fn: (n: NotificationIntegration) => Promise<void>,
+): void {
+  for (const notifier of activeNotifiers()) {
+    fn(notifier).catch((err) => {
+      log.error(`${label} error`, err);
+    });
+  }
+}
+
+function wireEvents(): void {
+  if (eventsWired || !monitor) {
+    return;
+  }
+  eventsWired = true;
+  monitor.on(SESSION_CREATED, (session: Session) => {
+    dispatch('session.created', (n) => n.onSessionCreated(session));
+  });
+  monitor.on(SESSION_UPDATED, (session: Session) => {
+    dispatch('session.updated', (n) => n.onSessionUpdated(session));
+  });
+  monitor.on(SESSION_ENDED, (session: Session) => {
+    dispatch('session.ended', (n) => n.onSessionEnded(session));
+  });
+  monitor.on(REPOSITORY_ADDED, (repo: Repository) => {
+    dispatch('repository.added', (n) => n.onRepositoryAdded(repo));
+  });
+  monitor.on(REPOSITORY_REMOVED, (repo: Repository) => {
+    dispatch('repository.removed', (n) => n.onRepositoryRemoved(repo));
+  });
+  outputEvents.on('session.output.batch', (sessionId: string, outputs: SessionOutput[]) => {
+    dispatch('session.output', (n) => n.onSessionOutput(sessionId, outputs));
+  });
+  pendingChoiceEvents.on('session.pending_choice', (choice: PendingChoice) => {
+    dispatch('pending_choice', (n) => n.onPendingChoice(choice));
+  });
+}
 
 export function setIntegrationServices(
   sn: SlackNotifier | null,
@@ -27,13 +86,15 @@ export function setIntegrationServices(
   tn: TeamsNotifier | null,
   tl: TeamsListener | null,
   enabled: boolean,
-  _monitor: SessionMonitor,
+  m: SessionMonitor,
 ): void {
   slackNotifier = sn;
   slackListener = sl;
   teamsNotifier = tn;
   teamsListener = tl;
   integrationsEnabled = enabled;
+  monitor = m;
+  wireEvents();
 }
 
 function buildStatusPayload(): IntegrationStatusPayload {

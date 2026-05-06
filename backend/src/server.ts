@@ -39,12 +39,9 @@ import { startPruningJob } from './services/pruning-job.js';
 import { TeamsNotifier } from './integration/teams/teams-notifier.js';
 import { TeamsListener } from './integration/teams/teams-listener.js';
 import { FastifyTeamsAdapter } from './integration/teams/teams-sdk-adapter.js';
-import { outputEvents } from './services/output-store.js';
 import { loadTeamsConfig } from './config/teams-config-loader.js';
 import { getIntegrationEnabled } from './db/database.js';
-import { pendingChoiceEvents } from './services/pending-choice-events.js';
-import type { PendingChoice } from './services/pending-choice-events.js';
-import type { Session, Repository, SessionOutput, ArgusConfig } from './models/index.js';
+import type { Session, Repository, ArgusConfig } from './models/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -231,7 +228,7 @@ export async function startServer(): Promise<FastifyInstance> {
 
   if (config.integrationsEnabled) {
     // Always create SlackNotifier; initialize() loads config from file at connect time
-    slackNotifier = new SlackNotifier(monitor);
+    slackNotifier = new SlackNotifier();
     if (getIntegrationEnabled('slack') !== false) {
       const initialized = await slackNotifier.initialize();
       if (initialized && slackNotifier.webClient) {
@@ -250,37 +247,12 @@ export async function startServer(): Promise<FastifyInstance> {
         { teamsEnabledInDb },
         'teams.startup: checking integration enabled flag and config',
       );
-      if (teamsEnabledInDb !== false && (await teamsNotifier.initialize())) {
-        app.log.info('teams.startup: subscriptions registered on monitor');
-        monitor.on('session.created', (session: Session) => {
-          teamsNotifier!
-            .onSessionCreated(session)
-            .catch((err) => app.log.error({ err }, 'teams.session.created.error'));
-        });
-        monitor.on('session.updated', (session: Session) => {
-          teamsNotifier!
-            .onSessionUpdated(session)
-            .catch((err) => app.log.error({ err }, 'teams.session.updated.error'));
-        });
-        monitor.on('session.ended', (session: Session) => {
-          teamsNotifier!
-            .onSessionEnded(session)
-            .catch((err) => app.log.error({ err }, 'teams.session.ended.error'));
-        });
-        outputEvents.on('session.output.batch', (sessionId: string, outputs: SessionOutput[]) => {
-          teamsNotifier!
-            .onSessionOutput(sessionId, outputs)
-            .catch((err) => app.log.error({ err }, 'teams.session.output.error'));
-        });
-        pendingChoiceEvents.on('session.pending_choice', (choice: PendingChoice) => {
-          teamsNotifier!
-            .onPendingChoice(choice)
-            .catch((err) => app.log.error({ err }, 'teams.pending_choice.error'));
-        });
+      if (teamsEnabledInDb !== false) {
+        await teamsNotifier.initialize();
       } else {
         app.log.warn(
           { teamsEnabledInDb },
-          'teams.startup: subscriptions NOT registered (disabled in DB or config incomplete)',
+          'teams.startup: skipping auto-initialize (disabled in DB)',
         );
       }
     }

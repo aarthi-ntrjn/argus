@@ -1,5 +1,4 @@
 import { WebClient } from '@slack/web-api';
-import type { SessionMonitor } from '../../services/session-monitor.js';
 import type {
   Session,
   Repository,
@@ -19,8 +18,6 @@ import {
 import { MessageQueue } from '../../services/message-queue.js';
 import { SessionDiffTracker } from '../../services/session-diff-tracker.js';
 import type { SessionChange } from '../../services/session-diff-tracker.js';
-import { outputEvents } from '../../services/output-store.js';
-import { pendingChoiceEvents } from '../../services/pending-choice-events.js';
 import type { PendingChoice } from '../../services/pending-choice-events.js';
 import {
   SESSION_CREATED,
@@ -38,7 +35,6 @@ const log = createTaggedLogger('[SlackNotifier]', '\x1b[32m'); // green
 
 export class SlackNotifier implements NotificationIntegration {
   private config: SlackConfig;
-  private readonly sessionMonitor: SessionMonitor;
   private client: WebClient | null = null;
   private active = false;
   private workspaceId = '';
@@ -48,11 +44,9 @@ export class SlackNotifier implements NotificationIntegration {
 
   private readonly diffTracker = new SessionDiffTracker();
   private readonly queue: MessageQueue;
-  private subscribed = false;
 
-  constructor(sessionMonitor: SessionMonitor) {
+  constructor() {
     this.config = { botToken: '', channelId: '', ownerSenderId: '', enabled: false };
-    this.sessionMonitor = sessionMonitor;
     this.queue = new MessageQueue((eventType, sessionId) => {
       log.warn(`Send queue full, dropping ${eventType} for session ${sessionId}`);
     });
@@ -94,7 +88,6 @@ export class SlackNotifier implements NotificationIntegration {
     }
 
     this.active = true;
-    this.subscribeToEvents();
     this.seedActiveSessions();
     log.info(`Initialized, posting to channel ${this.config.channelId}`);
     return true;
@@ -398,6 +391,14 @@ export class SlackNotifier implements NotificationIntegration {
     );
   }
 
+  async onRepositoryAdded(repo: Repository): Promise<void> {
+    await this.postEvent('', REPOSITORY_ADDED, repo);
+  }
+
+  async onRepositoryRemoved(repo: Repository): Promise<void> {
+    await this.postEvent('', REPOSITORY_REMOVED, repo);
+  }
+
   // -------------------------------------------------------------------------
   // Generic event
   // -------------------------------------------------------------------------
@@ -449,48 +450,6 @@ export class SlackNotifier implements NotificationIntegration {
       return true;
     }
     return this.config.enabledEventTypes.includes(eventType);
-  }
-
-  private subscribeToEvents(): void {
-    if (this.subscribed) {
-      return;
-    }
-    this.subscribed = true;
-    this.sessionMonitor.on(SESSION_CREATED, (session: Session) => {
-      this.onSessionCreated(session).catch((err) => {
-        log.error(`Unhandled error in session.created handler:`, err);
-      });
-    });
-    this.sessionMonitor.on(SESSION_ENDED, (session: Session) => {
-      this.onSessionEnded(session).catch((err) => {
-        log.error(`Unhandled error in session.ended handler:`, err);
-      });
-    });
-    this.sessionMonitor.on(SESSION_UPDATED, (session: Session) => {
-      this.onSessionUpdated(session).catch((err) => {
-        log.error(`Unhandled error in session.updated handler:`, err);
-      });
-    });
-    this.sessionMonitor.on(REPOSITORY_ADDED, (repo: Repository) => {
-      this.postEvent('', REPOSITORY_ADDED, repo).catch((err) => {
-        log.error(`Unhandled error in repository.added handler:`, err);
-      });
-    });
-    this.sessionMonitor.on(REPOSITORY_REMOVED, (repo: Repository) => {
-      this.postEvent('', REPOSITORY_REMOVED, repo).catch((err) => {
-        log.error(`Unhandled error in repository.removed handler:`, err);
-      });
-    });
-    outputEvents.on('session.output.batch', (sessionId: string, outputs: SessionOutput[]) => {
-      this.onSessionOutput(sessionId, outputs).catch((err) => {
-        log.error(`Unhandled error in session.output.batch handler:`, err);
-      });
-    });
-    pendingChoiceEvents.on('session.pending_choice', (choice: PendingChoice) => {
-      this.onPendingChoice(choice).catch((err) => {
-        log.error(`Unhandled error in session.pending_choice handler:`, err);
-      });
-    });
   }
 
   // Seed diff tracker baselines for sessions that were already active when this

@@ -354,6 +354,10 @@ export class TeamsNotifier implements NotificationIntegration {
     );
   }
 
+  async onRepositoryAdded(_repo: Repository): Promise<void> {}
+
+  async onRepositoryRemoved(_repo: Repository): Promise<void> {}
+
   get isRunning(): boolean {
     return this.active;
   }
