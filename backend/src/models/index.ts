@@ -1,5 +1,3 @@
-import type { PendingChoice } from '../services/pending-choice-events.js';
-export type { PendingChoice };
 import type { SessionChange } from '../services/session-diff-tracker.js';
 export type { SessionChange };
 

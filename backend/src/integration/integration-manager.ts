@@ -48,7 +48,7 @@ const diffTracker = new SessionDiffTracker();
 
 function activeNotifiers(): NotificationIntegration[] {
   return [slackNotifier, teamsNotifier].filter(
-    (n): n is NotificationIntegration => n !== null && n.isRunning,
+    (n): n is SlackNotifier | TeamsNotifier => n !== null && n.isRunning,
   );
 }
 
@@ -151,7 +151,7 @@ export function shutdownIntegrations(): void {
   slackNotifier?.shutdown();
 }
 
-export function getIntegrationRunningStatus(): { slack: string; teams: string } {
+export function getIntegrationRunningStatus(): { slack: 'on' | 'off' | 'na'; teams: 'on' | 'off' | 'na' } {
   return {
     slack: slackNotifier == null ? 'na' : slackNotifier.isRunning ? 'on' : 'off',
     teams: teamsNotifier == null ? 'na' : teamsNotifier.isRunning ? 'on' : 'off',
