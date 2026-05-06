@@ -14,6 +14,7 @@ type TrackedState = {
   yoloMode: boolean | null;
   pid: number | null;
   launchMode: string | null;
+  isResting: boolean;
 };
 
 const TRACKED_FIELDS: { key: keyof TrackedState; label: string }[] = [
@@ -22,6 +23,7 @@ const TRACKED_FIELDS: { key: keyof TrackedState; label: string }[] = [
   { key: 'yoloMode', label: 'Yolo' },
   { key: 'pid', label: 'PID' },
   { key: 'launchMode', label: 'Mode' },
+  { key: 'isResting', label: 'Resting' },
   // summary is intentionally excluded: it surfaces through the output stream instead
 ];
 
@@ -32,6 +34,7 @@ function extract(session: Session): TrackedState {
     yoloMode: session.yoloMode,
     pid: session.pid,
     launchMode: session.launchMode,
+    isResting: session.isResting === true,
   };
 }
 
@@ -41,6 +44,7 @@ function format(key: keyof TrackedState, value: unknown): string {
   }
   switch (key) {
     case 'yoloMode':
+    case 'isResting':
       return value ? 'yes' : 'no';
     case 'launchMode':
       return value === 'pty' ? 'connected' : 'readonly';
@@ -94,6 +98,12 @@ export class SessionDiffTracker {
 
     const changes: SessionChange[] = [];
     for (const { key, label } of TRACKED_FIELDS) {
+      // isResting is an in-memory-only field set by the resting transition emitter.
+      // DB sessions don't carry it, so skip comparison when undefined to avoid
+      // spuriously flipping the baseline on regular scan-based emits.
+      if (key === 'isResting' && session.isResting === undefined) {
+        continue;
+      }
       if (prev[key] !== curr[key]) {
         changes.push({
           field: key,
@@ -105,7 +115,13 @@ export class SessionDiffTracker {
     }
 
     if (changes.length > 0) {
-      this.baseline.set(session.id, curr);
+      // Preserve the baseline isResting value when the emitted session does not
+      // carry it, so regular scan-based emits cannot clear a resting notification.
+      const newBaseline = { ...curr };
+      if (session.isResting === undefined) {
+        newBaseline.isResting = prev.isResting;
+      }
+      this.baseline.set(session.id, newBaseline);
     }
 
     return changes;
