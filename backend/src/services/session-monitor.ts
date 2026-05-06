@@ -200,8 +200,12 @@ export class SessionMonitor extends EventEmitter {
         }
 
         const sig = this.sessionSignature(session);
-        if (this.lastEmittedSessions.get(session.id) !== sig) {
+        const prev = this.lastEmittedSessions.get(session.id);
+        if (prev !== sig) {
           this.lastEmittedSessions.set(session.id, sig);
+          logger.info(
+            `[SessionMonitor] session.updated sessionId=${session.id} changed=${this.signatureDiff(prev ?? sig, sig)}`,
+          );
           this.emit('session.updated', session);
         }
       }
@@ -222,6 +226,14 @@ export class SessionMonitor extends EventEmitter {
       yoloMode: session.yoloMode,
       endedAt: session.endedAt,
     });
+  }
+
+  private signatureDiff(prev: string, next: string): string {
+    const a = JSON.parse(prev) as Record<string, unknown>;
+    const b = JSON.parse(next) as Record<string, unknown>;
+    return Object.keys(b)
+      .filter((k) => a[k] !== b[k])
+      .join(',');
   }
 
   triggerScan(): void {
@@ -405,8 +417,12 @@ export class SessionMonitor extends EventEmitter {
           this.emit('session.created', session);
         } else {
           const sig = this.sessionSignature(session);
-          if (this.lastEmittedSessions.get(session.id) !== sig) {
+          const prev = this.lastEmittedSessions.get(session.id);
+          if (prev !== sig) {
             this.lastEmittedSessions.set(session.id, sig);
+            logger.info(
+              `[SessionMonitor] session.updated sessionId=${session.id} changed=${this.signatureDiff(prev ?? sig, sig)}`,
+            );
             this.emit('session.updated', session);
           }
         }
@@ -445,6 +461,9 @@ export class SessionMonitor extends EventEmitter {
         } else {
           if (this.restingNotifiedSessions.has(session.id)) {
             this.restingNotifiedSessions.delete(session.id);
+            logger.info(
+              `[SessionMonitor] session.updated sessionId=${session.id} reason=activity-resumed`,
+            );
             this.emit('session.updated', { ...session, isResting: false });
           }
         }
