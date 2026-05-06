@@ -19,7 +19,7 @@ export function applyModelUpdate(sessionId: string, model: string, tag: string):
   if (!existing || existing.model) {
     return;
   }
-  logger.info(`${tag} model detected sessionId=${sessionId} model=${model}`);
+  logger.debug(`${tag} model detected sessionId=${sessionId} model=${model}`);
   const updated = { ...existing, model };
   upsertSession(updated);
   broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated });
@@ -40,7 +40,7 @@ export function applySummaryUpdate(sessionId: string, outputs: SessionOutput[], 
   if (existing.summary === summary) {
     return;
   }
-  logger.info(`${tag} summary updated sessionId=${sessionId} summary=${summary}`);
+  logger.debug(`${tag} summary updated sessionId=${sessionId} summary=${summary}`);
   const updated = { ...existing, summary };
   upsertSession(updated);
   broadcast({ type: 'session.updated', timestamp: new Date().toISOString(), data: updated });
