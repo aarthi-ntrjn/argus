@@ -160,32 +160,35 @@ jobs:
                       vulns = json.load(f)
               except Exception:
                   vulns = []
-              rows = [
+              facts = [
                   {
-                      "type": "ColumnSet",
-                      "columns": [
-                          {
-                              "type": "Column", "width": "auto",
-                              "items": [{"type": "TextBlock", "weight": "Bolder",
-                                         "text": f"{emoji.get(v['severity'], '⚪')} {v['name']}",
-                                         "wrap": True}],
-                          },
-                          {
-                              "type": "Column", "width": "stretch",
-                              "items": [{"type": "TextBlock",
-                                         "text": (v["title"] or "No description") + (" *(fix available)*" if v["fixAvailable"] else ""),
-                                         "wrap": True, "isSubtle": True}],
-                          },
-                      ],
+                      "title": f"{emoji.get(v['severity'], '⚪')} {v['name']} ({v['severity']})",
+                      "value": (v["title"] or "No description") + (" — fix available" if v["fixAvailable"] else ""),
                   }
                   for v in vulns
               ]
               card_body = [
                   {"type": "TextBlock", "size": "Medium", "weight": "Bolder", "color": "Attention",
                    "text": f"🔴 Security Audit: {total} vulnerabilities found - {date}"},
-                  {"type": "TextBlock", "wrap": True,
-                   "text": f"{critical} critical, {high} high, {moderate} moderate."},
-                  {"type": "Container", "separator": True, "items": rows},
+                  # Severity summary row — each count colour-coded
+                  {
+                      "type": "ColumnSet",
+                      "columns": [
+                          {"type": "Column", "width": "auto", "items": [
+                              {"type": "TextBlock", "weight": "Bolder", "color": "Attention",
+                               "text": f"🔴 {critical} critical"},
+                          ]},
+                          {"type": "Column", "width": "auto", "items": [
+                              {"type": "TextBlock", "weight": "Bolder", "color": "Warning",
+                               "text": f"🟠 {high} high"},
+                          ]},
+                          {"type": "Column", "width": "stretch", "items": [
+                              {"type": "TextBlock", "weight": "Bolder", "color": "Accent",
+                               "text": f"🟡 {moderate} moderate"},
+                          ]},
+                      ],
+                  },
+                  {"type": "FactSet", "separator": True, "facts": facts},
               ]
           card = {
               "type":    "AdaptiveCard",
