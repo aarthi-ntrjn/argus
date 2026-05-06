@@ -116,7 +116,9 @@ export class SessionMonitor extends EventEmitter {
       const now = Date.now();
       const thresholdMs = loadConfig().restingThresholdMinutes * 60_000;
       for (const session of getSessions({ status: 'active' })) {
-        if (!session.lastActivityAt) {continue;}
+        if (!session.lastActivityAt) {
+          continue;
+        }
         const age = now - new Date(session.lastActivityAt).getTime();
         if (age >= thresholdMs) {
           if (!this.restingNotifiedSessions.has(session.id)) {

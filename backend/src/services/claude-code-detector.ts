@@ -108,8 +108,9 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
           typeof data.pid !== 'number' ||
           typeof data.sessionId !== 'string' ||
           typeof data.cwd !== 'string'
-        )
-          {continue;}
+        ) {
+          continue;
+        }
         entries.push({ sessionId: data.sessionId, pid: data.pid, cwd: data.cwd });
       } catch {
         /* skip malformed */
@@ -160,7 +161,9 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
     const now = new Date().toISOString();
 
     for (const oldPid of this.previousAlivePids) {
-      if (this.currentAlivePids.has(oldPid)) {continue;}
+      if (this.currentAlivePids.has(oldPid)) {
+        continue;
+      }
       const activeSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
       for (const session of activeSessions) {
         if (session.pid === oldPid && session.pidSource === 'session_registry') {
@@ -194,7 +197,9 @@ export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> impl
         ...getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE }),
         ...getSessions({ status: 'idle', type: SessionTypes.CLAUDE_CODE }),
       ];
-      if (liveSessions.length === 0) {return;}
+      if (liveSessions.length === 0) {
+        return;
+      }
       const repos = getRepositories();
       const now = new Date().toISOString();
       for (const session of liveSessions) {

@@ -63,7 +63,9 @@ function sanitizeForTelemetry(value: string): string {
 }
 
 function extractOrigin(stack: string | undefined): string {
-  if (!stack) {return 'unknown';}
+  if (!stack) {
+    return 'unknown';
+  }
   const frame = stack
     .split('\n')
     .find((line) => line.includes(' at ') && !line.includes('node_modules'));

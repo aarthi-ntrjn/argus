@@ -91,10 +91,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         return reply.send({ ok: true });
       }
 
-      req.log.debug(
-        { hookEvent: payload.hook_event_name, payload }, 
-        'claude-code hook received'
-      );
+      req.log.debug({ hookEvent: payload.hook_event_name, payload }, 'claude-code hook received');
 
       if (_cliManager) {
         await _cliManager.handleClaudeHookPayload(payload);
@@ -118,7 +115,8 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
       if (!event || !(event in EVENT_TO_PASCAL)) {
         return reply.status(400).send({
           error: 'INVALID_HOOK_EVENT',
-          message: 'event query parameter must be one of: sessionStart, sessionEnd, preToolUse, postToolUse',
+          message:
+            'event query parameter must be one of: sessionStart, sessionEnd, preToolUse, postToolUse',
           requestId: req.id,
         });
       }

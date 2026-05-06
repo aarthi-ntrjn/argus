@@ -182,8 +182,12 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
    * (stale on-disk source pointing at a recycled OS pid).
    */
   protected isExpectedProcessAlive(pid: number | null, sessionId: string): boolean {
-    if (pid === null) {return false;}
-    if (!isPidRunning(pid)) {return false;}
+    if (pid === null) {
+      return false;
+    }
+    if (!isPidRunning(pid)) {
+      return false;
+    }
     if (!isExpectedProcess(pid, this.toolTypeId)) {
       logger.info(
         `${this.logTag} PID reuse detected: pid ${pid} is running with wrong name, skipping (sessionId=${sessionId})`,
@@ -207,7 +211,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
    * cycle does.
    */
   async scan(force = false): Promise<Session[]> {
-    if (!existsSync(this.sessionsDir)) {return [];}
+    if (!existsSync(this.sessionsDir)) {
+      return [];
+    }
     const scanStart = Date.now();
     const entries = await this.readSessionEntries(force);
     const sessions: Session[] = [];
@@ -228,7 +234,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
           `${this.logTag} slow processSessionEntry (${entryMs}ms): sessionType=${this.toolTypeId} sessionId=${entry.sessionId} pid=${entry.pid}`,
         );
       }
-      if (session !== null) {sessions.push(session);}
+      if (session !== null) {
+        sessions.push(session);
+      }
     }
     this.dispatchSessionEvents(sessions);
     const scanMs = Date.now() - scanStart;
@@ -346,7 +354,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
    */
   seedState(sessions: Session[]): void {
     for (const session of sessions) {
-      if (session.type !== this.toolTypeId) {continue;}
+      if (session.type !== this.toolTypeId) {
+        continue;
+      }
       this.sigCache.set(session.id, this.sessionSignature(session));
     }
   }
@@ -541,7 +551,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   }
 
   clearPendingChoice(sessionId: string): void {
-    if (!this.pendingChoices.has(sessionId)) {return;}
+    if (!this.pendingChoices.has(sessionId)) {
+      return;
+    }
     this.pendingChoices.delete(sessionId);
     const now = new Date().toISOString();
     broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
@@ -573,7 +585,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
    */
   async handleHookPayload(payload: CliHookPayload): Promise<void> {
     const { hook_event_name, session_id, cwd } = payload;
-    if (!session_id) {return;}
+    if (!session_id) {
+      return;
+    }
 
     const repo = cwd ? getRepositoryByPath(cwd) : null;
     if (!repo) {
@@ -620,7 +634,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     sessionId: string,
     now: string,
   ): void {
-    if (!existing) {return;}
+    if (!existing) {
+      return;
+    }
     updateSessionStatus(sessionId, 'ended', now);
     this.closeJsonlWatcher(sessionId);
     const ended = { ...existing, status: 'ended' as const, endedAt: now };
@@ -641,7 +657,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     payload: CliHookPayload,
     now: string,
   ): void {
-    if (!existing) {return;}
+    if (!existing) {
+      return;
+    }
     const { question, choices, allQuestions } = parsePendingChoicePayload(payload.tool_input ?? {});
     this.pendingChoices.set(sessionId, { question, choices, allQuestions });
     broadcast({
@@ -662,7 +680,9 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     existing: Session | null | undefined,
     now: string,
   ): void {
-    if (!existing) {return;}
+    if (!existing) {
+      return;
+    }
     this.pendingChoices.delete(sessionId);
     broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
     pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);

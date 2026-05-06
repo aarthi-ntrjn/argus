@@ -142,12 +142,12 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    // Remove all hooks if no repositories remain; always remove per-repo hooks.
+    // Always remove per-repo hooks first; do a full cleanup if no repositories remain.
+    _cliManager?.removeHooksForRepo(existing.path);
     const remaining = getRepositories();
     if (remaining.length === 0) {
       _cliManager?.removeAllHooks();
     }
-    _cliManager?.removeHooksForRepo(existing.path);
 
     broadcast({ type: 'repository.removed', timestamp: new Date().toISOString(), data: { id } });
     return reply.status(204).send();

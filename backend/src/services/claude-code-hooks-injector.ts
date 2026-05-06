@@ -51,7 +51,9 @@ export class ClaudeCodeHooksInjector implements CliHooksInjector {
       if (existsSync(CLAUDE_SETTINGS_PATH)) {
         settings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
       }
-      if (!settings.hooks) {settings.hooks = {};}
+      if (!settings.hooks) {
+        settings.hooks = {};
+      }
 
       // Remove malformed event keys (e.g. '[object Object]' from object-as-key coercion).
       for (const event of Object.keys(settings.hooks)) {
@@ -67,7 +69,9 @@ export class ClaudeCodeHooksInjector implements CliHooksInjector {
       }
 
       for (const { event, matcher } of HOOK_EVENTS) {
-        if (!settings.hooks[event]) {settings.hooks[event] = [];}
+        if (!settings.hooks[event]) {
+          settings.hooks[event] = [];
+        }
         settings.hooks[event].push({ matcher, hooks: [{ type: 'command', command: hookCommand }] });
       }
 
@@ -91,13 +95,19 @@ export class ClaudeCodeHooksInjector implements CliHooksInjector {
   /** Removes all Argus hooks from ~/.claude/settings.json. */
   removeAll(): void {
     try {
-      if (!existsSync(CLAUDE_SETTINGS_PATH)) {return;}
+      if (!existsSync(CLAUDE_SETTINGS_PATH)) {
+        return;
+      }
       const settings: ClaudeSettings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
-      if (!settings.hooks) {return;}
+      if (!settings.hooks) {
+        return;
+      }
       let changed = false;
       for (const event of Object.keys(settings.hooks)) {
         const entries = settings.hooks[event];
-        if (!entries) {continue;}
+        if (!entries) {
+          continue;
+        }
         const filtered = entries.filter((entry) => !isArgusEntry(entry));
         if (filtered.length !== entries.length) {
           settings.hooks[event] = filtered;
