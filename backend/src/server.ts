@@ -25,7 +25,7 @@ import integrationsRoutes, {
   initializeIntegrations,
   shutdownIntegrations,
   getIntegrationRunningStatus,
-} from './api/routes/integrations.js';
+} from './integration/integration-manager.js';
 import metricsRoutes from './api/routes/metrics.js';
 import { fsRoutes } from './api/routes/fs.js';
 import todosRoutes from './api/routes/todos.js';

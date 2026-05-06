@@ -1,38 +1,38 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { SlackNotifier } from '../../integration/slack/slack-notifier.js';
-import { SlackListener } from '../../integration/slack/slack-listener.js';
-import { TeamsNotifier } from '../../integration/teams/teams-notifier.js';
-import { TeamsListener } from '../../integration/teams/teams-listener.js';
-import { setIntegrationEnabled, getIntegrationEnabled } from '../../db/database.js';
-import { telemetryService } from '../../services/telemetry-service.js';
-import { loadSlackConfig } from '../../config/slack-config-loader.js';
-import { loadTeamsConfig } from '../../config/teams-config-loader.js';
+import { SlackNotifier } from './slack/slack-notifier.js';
+import { SlackListener } from './slack/slack-listener.js';
+import { TeamsNotifier } from './teams/teams-notifier.js';
+import { TeamsListener } from './teams/teams-listener.js';
+import { setIntegrationEnabled, getIntegrationEnabled } from '../db/database.js';
+import { telemetryService } from '../services/telemetry-service.js';
+import { loadSlackConfig } from '../config/slack-config-loader.js';
+import { loadTeamsConfig } from '../config/teams-config-loader.js';
 import {
   getSlackConnectionStatus,
   getTeamsConnectionStatus,
-} from '../../services/integration-status.js';
-import { setSlackServices } from './health.js';
-import type { SessionMonitor } from '../../services/session-monitor.js';
-import { broadcast, type IntegrationStatusPayload } from '../ws/event-dispatcher.js';
-import { createTaggedLogger } from '../../utils/logger.js';
-import { outputEvents } from '../../services/output-store.js';
-import { pendingChoiceEvents } from '../../services/pending-choice-events.js';
-import type { PendingChoice } from '../../services/pending-choice-events.js';
+} from '../services/integration-status.js';
+import { setSlackServices } from '../api/routes/health.js';
+import type { SessionMonitor } from '../services/session-monitor.js';
+import { broadcast, type IntegrationStatusPayload } from '../api/ws/event-dispatcher.js';
+import { createTaggedLogger } from '../utils/logger.js';
+import { outputEvents } from '../services/output-store.js';
+import { pendingChoiceEvents } from '../services/pending-choice-events.js';
+import type { PendingChoice } from '../services/pending-choice-events.js';
 import type {
   Session,
   Repository,
   SessionOutput,
   NotificationIntegration,
-} from '../../models/index.js';
-import { SessionDiffTracker } from '../../services/session-diff-tracker.js';
-import { getSessions } from '../../db/database.js';
+} from '../models/index.js';
+import { SessionDiffTracker } from '../services/session-diff-tracker.js';
+import { getSessions } from '../db/database.js';
 import {
   SESSION_CREATED,
   SESSION_UPDATED,
   SESSION_ENDED,
   REPOSITORY_ADDED,
   REPOSITORY_REMOVED,
-} from '../../constants/slack-events.js';
+} from '../constants/slack-events.js';
 import type { App } from '@microsoft/teams.apps';
 
 const log = createTaggedLogger('[Integrations]', '\x1b[33m'); // yellow
