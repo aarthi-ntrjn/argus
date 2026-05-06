@@ -5,14 +5,14 @@ import { randomUUID } from 'crypto';
 
 // psList is still used by session-monitor for liveness checks, but
 // ClaudeCodeDetector no longer uses it for PID discovery. These tests
-// verify that scanExistingSessions creates sessions with pid=null,
+// verify that scan() creates sessions with pid=null,
 // and that PID assignment is handled by the session registry scanner.
 
 vi.mock('ps-list', () => ({
   default: vi.fn(async () => []),
 }));
 
-// isPidRunning is called by scanExistingSessions to verify registry entries are live.
+// isPidRunning is called by scan() to verify registry entries are live.
 // Default: all registry PIDs are considered live.
 vi.mock('../../src/services/process-utils.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/services/process-utils.js')>();
@@ -48,7 +48,7 @@ vi.mock('fs', async (importOriginal) => {
       if (pathStr.includes('sessions') && pathStr.endsWith('.json')) {
         const pid = parseInt(pathStr.replace(/^.*[/\\](\d+)\.json$/, '$1'), 10);
         const entry = Object.values(fakeRegistryEntries).find(e => e.pid === pid);
-        if (entry) return JSON.stringify({ ...entry, startedAt: Date.now(), kind: 'interactive', entrypoint: 'cli' });
+        if (entry) {return JSON.stringify({ ...entry, startedAt: Date.now(), kind: 'interactive', entrypoint: 'cli' });}
       }
       return actual.readFileSync(p as string, _enc as string);
     }),
@@ -83,20 +83,20 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
     vi.resetModules();
   });
 
-  it('scanExistingSessions creates session with pid=null (registry handles PID)', async () => {
+  it('scan() creates session with pid from registry', async () => {
     fakeJsonlFiles = ['new-pid-session.jsonl'];
     fakeRegistryEntries = { 'new-pid-session': { pid: 5555, sessionId: 'new-pid-session', cwd: FAKE_REPO_PATH } };
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     const sessions = dbModule.getSessions({ repositoryId: 'repo-pid-test', type: 'claude-code' });
     expect(sessions.length).toBeGreaterThan(0);
-    expect(sessions[0].pid).toBeNull();
-    expect(sessions[0].pidSource).toBeNull();
+    expect(sessions[0].pid).toBe(5555);
+    expect(sessions[0].pidSource).toBe('session_registry');
   });
 
-  it('scanExistingSessions re-activates an ended session with pid=null', async () => {
+  it('scan() re-activates an ended session with pid from registry', async () => {
     const now = new Date().toISOString();
     const sessionId = 'pid-reactivate-session';
     fakeJsonlFiles = [`${sessionId}.jsonl`];
@@ -118,14 +118,14 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession(sessionId);
     expect(session?.status).toBe('active');
-    expect(session?.pid).toBeNull();
+    expect(session?.pid).toBe(7777);
   });
 
-  it('scanExistingSessions does not overwrite a PTY-assigned PID', async () => {
+  it('scan() does not overwrite a PTY-assigned PID', async () => {
     const now = new Date().toISOString();
     const sessionId = 'pty-pid-session';
     fakeJsonlFiles = [`${sessionId}.jsonl`];
@@ -147,10 +147,11 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
     });
 
     const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
-    await new ClaudeCodeDetector().scanExistingSessions();
+    await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession(sessionId);
     expect(session?.pid).toBe(42);
     expect(session?.pidSource).toBe('pty_registry');
   });
 });
+

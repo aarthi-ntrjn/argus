@@ -15,9 +15,12 @@ import * as logger from './utils/logger.js';
 import { SlackNotifier } from './integration/slack/slack-notifier.js';
 import { SlackListener } from './integration/slack/slack-listener.js';
 import { addClient, removeClient, broadcast } from './api/ws/event-dispatcher.js';
-import repositoriesRoutes, { setMonitor } from './api/routes/repositories.js';
-import sessionsRoutes, { setSessionClaudeDetector } from './api/routes/sessions.js';
-import hooksRoutes, { setClaudeDetector } from './api/routes/hooks.js';
+import repositoriesRoutes, {
+  setMonitor,
+  setCliManager as setRepositoriesCliManager,
+} from './api/routes/repositories.js';
+import sessionsRoutes, { setCliManager as setSessionsCliManager } from './api/routes/sessions.js';
+import hooksRoutes, { setCliManager as setHooksCliManager } from './api/routes/hooks.js';
 import healthRoutes, { setSlackServices, setUpdateService } from './api/routes/health.js';
 import updateRoutes, { setUpdateServiceForRoutes } from './api/routes/update.js';
 import { updateService } from './services/update-service.js';
@@ -83,7 +86,12 @@ export async function buildServer(): Promise<{
         process.env.NODE_ENV !== 'production'
           ? {
               target: 'pino-pretty',
-              options: { colorize: true, singleLine: true, translateTime: 'SYS:HH:MM:ss.l' },
+              options: {
+                colorize: true,
+                singleLine: true,
+                translateTime: 'SYS:HH:MM:ss.l',
+                messageFormat: '{req.method} {req.url} {msg}',
+              },
             }
           : undefined,
     },
@@ -187,9 +195,10 @@ export async function startServer(): Promise<FastifyInstance> {
   const { app, config, teamsApp } = await buildServer();
 
   monitor = new SessionMonitor();
-  const claudeDetector = monitor.getClaudeCodeDetector();
-  setClaudeDetector(claudeDetector);
-  setSessionClaudeDetector(claudeDetector);
+  const cliManager = monitor.getCliManager();
+  setHooksCliManager(cliManager);
+  setSessionsCliManager(cliManager);
+  setRepositoriesCliManager(cliManager);
   setMonitor(monitor);
 
   monitor.on('session.created', (session: Session) => {
@@ -236,7 +245,13 @@ export async function startServer(): Promise<FastifyInstance> {
     if (teamsApp) {
       teamsNotifier = new TeamsNotifier(teamsApp);
 
-      if (getIntegrationEnabled('teams') !== false && (await teamsNotifier.initialize())) {
+      const teamsEnabledInDb = getIntegrationEnabled('teams');
+      app.log.info(
+        { teamsEnabledInDb },
+        'teams.startup: checking integration enabled flag and config',
+      );
+      if (teamsEnabledInDb !== false && (await teamsNotifier.initialize())) {
+        app.log.info('teams.startup: subscriptions registered on monitor');
         monitor.on('session.created', (session: Session) => {
           teamsNotifier!
             .onSessionCreated(session)
@@ -262,6 +277,11 @@ export async function startServer(): Promise<FastifyInstance> {
             .onPendingChoice(choice)
             .catch((err) => app.log.error({ err }, 'teams.pending_choice.error'));
         });
+      } else {
+        app.log.warn(
+          { teamsEnabledInDb },
+          'teams.startup: subscriptions NOT registered (disabled in DB or config incomplete)',
+        );
       }
     }
   }

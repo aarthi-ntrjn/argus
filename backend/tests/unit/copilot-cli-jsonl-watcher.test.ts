@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 // Mock chokidar — capture the 'change' handler so tests can trigger it
 let capturedChangeHandler: (() => void) | null = null;
 const mockWatcherOn = vi.fn((event: string, handler: () => void) => {
-  if (event === 'change') capturedChangeHandler = handler;
+  if (event === 'change') {capturedChangeHandler = handler;}
   return mockFsWatcher;
 });
 const mockFsWatcher = { on: mockWatcherOn, close: vi.fn().mockResolvedValue(undefined) };
@@ -35,7 +35,7 @@ vi.mock('../../src/api/ws/event-dispatcher.js', () => ({
   broadcast: mockBroadcast,
 }));
 
-import { CopilotJsonlWatcher } from '../../src/services/copilot-jsonl-watcher.js';
+import { CopilotJsonlWatcher } from '../../src/services/copilot-cli-jsonl-watcher.js';
 
 function writeTempJsonl(content: string): string {
   const dir = join(tmpdir(), `argus-copilot-watcher-test-${randomUUID()}`);

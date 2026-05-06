@@ -9,6 +9,7 @@ import {
   upsertTeamsThread,
   deleteTeamsThread,
   getRepository,
+  getSessions,
 } from '../../db/database.js';
 import type { Repository, NotificationIntegration } from '../../models/index.js';
 import type { PendingChoice } from '../../services/pending-choice-events.js';
@@ -54,6 +55,7 @@ export class TeamsNotifier implements NotificationIntegration {
       return false;
     }
     this.active = true;
+    this.seedActiveSessions();
     this.log.info('teams: configured, subscribing to session events');
     return true;
   }
@@ -66,6 +68,18 @@ export class TeamsNotifier implements NotificationIntegration {
       Boolean(config.channelId) &&
       Boolean(config.ownerSenderId)
     );
+  }
+
+  // Seed diff tracker baselines for sessions that were already active when this
+  // integration started, so onSessionUpdated can detect meaningful changes immediately.
+  private seedActiveSessions(): void {
+    const active = getSessions({ status: 'active' });
+    for (const session of active) {
+      this.diffTracker.seed(session);
+    }
+    if (active.length > 0) {
+      this.log.info(`teams.seed: seeded ${active.length} already-active sessions`);
+    }
   }
 
   async onSessionCreated(session: Session): Promise<void> {

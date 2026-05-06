@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -14,6 +14,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Scripts**: All scripts (`.ps1`, `.sh`, `.mjs`, etc.) must go in `scripts/`. The `.specify/scripts/powershell/` folder is strictly reserved for scripts invoked directly by Speckit workflow steps. Do not put application or dev tooling scripts there.
 - **Documentation**: All `README-*.md` files must go in `docs/`. The only README at the repo root is `README.md`.
+
+## File Naming
+
+Backend service files are named by the AI platform they belong to, using a consistent prefix:
+
+- Files specific to Claude Code must be prefixed `claude-code-` (e.g. `claude-code-detector.ts`, `claude-code-hooks-injector.ts`, `claude-code-jsonl-watcher.ts`).
+- Files specific to Copilot CLI must be prefixed `copilot-cli-` (e.g. `copilot-cli-detector.ts`, `copilot-cli-hooks-injector.ts`, `copilot-cli-jsonl-watcher.ts`).
+- Shared/cross-cutting files do not carry a platform prefix.
+
+This applies to both source files and their corresponding test files.
 
 ## Writing Style
 
@@ -32,6 +42,14 @@ All code must pass `npm run lint` and `npm run format` in both the `backend` and
 - **No `any` type** in production code. Use typed assertions (`err as { status?: number }`) or proper interfaces instead. Test files are exempt.
 - Formatting (indentation, spacing, quotes, trailing commas) is owned by **Prettier** — do not fight it. Run `npm run format --workspace=<backend|frontend>` to apply.
 - After generating new code, run `npm run lint:fix --workspace=<backend|frontend>` to auto-fix any violations before committing.
+
+## Comments
+
+Only add comments when they clarify intent that is not obvious from the code itself. Never describe what the code does — describe why it exists or what decision it encodes.
+
+- **Class-level docblocks**: Explain what the class is responsible for and any non-obvious design constraints (e.g. why it is global vs. per-repo). Keep to 2-4 sentences.
+- **Method comments**: One line, stating what the method achieves from the caller's point of view, not how it does it.
+- **Inline comments**: Use sparingly, only for genuinely surprising logic (e.g. a workaround, an edge case the reader could not infer). Never comment self-explanatory code.
 
 ## Decision Making
 

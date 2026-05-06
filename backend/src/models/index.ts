@@ -31,15 +31,6 @@ export interface Repository {
   remoteUrl?: string | null;
 }
 
-export interface ClaudeSessionRegistryEntry {
-  pid: number;
-  sessionId: string;
-  cwd: string;
-  startedAt: number;
-  kind: string;
-  entrypoint: string;
-}
-
 export interface Session {
   id: string;
   repositoryId: string;

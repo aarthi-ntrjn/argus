@@ -6,16 +6,16 @@ import { ptyRegistry } from '../../services/pty-registry.js';
 import { telemetryService } from '../../services/telemetry-service.js';
 import { broadcast } from '../ws/event-dispatcher.js';
 
-let _claudeDetector: {
+let _cliManager: {
   getPendingChoice(sessionId: string): unknown;
   clearPendingChoice(sessionId: string): void;
 } | null = null;
 
-export function setSessionClaudeDetector(detector: {
+export function setCliManager(manager: {
   getPendingChoice(sessionId: string): unknown;
   clearPendingChoice(sessionId: string): void;
 }): void {
-  _claudeDetector = detector;
+  _cliManager = manager;
 }
 
 function withPtyConnected<T extends { id: string; launchMode?: string | null }>(
@@ -101,7 +101,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Params: { id: string } }>('/api/v1/sessions/:id/interrupt', async (req, reply) => {
     try {
       const action = await sessionController.interruptSession(req.params.id);
-      _claudeDetector?.clearPendingChoice(req.params.id);
+      _cliManager?.clearPendingChoice(req.params.id);
       broadcast({
         type: 'session.pending_choice.resolved',
         timestamp: new Date().toISOString(),
@@ -179,7 +179,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
             .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
         }
 
-        const skipEnter = raw ? true : !!_claudeDetector?.getPendingChoice(req.params.id);
+        const skipEnter = raw ? true : !!_cliManager?.getPendingChoice(req.params.id);
         const action = await sessionController.sendPrompt(req.params.id, prompt, skipEnter);
         return reply.status(202).send({ actionId: action.id, status: action.status });
       } catch (err: unknown) {
@@ -250,7 +250,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
       /* best effort — clear the pending choice regardless */
     }
 
-    _claudeDetector?.clearPendingChoice(req.params.id);
+    _cliManager?.clearPendingChoice(req.params.id);
     broadcast({
       type: 'session.pending_choice.resolved',
       timestamp: new Date().toISOString(),

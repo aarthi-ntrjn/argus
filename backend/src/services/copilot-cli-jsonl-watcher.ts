@@ -6,7 +6,6 @@ import type { SessionOutput } from '../models/index.js';
 
 export class CopilotJsonlWatcher extends JsonlWatcherBase {
   protected readonly tag = '[CopilotDetector]';
-  private readonly pendingAskUserCallIds = new Map<string, string>();
 
   protected parseLine(
     line: string,
@@ -63,10 +62,5 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
 
   async watchFile(sessionId: string, dirPath: string): Promise<void> {
     await this.attachWatcher(sessionId, join(dirPath, 'events.jsonl'));
-  }
-
-  stopWatchers(): void {
-    super.stopWatchers();
-    this.pendingAskUserCallIds.clear();
   }
 }

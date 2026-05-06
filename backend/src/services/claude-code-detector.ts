@@ -1,490 +1,218 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import * as logger from '../utils/logger.js';
-import { join, dirname, normalize } from 'path';
+import { readdirSync, readFileSync } from 'fs';
+import { join } from 'path';
 import { homedir } from 'os';
+import { getSessions, getRepositories } from '../db/database.js';
+import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
+import { isPidRunning } from './process-utils.js';
+import { SessionTypes } from '../models/index.js';
+import type { Session, Repository } from '../models/index.js';
+import type { CliDetector } from './cli-detector.js';
+import { BaseCliDetector, type SessionEntry } from './base-cli-detector.js';
 
-import {
-  getSession,
-  upsertSession,
-  updateSessionStatus,
-  getRepositoryByPath,
-} from '../db/database.js';
-import { ptyRegistry } from './pty-registry.js';
-import { ClaudeSessionRegistry } from './claude-session-registry.js';
-import { ClaudeJsonlWatcher } from './claude-jsonl-watcher.js';
-import { broadcast } from '../api/ws/event-dispatcher.js';
-import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
-import type { Session, Repository, PendingChoice, PendingChoiceItem } from '../models/index.js';
-import { pendingChoiceEvents } from './pending-choice-events.js';
-import { telemetryService } from './telemetry-service.js';
+/**
+ * Under the hood, Claude Code writes a JSON file per session in ~/.claude/sessions/*.json
+ * with the PID and CWD, which we can use for detection and tracking.
+ * The hooks are the primary real-time signal, while the on-disk session files are a
+ * secondary signal we scan on a timer for reconciliation and edge cases (sessions
+ * started without hooks, PID backfill, unclean shutdown detection).
+ *
+ * Example session file: ~/.claude/sessions/13232.json
+ * {
+ *   "pid": 13232,
+ *   "sessionId": "0f63ac9c-1cdf-47fe-abb1-d6b3bef059a1",
+ *   "cwd": "C:\\source\\github\\aarthi-ntrjn\\argus",
+ *   "startedAt": 1777845541042,
+ *   "procStart": "639134171321274940",
+ *   "version": "2.1.126",
+ *   "peerProtocol": 1,
+ *   "kind": "interactive",
+ *   "entrypoint": "cli",
+ *   "status": "idle",
+ *   "updatedAt": 1777845921982
+ * }
+ */
 
-const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json');
-const HOOK_COMMAND =
-  'curl -sf -X POST http://127.0.0.1:7411/hooks/claude -H "Content-Type: application/json" -d @- 2>/dev/null || true';
-const HOOK_EVENTS: Array<{ event: string; matcher: string }> = [
-  { event: 'SessionStart', matcher: '' },
-  { event: 'SessionEnd', matcher: '' },
-  { event: 'PreToolUse', matcher: 'AskUserQuestion' },
-  { event: 'PostToolUse', matcher: 'AskUserQuestion' },
-];
+const DEFAULT_SESSIONS_DIR = join(homedir(), '.claude', 'sessions');
 
-interface ClaudeSettings {
-  hooks?: Record<
-    string,
-    Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>
-  >;
-  [key: string]: unknown;
-}
-
-interface HookPayload {
-  hook_event_name: string;
-  session_id: string;
+interface SessionProcessJson {
+  pid?: number;
+  sessionId?: string;
   cwd?: string;
-  tool_name?: string;
-  tool_input?: Record<string, unknown>;
-  tool_result?: unknown;
-  [key: string]: unknown;
 }
 
-export class ClaudeCodeDetector {
-  private jsonlWatcher = new ClaudeJsonlWatcher();
-  private pendingChoices = new Map<string, PendingChoice>();
-  private sessionCreatedCallback?: (session: Session) => void;
+/** Parsed entry from one ~/.claude/sessions/*.json file. The on-disk session file always carries a non-null pid. */
+interface ClaudeSessionEntry extends SessionEntry {
+  pid: number;
+}
 
-  setSessionCreatedCallback(cb: (session: Session) => void): void {
-    this.sessionCreatedCallback = cb;
+/**
+ * Detects and tracks Claude Code sessions.
+ *
+ * Detection model: event-driven via two complementary sources.
+ *
+ * Primary path — HTTP hooks: Claude fires PreToolUse / PostToolUse / SessionEnd events
+ * to /hooks/claude on every tool call. handleHookPayload() creates or updates the DB
+ * session and fires sessionCreatedCallback immediately.
+ *
+ * Secondary path — session-file scan: scan() reads ~/.claude/sessions/*.json on every
+ * cycle. This catches sessions that started without hooks (e.g. legacy installs) and
+ * backfills the PID once Claude writes it to its session file. It also detects
+ * unclean shutdowns where SessionEnd never fired (session file disappears).
+ *
+ * The base scan() pipeline calls readSessionEntries → processSessionEntry per entry
+ * → dispatchSessionEvents. Claude's dispatchSessionEvents adds a reconcileActiveSessions
+ * safety net that catches PTY sessions that don't appear in the session-file scan.
+ */
+export class ClaudeCodeDetector extends BaseCliDetector<ClaudeSessionEntry> implements CliDetector {
+  protected readonly jsonlWatcher = new ClaudeJsonlWatcher();
+  protected readonly sessionsDir: string;
+  /**
+   * Disappearance-detection bookkeeping. Each scan tracks every pid that
+   * passed the alive+expected-process guards into currentAlivePids. At the
+   * end of dispatch, the diff (previous \ current) identifies sessions whose
+   * file vanished between cycles, so we can end them.
+   *
+   * Pids are tracked regardless of whether buildSessionFromEntry produced a
+   * Session — a no-repo entry still counts as "seen alive this cycle", which
+   * keeps disappearance from firing spuriously on entries that were already
+   * filtered out earlier in the same cycle.
+   *
+   * This is the broader of the two scan-set semantics in this codebase: it
+   * tracks ALL alive pids. Copilot's activeDirPaths tracks the narrower
+   * subset (alive AND yielded an active session) for a different purpose
+   * (mtime-filter override).
+   */
+  private previousAlivePids = new Set<number>();
+  private currentAlivePids = new Set<number>();
+
+  protected readonly logTag = '[ClaudeDetector]';
+  protected readonly askUserToolName = 'AskUserQuestion';
+  protected readonly toolTypeId = 'claude-code' as const;
+
+  constructor(sessionsDir: string = DEFAULT_SESSIONS_DIR) {
+    super();
+    this.sessionsDir = sessionsDir;
   }
 
-  getPendingChoice(sessionId: string): PendingChoice | null {
-    return this.pendingChoices.get(sessionId) ?? null;
-  }
-
-  clearPendingChoice(sessionId: string): void {
-    if (!this.pendingChoices.has(sessionId)) {
-      return;
-    }
-    this.pendingChoices.delete(sessionId);
-    const now = new Date().toISOString();
-    broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
-    pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
-  }
-
-  injectHooks(): void {
-    try {
-      mkdirSync(dirname(CLAUDE_SETTINGS_PATH), { recursive: true });
-      let settings: ClaudeSettings = {};
-      if (existsSync(CLAUDE_SETTINGS_PATH)) {
-        settings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
-      }
-      if (!settings.hooks) {
-        settings.hooks = {};
-      }
-      let changed = false;
-
-      // Remove Argus hook entries whose (event, matcher) pair is no longer in HOOK_EVENTS.
-      // Also delete any malformed keys (e.g. '[object Object]' from object-as-key coercion).
-      for (const event of Object.keys(settings.hooks)) {
-        if (!/^\w+$/.test(event)) {
-          delete settings.hooks[event];
-          changed = true;
+  /** Reads ~/.claude/sessions/*.json and returns one parsed entry per valid file. */
+  protected async readSessionEntries(_force: boolean): Promise<ClaudeSessionEntry[]> {
+    this.currentAlivePids = new Set();
+    const files = readdirSync(this.sessionsDir).filter((f) => f.endsWith('.json'));
+    const entries: ClaudeSessionEntry[] = [];
+    for (const file of files) {
+      try {
+        const data = JSON.parse(
+          readFileSync(join(this.sessionsDir, file), 'utf-8'),
+        ) as SessionProcessJson;
+        if (
+          typeof data.pid !== 'number' ||
+          typeof data.sessionId !== 'string' ||
+          typeof data.cwd !== 'string'
+        ) {
           continue;
         }
-        const before = settings.hooks[event];
-        const after = before.filter((entry) => {
-          const isArgusEntry = entry.hooks?.some((h) => h.command === HOOK_COMMAND);
-          if (!isArgusEntry) {
-            return true;
-          }
-          return HOOK_EVENTS.some((he) => he.event === event && he.matcher === entry.matcher);
-        });
-        if (after.length !== before.length) {
-          settings.hooks[event] = after;
-          changed = true;
-        }
+        entries.push({ sessionId: data.sessionId, pid: data.pid, cwd: data.cwd });
+      } catch {
+        /* skip malformed */
       }
-
-      for (const { event, matcher } of HOOK_EVENTS) {
-        if (!this.hasHook(settings, event, matcher)) {
-          if (!settings.hooks[event]) {
-            settings.hooks[event] = [];
-          }
-          settings.hooks[event].push({
-            matcher,
-            hooks: [{ type: 'command', command: HOOK_COMMAND }],
-          });
-          changed = true;
-        }
-      }
-      if (changed) {
-        writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
-      }
-    } catch {
-      /* ignore if settings file inaccessible */
     }
+    return entries;
   }
 
-  removeAllHooks(): void {
+  /**
+   * Tracks every alive pid in currentAlivePids so disappearance detection in
+   * the next cycle can tell which sessions vanished. Runs before the repo
+   * filter, so no-repo entries still count as "seen alive this cycle".
+   */
+  protected onAliveEntry(entry: ClaudeSessionEntry): void {
+    this.currentAlivePids.add(entry.pid);
+  }
+
+  protected readonly defaultPidSource = 'session_registry' as const;
+
+  protected resolveWatchPath(_entry: ClaudeSessionEntry, repo: Repository): string {
+    return repo.path;
+  }
+
+  /** Session timestamps and summary for the reactivation/new-session path. */
+  protected buildNewSessionFields(
+    _entry: ClaudeSessionEntry,
+    existingSession: Session | undefined | null,
+    now: string,
+  ): { startedAt: string; lastActivityAt: string; summary: string | null } {
+    return {
+      startedAt: existingSession?.startedAt ?? now,
+      lastActivityAt: now,
+      summary: existingSession?.summary ?? null,
+    };
+  }
+
+  /**
+   * Three-stage dispatch:
+   *   1. Disappearance: any pid that was alive last cycle but is gone this cycle
+   *      means the session file vanished. End the matching DB session.
+   *   2. sigCache diff (shared): fire created/updated callbacks via the base
+   *      fireCreatedAndUpdated helper.
+   *   3. reconcileActiveSessions safety net: catches sessions that pid-tracking
+   *      cannot reach — repo removed while Claude runs, or Argus restart with
+   *      a stale active session whose process and session file are both gone.
+   */
+  protected dispatchSessionEvents(sessions: Session[]): void {
+    const now = new Date().toISOString();
+
+    for (const oldPid of this.previousAlivePids) {
+      if (this.currentAlivePids.has(oldPid)) {
+        continue;
+      }
+      const activeSessions = getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE });
+      for (const session of activeSessions) {
+        if (session.pid === oldPid && session.pidSource === 'session_registry') {
+          this.markSessionEnded(session, now, 'session file gone');
+        }
+      }
+    }
+    this.previousAlivePids = new Set(this.currentAlivePids);
+
+    this.fireCreatedAndUpdated(sessions);
+
+    this.reconcileActiveSessions();
+  }
+
+  /**
+   * Ends active/idle Claude sessions that can't be caught by the pid-tracking
+   * disappearance detection in dispatchSessionEvents:
+   *
+   * - Repo removed while Claude is running: the session file and process are
+   *   still alive so the pid stays in currentAlivePids, but resolveRepoOrWarn
+   *   filters the entry out so it never enters the scan results.
+   *
+   * - Dead process with no visible session file: happens after an Argus restart
+   *   when Claude crashed while Argus was down. previousAlivePids is empty on
+   *   first scan so the pid-diff can't fire; the session file is gone so
+   *   processSessionEntry is never called.
+   */
+  private reconcileActiveSessions(): void {
     try {
-      if (!existsSync(CLAUDE_SETTINGS_PATH)) {
+      const liveSessions = [
+        ...getSessions({ status: 'active', type: SessionTypes.CLAUDE_CODE }),
+        ...getSessions({ status: 'idle', type: SessionTypes.CLAUDE_CODE }),
+      ];
+      if (liveSessions.length === 0) {
         return;
       }
-      const settings: ClaudeSettings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
-      if (!settings.hooks) {
-        return;
-      }
-      let changed = false;
-      for (const { event } of HOOK_EVENTS) {
-        const entries = settings.hooks[event];
-        if (!entries) {
+      const repos = getRepositories();
+      const now = new Date().toISOString();
+      for (const session of liveSessions) {
+        if (!repos.some((r) => r.id === session.repositoryId)) {
+          this.markSessionEnded(session, now, 'repo removed');
           continue;
         }
-        const filtered = entries.filter(
-          (entry) => !entry.hooks?.some((h) => h.command === HOOK_COMMAND),
-        );
-        if (filtered.length !== entries.length) {
-          settings.hooks[event] = filtered;
-          changed = true;
+        if (session.pid != null && !isPidRunning(session.pid)) {
+          this.markSessionEnded(session, now, 'process gone');
         }
-      }
-      if (changed) {
-        writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
       }
     } catch {
-      /* ignore */
+      /* best-effort */
     }
-  }
-
-  private hasHook(settings: ClaudeSettings, event: string, matcher: string): boolean {
-    const eventHooks = settings.hooks?.[event];
-    if (!eventHooks) {
-      return false;
-    }
-    return eventHooks.some(
-      (entry) => entry.matcher === matcher && entry.hooks?.some((h) => h.command === HOOK_COMMAND),
-    );
-  }
-
-  async scanExistingSessions(): Promise<void> {
-    const registry = new ClaudeSessionRegistry();
-    const registryEntries = registry.scanEntries();
-
-    for (const entry of registryEntries) {
-      // Guard 1: process is running (cheap signal-0 check)
-      // Guard 2: verify the process at this PID is actually the expected AI tool — catches
-      //   stale registry entries pointing to recycled PIDs (PID reuse by an unrelated process).
-      const existingSession = getSession(entry.sessionId);
-      if (!isPidRunning(entry.pid)) {
-        continue;
-      }
-      if (!isExpectedProcess(entry.pid, 'claude-code')) {
-        logger.info(
-          `[ClaudeDetector] PID reuse detected: pid ${entry.pid} is running with wrong name, skipping (sessionId=${entry.sessionId} existingStatus=${existingSession?.status ?? 'new'})`,
-        );
-        continue;
-      }
-
-      const normalizedCwd = normalize(entry.cwd.trimEnd().replace(/[/\\]+$/, ''));
-      const repo = getRepositoryByPath(normalizedCwd);
-      if (!repo) {
-        logger.warn(
-          `[ClaudeDetector] no repo for cwd="${normalizedCwd}" sessionId=${entry.sessionId} — session ignored`,
-        );
-        continue;
-      }
-
-      await this.activateFoundSession(entry.sessionId, repo, null);
-    }
-  }
-
-  async handleHookPayload(payload: HookPayload): Promise<void> {
-    const { hook_event_name, session_id, cwd } = payload;
-    if (!session_id) {
-      return;
-    }
-
-    const normalizedCwd = cwd ? normalize(cwd.trimEnd().replace(/[/\\]+$/, '')) : null;
-    const repo = normalizedCwd ? getRepositoryByPath(normalizedCwd) : null;
-    if (!repo) {
-      logger.warn(
-        `[ClaudeDetector] no repo for cwd="${normalizedCwd ?? 'none'}" sessionId=${session_id} hook=${hook_event_name} — hook ignored`,
-      );
-      return;
-    }
-
-    const existing = getSession(session_id);
-    const now = new Date().toISOString();
-
-    if (hook_event_name === 'SessionEnd') {
-      return this.handleSessionEnd(existing, session_id, now);
-    }
-    if (hook_event_name === 'PreToolUse' && payload.tool_name === 'AskUserQuestion') {
-      return this.handlePreAskQuestion(session_id, existing, payload, now);
-    }
-    if (hook_event_name === 'PostToolUse' && payload.tool_name === 'AskUserQuestion') {
-      return this.handlePostAskQuestion(session_id, existing, now);
-    }
-
-    if (!existing) {
-      const claimed = normalizedCwd
-        ? ptyRegistry.claimForSession(session_id, normalizedCwd, 'claude-code')
-        : null;
-      if (claimed) {
-        return this.createPtySession(session_id, repo, claimed, now);
-      }
-    }
-
-    this.upsertAndBroadcastSession(session_id, repo, existing, now);
-    await this.jsonlWatcher.watchFile(session_id, repo.path);
-  }
-
-  private handleSessionEnd(
-    existing: Session | null | undefined,
-    sessionId: string,
-    now: string,
-  ): void {
-    if (!existing) {
-      return;
-    }
-    updateSessionStatus(sessionId, 'ended', now);
-    this.jsonlWatcher.closeWatcher(sessionId);
-    const ended = { ...existing, status: 'ended' as const, endedAt: now };
-    broadcast({ type: 'session.ended', timestamp: now, data: ended });
-    telemetryService.sendEvent('session_ended', {
-      sessionType: existing.type,
-      sessionId: existing.id,
-      launchMode: existing.launchMode === 'pty' ? 'connected' : 'readonly',
-      yoloMode: existing.yoloMode,
-    });
-  }
-
-  private handlePreAskQuestion(
-    sessionId: string,
-    existing: Session | null | undefined,
-    payload: HookPayload,
-    now: string,
-  ): void {
-    if (!existing) {
-      return;
-    }
-    const toolInput = payload.tool_input ?? {};
-
-    const rawQs = Array.isArray(toolInput.questions)
-      ? (toolInput.questions as Record<string, unknown>[])
-      : [];
-    const allQuestions: PendingChoiceItem[] = rawQs.map((q) => {
-      const qText = typeof q.question === 'string' ? q.question : '';
-      const rawOpts: unknown[] = Array.isArray(q.options) ? q.options : [];
-      const qChoices: string[] = [];
-      const qDescriptions: string[] = [];
-      for (const c of rawOpts) {
-        if (typeof c === 'string') {
-          qChoices.push(c);
-          qDescriptions.push('');
-        } else if (c && typeof c === 'object') {
-          const obj = c as Record<string, unknown>;
-          if (typeof obj.label === 'string') {
-            qChoices.push(obj.label);
-            qDescriptions.push(typeof obj.description === 'string' ? obj.description : '');
-          }
-        }
-      }
-      const hasDescriptions = qDescriptions.some((d) => d !== '');
-      return {
-        question: qText,
-        choices: qChoices,
-        ...(hasDescriptions ? { descriptions: qDescriptions } : {}),
-        ...(typeof q.header === 'string' ? { header: q.header } : {}),
-      };
-    });
-
-    // Fallback: flat format { question: string, choices: string[] } (e.g. ask_user / Copilot)
-    if (allQuestions.length === 0) {
-      const question = typeof toolInput.question === 'string' ? toolInput.question : '';
-      const rawChoices: unknown[] = Array.isArray(toolInput.choices) ? toolInput.choices : [];
-      const choices = rawChoices
-        .map((c) => {
-          if (typeof c === 'string') {
-            return c;
-          }
-          if (
-            c &&
-            typeof c === 'object' &&
-            typeof (c as Record<string, unknown>).label === 'string'
-          ) {
-            return (c as Record<string, unknown>).label as string;
-          }
-          return null;
-        })
-        .filter((c): c is string => c !== null);
-      allQuestions.push({ question, choices });
-    }
-
-    const { question, choices } = allQuestions[0];
-    this.pendingChoices.set(sessionId, { question, choices, allQuestions });
-    broadcast({
-      type: 'session.pending_choice',
-      timestamp: now,
-      data: { sessionId, question, choices, allQuestions },
-    });
-    pendingChoiceEvents.emit('session.pending_choice', {
-      sessionId,
-      question,
-      choices,
-      allQuestions,
-    });
-  }
-
-  private handlePostAskQuestion(
-    sessionId: string,
-    existing: Session | null | undefined,
-    now: string,
-  ): void {
-    if (!existing) {
-      return;
-    }
-    this.pendingChoices.delete(sessionId);
-    broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
-    pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
-  }
-
-  private async createPtySession(
-    sessionId: string,
-    repo: Repository,
-    claimed: { pid: number | null; hostPid: number; ptyLaunchId: string },
-    now: string,
-  ): Promise<void> {
-    const yoloMode = detectYoloModeFromPids(claimed.pid, claimed.hostPid, 'claude-code');
-    const session: Session = {
-      id: sessionId,
-      repositoryId: repo.id,
-      type: 'claude-code',
-      launchMode: 'pty',
-      pid: claimed.pid,
-      hostPid: claimed.hostPid,
-      pidSource: 'pty_registry',
-      status: 'active',
-      startedAt: now,
-      endedAt: null,
-      lastActivityAt: now,
-      summary: null,
-      expiresAt: null,
-      model: null,
-      reconciled: true,
-      yoloMode,
-      ptyLaunchId: claimed.ptyLaunchId,
-    };
-    upsertSession(session);
-    this.sessionCreatedCallback?.(session);
-    await this.jsonlWatcher.watchFile(sessionId, repo.path);
-  }
-
-  private upsertAndBroadcastSession(
-    sessionId: string,
-    repo: Repository,
-    existing: Session | null | undefined,
-    now: string,
-  ): void {
-    const session: Session = existing ?? {
-      id: sessionId,
-      repositoryId: repo.id,
-      type: 'claude-code',
-      launchMode: null,
-      pid: null,
-      hostPid: null,
-      pidSource: null,
-      status: 'active',
-      startedAt: now,
-      endedAt: null,
-      lastActivityAt: now,
-      summary: null,
-      expiresAt: null,
-      model: null,
-      reconciled: true,
-      yoloMode: null,
-    };
-    session.status = 'active';
-    session.lastActivityAt = now;
-    upsertSession(session);
-    if (existing) {
-      broadcast({ type: 'session.updated', timestamp: now, data: session });
-    } else {
-      this.sessionCreatedCallback?.(session);
-    }
-  }
-
-  private async activateFoundSession(
-    sessionId: string,
-    repo: Repository,
-    claudePid: number | null,
-  ): Promise<void> {
-    const now = new Date().toISOString();
-    const existingSession = getSession(sessionId);
-
-    if (!existingSession) {
-      const claimed = ptyRegistry.claimForSession(sessionId, repo.path, 'claude-code');
-      if (claimed) {
-        logger.info(
-          `[ClaudeDetector] session activated via PTY claim sessionId=${sessionId} hostPid=${claimed.hostPid} pid=${claimed.pid}`,
-        );
-        await this.createPtySession(sessionId, repo, claimed, now);
-        return;
-      }
-    }
-
-    if (existingSession?.status === 'active') {
-      await this.jsonlWatcher.watchFile(sessionId, repo.path);
-      return;
-    }
-
-    // Don't re-activate a PTY session whose launcher has already disconnected.
-    // When the terminal closes, the WS close handler calls ptyRegistry.unregister(),
-    // so has() being false means the launcher is gone and the session should stay ended.
-    if (existingSession?.launchMode === 'pty' && !ptyRegistry.has(sessionId)) {
-      logger.info(
-        `[ClaudeDetector] skipping re-activation — PTY launcher gone sessionId=${sessionId}`,
-      );
-      return;
-    }
-    this.jsonlWatcher.closeWatcher(sessionId);
-    const base: Session = existingSession ?? {
-      id: sessionId,
-      repositoryId: repo.id,
-      type: 'claude-code',
-      launchMode: null,
-      pid: claudePid,
-      hostPid: null,
-      pidSource: null,
-      status: 'active',
-      startedAt: now,
-      endedAt: null,
-      lastActivityAt: now,
-      summary: null,
-      expiresAt: null,
-      model: null,
-      reconciled: true,
-      yoloMode: claudePid ? detectYoloModeFromPids(claudePid, null, 'claude-code') : null,
-    };
-    const isNewSession = !existingSession;
-    const activated = {
-      ...base,
-      status: 'active' as const,
-      endedAt: null as null,
-      lastActivityAt: now,
-      pid: claudePid,
-    };
-    logger.info(`[ClaudeDetector] session activated sessionId=${sessionId} pid=${claudePid}`);
-    upsertSession(activated);
-    if (isNewSession) {
-      this.sessionCreatedCallback?.(activated);
-    }
-    await this.jsonlWatcher.watchFile(sessionId, repo.path);
-  }
-
-  closeSessionWatcher(sessionId: string): void {
-    this.jsonlWatcher.closeWatcher(sessionId);
-  }
-
-  stopWatchers(): void {
-    this.jsonlWatcher.stopAll();
   }
 }

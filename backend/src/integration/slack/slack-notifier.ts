@@ -14,6 +14,7 @@ import {
   getSlackThreadByTs,
   upsertSlackThread,
   deleteSlackThread,
+  getSessions,
 } from '../../db/database.js';
 import { MessageQueue } from '../../services/message-queue.js';
 import { SessionDiffTracker } from '../../services/session-diff-tracker.js';
@@ -94,6 +95,7 @@ export class SlackNotifier implements NotificationIntegration {
 
     this.active = true;
     this.subscribeToEvents();
+    this.seedActiveSessions();
     log.info(`Initialized, posting to channel ${this.config.channelId}`);
     return true;
   }
@@ -263,7 +265,7 @@ export class SlackNotifier implements NotificationIntegration {
   }
 
   async onSessionUpdated(session: Session): Promise<void> {
-    log.debug(`slack.session.updated.received: session=${session.id} status=${session.status}`);
+    log.info(`slack.session.updated.received: session=${session.id} status=${session.status}`);
     if (!this.active || !this.client) {
       return;
     }
@@ -273,13 +275,13 @@ export class SlackNotifier implements NotificationIntegration {
 
     const changes = this.diffTracker.update(session);
     if (changes === null) {
-      log.debug(
+      log.info(
         `slack.session.updated.skipped: no baseline, recording current state for session=${session.id}`,
       );
       return;
     }
     if (changes.length === 0) {
-      log.debug(`slack.session.updated.skipped: no meaningful changes for session=${session.id}`);
+      log.info(`slack.session.updated.skipped: no meaningful changes for session=${session.id}`);
       return;
     }
 
@@ -489,6 +491,18 @@ export class SlackNotifier implements NotificationIntegration {
         log.error(`Unhandled error in session.pending_choice handler:`, err);
       });
     });
+  }
+
+  // Seed diff tracker baselines for sessions that were already active when this
+  // integration started, so onSessionUpdated can detect meaningful changes immediately.
+  private seedActiveSessions(): void {
+    const active = getSessions({ status: 'active' });
+    for (const session of active) {
+      this.diffTracker.seed(session);
+    }
+    if (active.length > 0) {
+      log.info(`slack.seed: seeded ${active.length} already-active sessions`);
+    }
   }
 }
 

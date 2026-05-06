@@ -66,6 +66,7 @@ export abstract class JsonlWatcherBase {
   protected readonly watchers = new Map<string, FSWatcher>();
   protected readonly filePositions = new Map<string, number>();
   protected readonly sequenceCounters = new Map<string, number>();
+  protected readonly pendingAskUserCallIds = new Map<string, string>();
   protected readonly outputStore = new OutputStore();
 
   protected abstract readonly tag: string;
@@ -75,6 +76,13 @@ export abstract class JsonlWatcherBase {
     seq: number,
     makeId: (blockIndex: number) => string,
   ): SessionOutput[];
+
+  /**
+   * Start watching the per-session JSONL output file.
+   * Subclasses resolve the file path from a tool-specific input (Claude derives
+   * it from a repoPath; Copilot from a session dirPath).
+   */
+  abstract watchFile(sessionId: string, path: string): Promise<void>;
 
   protected async attachWatcher(sessionId: string, filePath: string): Promise<void> {
     if (this.watchers.has(sessionId)) {
@@ -149,6 +157,17 @@ export abstract class JsonlWatcherBase {
     }
   }
 
+  closeWatcher(sessionId: string): void {
+    this.watchers
+      .get(sessionId)
+      ?.close()
+      .catch(() => {});
+    this.watchers.delete(sessionId);
+    this.filePositions.delete(sessionId);
+    this.sequenceCounters.delete(sessionId);
+    this.pendingAskUserCallIds.delete(sessionId);
+  }
+
   stopWatchers(): void {
     for (const watcher of this.watchers.values()) {
       watcher.close().catch(() => {});
@@ -156,6 +175,7 @@ export abstract class JsonlWatcherBase {
     this.watchers.clear();
     this.filePositions.clear();
     this.sequenceCounters.clear();
+    this.pendingAskUserCallIds.clear();
   }
 
   protected onNewOutputs(_sessionId: string, _outputs: SessionOutput[]): void {}
