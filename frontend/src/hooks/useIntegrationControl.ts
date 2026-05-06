@@ -8,6 +8,7 @@ export function useIntegrationControl() {
   const { data } = useQuery({
     queryKey: ['integration-status'],
     queryFn: getIntegrationStatus,
+    refetchOnWindowFocus: false,
   });
 
   const integrationsEnabled = data?.integrationsEnabled === true;

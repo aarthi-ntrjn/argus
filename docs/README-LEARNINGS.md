@@ -418,3 +418,12 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: The mutation-updates-cache pattern prevents staleness in practice but does not signal to React Query that external changes cannot occur. The focus-refetch behaviour is invisible unless you watch the network inspector around the time you switch tabs.
 **How to prevent**: Any query whose only mutation path calls `setQueryData` (not just `invalidateQueries`) on success effectively owns its own freshness. Add `refetchOnWindowFocus: false` to those queries — the mutation is the source of truth, not a background refetch.
 **Fix summary**: Added `refetchOnWindowFocus: false` to the `useQuery` in `useArgusSettings.ts`.
+
+## T130 — Integration status has no WebSocket push so frontend polls on window focus
+
+**Date**: 2026-05-06
+**Symptom**: Tabbing back to the Argus UI after switching away triggered a `GET /api/v1/integrations` request even when nothing had changed in Slack or Teams.
+**Root cause**: The four start/stop route handlers in `integrations.ts` never called `broadcast()` after changing state, so the frontend had no push signal and relied on focus-refetch as its only way to learn of changes.
+**Why it was missed**: Integration status was treated the same as purely frontend-owned data (settings, todos) but it is not — the backend can independently lose a connection. The missing broadcast was never noticed because focus-refetch masked it.
+**How to prevent**: Any backend state that can change independently of a frontend action needs a WebSocket event. When adding a start/stop route, add the broadcast at the same time. The pattern: extract a `buildStatusPayload()` helper shared by the GET handler and the broadcast so the shapes stay in sync.
+**Fix summary**: Added `IntegrationStatusPayload` type and `'integration.status'` WsEvent to `event-dispatcher.ts`; extracted `buildStatusPayload()` and `broadcastStatus()` helpers in `integrations.ts` and called `broadcastStatus()` in all four start/stop handlers; added `integration.status` handler in `socket.ts`; added `refetchOnWindowFocus: false` to `useIntegrationControl.ts`.

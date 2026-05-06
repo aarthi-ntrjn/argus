@@ -8,6 +8,20 @@ import type {
 } from '../../models/index.js';
 import type { UpdateStatus } from '../../services/update-service.js';
 
+export interface IntegrationStatusPayload {
+  integrationsEnabled: boolean;
+  slack: {
+    connectionStatus: 'connected' | 'stopped' | 'unconfigured';
+    notifier: { running: boolean } | null;
+    listener: { running: boolean } | null;
+  };
+  teams: {
+    connectionStatus: 'connected' | 'stopped' | 'unconfigured';
+    notifier: { running: boolean } | null;
+    listener: { running: boolean } | null;
+  };
+}
+
 export type WsEventType =
   | 'session.created'
   | 'session.updated'
@@ -45,7 +59,8 @@ export type WsEvent =
   | { type: 'repository.added'; timestamp: string; data: Repository }
   | { type: 'repository.updated'; timestamp: string; data: Repository }
   | { type: 'repository.removed'; timestamp: string; data: { id: string } }
-  | { type: 'update.status'; timestamp: string; data: UpdateStatus };
+  | { type: 'update.status'; timestamp: string; data: UpdateStatus }
+  | { type: 'integration.status'; timestamp: string; data: IntegrationStatusPayload };
 
 const clients = new Set<WebSocket>();
 
