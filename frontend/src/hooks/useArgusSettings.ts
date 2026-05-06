@@ -18,6 +18,7 @@ export function useArgusSettings(): UseArgusSettingsResult {
     queryKey: ARGUS_SETTINGS_QUERY_KEY,
     queryFn: getArgusSettings,
     staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 
   const { mutateAsync: patchSetting } = useMutation({

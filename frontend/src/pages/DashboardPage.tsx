@@ -189,6 +189,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ['repositories'],
     queryFn: getRepositories,
+    refetchOnWindowFocus: false,
   });
 
   const {
@@ -198,6 +199,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ['sessions'],
     queryFn: () => getSessions(),
+    refetchOnWindowFocus: false,
   });
 
   // When the selected session ends, auto-switch to the first still-active session

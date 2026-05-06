@@ -27,6 +27,7 @@ export default function OutputPane({
   const { data, isError } = useQuery({
     queryKey: ['session-output', session.id],
     queryFn: () => getSessionOutput(session.id, { limit: 100 }),
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {

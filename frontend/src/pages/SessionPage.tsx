@@ -24,12 +24,14 @@ export default function SessionPage() {
     queryKey: ['session', id],
     queryFn: () => getSession(id!),
     enabled: !!id,
+    refetchOnWindowFocus: false,
   });
 
   const { data: repos = [] } = useQuery({
     queryKey: ['repositories'],
     queryFn: getRepositories,
     enabled: !!session,
+    refetchOnWindowFocus: false,
   });
 
   const repo = session ? repos.find((r) => r.id === session.repositoryId) : undefined;

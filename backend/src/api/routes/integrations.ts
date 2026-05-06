@@ -13,6 +13,7 @@ import {
 } from '../../services/integration-status.js';
 import { setSlackServices } from './health.js';
 import type { SessionMonitor } from '../../services/session-monitor.js';
+import { broadcast, type IntegrationStatusPayload } from '../ws/event-dispatcher.js';
 
 let slackNotifier: SlackNotifier | null = null;
 let slackListener: SlackListener | null = null;
@@ -35,25 +36,33 @@ export function setIntegrationServices(
   integrationsEnabled = enabled;
 }
 
+function buildStatusPayload(): IntegrationStatusPayload {
+  const slackConfig = loadSlackConfig();
+  const teamsConfig = loadTeamsConfig();
+  const slackRunning = slackNotifier?.isRunning === true;
+  const teamsRunning = teamsNotifier?.isRunning === true;
+  return {
+    integrationsEnabled,
+    slack: {
+      connectionStatus: getSlackConnectionStatus(slackConfig, slackRunning),
+      notifier: slackNotifier ? { running: slackRunning } : null,
+      listener: slackListener ? { running: slackListener.isRunning } : null,
+    },
+    teams: {
+      connectionStatus: getTeamsConnectionStatus(teamsConfig, teamsRunning),
+      notifier: teamsNotifier ? { running: teamsRunning } : null,
+      listener: teamsListener ? { running: teamsListener.isRunning } : null,
+    },
+  };
+}
+
+function broadcastStatus(): void {
+  broadcast({ type: 'integration.status', timestamp: new Date().toISOString(), data: buildStatusPayload() });
+}
+
 const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/v1/integrations', async (_request, reply) => {
-    const slackConfig = loadSlackConfig();
-    const teamsConfig = loadTeamsConfig();
-    const slackRunning = slackNotifier?.isRunning === true;
-    const teamsRunning = teamsNotifier?.isRunning === true;
-    return reply.send({
-      integrationsEnabled,
-      slack: {
-        connectionStatus: getSlackConnectionStatus(slackConfig, slackRunning),
-        notifier: slackNotifier ? { running: slackRunning } : null,
-        listener: slackListener ? { running: slackListener.isRunning } : null,
-      },
-      teams: {
-        connectionStatus: getTeamsConnectionStatus(teamsConfig, teamsRunning),
-        notifier: teamsNotifier ? { running: teamsRunning } : null,
-        listener: teamsListener ? { running: teamsListener.isRunning } : null,
-      },
-    });
+    return reply.send(buildStatusPayload());
   });
 
   fastify.post('/api/v1/integrations/slack/start', async (_request, reply) => {
@@ -77,6 +86,7 @@ const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
     setIntegrationEnabled('slack', true);
     telemetryService.setIntegrationStatus('slack', 'on');
     telemetryService.sendEvent('integration_started', { integration_platform: 'slack' });
+    broadcastStatus();
     return reply.send({ started });
   });
 
@@ -89,6 +99,7 @@ const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
     setIntegrationEnabled('slack', false);
     telemetryService.setIntegrationStatus('slack', 'off');
     telemetryService.sendEvent('integration_stopped', { integration_platform: 'slack' });
+    broadcastStatus();
     return reply.send({ stopped: true });
   });
 
@@ -101,6 +112,7 @@ const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
     setIntegrationEnabled('teams', true);
     telemetryService.setIntegrationStatus('teams', 'on');
     telemetryService.sendEvent('integration_started', { integration_platform: 'teams' });
+    broadcastStatus();
     return reply.send({ started });
   });
 
@@ -113,6 +125,7 @@ const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
     setIntegrationEnabled('teams', false);
     telemetryService.setIntegrationStatus('teams', 'off');
     telemetryService.sendEvent('integration_stopped', { integration_platform: 'teams' });
+    broadcastStatus();
     return reply.send({ stopped: true });
   });
 };

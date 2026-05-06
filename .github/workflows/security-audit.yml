@@ -1,0 +1,255 @@
+# Daily vulnerability audit — runs on a schedule and on manual dispatch.
+# Checks all severity levels (moderate and above), unlike the CI pipeline
+# which only fails on critical CVEs.
+#
+# Reports findings via:
+#   - GitHub Issues (always, when vulnerabilities are found)
+#   - Teams (if TEAMS_WEBHOOK_URL secret is set)
+#   - Slack  (if SLACK_WEBHOOK_URL secret is set)
+
+name: Security Audit
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 20:00 PDT (UTC-7) daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (lockfile-enforced, scripts suppressed)
+        run: npm ci --ignore-scripts --engine-strict
+
+      - name: Run audit and capture results
+        id: audit
+        run: |
+          npm audit --json > audit.json 2>/dev/null || true
+          npm audit > audit.txt 2>&1 || true
+          python3 - <<'EOF'
+          import json, os
+          try:
+              with open("audit.json") as f:
+                  data = json.load(f)
+          except Exception:
+              data = {}
+          meta  = data.get("metadata", {}).get("vulnerabilities", {})
+          total = sum(meta.get(s, 0) for s in ["moderate", "high", "critical"])
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"total={total}\n")
+              out.write(f"critical={meta.get('critical', 0)}\n")
+              out.write(f"high={meta.get('high', 0)}\n")
+              out.write(f"moderate={meta.get('moderate', 0)}\n")
+          # Write per-package details for the Teams card
+          severity_order = {"critical": 0, "high": 1, "moderate": 2}
+          details = []
+          for name, info in data.get("vulnerabilities", {}).items():
+              sev = info.get("severity", "")
+              if sev not in severity_order:
+                  continue
+              titles = [
+                  v.get("title", "")
+                  for v in info.get("via", [])
+                  if isinstance(v, dict) and v.get("title")
+              ]
+              details.append({
+                  "name":         name,
+                  "severity":     sev,
+                  "title":        titles[0] if titles else "",
+                  "fixAvailable": bool(info.get("fixAvailable")),
+              })
+          details.sort(key=lambda x: severity_order.get(x["severity"], 9))
+          with open("vuln-details.json", "w") as f:
+              json.dump(details, f)
+          EOF
+
+      - name: Create GitHub Issue
+        if: steps.audit.outputs.total != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUDIT_TOTAL: ${{ steps.audit.outputs.total }}
+          AUDIT_CRITICAL: ${{ steps.audit.outputs.critical }}
+          AUDIT_HIGH: ${{ steps.audit.outputs.high }}
+          AUDIT_MODERATE: ${{ steps.audit.outputs.moderate }}
+        run: |
+          gh label create "security-audit" --color "FF0000" --description "Automated security audit findings" --force 2>/dev/null || true
+          python3 - <<'EOF'
+          import os, subprocess, datetime
+          date = datetime.date.today().isoformat()
+          total    = os.environ["AUDIT_TOTAL"]
+          critical = os.environ["AUDIT_CRITICAL"]
+          high     = os.environ["AUDIT_HIGH"]
+          moderate = os.environ["AUDIT_MODERATE"]
+          with open("audit.txt") as f:
+              report = f.read().strip()
+          body = (
+              f"## npm Audit Report — {date}\n\n"
+              f"**{total} vulnerabilities found:** {critical} critical, {high} high, {moderate} moderate\n\n"
+              f"```\n{report}\n```\n\n"
+              f"Run `npm audit` locally for details, or `npm audit fix --force` to attempt automatic fixes."
+          )
+          with open("issue-body.md", "w") as f:
+              f.write(body)
+          result = subprocess.run([
+              "gh", "issue", "create",
+              "--title", f"Security Audit ({date}): {total} vulnerabilities found",
+              "--body-file", "issue-body.md",
+              "--label", "security-audit",
+          ], check=True, capture_output=True, text=True)
+          issue_url = result.stdout.strip()
+          print(f"Issue created: {issue_url}")
+          with open("issue-url.txt", "w") as f:
+              f.write(issue_url)
+          EOF
+
+      - name: Notify Teams
+        # Sends an Adaptive Card to the Power Automate webhook.
+        # The flow action "Post card in a chat or channel" expects the body
+        # to be a valid Adaptive Card JSON (type: AdaptiveCard).
+        if: env.TEAMS_WEBHOOK_URL != ''
+        env:
+          AUDIT_TOTAL: ${{ steps.audit.outputs.total }}
+          AUDIT_CRITICAL: ${{ steps.audit.outputs.critical }}
+          AUDIT_HIGH: ${{ steps.audit.outputs.high }}
+          AUDIT_MODERATE: ${{ steps.audit.outputs.moderate }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, datetime, urllib.request, urllib.error
+          total    = int(os.environ.get("AUDIT_TOTAL", "0"))
+          critical = os.environ.get("AUDIT_CRITICAL", "0")
+          high     = os.environ.get("AUDIT_HIGH", "0")
+          moderate = os.environ.get("AUDIT_MODERATE", "0")
+          date     = datetime.date.today().isoformat()
+          emoji    = {"critical": "🔴", "high": "🟠", "moderate": "🟡"}
+          try:
+              with open("issue-url.txt") as f:
+                  issue_url = f.read().strip()
+          except Exception:
+              issue_url = ""
+          actions = (
+              [{"type": "Action.OpenUrl", "title": "View GitHub Issue", "url": issue_url}]
+              if issue_url else []
+          )
+          if total == 0:
+              card_body = [
+                  {"type": "TextBlock", "size": "Medium", "weight": "Bolder",
+                   "text": f"✅ Security Audit Clean - {date}"},
+                  {"type": "TextBlock", "wrap": True,
+                   "text": "npm audit found no moderate, high, or critical vulnerabilities."},
+              ]
+          else:
+              try:
+                  with open("vuln-details.json") as f:
+                      vulns = json.load(f)
+              except Exception:
+                  vulns = []
+              facts = [
+                  {
+                      "title": f"{emoji.get(v['severity'], '⚪')} {v['name']} ({v['severity']})",
+                      "value": (v["title"] or "No description") + (" — fix available" if v["fixAvailable"] else ""),
+                  }
+                  for v in vulns
+              ]
+              card_body = [
+                  {"type": "TextBlock", "size": "Medium", "weight": "Bolder", "color": "Attention",
+                   "text": f"🔴 Security Audit: {total} vulnerabilities found - {date}"},
+                  # Severity summary row — each count colour-coded
+                  {
+                      "type": "ColumnSet",
+                      "columns": [
+                          {"type": "Column", "width": "auto", "items": [
+                              {"type": "TextBlock", "weight": "Bolder", "color": "Attention",
+                               "text": f"🔴 {critical} critical"},
+                          ]},
+                          {"type": "Column", "width": "auto", "items": [
+                              {"type": "TextBlock", "weight": "Bolder", "color": "Warning",
+                               "text": f"🟠 {high} high"},
+                          ]},
+                          {"type": "Column", "width": "stretch", "items": [
+                              {"type": "TextBlock", "weight": "Bolder", "color": "Accent",
+                               "text": f"🟡 {moderate} moderate"},
+                          ]},
+                      ],
+                  },
+                  {"type": "FactSet", "separator": True, "facts": facts},
+              ]
+          card = {
+              "type":    "AdaptiveCard",
+              "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+              "version": "1.4",
+              "body":    card_body,
+              "actions": actions,
+          }
+          req = urllib.request.Request(
+              os.environ["TEAMS_WEBHOOK_URL"],
+              data=json.dumps(card).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              urllib.request.urlopen(req)
+          except urllib.error.HTTPError as e:
+              print(f"HTTP {e.code}: {e.reason} — {e.read().decode()}")
+              raise
+          EOF
+
+      - name: Notify Slack
+        if: env.SLACK_WEBHOOK_URL != ''
+        env:
+          AUDIT_TOTAL: ${{ steps.audit.outputs.total }}
+          AUDIT_CRITICAL: ${{ steps.audit.outputs.critical }}
+          AUDIT_HIGH: ${{ steps.audit.outputs.high }}
+          AUDIT_MODERATE: ${{ steps.audit.outputs.moderate }}
+        run: |
+          python3 - <<'EOF'
+          import json, urllib.request, os, datetime
+          total = int(os.environ.get("AUDIT_TOTAL", "0"))
+          date  = datetime.date.today().isoformat()
+          if total == 0:
+              header = f"Security Audit Clean - {date}"
+              body   = "npm audit found no moderate, high, or critical vulnerabilities."
+          else:
+              critical = os.environ.get("AUDIT_CRITICAL", "0")
+              high     = os.environ.get("AUDIT_HIGH", "0")
+              moderate = os.environ.get("AUDIT_MODERATE", "0")
+              header = f"Security Audit: {total} vulnerabilities - {date}"
+              body   = f"*{critical}* critical, *{high}* high, *{moderate}* moderate\nSee GitHub Issues for the full report."
+          payload = {
+              "blocks": [
+                  {"type": "header",  "text": {"type": "plain_text", "text": header}},
+                  {"type": "section", "text": {"type": "mrkdwn",     "text": body}},
+              ]
+          }
+          req = urllib.request.Request(
+              os.environ["SLACK_WEBHOOK_URL"],
+              data=json.dumps(payload).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          urllib.request.urlopen(req)
+          EOF
+
+      - name: Fail if vulnerabilities found
+        # Fail the workflow run so it shows as red in the Actions UI and
+        # triggers any branch notification emails GitHub sends on failure.
+        if: steps.audit.outputs.total != '0'
+        run: |
+          echo "Found ${{ steps.audit.outputs.total }} vulnerabilities (see GitHub Issue for details)."
+          exit 1

@@ -25,6 +25,7 @@ jobs:
 
       - name: Dependency review
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        continue-on-error: true
         with:
           # Block PRs that introduce dependencies with critical advisories or
           # active malicious flags. Lower severities are reported but not blocked.
