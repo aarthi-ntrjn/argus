@@ -62,7 +62,7 @@ vi.mock('fs', async (importOriginal) => {
       if (pathStr.includes('sessions') && pathStr.endsWith('.json')) {
         const pid = parseInt(pathStr.replace(/^.*[/\\](\d+)\.json$/, '$1'), 10);
         const entry = Object.values(fakeRegistryEntries).find(e => e.pid === pid);
-        if (entry) return JSON.stringify({ ...entry, startedAt: Date.now(), kind: 'interactive', entrypoint: 'cli' });
+        if (entry) {return JSON.stringify({ ...entry, startedAt: Date.now(), kind: 'interactive', entrypoint: 'cli' });}
       }
       return actual.readFileSync(p as string, _enc as string);
     }),

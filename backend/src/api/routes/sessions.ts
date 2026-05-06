@@ -43,9 +43,9 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: { id: string } }>('/api/v1/sessions/:id', async (req, reply) => {
     const session = getSession(req.params.id);
     if (!session)
-      return reply
+      {return reply
         .status(404)
-        .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+        .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });}
     return reply.send(withPtyConnected(session));
   });
 
@@ -54,9 +54,9 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       const session = getSession(req.params.id);
       if (!session)
-        return reply
+        {return reply
           .status(404)
-          .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+          .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });}
       const limit = Math.min(parseInt(req.query.limit ?? '100', 10), 1000);
       const page = outputStore.getOutputPage(session.id, limit, req.query.before);
       return reply.send(page);
@@ -70,23 +70,23 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
     } catch (err: unknown) {
       const e = err as { code?: string; message?: string };
       if (e.code === 'NOT_FOUND')
-        return reply
+        {return reply
           .status(404)
-          .send({ error: 'NOT_FOUND', message: e.message, requestId: req.id });
+          .send({ error: 'NOT_FOUND', message: e.message, requestId: req.id });}
       if (e.code === 'CONFLICT')
-        return reply.status(409).send({ error: 'CONFLICT', message: e.message, requestId: req.id });
+        {return reply.status(409).send({ error: 'CONFLICT', message: e.message, requestId: req.id });}
       if (e.code === 'PID_NOT_SET')
-        return reply
+        {return reply
           .status(422)
-          .send({ error: 'PID_NOT_SET', message: e.message, requestId: req.id });
+          .send({ error: 'PID_NOT_SET', message: e.message, requestId: req.id });}
       if (e.code === 'PID_NOT_FOUND')
-        return reply
+        {return reply
           .status(422)
-          .send({ error: 'PID_NOT_FOUND', message: e.message, requestId: req.id });
+          .send({ error: 'PID_NOT_FOUND', message: e.message, requestId: req.id });}
       if (e.code === 'PID_NOT_AI_TOOL')
-        return reply
+        {return reply
           .status(403)
-          .send({ error: 'PID_NOT_AI_TOOL', message: e.message, requestId: req.id });
+          .send({ error: 'PID_NOT_AI_TOOL', message: e.message, requestId: req.id });}
       throw err;
     }
   });
@@ -104,23 +104,23 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
     } catch (err: unknown) {
       const e = err as { code?: string; message?: string };
       if (e.code === 'NOT_FOUND')
-        return reply
+        {return reply
           .status(404)
-          .send({ error: 'NOT_FOUND', message: e.message, requestId: req.id });
+          .send({ error: 'NOT_FOUND', message: e.message, requestId: req.id });}
       if (e.code === 'CONFLICT')
-        return reply.status(409).send({ error: 'CONFLICT', message: e.message, requestId: req.id });
+        {return reply.status(409).send({ error: 'CONFLICT', message: e.message, requestId: req.id });}
       if (e.code === 'PID_NOT_SET')
-        return reply
+        {return reply
           .status(422)
-          .send({ error: 'PID_NOT_SET', message: e.message, requestId: req.id });
+          .send({ error: 'PID_NOT_SET', message: e.message, requestId: req.id });}
       if (e.code === 'PID_NOT_FOUND')
-        return reply
+        {return reply
           .status(422)
-          .send({ error: 'PID_NOT_FOUND', message: e.message, requestId: req.id });
+          .send({ error: 'PID_NOT_FOUND', message: e.message, requestId: req.id });}
       if (e.code === 'PID_NOT_AI_TOOL')
-        return reply
+        {return reply
           .status(403)
-          .send({ error: 'PID_NOT_AI_TOOL', message: e.message, requestId: req.id });
+          .send({ error: 'PID_NOT_AI_TOOL', message: e.message, requestId: req.id });}
       throw err;
     }
   });
@@ -130,9 +130,9 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Params: { id: string } }>('/api/v1/sessions/:id/dismiss', async (req, reply) => {
     const session = getSession(req.params.id);
     if (!session)
-      return reply
+      {return reply
         .status(404)
-        .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+        .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });}
     if (session.status === 'ended' || session.status === 'completed') {
       return reply.status(409).send({ error: 'CONFLICT', message: 'Session already ended' });
     }
@@ -155,14 +155,14 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       const { prompt, raw } = req.body ?? {};
       if (!prompt)
-        return reply.status(400).send({ error: 'MISSING_PROMPT', message: 'prompt is required' });
+        {return reply.status(400).send({ error: 'MISSING_PROMPT', message: 'prompt is required' });}
 
       try {
         const session = getSession(req.params.id);
         if (!session)
-          return reply
+          {return reply
             .status(404)
-            .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+            .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });}
 
         const skipEnter = raw ? true : !!_cliManager?.getPendingChoice(req.params.id);
         const action = await sessionController.sendPrompt(req.params.id, prompt, skipEnter);
@@ -170,9 +170,9 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
       } catch (err: unknown) {
         const e = err as { code?: string; message?: string };
         if (e.code === 'NOT_FOUND')
-          return reply.status(404).send({ error: 'NOT_FOUND', message: e.message });
+          {return reply.status(404).send({ error: 'NOT_FOUND', message: e.message });}
         if (e.code === 'CONFLICT')
-          return reply.status(409).send({ error: 'CONFLICT', message: e.message });
+          {return reply.status(409).send({ error: 'CONFLICT', message: e.message });}
         throw err;
       }
     },
@@ -183,18 +183,18 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       const { choiceNumber, prompt } = req.body ?? {};
       if (!choiceNumber)
-        return reply
+        {return reply
           .status(400)
-          .send({ error: 'MISSING_CHOICE_NUMBER', message: 'choiceNumber is required' });
+          .send({ error: 'MISSING_CHOICE_NUMBER', message: 'choiceNumber is required' });}
       if (!prompt)
-        return reply.status(400).send({ error: 'MISSING_PROMPT', message: 'prompt is required' });
+        {return reply.status(400).send({ error: 'MISSING_PROMPT', message: 'prompt is required' });}
 
       try {
         const session = getSession(req.params.id);
         if (!session)
-          return reply
+          {return reply
             .status(404)
-            .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+            .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });}
 
         const action = await sessionController.sendChoiceWithPrompt(
           req.params.id,
@@ -205,9 +205,9 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
       } catch (err: unknown) {
         const e = err as { code?: string; message?: string };
         if (e.code === 'NOT_FOUND')
-          return reply.status(404).send({ error: 'NOT_FOUND', message: e.message });
+          {return reply.status(404).send({ error: 'NOT_FOUND', message: e.message });}
         if (e.code === 'CONFLICT')
-          return reply.status(409).send({ error: 'CONFLICT', message: e.message });
+          {return reply.status(409).send({ error: 'CONFLICT', message: e.message });}
         throw err;
       }
     },
@@ -216,9 +216,9 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Params: { id: string } }>('/api/v1/sessions/:id/reject-tool', async (req, reply) => {
     const session = getSession(req.params.id);
     if (!session)
-      return reply
+      {return reply
         .status(404)
-        .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
+        .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });}
 
     try {
       // Send Ctrl+C to cancel the pending tool in the PTY

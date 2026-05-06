@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 // Mock chokidar — capture the 'change' handler so tests can trigger it
 let capturedChangeHandler: (() => void) | null = null;
 const mockWatcherOn = vi.fn((event: string, handler: () => void) => {
-  if (event === 'change') capturedChangeHandler = handler;
+  if (event === 'change') {capturedChangeHandler = handler;}
   return mockFsWatcher;
 });
 const mockFsWatcher = { on: mockWatcherOn, close: vi.fn().mockResolvedValue(undefined) };

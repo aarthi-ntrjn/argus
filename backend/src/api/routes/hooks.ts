@@ -64,13 +64,9 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         return reply.send({ ok: true });
       }
 
-      if (isToolUse && payload?.tool_name !== 'AskUserQuestion') {
-        return reply.send({ ok: true });
-      }
-
       const sessionId = payload.session_id;
 
-      // Validate that session_id is a well-formed UUID v4 string.
+      // Validate session_id before filtering by tool_name so invalid IDs are always rejected.
       if (typeof sessionId !== 'string' || !UUID_V4_RE.test(sessionId)) {
         return reply.status(400).send({
           error: 'INVALID_SESSION_ID',
@@ -89,6 +85,10 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
             requestId: req.id,
           });
         }
+      }
+
+      if (isToolUse && payload?.tool_name !== 'AskUserQuestion') {
+        return reply.send({ ok: true });
       }
 
       req.log.debug(
@@ -113,19 +113,20 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       const body = req.body ?? {};
       const event = req.query.event;
-      const isLifecycle = event === 'sessionStart' || event === 'sessionEnd';
+
+      // Reject missing or unrecognized event values before any further processing.
+      if (!event || !(event in EVENT_TO_PASCAL)) {
+        return reply.status(400).send({
+          error: 'INVALID_HOOK_EVENT',
+          message: 'event query parameter must be one of: sessionStart, sessionEnd, preToolUse, postToolUse',
+          requestId: req.id,
+        });
+      }
+
       const isToolUse = event === 'preToolUse' || event === 'postToolUse';
 
-      if (!isLifecycle && !isToolUse) {
-        return reply.send({ ok: true });
-      }
-
-      if (isToolUse && body.toolName !== 'ask_user') {
-        return reply.send({ ok: true });
-      }
-
       const sessionId = body.sessionId;
-      
+
       // Validate that sessionId is a well-formed UUID v4 string.
       if (typeof sessionId !== 'string' || !UUID_V4_RE.test(sessionId)) {
         return reply.status(400).send({
@@ -133,6 +134,10 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
           message: 'sessionId must be a valid UUID v4',
           requestId: req.id,
         });
+      }
+
+      if (isToolUse && body.toolName !== 'ask_user') {
+        return reply.send({ ok: true });
       }
 
       // toolArgs arrives as a JSON string; parse it into a structured object.

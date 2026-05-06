@@ -35,7 +35,7 @@ describe('ClaudeCodeHooksInjector', () => {
   });
 
   afterEach(() => {
-    if (existsSync(CLAUDE_SETTINGS_PATH)) rmSync(CLAUDE_SETTINGS_PATH, { force: true });
+    if (existsSync(CLAUDE_SETTINGS_PATH)) {rmSync(CLAUDE_SETTINGS_PATH, { force: true });}
   });
 
   describe('injectForAll()', () => {

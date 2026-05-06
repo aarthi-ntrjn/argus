@@ -55,7 +55,7 @@ describe('CopilotHooksInjector', () => {
   afterEach(() => {
     [TEST_REPO_A, TEST_REPO_B].forEach((dir) => {
       const hooksDir = join(dir, '.github', 'hooks');
-      if (existsSync(hooksDir)) rmSync(hooksDir, { recursive: true, force: true });
+      if (existsSync(hooksDir)) {rmSync(hooksDir, { recursive: true, force: true });}
     });
   });
 

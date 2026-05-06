@@ -51,7 +51,7 @@ export function parsePendingChoicePayload(toolInput: Record<string, unknown>): {
     const rawChoices: unknown[] = Array.isArray(toolInput.choices) ? toolInput.choices : [];
     const choices = rawChoices
       .map((c) => {
-        if (typeof c === 'string') return c;
+        if (typeof c === 'string') {return c;}
         if (
           c &&
           typeof c === 'object' &&

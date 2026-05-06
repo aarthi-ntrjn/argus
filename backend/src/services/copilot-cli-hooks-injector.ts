@@ -42,7 +42,7 @@ function buildEntry(event: CopilotEvent, port: number): HookEntry {
 }
 
 function readHooksJson(filePath: string): HooksJson {
-  if (!existsSync(filePath)) return { version: 1, hooks: {} };
+  if (!existsSync(filePath)) {return { version: 1, hooks: {} };}
   try {
     return JSON.parse(readFileSync(filePath, 'utf-8')) as HooksJson;
   } catch {
@@ -69,7 +69,7 @@ export class CopilotHooksInjector implements CliHooksInjector {
       const filePath = hooksJsonPath(repoPath);
       const data = readHooksJson(filePath);
       data.version = 1;
-      if (!data.hooks) data.hooks = {};
+      if (!data.hooks) {data.hooks = {};}
 
       for (const event of EVENTS) {
         const existing: HookEntry[] = (data.hooks[event] ?? []) as HookEntry[];
@@ -92,10 +92,10 @@ export class CopilotHooksInjector implements CliHooksInjector {
   removeForRepo(repoPath: string): void {
     try {
       const filePath = hooksJsonPath(repoPath);
-      if (!existsSync(filePath)) return;
+      if (!existsSync(filePath)) {return;}
 
       const data = readHooksJson(filePath);
-      if (!data.hooks) return;
+      if (!data.hooks) {return;}
 
       for (const event of Object.keys(data.hooks)) {
         const entries = (data.hooks[event] ?? []) as HookEntry[];

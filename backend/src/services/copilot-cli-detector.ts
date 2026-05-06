@@ -38,7 +38,7 @@ interface WorkspaceYaml {
 
 /** js-yaml may yield Date or string for unquoted vs quoted timestamps. Normalize to ISO string. */
 function toIsoString(val: string | Date | undefined): string | null {
-  if (val === undefined) return null;
+  if (val === undefined) {return null;}
   return val instanceof Date ? val.toISOString() : val;
 }
 
@@ -130,14 +130,14 @@ export class CopilotCliDetector
     try {
       const entries = readdirSync(this.sessionsDir, { withFileTypes: true });
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory()) {continue;}
         const dirPath = join(this.sessionsDir, entry.name);
         if (previousActive.has(dirPath) || force) {
           dirsToProcess.add(dirPath);
           continue;
         }
         try {
-          if (statSync(dirPath).mtimeMs > this.lastScanTime) dirsToProcess.add(dirPath);
+          if (statSync(dirPath).mtimeMs > this.lastScanTime) {dirsToProcess.add(dirPath);}
         } catch {
           /* ignore */
         }
@@ -154,9 +154,9 @@ export class CopilotCliDetector
     const nowIso = new Date().toISOString();
     for (const dirPath of dirsToProcess) {
       const data = this.readDirEntry(dirPath);
-      if (!data) continue;
+      if (!data) {continue;}
       const cwd = data.workspace.cwd;
-      if (!cwd) continue;
+      if (!cwd) {continue;}
       result.push({
         sessionId: data.workspace.id ?? randomUUID(),
         cwd,
@@ -200,7 +200,7 @@ export class CopilotCliDetector
    * detect the eventual end transition promptly.
    */
   protected onSessionBuilt(entry: CopilotSessionEntry, session: Session | null): void {
-    if (session?.status === 'active') this.activeDirPaths.add(entry.dirPath);
+    if (session?.status === 'active') {this.activeDirPaths.add(entry.dirPath);}
   }
 
   private findLockFile(dirPath: string): string | null {

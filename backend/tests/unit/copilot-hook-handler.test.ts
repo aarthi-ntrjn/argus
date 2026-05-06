@@ -86,8 +86,8 @@ describe('CopilotCliDetector — handleHookPayload', () => {
   afterEach(() => {
     dbModule.closeDb();
     vi.resetModules();
-    if (existsSync(FAKE_HOME_DIR)) rmSync(FAKE_HOME_DIR, { recursive: true, force: true });
-    if (existsSync(TEST_REPO_PATH)) rmSync(TEST_REPO_PATH, { recursive: true, force: true });
+    if (existsSync(FAKE_HOME_DIR)) {rmSync(FAKE_HOME_DIR, { recursive: true, force: true });}
+    if (existsSync(TEST_REPO_PATH)) {rmSync(TEST_REPO_PATH, { recursive: true, force: true });}
   });
 
   describe('ask_user pending choice (flat format)', () => {
