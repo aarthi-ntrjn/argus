@@ -2,20 +2,17 @@ import { randomUUID } from 'crypto';
 import type { App } from '@microsoft/teams.apps';
 import { MessageActivity } from '@microsoft/teams.api';
 import { AdaptiveCard, TextBlock, ExecuteAction } from '@microsoft/teams.cards';
-import type { Session, SessionOutput } from '../../models/index.js';
+import type { Session, SessionOutput, SessionChange } from '../../models/index.js';
 import { loadTeamsConfig } from '../../config/teams-config-loader.js';
 import {
   getTeamsThread,
   upsertTeamsThread,
   deleteTeamsThread,
   getRepository,
-  getSessions,
 } from '../../db/database.js';
 import type { Repository, NotificationIntegration } from '../../models/index.js';
 import type { PendingChoice } from '../../services/pending-choice-events.js';
 import { MessageQueue } from '../../services/message-queue.js';
-import { SessionDiffTracker } from '../../services/session-diff-tracker.js';
-import type { SessionChange } from '../../services/session-diff-tracker.js';
 import { createTaggedLogger } from '../../utils/logger.js';
 
 function field(label: string, value: string): string {
@@ -32,7 +29,6 @@ function code(value: string): string {
  * Thread records are persisted to the DB so they survive server restarts.
  */
 export class TeamsNotifier implements NotificationIntegration {
-  private readonly diffTracker = new SessionDiffTracker();
   private active = false;
   private readonly queue: MessageQueue;
 
@@ -61,7 +57,6 @@ export class TeamsNotifier implements NotificationIntegration {
       return false;
     }
     this.active = true;
-    this.seedActiveSessions();
     this.log.info('teams: configured, subscribing to session events');
     return true;
   }
@@ -76,17 +71,6 @@ export class TeamsNotifier implements NotificationIntegration {
     );
   }
 
-  // Seed diff tracker baselines for sessions that were already active when this
-  // integration started, so onSessionUpdated can detect meaningful changes immediately.
-  private seedActiveSessions(): void {
-    const active = getSessions({ status: 'active' });
-    for (const session of active) {
-      this.diffTracker.seed(session);
-    }
-    if (active.length > 0) {
-      this.log.info(`teams.seed: seeded ${active.length} already-active sessions`);
-    }
-  }
 
   /** Opens a new Teams thread for the session, or reconnects to an existing one after a server restart. */
   async onSessionCreated(session: Session): Promise<void> {
@@ -108,7 +92,6 @@ export class TeamsNotifier implements NotificationIntegration {
       this.log.info(
         `teams.thread.reused: session=${session.id} teamsThreadId=${existing.teamsThreadId}`,
       );
-      this.diffTracker.seed(session);
       this.queue.enqueue(
         async () => {
           try {
@@ -138,8 +121,7 @@ export class TeamsNotifier implements NotificationIntegration {
                   tenantId: loadTeamsConfig().tenantId ?? '',
                   createdAt: new Date().toISOString(),
                 });
-                this.diffTracker.seed(session);
-                this.log.info(
+                          this.log.info(
                   `teams.thread.stale.recovered: session=${session.id} teamsThreadId=${sent.id}`,
                 );
               } catch (retryErr) {
@@ -178,8 +160,7 @@ export class TeamsNotifier implements NotificationIntegration {
             createdAt: new Date().toISOString(),
           });
           this.log.info(`teams.thread.created: session=${session.id} teamsThreadId=${sent.id}`);
-          this.diffTracker.seed(session);
-        } catch (err) {
+            } catch (err) {
           this.log.error(`teams.thread.create.failed: session=${session.id}`, err);
         }
       },
@@ -189,7 +170,7 @@ export class TeamsNotifier implements NotificationIntegration {
   }
 
   /** Posts a reply to the session thread if any tracked fields changed since the last update. */
-  async onSessionUpdated(session: Session): Promise<void> {
+  async onSessionUpdated(session: Session, changes: SessionChange[]): Promise<void> {
     this.log.info(
       `teams.session.updated.received: session=${session.id} status=${session.status} model=${session.model} pid=${session.pid}`,
     );
@@ -210,18 +191,6 @@ export class TeamsNotifier implements NotificationIntegration {
         `teams.session.updated: no thread, delegating to onSessionCreated: session=${session.id}`,
       );
       await this.onSessionCreated(session);
-      return;
-    }
-
-    const changes = this.diffTracker.update(session);
-    if (changes === null) {
-      this.log.info(
-        `teams.session.updated.skipped: no baseline, recording current state session=${session.id}`,
-      );
-      return;
-    }
-    if (changes.length === 0) {
-      this.log.info(`teams.session.updated.skipped: no meaningful changes session=${session.id}`);
       return;
     }
 
@@ -344,7 +313,6 @@ export class TeamsNotifier implements NotificationIntegration {
           const threadConvId = `${channelId};messageid=${thread.teamsThreadId}`;
           await this.teamsApp.api.conversations.activities(threadConvId).create(activity);
           deleteTeamsThread(session.id);
-          this.diffTracker.clear(session.id);
           this.log.info(`teams.session.ended: session=${session.id} status=${session.status}`);
         } catch (err) {
           this.log.error(`teams.session.end.notify.failed: session=${session.id}`, err);

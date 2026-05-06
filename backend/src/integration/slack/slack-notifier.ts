@@ -13,10 +13,8 @@ import {
   getSlackThreadByTs,
   upsertSlackThread,
   deleteSlackThread,
-  getSessions,
 } from '../../db/database.js';
 import { MessageQueue } from '../../services/message-queue.js';
-import { SessionDiffTracker } from '../../services/session-diff-tracker.js';
 import type { SessionChange } from '../../services/session-diff-tracker.js';
 import type { PendingChoice } from '../../services/pending-choice-events.js';
 import {
@@ -48,7 +46,6 @@ export class SlackNotifier implements NotificationIntegration {
   // Thread anchor map: sessionId -> Slack message ts of the parent message
   private readonly threadAnchors = new Map<string, string>();
 
-  private readonly diffTracker = new SessionDiffTracker();
   private readonly queue: MessageQueue;
 
   constructor() {
@@ -95,7 +92,6 @@ export class SlackNotifier implements NotificationIntegration {
     }
 
     this.active = true;
-    this.seedActiveSessions();
     log.info(`Initialized, posting to channel ${this.config.channelId}`);
     return true;
   }
@@ -188,7 +184,6 @@ export class SlackNotifier implements NotificationIntegration {
             } else {
               log.info(`slack.thread.reused.notified: session=${session.id} ts=${result.ts}`);
             }
-            this.diffTracker.seed(session);
           }
         } catch (err) {
           const slackErr = err as { data?: { error?: string } } | null;
@@ -214,8 +209,7 @@ export class SlackNotifier implements NotificationIntegration {
                   workspaceId: this.workspaceId,
                   createdAt: new Date().toISOString(),
                 });
-                this.diffTracker.seed(session);
-                log.info(`slack.thread.stale.recovered: session=${session.id} ts=${result.ts}`);
+                    log.info(`slack.thread.stale.recovered: session=${session.id} ts=${result.ts}`);
               }
             } catch (retryErr) {
               log.error(`slack.thread.stale.recover.failed: session=${session.id}`, retryErr);
@@ -256,7 +250,6 @@ export class SlackNotifier implements NotificationIntegration {
             ...(threadTs ? { thread_ts: threadTs } : {}),
           });
           this.threadAnchors.delete(session.id);
-          this.diffTracker.clear(session.id);
           deleteSlackThread(session.id);
           log.info(`slack.session.ended.posted: session=${session.id} status=${session.status}`);
         } catch (err) {
@@ -269,24 +262,12 @@ export class SlackNotifier implements NotificationIntegration {
   }
 
   /** Posts a reply to the session thread if any tracked fields changed since the last update. */
-  async onSessionUpdated(session: Session): Promise<void> {
+  async onSessionUpdated(session: Session, changes: SessionChange[]): Promise<void> {
     log.info(`slack.session.updated.received: session=${session.id} status=${session.status}`);
     if (!this.active || !this.client) {
       return;
     }
     if (!this.isEventEnabled(SESSION_UPDATED)) {
-      return;
-    }
-
-    const changes = this.diffTracker.update(session);
-    if (changes === null) {
-      log.info(
-        `slack.session.updated.skipped: no baseline, recording current state for session=${session.id}`,
-      );
-      return;
-    }
-    if (changes.length === 0) {
-      log.info(`slack.session.updated.skipped: no meaningful changes for session=${session.id}`);
       return;
     }
 
@@ -457,18 +438,8 @@ export class SlackNotifier implements NotificationIntegration {
     return this.config.enabledEventTypes.includes(eventType);
   }
 
-  // Seed diff tracker baselines for sessions that were already active when this
-  // integration started, so onSessionUpdated can detect meaningful changes immediately.
-  private seedActiveSessions(): void {
-    const active = getSessions({ status: 'active' });
-    for (const session of active) {
-      this.diffTracker.seed(session);
-    }
-    if (active.length > 0) {
-      log.info(`slack.seed: seeded ${active.length} already-active sessions`);
-    }
-  }
 }
+
 
 // -------------------------------------------------------------------------
 // Block Kit builders

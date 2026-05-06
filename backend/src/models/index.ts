@@ -1,5 +1,7 @@
 import type { PendingChoice } from '../services/pending-choice-events.js';
 export type { PendingChoice };
+import type { SessionChange } from '../services/session-diff-tracker.js';
+export type { SessionChange };
 
 export type SessionType = 'copilot-cli' | 'claude-code';
 
@@ -198,7 +200,7 @@ export interface NotificationIntegration {
   readonly isRunning: boolean;
   initialize(): Promise<boolean>;
   onSessionCreated(session: Session): Promise<void>;
-  onSessionUpdated(session: Session): Promise<void>;
+  onSessionUpdated(session: Session, changes: SessionChange[]): Promise<void>;
   onSessionEnded(session: Session): Promise<void>;
   onSessionOutput(sessionId: string, outputs: SessionOutput[]): Promise<void>;
   onPendingChoice(choice: PendingChoice): Promise<void>;

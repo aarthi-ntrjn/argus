@@ -19,6 +19,8 @@ import { outputEvents } from '../../services/output-store.js';
 import { pendingChoiceEvents } from '../../services/pending-choice-events.js';
 import type { PendingChoice } from '../../services/pending-choice-events.js';
 import type { Session, Repository, SessionOutput, NotificationIntegration } from '../../models/index.js';
+import { SessionDiffTracker } from '../../services/session-diff-tracker.js';
+import { getSessions } from '../../db/database.js';
 import {
   SESSION_CREATED,
   SESSION_UPDATED,
@@ -37,6 +39,7 @@ let teamsListener: TeamsListener | null = null;
 let integrationsEnabled = false;
 let monitor: SessionMonitor | null = null;
 let eventsWired = false;
+const diffTracker = new SessionDiffTracker();
 
 function activeNotifiers(): NotificationIntegration[] {
   return [slackNotifier, teamsNotifier].filter(
@@ -61,13 +64,19 @@ function wireEvents(): void {
   }
   eventsWired = true;
   monitor.on(SESSION_CREATED, (session: Session) => {
+    diffTracker.seed(session);
     dispatch('session.created', (n) => n.onSessionCreated(session));
   });
   monitor.on(SESSION_UPDATED, (session: Session) => {
-    dispatch('session.updated', (n) => n.onSessionUpdated(session));
+    const changes = diffTracker.update(session);
+    if (!changes || changes.length === 0) {
+      return;
+    }
+    dispatch('session.updated', (n) => n.onSessionUpdated(session, changes));
   });
   monitor.on(SESSION_ENDED, (session: Session) => {
     dispatch('session.ended', (n) => n.onSessionEnded(session));
+    diffTracker.clear(session.id);
   });
   monitor.on(REPOSITORY_ADDED, (repo: Repository) => {
     dispatch('repository.added', (n) => n.onRepositoryAdded(repo));
@@ -124,6 +133,10 @@ export async function initializeIntegrations(
     if (getIntegrationEnabled('teams') !== false) {
       await teamsNotifier.initialize();
     }
+  }
+
+  for (const session of getSessions({ status: 'active' })) {
+    diffTracker.seed(session);
   }
 
   wireEvents();
