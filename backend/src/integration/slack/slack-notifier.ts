@@ -267,6 +267,9 @@ export class SlackNotifier implements NotificationIntegration {
     if (!this.active || !this.client) {
       return;
     }
+    if (changes.length === 0) {
+      return;
+    }
     if (!this.isEventEnabled(SESSION_UPDATED)) {
       return;
     }

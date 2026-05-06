@@ -176,6 +176,9 @@ export class TeamsNotifier implements NotificationIntegration {
     if (!this.active) {
       return;
     }
+    if (changes.length === 0) {
+      return;
+    }
     if (!this.isConfigured()) {
       this.log.warn(`teams.session.updated.skipped: not configured session=${session.id}`);
       return;
