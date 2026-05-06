@@ -75,7 +75,7 @@ test.describe('SC-020 (real server): Send Prompt — API contract', () => {
     // The detector creates the session with launchMode=null when there is no
     // pending WS launcher for the repo.
     const hookRes = await req.post(`${BASE_URL}/hooks/claude`, {
-      data: { hook_event_name: 'PreToolUse', session_id: sessionId, cwd: TEST_REPO_A },
+      data: { hook_event_name: 'SessionStart', session_id: sessionId, cwd: TEST_REPO_A },
     });
     expect(hookRes.ok()).toBeTruthy();
     await new Promise(r => setTimeout(r, 200));
@@ -115,7 +115,7 @@ test.describe('SC-020 (real server): Send Prompt — API contract', () => {
     // Fire a hook as if Claude started — detector claims the pending WS entry
     // and creates the DB session with launchMode='pty'.
     await req.post(`${BASE_URL}/hooks/claude`, {
-      data: { hook_event_name: 'PreToolUse', session_id: claudeSessionId, cwd: TEST_REPO_A },
+      data: { hook_event_name: 'SessionStart', session_id: claudeSessionId, cwd: TEST_REPO_A },
     });
 
     // Give backend time to commit the upsert
@@ -151,7 +151,7 @@ test.describe('SC-020 (real server): Send Prompt — API contract', () => {
 
     // Fire a hook to claim the pending WS entry and create a PTY session
     await req.post(`${BASE_URL}/hooks/claude`, {
-      data: { hook_event_name: 'PreToolUse', session_id: claudeSessionId, cwd: TEST_REPO_A },
+      data: { hook_event_name: 'SessionStart', session_id: claudeSessionId, cwd: TEST_REPO_A },
     });
     await new Promise(r => setTimeout(r, 200));
 
