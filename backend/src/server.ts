@@ -240,7 +240,13 @@ export async function startServer(): Promise<FastifyInstance> {
     if (teamsApp) {
       teamsNotifier = new TeamsNotifier(teamsApp);
 
-      if (getIntegrationEnabled('teams') !== false && (await teamsNotifier.initialize())) {
+      const teamsEnabledInDb = getIntegrationEnabled('teams');
+      app.log.info(
+        { teamsEnabledInDb },
+        'teams.startup: checking integration enabled flag and config',
+      );
+      if (teamsEnabledInDb !== false && (await teamsNotifier.initialize())) {
+        app.log.info('teams.startup: subscriptions registered on monitor');
         monitor.on('session.created', (session: Session) => {
           teamsNotifier!
             .onSessionCreated(session)
@@ -266,6 +272,11 @@ export async function startServer(): Promise<FastifyInstance> {
             .onPendingChoice(choice)
             .catch((err) => app.log.error({ err }, 'teams.pending_choice.error'));
         });
+      } else {
+        app.log.warn(
+          { teamsEnabledInDb },
+          'teams.startup: subscriptions NOT registered (disabled in DB or config incomplete)',
+        );
       }
     }
   }
