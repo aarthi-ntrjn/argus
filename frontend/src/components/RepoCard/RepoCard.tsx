@@ -1,10 +1,12 @@
 import type { Repository, Session } from '../../types';
+import type { PendingLauncher } from '../../hooks/usePendingLaunchers';
 import { buildGitHubCompareUrl } from '../../utils/repoUtils';
 import { postTelemetryEvent } from '../../services/api';
 import { GitCompare } from 'lucide-react';
 import Badge from '../Badge';
 import LaunchDropdown from '../LaunchDropdown/LaunchDropdown';
 import SessionCard from '../SessionCard/SessionCard';
+import PendingSessionCard from '../PendingSessionCard/PendingSessionCard';
 
 export interface RepoWithSessions extends Repository {
   sessions: Session[];
@@ -16,10 +18,12 @@ interface RepoCardProps {
   skipConfirm: boolean;
   selectedSessionId: string | null;
   isMobile: boolean;
+  pendingLaunchers: PendingLauncher[];
   onRemoveById: (id: string) => void;
   onSetRemoveConfirm: (id: string) => void;
   onSelectSession: (id: string) => void;
   onLaunchError: (msg: string) => void;
+  onLaunchPending: (ptyLaunchId: string, tool: 'claude' | 'copilot') => void;
 }
 
 export default function RepoCard({
@@ -27,10 +31,12 @@ export default function RepoCard({
   skipConfirm,
   selectedSessionId,
   isMobile,
+  pendingLaunchers,
   onRemoveById,
   onSetRemoveConfirm,
   onSelectSession,
   onLaunchError,
+  onLaunchPending,
 }: RepoCardProps) {
   return (
     <div data-tour-id="dashboard-repo-card" className="bg-white rounded-lg shadow p-4 md:p-6">
@@ -41,7 +47,11 @@ export default function RepoCard({
             <Badge>
               {repo.sessions.length} session{repo.sessions.length !== 1 ? 's' : ''}
             </Badge>
-            <LaunchDropdown repoPath={repo.path} onLaunchError={onLaunchError} />
+            <LaunchDropdown
+              repoPath={repo.path}
+              onLaunchError={onLaunchError}
+              onLaunchPending={onLaunchPending}
+            />
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -99,12 +109,15 @@ export default function RepoCard({
           )}
         </div>
       </div>
-      {repo.sessions.length === 0 ? (
+      {repo.sessions.length === 0 && pendingLaunchers.length === 0 ? (
         <p className="text-gray-500 text-sm">
           {repo.hasHiddenSessions ? 'No active sessions' : 'No sessions'}
         </p>
       ) : (
         <div data-tour-id="dashboard-session-card" className="space-y-2">
+          {pendingLaunchers.map((pl) => (
+            <PendingSessionCard key={pl.ptyLaunchId} tool={pl.tool} repoPath={pl.repoPath} />
+          ))}
           {repo.sessions.map((session) => (
             <SessionCard
               key={session.id}
