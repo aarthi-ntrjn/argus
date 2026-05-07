@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { findGitRepos } from '../../src/api/routes/fs.js';
+import { findGitRepos } from '../../src/services/repository-scanner.js';
 
 function makeGitRepo(base: string, ...parts: string[]): string {
   const dir = join(base, ...parts);
