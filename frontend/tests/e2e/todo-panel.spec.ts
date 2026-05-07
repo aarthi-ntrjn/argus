@@ -191,7 +191,11 @@ test.describe('Todo Panel', () => {
     await page.goto('/');
 
     const deleteTarget = page.getByRole('textbox', { name: /edit task: Delete me/i });
-    await deleteTarget.fill('');
+    await deleteTarget.click();
+    await page.keyboard.press('Control+A');
+    // First Backspace clears the selected text (value was non-empty at keydown, so no deletion triggered).
+    // Second Backspace presses with value already '' and triggers the empty-row deletion handler.
+    await page.keyboard.press('Backspace');
     await deleteTarget.press('Backspace');
 
     await expect(page.getByRole('textbox', { name: /edit task: Delete me/i })).not.toBeVisible();

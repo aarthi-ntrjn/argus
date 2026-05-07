@@ -182,7 +182,11 @@ test.describe('To Tackle panel (real server)', () => {
     try {
       await page.goto('/');
       const input = page.getByRole('textbox', { name: /edit task: Backspace delete E2E/i });
-      await input.fill('');
+      await input.click();
+      await page.keyboard.press('Control+A');
+      // First Backspace clears selected text (value was non-empty at keydown, so no deletion triggered).
+      // Second Backspace presses with value already '' and triggers the empty-row deletion handler.
+      await page.keyboard.press('Backspace');
       await input.press('Backspace');
 
       await expect(page.getByRole('textbox', { name: /edit task: Backspace delete E2E/i })).not.toBeVisible();
