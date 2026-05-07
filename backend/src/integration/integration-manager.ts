@@ -7,10 +7,7 @@ import { setIntegrationEnabled, getIntegrationEnabled } from '../db/database.js'
 import { telemetryService } from '../services/telemetry-service.js';
 import { loadSlackConfig } from '../config/slack-config-loader.js';
 import { loadTeamsConfig } from '../config/teams-config-loader.js';
-import {
-  getSlackConnectionStatus,
-  getTeamsConnectionStatus,
-} from './integration-status.js';
+import { getSlackConnectionStatus, getTeamsConnectionStatus } from './integration-status.js';
 import { setSlackServices } from '../api/routes/health.js';
 import type { SessionMonitor } from '../services/session-monitor.js';
 import { broadcast, type IntegrationStatusPayload } from '../api/ws/event-dispatcher.js';
@@ -151,7 +148,10 @@ export function shutdownIntegrations(): void {
   slackNotifier?.shutdown();
 }
 
-export function getIntegrationRunningStatus(): { slack: 'on' | 'off' | 'na'; teams: 'on' | 'off' | 'na' } {
+export function getIntegrationRunningStatus(): {
+  slack: 'on' | 'off' | 'na';
+  teams: 'on' | 'off' | 'na';
+} {
   return {
     slack: slackNotifier == null ? 'na' : slackNotifier.isRunning ? 'on' : 'off',
     teams: teamsNotifier == null ? 'na' : teamsNotifier.isRunning ? 'on' : 'off',

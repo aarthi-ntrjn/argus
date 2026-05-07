@@ -47,7 +47,11 @@ export default function RepoCard({
             <Badge>
               {repo.sessions.length} session{repo.sessions.length !== 1 ? 's' : ''}
             </Badge>
-            <LaunchDropdown repoPath={repo.path} onLaunchError={onLaunchError} onLaunchPending={onLaunchPending} />
+            <LaunchDropdown
+              repoPath={repo.path}
+              onLaunchError={onLaunchError}
+              onLaunchPending={onLaunchPending}
+            />
             <button
               onClick={(e) => {
                 e.stopPropagation();
