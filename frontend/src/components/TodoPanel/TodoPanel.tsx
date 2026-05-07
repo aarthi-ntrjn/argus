@@ -267,6 +267,10 @@ export default function TodoPanel() {
         if (index > 0) {
           focusRow(index - 1, reversedTodosArg);
         }
+      } else if (e.key === 'Delete' && !isDraft(id)) {
+        e.preventDefault();
+        deleteTodo.mutate(id);
+        focusAddRow();
       }
     },
     [todos, createTodo, updateTodoText, deleteTodo, focusAddRow, focusRow],

@@ -357,6 +357,42 @@ describe('TodoPanel', () => {
     });
   });
 
+  describe('Delete key on todo item', () => {
+    it('calls deleteTodo when Delete is pressed on a todo item', async () => {
+      mockUseTodos.mockReturnValue({
+        data: baseTodos,
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useTodos>);
+      const mutate = vi.fn();
+      mockUseDeleteTodo.mockReturnValue(
+        makeMutation({ mutate }) as unknown as ReturnType<typeof useDeleteTodo>,
+      );
+      renderPanel();
+      const input = screen.getByRole('textbox', { name: /edit task: First task/i });
+      await userEvent.click(input);
+      await userEvent.keyboard('{Delete}');
+      expect(mutate).toHaveBeenCalledWith('1');
+    });
+
+    it('does not delete on Delete key pressed in the add-row', async () => {
+      mockUseTodos.mockReturnValue({
+        data: baseTodos,
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useTodos>);
+      const mutate = vi.fn();
+      mockUseDeleteTodo.mockReturnValue(
+        makeMutation({ mutate }) as unknown as ReturnType<typeof useDeleteTodo>,
+      );
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.click(addRow);
+      await userEvent.keyboard('{Delete}');
+      expect(mutate).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Backspace on empty input', () => {
     it('calls deleteTodo when Backspace is pressed on empty real todo', async () => {
       mockUseTodos.mockReturnValue({
