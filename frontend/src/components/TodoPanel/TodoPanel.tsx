@@ -70,7 +70,16 @@ function TodoRow({
 }: TodoRowProps) {
   const { done } = todo;
   return (
-    <li key={todo.id} className="group flex items-center gap-2 px-4 py-[3px]">
+    <li
+      key={todo.id}
+      className="group flex items-center gap-2 px-4 py-[3px]"
+      onKeyDown={(e) => {
+        if (e.key === 'Delete') {
+          e.preventDefault();
+          onDelete(todo.id);
+        }
+      }}
+    >
       <Checkbox
         checked={done}
         onChange={() => onToggle(todo.id, done)}
@@ -267,10 +276,6 @@ export default function TodoPanel() {
         if (index > 0) {
           focusRow(index - 1, reversedTodosArg);
         }
-      } else if (e.key === 'Delete' && !isDraft(id)) {
-        e.preventDefault();
-        deleteTodo.mutate(id);
-        focusAddRow();
       }
     },
     [todos, createTodo, updateTodoText, deleteTodo, focusAddRow, focusRow],
@@ -395,7 +400,10 @@ export default function TodoPanel() {
                 todoRefsMap={todoRefsMap}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
-                onDelete={(id) => deleteTodo.mutate(id)}
+                onDelete={(id) => {
+                  deleteTodo.mutate(id);
+                  focusAddRow();
+                }}
                 onToggle={(id, done) => toggleTodo.mutate({ id, done: !done })}
               />
             ))}

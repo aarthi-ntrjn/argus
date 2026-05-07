@@ -358,7 +358,7 @@ describe('TodoPanel', () => {
   });
 
   describe('Delete key on todo item', () => {
-    it('calls deleteTodo when Delete is pressed on a todo item', async () => {
+    it('calls deleteTodo when Delete is pressed while the todo textarea is focused', async () => {
       mockUseTodos.mockReturnValue({
         data: baseTodos,
         isLoading: false,
@@ -371,6 +371,23 @@ describe('TodoPanel', () => {
       renderPanel();
       const input = screen.getByRole('textbox', { name: /edit task: First task/i });
       await userEvent.click(input);
+      await userEvent.keyboard('{Delete}');
+      expect(mutate).toHaveBeenCalledWith('1');
+    });
+
+    it('calls deleteTodo when Delete is pressed while the todo checkbox is focused', async () => {
+      mockUseTodos.mockReturnValue({
+        data: baseTodos,
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useTodos>);
+      const mutate = vi.fn();
+      mockUseDeleteTodo.mockReturnValue(
+        makeMutation({ mutate }) as unknown as ReturnType<typeof useDeleteTodo>,
+      );
+      renderPanel();
+      const checkbox = screen.getByRole('checkbox', { name: /mark "First task"/i });
+      await userEvent.click(checkbox);
       await userEvent.keyboard('{Delete}');
       expect(mutate).toHaveBeenCalledWith('1');
     });
