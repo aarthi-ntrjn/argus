@@ -5,6 +5,7 @@ import type {
   SessionOutput,
   ControlAction,
   PendingChoiceItem,
+  SessionType,
 } from '../../models/index.js';
 import type { UpdateStatus } from '../../services/update-service.js';
 
@@ -33,12 +34,18 @@ export type WsEventType =
   | 'repository.added'
   | 'repository.updated'
   | 'repository.removed'
-  | 'update.status';
+  | 'update.status'
+  | 'launcher.pending.gone';
 
 export type WsEvent =
   | { type: 'session.created'; timestamp: string; data: Session }
   | { type: 'session.updated'; timestamp: string; data: Session }
   | { type: 'session.ended'; timestamp: string; data: Session }
+  | {
+      type: 'launcher.pending.gone';
+      timestamp: string;
+      data: { ptyLaunchId: string; repoPath: string; sessionType: SessionType };
+    }
   | {
       type: 'session.pending_choice';
       timestamp: string;

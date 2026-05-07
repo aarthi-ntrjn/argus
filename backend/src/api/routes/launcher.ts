@@ -348,7 +348,13 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
           }
         } else if (repoPath) {
           // Never claimed — claude never started or crashed before first hook.
+          const sessionType = ptyRegistry.getPendingSessionType(ptyLaunchId);
           ptyRegistry.unregisterPending(repoPath, ptyLaunchId);
+          broadcast({
+            type: 'launcher.pending.gone',
+            timestamp: new Date().toISOString(),
+            data: { ptyLaunchId, repoPath, sessionType: sessionType ?? 'claude-code' },
+          });
           fastify.log.info(
             { ptyLaunchId, repoPath, code },
             '[Launcher] disconnected before Claude hook, no session created',
