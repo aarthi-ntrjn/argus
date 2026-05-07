@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ArgusLaunchClient } from '../src/cli/argus-launch-client.js';
+import { ArgusLaunchClient } from '../src/launch-pty/argus-launch-client.js';
 
 // Mock ws so tests don't open real connections.
 // send() accepts an optional callback (called when data is flushed).
