@@ -5,6 +5,14 @@
 **Status**: Draft
 **Input**: User description: "when not running in yolo mode bash command approvals are not bubbled to the session card"
 
+## Clarifications
+
+### Session 2026-05-06
+
+- Q: Should approval/denial use dedicated Approve/Deny buttons or reuse the existing numbered-choice panel? → A: Reuse the existing numbered-choice panel — surface as choices (e.g., "Yes, run it" / "No, skip it").
+- Q: Should the Claude Code hooks injector use a wildcard/empty matcher or register specific tool names for PreToolUse? → A: Wildcard/empty matcher — receive all PreToolUse events; filter on the Argus side.
+- Q: Should tool approval prompts be visually distinct from ask_user prompts? → A: No — same visual treatment; tool input rendered as plain question text using the existing panel.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - See Bash Approval on Session Card (Priority: P1)
@@ -52,11 +60,11 @@ A user viewing the full session detail panel while a Claude Code or Copilot CLI 
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST detect when a Claude Code or Copilot CLI session running without auto-approval has a bash/shell command awaiting approval and surface this as a pending approval event to the session card.
-- **FR-002**: The session card MUST display the full text of the bash command (or command description) pending approval.
-- **FR-003**: The session card MUST transition to a visually distinct "waiting for approval" state when a bash approval is pending, consistent with how existing `ask_user` prompts are displayed.
-- **FR-004**: Users MUST be able to approve a pending bash command from the session card without leaving the Argus dashboard.
-- **FR-005**: Users MUST be able to deny a pending bash command from the session card without leaving the Argus dashboard.
+- **FR-001**: The system MUST detect when a Claude Code or Copilot CLI session running without auto-approval has any tool use awaiting approval and surface this as a pending approval event to the session card. This includes bash/shell commands and any other tool type that the agent pauses on.
+- **FR-002**: The session card MUST display the full text of the command or tool input pending approval.
+- **FR-003**: The session card MUST transition to the same "waiting" state and use the same `PendingChoicePanel` visual treatment for tool approval prompts as it does for `ask_user` prompts. No distinct visual styling is required.
+- **FR-004**: Users MUST be able to approve a pending tool use from the session card without leaving the Argus dashboard, using the existing pending-choice panel with "Yes, run it" as a numbered choice.
+- **FR-005**: Users MUST be able to deny a pending tool use from the session card without leaving the Argus dashboard, using the existing pending-choice panel with "No, skip it" as a numbered choice.
 - **FR-006**: When a bash approval is resolved (approved or denied), the session card MUST return to its normal state and the approval prompt MUST disappear.
 - **FR-007**: The approve/deny actions MUST be disabled (read-only prompt still visible) when the session is not PTY-connected.
 - **FR-008**: The feature MUST NOT affect sessions running in YOLO mode — YOLO sessions auto-approve and should never show an approval prompt.
@@ -73,8 +81,6 @@ A user viewing the full session detail panel while a Claude Code or Copilot CLI 
 
 ## Assumptions
 
-- Both Claude Code and Copilot CLI fire a `PreToolUse` hook event when pausing for bash/shell command approval. This event contains the tool name and the command text to be approved. Argus already receives these hook events via the same HTTP hook endpoint used for `AskUserQuestion` / `ask_user` prompts.
-- The hooks injector currently only registers `PreToolUse` hooks for the ask-user tool names (`AskUserQuestion` for Claude Code, `ask_user` for Copilot CLI). It must also be extended to register `PreToolUse` for the respective shell/bash tool names so Argus receives those events.
-- The existing pending-choice UI infrastructure (`PendingChoicePanel`, `session.pending_choice` WS events) can be reused or extended to display bash approvals, since both represent "session needs input before proceeding."
-- Approval and denial are sent by typing a response into the session's PTY — the same mechanism used for existing pending choices.
+- Both Claude Code and Copilot CLI fire a `PreToolUse` hook event for every tool use when not in auto-approval mode. Argus registers to receive all `PreToolUse` events (wildcard/empty matcher for Claude Code; Copilot CLI already sends all). Filtering of which events to surface as approval prompts is done inside Argus — `ask_user`/`AskUserQuestion` events are already handled as pending choices and excluded from this feature's path.
+- The existing `PendingChoicePanel` is reused for tool approval prompts. The tool name and input are mapped to a question string, and fixed choices "Yes, run it" / "No, skip it" are provided. The panel sends the numbered response ("1" or "2") to the PTY.
 - Sessions launched outside Argus (not via PTY) that enter a bash approval state will show the prompt as read-only (no approve/deny actions), since Argus has no PTY channel to send the response.
