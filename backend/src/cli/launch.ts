@@ -35,14 +35,18 @@ function normalizeLaunchCwd(rawCwd: string): string {
 
 process.stderr.write(`[launch] log: ${logFile}\n`);
 
-// Parse --cwd <path> out of argv before passing the rest to resolveLaunchCommand.
+// Parse --cwd <path> and --launch-id <uuid> out of argv before passing the rest to resolveLaunchCommand.
 const rawArgs = process.argv.slice(2);
 let cwd = process.cwd();
+let launchIdArg: string | undefined;
 const toolArgs: string[] = [];
 for (let i = 0; i < rawArgs.length; i++) {
   if ((rawArgs[i] === '--cwd' || rawArgs[i] === '-cwd') && rawArgs[i + 1]) {
     cwd = rawArgs[++i];
     log(`argv: --cwd resolved to ${cwd}`);
+  } else if (rawArgs[i] === '--launch-id' && rawArgs[i + 1]) {
+    launchIdArg = rawArgs[++i];
+    log(`argv: --launch-id resolved to ${launchIdArg}`);
   } else {
     toolArgs.push(rawArgs[i]);
   }
@@ -131,7 +135,7 @@ process.stdout.on('resize', () => {
 });
 
 // Connect to Argus backend
-const ptyLaunchId = randomUUID();
+const ptyLaunchId = launchIdArg ?? randomUUID();
 log(`connecting to Argus WebSocket ws://127.0.0.1:7411/launcher ptyLaunchId=${ptyLaunchId}`);
 const client = new ArgusLaunchClient('ws://127.0.0.1:7411/launcher', ptyLaunchId, log);
 // On Windows the real tool PID is unknown until the process tree walk resolves it.

@@ -8,6 +8,7 @@ import { Button } from '../Button';
 interface Props {
   repoPath: string;
   onLaunchError: (msg: string) => void;
+  onLaunchPending?: (ptyLaunchId: string, tool: 'claude' | 'copilot') => void;
 }
 
 function toLaunchErrorMessage(err: unknown): string {
@@ -18,7 +19,7 @@ function toLaunchErrorMessage(err: unknown): string {
   return `Failed to launch session: ${raw}`;
 }
 
-export default function LaunchDropdown({ repoPath, onLaunchError }: Props) {
+export default function LaunchDropdown({ repoPath, onLaunchError, onLaunchPending }: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<'claude' | 'copilot' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -92,7 +93,10 @@ export default function LaunchDropdown({ repoPath, onLaunchError }: Props) {
     }
     setOpen(false);
     try {
-      await launchInTerminal(tool, repoPath);
+      const result = await launchInTerminal(tool, repoPath);
+      if (result.ptyLaunchId) {
+        onLaunchPending?.(result.ptyLaunchId, tool);
+      }
     } catch (err) {
       onLaunchError(toLaunchErrorMessage(err));
     }
