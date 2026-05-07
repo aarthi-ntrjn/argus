@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync, mkdirSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { dump as yamlDump } from 'js-yaml';
-import { resolveSessionIdByPid } from '../src/services/session-pid-resolver.js';
+import { resolveSessionIdByPid } from '../src/cli/session-pid-resolver.js';
 
 function makeTmpDir(): string {
   return mkdtempSync(join(tmpdir(), 'argus-resolver-test-'));

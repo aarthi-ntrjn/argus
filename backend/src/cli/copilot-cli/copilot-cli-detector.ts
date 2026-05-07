@@ -3,11 +3,11 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
-import { getSessions, getServerState, setServerState } from '../db/database.js';
+import { getSessions, getServerState, setServerState } from '../../db/database.js';
 import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
-import type { Session, Repository } from '../models/index.js';
-import type { CliDetector } from './cli-detector.js';
-import { BaseCliDetector, type SessionEntry } from './base-cli-detector.js';
+import type { Session, Repository } from '../../models/index.js';
+import type { CliDetector } from '../cli-detector.js';
+import { BaseCliDetector, type SessionEntry } from '../base-cli-detector.js';
 
 /**
  * Copilot CLI writes one subdirectory per session under ~/.copilot/session-state/.

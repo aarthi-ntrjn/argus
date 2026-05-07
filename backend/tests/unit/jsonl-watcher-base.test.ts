@@ -25,7 +25,7 @@ vi.mock('../../src/db/database.js', () => ({
 
 // Mock OutputStore — capture insertOutput calls and control return value
 const mockInsertOutput = vi.hoisted(() => vi.fn((_id: string, _outputs: SessionOutput[]) => true));
-vi.mock('../../src/services/output-store.js', () => ({
+vi.mock('../../src/db/output-store.js', () => ({
   OutputStore: vi.fn().mockImplementation(() => ({ insertOutput: mockInsertOutput })),
 }));
 
@@ -33,13 +33,13 @@ vi.mock('../../src/services/output-store.js', () => ({
 const mockApplyActivity = vi.hoisted(() => vi.fn());
 const mockApplyModel = vi.hoisted(() => vi.fn());
 const mockApplySummary = vi.hoisted(() => vi.fn());
-vi.mock('../../src/services/watcher-session-helpers.js', () => ({
+vi.mock('../../src/cli/watcher-session-helpers.js', () => ({
   applyActivityUpdate: mockApplyActivity,
   applyModelUpdate: mockApplyModel,
   applySummaryUpdate: mockApplySummary,
 }));
 
-import { JsonlWatcherBase, TAIL_BYTES } from '../../src/services/jsonl-watcher-base.js';
+import { JsonlWatcherBase, TAIL_BYTES } from '../../src/cli/jsonl-watcher-base.js';
 
 // Minimal concrete subclass — parseLine returns one output per non-empty line
 class TestWatcher extends JsonlWatcherBase {

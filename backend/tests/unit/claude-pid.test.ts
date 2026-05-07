@@ -14,8 +14,8 @@ vi.mock('ps-list', () => ({
 
 // isPidRunning is called by scan() to verify registry entries are live.
 // Default: all registry PIDs are considered live.
-vi.mock('../../src/services/process-utils.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/services/process-utils.js')>();
+vi.mock('../../src/utils/process-utils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/utils/process-utils.js')>();
   return {
     ...actual,
     isPidRunning: vi.fn(() => true),
@@ -87,7 +87,7 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
     fakeJsonlFiles = ['new-pid-session.jsonl'];
     fakeRegistryEntries = { 'new-pid-session': { pid: 5555, sessionId: 'new-pid-session', cwd: FAKE_REPO_PATH } };
 
-    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    const { ClaudeCodeDetector } = await import('../../src/cli/claude-code/claude-code-detector.js');
     await new ClaudeCodeDetector().scan();
 
     const sessions = dbModule.getSessions({ repositoryId: 'repo-pid-test', type: 'claude-code' });
@@ -117,7 +117,7 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
       model: null,
     });
 
-    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    const { ClaudeCodeDetector } = await import('../../src/cli/claude-code/claude-code-detector.js');
     await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession(sessionId);
@@ -146,7 +146,7 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
       model: null,
     });
 
-    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    const { ClaudeCodeDetector } = await import('../../src/cli/claude-code/claude-code-detector.js');
     await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession(sessionId);

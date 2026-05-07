@@ -11,8 +11,8 @@ import {
   getRepository,
 } from '../../db/database.js';
 import type { Repository, NotificationIntegration } from '../../models/index.js';
-import type { PendingChoice } from '../../services/pending-choice-events.js';
-import { MessageQueue } from '../../services/message-queue.js';
+import type { PendingChoice } from '../../cli/pending-choice-events.js';
+import { MessageQueue } from '../../utils/message-queue.js';
 import { createTaggedLogger } from '../../utils/logger.js';
 
 function field(label: string, value: string): string {

@@ -24,13 +24,13 @@ function isArgusEntry(entry: { hooks?: Array<{ command?: string }> }): boolean {
 }
 
 describe('ClaudeCodeHooksInjector', () => {
-  let InjectorClass: typeof import('../../src/services/claude-code-hooks-injector.js').ClaudeCodeHooksInjector;
+  let InjectorClass: typeof import('../../src/cli/claude-code/claude-code-hooks-injector.js').ClaudeCodeHooksInjector;
 
   beforeEach(async () => {
     process.env.ARGUS_DB_PATH = join(tmpdir(), `argus-claude-injector-${randomUUID()}.db`);
     vi.resetModules();
     mkdirSync(join(FAKE_HOME, '.claude'), { recursive: true });
-    const mod = await import('../../src/services/claude-code-hooks-injector.js');
+    const mod = await import('../../src/cli/claude-code/claude-code-hooks-injector.js');
     InjectorClass = mod.ClaudeCodeHooksInjector;
   });
 
@@ -90,7 +90,7 @@ describe('ClaudeCodeHooksInjector', () => {
     it('injected command uses port from ARGUS_PORT env var', async () => {
       process.env.ARGUS_PORT = '9000';
       vi.resetModules();
-      const mod = await import('../../src/services/claude-code-hooks-injector.js');
+      const mod = await import('../../src/cli/claude-code/claude-code-hooks-injector.js');
       new mod.ClaudeCodeHooksInjector().injectForAll();
       const settings = readSettings();
       const argusEntry = settings.hooks['SessionStart'].find(isArgusEntry);

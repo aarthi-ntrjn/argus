@@ -1,44 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import { promises as fsPromises, existsSync } from 'fs';
-import { join, normalize, basename } from 'path';
+import { existsSync } from 'fs';
+import { normalize } from 'path';
 import { expandTilde } from '../../utils/path-sandbox.js';
-
-export async function findGitRepos(
-  dirPath: string,
-  results: Array<{ path: string; name: string }> = [],
-): Promise<Array<{ path: string; name: string }>> {
-  // If this dir is itself a git repo, add it and don't recurse into it
-  if (existsSync(join(dirPath, '.git'))) {
-    results.push({ path: dirPath, name: basename(dirPath) });
-    return results;
-  }
-  let entries;
-  try {
-    entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
-  } catch {
-    return results;
-  }
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-    if (entry.name === 'node_modules' || entry.name === '.git') {
-      continue;
-    }
-    const fullPath = join(dirPath, entry.name);
-    try {
-      const stat = await fsPromises.lstat(fullPath);
-      // FR-010: skip symlinks to avoid loops
-      if (stat.isSymbolicLink() || !stat.isDirectory()) {
-        continue;
-      }
-    } catch {
-      continue;
-    }
-    await findGitRepos(fullPath, results);
-  }
-  return results;
-}
+import { findGitRepos } from '../../services/repository-scanner.js';
 
 export async function fsRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/v1/fs/scan-folder', async (request, reply) => {

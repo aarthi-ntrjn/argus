@@ -52,7 +52,7 @@ function makeSession(sessionId: string): import('../../src/models/index.js').Ses
 
 describe('ClaudeCodeDetector — hook-based pending choice', () => {
   let dbModule: typeof import('../../src/db/database.js');
-  let detector: import('../../src/services/claude-code-detector.js').ClaudeCodeDetector;
+  let detector: import('../../src/cli/claude-code/claude-code-detector.js').ClaudeCodeDetector;
 
   beforeEach(async () => {
     process.env.ARGUS_DB_PATH = join(tmpdir(), `argus-hook-test-${randomUUID()}.db`);
@@ -70,7 +70,7 @@ describe('ClaudeCodeDetector — hook-based pending choice', () => {
       lastScannedAt: null,
     });
 
-    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    const { ClaudeCodeDetector } = await import('../../src/cli/claude-code/claude-code-detector.js');
     detector = new ClaudeCodeDetector();
   });
 

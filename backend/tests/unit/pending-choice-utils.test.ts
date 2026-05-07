@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parsePendingChoicePayload,
   buildToolApprovalChoice,
-} from '../../src/services/pending-choice-utils.js';
+} from '../../src/cli/pending-choice-utils.js';
 
 describe('parsePendingChoicePayload', () => {
   describe('multi-question Claude format ({ questions: [...] })', () => {

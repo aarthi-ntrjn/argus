@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveLaunchCommand } from '../src/cli/launch-command-resolver.js';
+import { resolveLaunchCommand } from '../src/launch-pty/launch-command-resolver.js';
 
 describe('resolveLaunchCommand', () => {
   it('resolves "claude" to claude-code session type', () => {

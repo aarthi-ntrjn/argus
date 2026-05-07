@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { getSessions, getSession, updateSessionStatus } from '../../db/database.js';
-import { OutputStore } from '../../services/output-store.js';
+import { OutputStore } from '../../db/output-store.js';
 import { SessionController } from '../../services/session-controller.js';
-import { ptyRegistry } from '../../services/pty-registry.js';
+import { ptyRegistry } from '../../launch-pty/pty-registry.js';
 import { telemetryService } from '../../services/telemetry-service.js';
 import { broadcast } from '../ws/event-dispatcher.js';
 

@@ -19,10 +19,10 @@ vi.mock('fs/promises', async (importOriginal) => {
 });
 
 vi.mock('../../src/db/database.js', () => ({ getMaxSequenceNumber: vi.fn(() => 0) }));
-vi.mock('../../src/services/output-store.js', () => ({
+vi.mock('../../src/db/output-store.js', () => ({
   OutputStore: vi.fn().mockImplementation(() => ({ insertOutput: vi.fn() })),
 }));
-vi.mock('../../src/services/watcher-session-helpers.js', () => ({
+vi.mock('../../src/cli/watcher-session-helpers.js', () => ({
   applyActivityUpdate: vi.fn(),
   applyModelUpdate: vi.fn(),
   applySummaryUpdate: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('../../src/services/watcher-session-helpers.js', () => ({
 
 describe('ClaudeJsonlWatcher — claudeProjectDirName', () => {
   it('replaces spaces in repo path with hyphens when building the JSONL file path', async () => {
-    const { ClaudeJsonlWatcher } = await import('../../src/services/claude-code-jsonl-watcher.js');
+    const { ClaudeJsonlWatcher } = await import('../../src/cli/claude-code/claude-code-jsonl-watcher.js');
     const watcher = new ClaudeJsonlWatcher();
     await watcher.watchFile('session-abc', '/home/my user/my project');
 
@@ -43,7 +43,7 @@ describe('ClaudeJsonlWatcher — claudeProjectDirName', () => {
 
   it('replaces path separators with hyphens', async () => {
     mockWatch.mockClear();
-    const { ClaudeJsonlWatcher } = await import('../../src/services/claude-code-jsonl-watcher.js');
+    const { ClaudeJsonlWatcher } = await import('../../src/cli/claude-code/claude-code-jsonl-watcher.js');
     const watcher = new ClaudeJsonlWatcher();
     await watcher.watchFile('session-def', '/home/user/myrepo');
 
