@@ -2,7 +2,7 @@
 
 **Feature Branch**: `069-launch-pending-card`
 **Created**: 2026-05-06
-**Status**: Draft
+**Status**: Clarified
 **Input**: User description: "when i launch with argus - i want to show a placeholder session card with a spinner"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -34,7 +34,7 @@ When the AI tool process exits before creating a session (e.g., the tool is not 
 **Acceptance Scenarios**:
 
 1. **Given** a placeholder card is visible, **When** no real session appears within 30 seconds, **Then** the placeholder card is automatically removed from the sessions list.
-2. **Given** a placeholder card is visible, **When** the Argus server reports the launcher disconnected without creating a session, **Then** the placeholder card is removed promptly.
+2. **Given** a placeholder card is visible, **When** the Argus server broadcasts a launcher-disconnected event for that launch identifier, **Then** the placeholder card is removed immediately (without waiting for the 30-second timeout).
 
 ---
 
@@ -48,14 +48,15 @@ When the AI tool process exits before creating a session (e.g., the tool is not 
 
 ### Functional Requirements
 
-- **FR-001**: System MUST display a placeholder session card immediately after the user initiates a "Launch with Argus" action that successfully triggers the terminal launch (non-headless path).
+- **FR-001**: System MUST display a placeholder session card immediately after the user initiates a "Launch with Argus" action that successfully triggers the terminal launch (non-headless path). The launch response MUST include a unique launch identifier so the placeholder can be matched to its resulting session.
 - **FR-002**: The placeholder card MUST show the tool type (Claude Code or Copilot CLI), the repository path, and an animated spinner indicating the session is starting.
 - **FR-003**: The placeholder card MUST be visually distinct from real session cards to communicate that it is not yet an active session.
-- **FR-004**: System MUST automatically remove the placeholder card when the corresponding real session appears in the sessions list.
-- **FR-005**: System MUST automatically remove the placeholder card if no real session appears within 30 seconds.
+- **FR-004**: System MUST automatically remove the placeholder card when the corresponding real session appears in the sessions list, matched by the unique launch identifier included in the session's real-time event payload.
+- **FR-005**: System MUST automatically remove the placeholder card if no real session appears within 30 seconds (timeout fallback).
 - **FR-006**: System MUST NOT show a placeholder card when the headless (copy-command) path is used, since no launch was initiated by Argus.
-- **FR-007**: Multiple simultaneous launch actions MUST each produce their own independent placeholder card.
+- **FR-007**: Multiple simultaneous launch actions MUST each produce their own independent placeholder card, identified by their unique launch identifiers.
 - **FR-008**: The placeholder card MUST NOT be interactive (no stop, send-prompt, or other session controls).
+- **FR-009**: The backend MUST broadcast a real-time event when a pending launcher disconnects before a session is created, enabling the frontend to remove the corresponding placeholder immediately.
 
 ### Key Entities
 
@@ -78,3 +79,11 @@ When the AI tool process exits before creating a session (e.g., the tool is not 
 - The 30-second timeout for auto-removal is a reasonable default covering normal startup latency; it does not need to be user-configurable in this version.
 - The headless/copy-command path (status 422 from the launch endpoint) does not trigger a placeholder because Argus did not initiate the launch.
 - The existing real-time session update mechanism (WebSocket or SSE) already delivers new sessions to the frontend and can be used to detect when a placeholder should be replaced.
+
+## Clarifications
+
+### Session 2026-05-06
+
+- **Matching strategy (FR-004, FR-007)**: The backend returns a `ptyLaunchId` in the 202 response from the launch-terminal endpoint. The frontend stores this ID on the placeholder. When a new session appears via real-time push, if it carries the same `ptyLaunchId` and belongs to the same repo, the placeholder is removed. This enables precise matching for concurrent same-repo/same-tool launches. Requires the session's `ptyLaunchId` to be included in real-time session events.
+
+- **Early removal on launcher disconnect (US2.2, FR-005)**: The backend MUST broadcast a real-time `launcher.pending.gone` event (via the existing SSE/WebSocket channel) when a pending launcher WebSocket disconnects without having claimed a session. The frontend uses this event to remove the matching placeholder immediately, without waiting for the 30-second timeout. The timeout remains as a fallback for cases where the event is not delivered.
