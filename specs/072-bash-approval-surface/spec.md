@@ -9,32 +9,33 @@
 
 ### User Story 1 - See Bash Approval on Session Card (Priority: P1)
 
-A developer monitors Claude Code sessions in Argus. One session is running without full permissions (non-YOLO mode). Claude Code encounters a bash command and pauses to wait for the user's approval. Currently the session card shows nothing — the user must look at the terminal directly to see why the session appears stuck. With this feature, the session card immediately shows the command awaiting approval, so the user can act from the Argus dashboard without switching to the terminal.
+A developer monitors Claude Code or GitHub Copilot CLI sessions in Argus. One session is running without full auto-approval (non-YOLO mode for Claude Code, or without `--allow-all` for Copilot CLI). The agent encounters a shell command and pauses to wait for the user's approval. Currently the session card shows nothing — the user must look at the terminal directly to see why the session appears stuck. With this feature, the session card immediately shows the command awaiting approval, so the user can act from the Argus dashboard without switching to the terminal.
 
 **Why this priority**: Without this, users cannot act on pending bash approvals from the dashboard. The session appears frozen with no indication of what is needed. This is the core gap the feature closes.
 
-**Independent Test**: Launch a Claude Code session without YOLO mode and trigger a bash command. Verify the session card shows a pending approval prompt displaying the command text, without needing to visit the terminal.
+**Independent Test**: Launch a Claude Code session (or Copilot CLI session) without auto-approval mode and trigger a shell command. Verify the session card shows a pending approval prompt displaying the command text, without needing to visit the terminal.
 
 **Acceptance Scenarios**:
 
-1. **Given** a Claude Code session running in non-YOLO mode, **When** Claude attempts to run a bash command, **Then** the session card transitions to a "waiting" state and displays the command text awaiting approval.
-2. **Given** a session card showing a bash approval prompt, **When** the user approves the command from the Argus dashboard, **Then** the approval is sent to the session and execution resumes.
-3. **Given** a session card showing a bash approval prompt, **When** the user denies the command, **Then** the denial is sent and the session continues (Claude handles the rejection).
-4. **Given** a session card showing a bash approval prompt, **When** the command completes (approved or denied), **Then** the session card returns to its normal active state and the approval prompt disappears.
+1. **Given** a Claude Code session running in non-YOLO mode, **When** Claude attempts to run a shell command, **Then** the session card transitions to a "waiting" state and displays the command text awaiting approval.
+2. **Given** a Copilot CLI session running without `--allow-all`, **When** Copilot attempts to run a shell command, **Then** the session card transitions to a "waiting" state and displays the command text awaiting approval.
+3. **Given** a session card showing a bash approval prompt, **When** the user approves the command from the Argus dashboard, **Then** the approval is sent to the session and execution resumes.
+4. **Given** a session card showing a bash approval prompt, **When** the user denies the command, **Then** the denial is sent and the agent handles the rejection.
+5. **Given** a session card showing a bash approval prompt, **When** the command is resolved (approved or denied), **Then** the session card returns to its normal active state and the approval prompt disappears.
 
 ---
 
 ### User Story 2 - Approval Prompt in Session Detail View (Priority: P2)
 
-A user viewing the full session detail panel while Claude Code is waiting for bash command approval sees the same approval prompt as in the card view, with the full command visible and the same approve/deny actions available.
+A user viewing the full session detail panel while a Claude Code or Copilot CLI session is waiting for shell command approval sees the same approval prompt as in the card view, with the full command visible and the same approve/deny actions available.
 
 **Why this priority**: The session detail view provides more screen space and context. A consistent approval UX there is important for users who drill into sessions to monitor them closely.
 
-**Independent Test**: Navigate to session detail while a bash approval is pending. Verify the prompt and command are visible, and approval/denial works from the detail view.
+**Independent Test**: Navigate to session detail while a bash approval is pending (for either agent type). Verify the prompt and command are visible, and approval/denial works from the detail view.
 
 **Acceptance Scenarios**:
 
-1. **Given** a session detail page open for a non-YOLO session, **When** a bash approval is pending, **Then** the approval panel is visible with the command text and approve/deny options.
+1. **Given** a session detail page open for a non-auto-approval session (Claude Code or Copilot CLI), **When** a shell approval is pending, **Then** the approval panel is visible with the command text and approve/deny options.
 2. **Given** the session detail page shows a bash approval prompt, **When** the user approves or denies, **Then** the action is sent and the prompt clears.
 
 ---
@@ -51,7 +52,7 @@ A user viewing the full session detail panel while Claude Code is waiting for ba
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST detect when a Claude Code session in non-YOLO mode has a bash command awaiting approval and surface this as a pending approval event to the session card.
+- **FR-001**: The system MUST detect when a Claude Code or Copilot CLI session running without auto-approval has a bash/shell command awaiting approval and surface this as a pending approval event to the session card.
 - **FR-002**: The session card MUST display the full text of the bash command (or command description) pending approval.
 - **FR-003**: The session card MUST transition to a visually distinct "waiting for approval" state when a bash approval is pending, consistent with how existing `ask_user` prompts are displayed.
 - **FR-004**: Users MUST be able to approve a pending bash command from the session card without leaving the Argus dashboard.
@@ -65,15 +66,15 @@ A user viewing the full session detail panel while Claude Code is waiting for ba
 
 ### Measurable Outcomes
 
-- **SC-001**: When a Claude Code session in non-YOLO mode pauses for bash approval, the approval prompt appears on the session card within 2 seconds of the pause.
+- **SC-001**: When a Claude Code or Copilot CLI session pauses for bash/shell approval, the approval prompt appears on the session card within 2 seconds of the pause.
 - **SC-002**: A user can approve or deny a bash command entirely from the Argus dashboard — zero terminal interactions required.
 - **SC-003**: After approval or denial, the session card returns to its previous state within 2 seconds.
-- **SC-004**: No approval prompts appear on sessions running in YOLO mode.
+- **SC-004**: No approval prompts appear on sessions running in auto-approval mode (YOLO for Claude Code, `--allow-all` for Copilot CLI).
 
 ## Assumptions
 
-- Claude Code sends a detectable event (hook or JSONL entry) when pausing for bash command approval in non-YOLO mode. This event contains the command text to be approved.
-- The existing pending-choice UI infrastructure (PendingChoicePanel, `session.pending_choice` WS events) can be reused or extended to display bash approvals, since both represent "session needs input before proceeding."
+- Both Claude Code and Copilot CLI fire a `PreToolUse` hook event when pausing for bash/shell command approval. This event contains the tool name and the command text to be approved. Argus already receives these hook events via the same HTTP hook endpoint used for `AskUserQuestion` / `ask_user` prompts.
+- The hooks injector currently only registers `PreToolUse` hooks for the ask-user tool names (`AskUserQuestion` for Claude Code, `ask_user` for Copilot CLI). It must also be extended to register `PreToolUse` for the respective shell/bash tool names so Argus receives those events.
+- The existing pending-choice UI infrastructure (`PendingChoicePanel`, `session.pending_choice` WS events) can be reused or extended to display bash approvals, since both represent "session needs input before proceeding."
 - Approval and denial are sent by typing a response into the session's PTY — the same mechanism used for existing pending choices.
-- GitHub Copilot CLI sessions are out of scope for this feature; Copilot CLI uses a different approval mechanism and is not addressed here.
 - Sessions launched outside Argus (not via PTY) that enter a bash approval state will show the prompt as read-only (no approve/deny actions), since Argus has no PTY channel to send the response.
