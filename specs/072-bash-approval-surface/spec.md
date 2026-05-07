@@ -2,7 +2,7 @@
 
 **Feature Branch**: `072-bash-approval-surface`
 **Created**: 2025-07-17
-**Status**: Draft
+**Status**: Clarified
 **Input**: User description: "when not running in yolo mode bash command approvals are not bubbled to the session card"
 
 ## Clarifications
