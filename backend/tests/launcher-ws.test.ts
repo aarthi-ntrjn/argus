@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PtyRegistry } from '../src/services/pty-registry.js';
+import { PtyRegistry } from '../src/launch-pty/pty-registry.js';
 
 // Unit-level tests for the launcher route logic via the PtyRegistry contract.
 // These verify message routing without spinning up a Fastify server.

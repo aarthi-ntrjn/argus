@@ -1,4 +1,4 @@
-import type { SessionChange } from '../services/session-diff-tracker.js';
+import type { SessionChange } from '../integration/session-diff-tracker.js';
 export type { SessionChange };
 
 export type SessionType = 'copilot-cli' | 'claude-code';

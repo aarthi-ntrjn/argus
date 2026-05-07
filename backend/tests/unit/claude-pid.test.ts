@@ -14,8 +14,8 @@ vi.mock('ps-list', () => ({
 
 // isPidRunning is called by scan() to verify registry entries are live.
 // Default: all registry PIDs are considered live.
-vi.mock('../../src/services/process-utils.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/services/process-utils.js')>();
+vi.mock('../../src/utils/process-utils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/utils/process-utils.js')>();
   return {
     ...actual,
     isPidRunning: vi.fn(() => true),

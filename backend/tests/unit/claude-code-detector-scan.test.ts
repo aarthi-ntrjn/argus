@@ -15,8 +15,8 @@ vi.mock('ps-list', () => ({
 // Default: all PIDs are considered live and belong to the expected process.
 let mockIsPidRunningResult = true;
 let mockIsExpectedProcessResult = true;
-vi.mock('../../src/services/process-utils.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/services/process-utils.js')>();
+vi.mock('../../src/utils/process-utils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/utils/process-utils.js')>();
   return {
     ...actual,
     isPidRunning: vi.fn(() => mockIsPidRunningResult),
@@ -468,7 +468,7 @@ describe('ClaudeCodeDetector.handleHookPayload — Stop hook', () => {
 
 describe('ClaudeCodeDetector — PTY claim on first hook (T029 redesign)', () => {
   let dbModule: typeof import('../../src/db/database.js');
-  let ptyRegistryModule: typeof import('../../src/services/pty-registry.js');
+  let ptyRegistryModule: typeof import('../../src/launch-pty/pty-registry.js');
 
   beforeEach(async () => {
     process.env.ARGUS_DB_PATH = join(tmpdir(), `argus-pty-claim-test-${randomUUID()}.db`);
@@ -477,7 +477,7 @@ describe('ClaudeCodeDetector — PTY claim on first hook (T029 redesign)', () =>
     mockMtime = new Date();
     fakeJsonlFiles = ['test-session-abc123.jsonl'];
     dbModule = await import('../../src/db/database.js');
-    ptyRegistryModule = await import('../../src/services/pty-registry.js');
+    ptyRegistryModule = await import('../../src/launch-pty/pty-registry.js');
     dbModule.insertRepository({
       id: 'repo-claim-test',
       path: FAKE_REPO_PATH,

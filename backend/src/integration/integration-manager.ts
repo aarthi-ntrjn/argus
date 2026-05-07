@@ -12,19 +12,19 @@ import {
   getTeamsConnectionStatus,
 } from './integration-status.js';
 import { setSlackServices } from '../api/routes/health.js';
-import type { SessionMonitor } from '../services/session-monitor.js';
+import type { SessionMonitor } from '../cli/session-monitor.js';
 import { broadcast, type IntegrationStatusPayload } from '../api/ws/event-dispatcher.js';
 import { createTaggedLogger } from '../utils/logger.js';
-import { outputEvents } from '../services/output-store.js';
-import { pendingChoiceEvents } from '../services/pending-choice-events.js';
-import type { PendingChoice } from '../services/pending-choice-events.js';
+import { outputEvents } from '../db/output-store.js';
+import { pendingChoiceEvents } from '../cli/pending-choice-events.js';
+import type { PendingChoice } from '../cli/pending-choice-events.js';
 import type {
   Session,
   Repository,
   SessionOutput,
   NotificationIntegration,
 } from '../models/index.js';
-import { SessionDiffTracker } from '../services/session-diff-tracker.js';
+import { SessionDiffTracker } from './session-diff-tracker.js';
 import { getSessions } from '../db/database.js';
 import {
   SESSION_CREATED,

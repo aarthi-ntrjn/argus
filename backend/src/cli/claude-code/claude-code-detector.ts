@@ -3,7 +3,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { getSessions, getRepositories } from '../../db/database.js';
 import { ClaudeJsonlWatcher } from './claude-code-jsonl-watcher.js';
-import { isPidRunning } from '../../services/process-utils.js';
+import { isPidRunning } from '../../utils/process-utils.js';
 import { SessionTypes } from '../../models/index.js';
 import type { Session, Repository } from '../../models/index.js';
 import type { CliDetector } from '../cli-detector.js';

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'crypto';
 import { rmSync, existsSync } from 'fs';
 import { insertRepository, upsertSession, closeDb } from '../../src/db/database.js';
-import { OutputStore, outputEvents } from '../../src/services/output-store.js';
+import { OutputStore, outputEvents } from '../../src/db/output-store.js';
 
 const testRepoId = randomUUID();
 const testSessionId = `test-${randomUUID()}`;
@@ -134,7 +134,7 @@ describe('OutputStore', () => {
   });
 
   it('can prune oldest records when over limit', async () => {
-    const { OutputStore } = await import('../../src/services/output-store.js');
+    const { OutputStore } = await import('../../src/db/output-store.js');
     const store = new OutputStore();
     const sessionId = testSessionId;
 

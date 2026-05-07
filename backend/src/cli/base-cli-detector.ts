@@ -18,7 +18,7 @@ export interface SessionEntry {
   pid: number | null;
 }
 import { broadcast } from '../api/ws/event-dispatcher.js';
-import { pendingChoiceEvents } from '../services/pending-choice-events.js';
+import { pendingChoiceEvents } from './pending-choice-events.js';
 import {
   updateSessionStatus,
   upsertSession,
@@ -27,8 +27,8 @@ import {
 } from '../db/database.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
 import { telemetryService } from '../services/telemetry-service.js';
-import { ptyRegistry } from '../services/pty-registry.js';
-import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from '../services/process-utils.js';
+import { ptyRegistry } from '../launch-pty/pty-registry.js';
+import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from '../utils/process-utils.js';
 import * as logger from '../utils/logger.js';
 import { JsonlWatcherBase } from './jsonl-watcher-base.js';
 import type { CliHookPayload } from './cli-detector.js';

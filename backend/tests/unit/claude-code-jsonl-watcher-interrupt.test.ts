@@ -3,10 +3,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../src/db/database.js', () => ({
   getMaxSequenceNumber: vi.fn(() => 0),
 }));
-vi.mock('../../src/services/output-store.js', () => ({
+vi.mock('../../src/db/output-store.js', () => ({
   OutputStore: vi.fn().mockImplementation(() => ({ insertOutput: vi.fn(() => true) })),
 }));
-vi.mock('../../src/services/watcher-session-helpers.js', () => ({
+vi.mock('../../src/cli/watcher-session-helpers.js', () => ({
   applyActivityUpdate: vi.fn(),
   applyModelUpdate: vi.fn(),
   applySummaryUpdate: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('../../src/api/ws/event-dispatcher.js', () => ({
 }));
 
 const mockPendingChoiceEmit = vi.hoisted(() => vi.fn());
-vi.mock('../../src/services/pending-choice-events.js', () => ({
+vi.mock('../../src/cli/pending-choice-events.js', () => ({
   pendingChoiceEvents: { emit: mockPendingChoiceEmit },
 }));
 

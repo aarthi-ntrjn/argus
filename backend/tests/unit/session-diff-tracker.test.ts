@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SessionDiffTracker } from '../../src/services/session-diff-tracker.js';
+import { SessionDiffTracker } from '../../src/integration/session-diff-tracker.js';
 import type { Session } from '../../src/models/index.js';
 
 function makeSession(overrides: Partial<Session> = {}): Session {

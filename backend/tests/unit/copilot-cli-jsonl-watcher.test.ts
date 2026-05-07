@@ -19,11 +19,11 @@ vi.mock('../../src/db/database.js', () => ({
   getMaxSequenceNumber: vi.fn(() => 0),
 }));
 
-vi.mock('../../src/services/output-store.js', () => ({
+vi.mock('../../src/db/output-store.js', () => ({
   OutputStore: vi.fn().mockImplementation(() => ({ insertOutput: vi.fn(() => true) })),
 }));
 
-vi.mock('../../src/services/watcher-session-helpers.js', () => ({
+vi.mock('../../src/cli/watcher-session-helpers.js', () => ({
   applyActivityUpdate: vi.fn(),
   applyModelUpdate: vi.fn(),
   applySummaryUpdate: vi.fn(),
