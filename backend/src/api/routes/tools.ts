@@ -24,7 +24,7 @@ const YOLO_FLAGS: Record<ToolCommand, string> = {
 
 // Base command (no --cwd): safe to copy and run manually from any directory.
 function buildLaunchCmdBase(tool: ToolCommand, yoloMode = false, launchId?: string): string {
-  const launchScript = path.join(ARGUS_ROOT, 'backend', 'dist', 'cli', 'launch.js');
+  const launchScript = path.join(ARGUS_ROOT, 'backend', 'dist', 'launch-pty', 'launch.js');
   const base = `node "${launchScript}" ${tool}`;
   const withYolo = yoloMode ? `${base} ${YOLO_FLAGS[tool]}` : base;
   return launchId ? `${withYolo} --launch-id ${launchId}` : withYolo;
