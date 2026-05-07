@@ -1,15 +1,15 @@
 # Coverage Report
 
-*Generated: May 6, 2026, 3:36 PM*
+*Generated: May 6, 2026, 9:33 PM*
 
 ## Summary
 
 | Suite | Files | Tests | Statements | Branches | Functions | Lines | Covers |
 |-------|-------|-------|------------|----------|-----------|-------|--------|
-| backend unit   | 203 | 🟢 526/526 | 🟡 63.08% | 🟡 74.86% | 🟡 69.87% | 🟡 63.08% | backend/src |
-| frontend unit  | 124 | 🟢 353/353 | 🟢 88.58% | 🟡 77.85% | 🔴 49.71% | 🟢 88.58% | frontend/src |
-| e2e mock       | 14 | 🟢 152/152 (2 skipped) | 🔴 54.96% | 🔴 49.03% | 🔴 48.73% | 🔴 55.30% | frontend/src |
-| e2e real       | 7 | 🔴 45/48 | N/A | N/A | N/A | N/A | backend/src |
+| backend unit   | 203 | 🟢 526/526 | 🟡 63.39% | 🟡 74.86% | 🟡 69.87% | 🟡 63.39% | backend/src |
+| frontend unit  | 127 | 🟢 367/367 | 🟢 88.63% | 🟡 78.45% | 🔴 50.87% | 🟢 88.63% | frontend/src |
+| e2e mock       | 14 | 🟢 152/152 (2 skipped) | 🔴 58.04% | 🔴 51.09% | 🔴 53.94% | 🔴 57.28% | frontend/src |
+| e2e real       | 7 | 🔴 46/48 | N/A | N/A | N/A | N/A | backend/src |
 
 ## Backend unit - per file
 
@@ -42,7 +42,7 @@
 | `backend/src/constants/slack-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/db/database.ts` | 🔴 54.98% | 🟡 70.73% | 🔴 52.63% | 🔴 54.98% |
 | `backend/src/db/schema.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/integration/integration-manager.ts` | 🔴 18.80% | 🟢 100.00% | 🔴 11.11% | 🔴 18.80% |
+| `backend/src/integration/integration-manager.ts` | 🔴 18.72% | 🟢 100.00% | 🔴 11.11% | 🔴 18.72% |
 | `backend/src/integration/integration-status.ts` | 🟡 78.57% | 🟡 75.00% | 🟢 100.00% | 🟡 78.57% |
 | `backend/src/integration/slack/slack-listener.ts` | 🔴 48.76% | 🟢 85.71% | 🟡 63.63% | 🔴 48.76% |
 | `backend/src/integration/slack/slack-notifier.ts` | 🟡 60.13% | 🟡 65.00% | 🟡 63.63% | 🟡 60.13% |
@@ -126,7 +126,7 @@
 | `frontend/src/components/SetupPage/SetupPage.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/TelemetryBanner/index.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/TelemetryBanner/TelemetryBanner.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/components/TodoPanel/TodoPanel.tsx` | 🟢 84.98% | 🟢 90.36% | 🟡 78.26% | 🟢 84.98% |
+| `frontend/src/components/TodoPanel/TodoPanel.tsx` | 🟢 91.81% | 🟢 94.68% | 🟢 100.00% | 🟢 91.81% |
 | `frontend/src/components/ToggleIconButton.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/UpdateBadge/UpdateBadge.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/YoloWarningDialog/YoloWarningDialog.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
@@ -502,7 +502,7 @@
 | `frontend/src/components/SetupPage/SetupPage.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `frontend/src/components/TelemetryBanner/index.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/TelemetryBanner/TelemetryBanner.tsx` | 🔴 25.00% | 🟢 100.00% | 🔴 0.00% | 🔴 25.00% |
-| `frontend/src/components/TodoPanel/TodoPanel.tsx` | 🟡 79.10% | 🟡 71.26% | 🟢 85.10% | 🟡 78.57% |
+| `frontend/src/components/TodoPanel/TodoPanel.tsx` | 🟢 88.23% | 🟡 74.15% | 🟢 100.00% | 🟢 88.46% |
 | `frontend/src/components/ToggleIconButton.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/YoloWarningDialog/YoloWarningDialog.tsx` | 🟡 66.66% | 🔴 50.00% | 🟢 100.00% | 🟡 66.66% |
 | `frontend/src/config/dashboardTourSteps.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
