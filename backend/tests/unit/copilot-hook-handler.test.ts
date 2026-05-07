@@ -150,7 +150,7 @@ describe('CopilotCliDetector — handleHookPayload', () => {
       const pending = detector.getPendingChoice(sessionId);
       expect(pending).not.toBeNull();
       expect(pending?.question).toBe('run_shell_command: ls -la');
-      expect(pending?.choices).toEqual(['Yes, run it', 'No, skip it']);
+      expect(pending?.choices).toEqual(['Yes, allow once', 'Yes, allow for this session', 'No, reject']);
     });
   });
 

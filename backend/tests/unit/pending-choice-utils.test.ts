@@ -135,46 +135,97 @@ describe('parsePendingChoicePayload', () => {
 });
 
 describe('buildToolApprovalChoice', () => {
-  it('builds question from tool name and command field', () => {
-    const result = buildToolApprovalChoice('Bash', { command: 'rm -rf /' });
-    expect(result.question).toBe('Bash: rm -rf /');
-    expect(result.choices).toEqual(['Yes, run it', 'No, skip it']);
-    expect(result.allQuestions).toHaveLength(1);
-    expect(result.allQuestions[0].question).toBe('Bash: rm -rf /');
-    expect(result.allQuestions[0].choices).toEqual(['Yes, run it', 'No, skip it']);
-  });
-
-  it('prefers command over other fields', () => {
-    const result = buildToolApprovalChoice('Bash', {
-      command: 'echo hello',
-      file_path: '/some/file',
+  describe('question formatting', () => {
+    it('builds question from tool name and command field', () => {
+      const result = buildToolApprovalChoice('Bash', { command: 'rm -rf /' });
+      expect(result.question).toBe('Bash: rm -rf /');
+      expect(result.allQuestions).toHaveLength(1);
+      expect(result.allQuestions[0].question).toBe('Bash: rm -rf /');
     });
-    expect(result.question).toBe('Bash: echo hello');
+
+    it('prefers command over other fields', () => {
+      const result = buildToolApprovalChoice('Bash', {
+        command: 'echo hello',
+        file_path: '/some/file',
+      });
+      expect(result.question).toBe('Bash: echo hello');
+    });
+
+    it('falls back to file_path when no command present', () => {
+      const result = buildToolApprovalChoice('Write', { file_path: '/src/index.ts' });
+      expect(result.question).toBe('Write: /src/index.ts');
+    });
+
+    it('falls back to path when no command or file_path present', () => {
+      const result = buildToolApprovalChoice('Read', { path: '/etc/hosts' });
+      expect(result.question).toBe('Read: /etc/hosts');
+    });
+
+    it('falls back to first string value in tool_input when no known key present', () => {
+      const result = buildToolApprovalChoice('Computer', { action: 'screenshot', duration: 5 });
+      expect(result.question).toBe('Computer: screenshot');
+    });
+
+    it('uses tool name only when tool_input has no string values', () => {
+      const result = buildToolApprovalChoice('Write', {});
+      expect(result.question).toBe('Write');
+    });
+
+    it('uses tool name only when tool_input is empty object', () => {
+      const result = buildToolApprovalChoice('Unknown', {});
+      expect(result.question).toBe('Unknown');
+    });
   });
 
-  it('falls back to file_path when no command present', () => {
-    const result = buildToolApprovalChoice('Write', { file_path: '/src/index.ts' });
-    expect(result.question).toBe('Write: /src/index.ts');
-  });
+  describe('tier-aware choices', () => {
+    it('Bash tool uses permanent per-project choices', () => {
+      const result = buildToolApprovalChoice('Bash', { command: 'rm -rf /' });
+      expect(result.choices).toEqual(['Yes', "Yes, don't ask again for this project", 'No']);
+      expect(result.allQuestions[0].choices).toEqual([
+        'Yes',
+        "Yes, don't ask again for this project",
+        'No',
+      ]);
+    });
 
-  it('falls back to path when no command or file_path present', () => {
-    const result = buildToolApprovalChoice('Read', { path: '/etc/hosts' });
-    expect(result.question).toBe('Read: /etc/hosts');
-  });
+    it('computer tool uses permanent per-project choices (bash tier)', () => {
+      const result = buildToolApprovalChoice('computer', { action: 'screenshot' });
+      expect(result.choices).toEqual(['Yes', "Yes, don't ask again for this project", 'No']);
+    });
 
-  it('falls back to first string value in tool_input when no known key present', () => {
-    const result = buildToolApprovalChoice('Computer', { action: 'screenshot', duration: 5 });
-    expect(result.question).toBe('Computer: screenshot');
-  });
+    it('Edit tool uses session-scoped choices', () => {
+      const result = buildToolApprovalChoice('Edit', { file_path: '/src/index.ts' });
+      expect(result.choices).toEqual(['Yes', "Yes, don't ask again for this session", 'No']);
+    });
 
-  it('uses tool name only when tool_input has no string values', () => {
-    const result = buildToolApprovalChoice('Write', {});
-    expect(result.question).toBe('Write');
-    expect(result.choices).toEqual(['Yes, run it', 'No, skip it']);
-  });
+    it('Write tool uses session-scoped choices', () => {
+      const result = buildToolApprovalChoice('Write', { file_path: '/src/out.txt' });
+      expect(result.choices).toEqual(['Yes', "Yes, don't ask again for this session", 'No']);
+    });
 
-  it('uses tool name only when tool_input is empty object', () => {
-    const result = buildToolApprovalChoice('Unknown', {});
-    expect(result.question).toBe('Unknown');
+    it('MultiEdit tool uses session-scoped choices', () => {
+      const result = buildToolApprovalChoice('MultiEdit', {});
+      expect(result.choices).toEqual(['Yes', "Yes, don't ask again for this session", 'No']);
+    });
+
+    it('run_shell_command uses Copilot session-once choices', () => {
+      const result = buildToolApprovalChoice('run_shell_command', { command: 'ls -la' });
+      expect(result.choices).toEqual(['Yes, allow once', 'Yes, allow for this session', 'No, reject']);
+    });
+
+    it('bash (Copilot CLI shell kind) uses Copilot session-once choices', () => {
+      const result = buildToolApprovalChoice('bash', { command: 'git push' });
+      expect(result.choices).toEqual(['Yes, allow once', 'Yes, allow for this session', 'No, reject']);
+    });
+
+    it('edit (Copilot CLI write kind) uses Copilot session-once choices', () => {
+      const result = buildToolApprovalChoice('edit', { file_path: '/src/index.ts' });
+      expect(result.choices).toEqual(['Yes, allow once', 'Yes, allow for this session', 'No, reject']);
+    });
+
+    it('unknown tool defaults to session-scoped choices (safe default)', () => {
+      const result = buildToolApprovalChoice('Unknown', {});
+      expect(result.choices).toEqual(['Yes', "Yes, don't ask again for this session", 'No']);
+    });
   });
 });
