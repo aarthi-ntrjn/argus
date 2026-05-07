@@ -152,6 +152,21 @@ describe('CopilotCliDetector — handleHookPayload', () => {
       expect(pending?.question).toBe('run_shell_command: ls -la');
       expect(pending?.choices).toEqual(['Yes, allow once', 'Yes, allow for this session', 'No, reject']);
     });
+
+    it('PreToolUse for a non-ask_user tool is suppressed in yolo mode', async () => {
+      const sessionId = randomUUID();
+      dbModule.upsertSession({ ...makeSession(sessionId, repoId), yoloMode: true });
+
+      await detector.handleHookPayload({
+        hook_event_name: 'PreToolUse',
+        session_id: sessionId,
+        tool_name: 'run_shell_command',
+        tool_input: { command: 'rm -rf /' },
+        cwd: TEST_REPO_PATH,
+      });
+
+      expect(detector.getPendingChoice(sessionId)).toBeNull();
+    });
   });
 
   describe('SessionEnd', () => {

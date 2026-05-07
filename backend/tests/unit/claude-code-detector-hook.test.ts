@@ -183,7 +183,22 @@ describe('ClaudeCodeDetector — hook-based pending choice', () => {
     const pending = detector.getPendingChoice(sessionId);
     expect(pending).not.toBeNull();
     expect(pending?.question).toBe('Bash: ls -la');
-    expect(pending?.choices).toEqual(['Yes, run it', 'No, skip it']);
+    expect(pending?.choices).toEqual(['Yes', "Yes, don't ask again for this project", 'No']);
+  });
+
+  it('PreToolUse with non-AskUserQuestion tool is suppressed in yolo mode', async () => {
+    const sessionId = randomUUID();
+    dbModule.upsertSession({ ...makeSession(sessionId), yoloMode: true });
+
+    await detector.handleHookPayload({
+      hook_event_name: 'PreToolUse',
+      session_id: sessionId,
+      tool_name: 'Bash',
+      tool_input: { command: 'rm -rf /' },
+      cwd: TEST_REPO_PATH,
+    });
+
+    expect(detector.getPendingChoice(sessionId)).toBeNull();
   });
 
   it('PostToolUse with non-AskUserQuestion tool_name clears the tool approval pending choice', async () => {

@@ -722,6 +722,10 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     if (!existing) {
       return;
     }
+    // In yolo mode the tool is auto-approved — no interactive prompt is shown.
+    if (existing.yoloMode) {
+      return;
+    }
     const toolName = payload.tool_name ?? 'Unknown';
     const { question, choices, allQuestions } = buildToolApprovalChoice(
       toolName,
