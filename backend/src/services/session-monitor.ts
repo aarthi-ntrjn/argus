@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { RepositoryScanner } from './repository-scanner.js';
-import { CliManager } from './cli-manager.js';
+import { CliManager } from '../cli/cli-manager.js';
 import { loadConfig } from '../config/config-loader.js';
 import {
   getSessions,

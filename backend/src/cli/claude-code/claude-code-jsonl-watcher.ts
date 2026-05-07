@@ -1,10 +1,10 @@
 import { join } from 'path';
 import { homedir } from 'os';
 import { parseClaudeJsonlLine } from './claude-code-jsonl-parser.js';
-import { JsonlWatcherBase } from './jsonl-watcher-base.js';
-import { broadcast } from '../api/ws/event-dispatcher.js';
-import { pendingChoiceEvents } from './pending-choice-events.js';
-import type { SessionOutput } from '../models/index.js';
+import { JsonlWatcherBase } from '../jsonl-watcher-base.js';
+import { broadcast } from '../../api/ws/event-dispatcher.js';
+import { pendingChoiceEvents } from '../../services/pending-choice-events.js';
+import type { SessionOutput } from '../../models/index.js';
 
 const TOOL_USE_INTERRUPTED_SENTINEL = '[Request interrupted by user for tool use]';
 

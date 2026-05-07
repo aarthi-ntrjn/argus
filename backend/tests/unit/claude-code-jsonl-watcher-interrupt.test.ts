@@ -25,7 +25,7 @@ vi.mock('../../src/services/pending-choice-events.js', () => ({
   pendingChoiceEvents: { emit: mockPendingChoiceEmit },
 }));
 
-import { ClaudeJsonlWatcher } from '../../src/services/claude-code-jsonl-watcher.js';
+import { ClaudeJsonlWatcher } from '../../src/cli/claude-code/claude-code-jsonl-watcher.js';
 import type { SessionOutput } from '../../src/models/index.js';
 
 class TestableWatcher extends ClaudeJsonlWatcher {

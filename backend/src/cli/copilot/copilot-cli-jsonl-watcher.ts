@@ -1,8 +1,8 @@
 import { join } from 'path';
-import { broadcast } from '../api/ws/event-dispatcher.js';
+import { broadcast } from '../../api/ws/event-dispatcher.js';
 import { parseJsonlLine } from './copilot-cli-jsonl-parser.js';
-import { JsonlWatcherBase } from './jsonl-watcher-base.js';
-import type { SessionOutput } from '../models/index.js';
+import { JsonlWatcherBase } from '../jsonl-watcher-base.js';
+import type { SessionOutput } from '../../models/index.js';
 
 export class CopilotJsonlWatcher extends JsonlWatcherBase {
   protected readonly tag = '[CopilotDetector]';

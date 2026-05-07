@@ -2,12 +2,12 @@ import { existsSync } from 'fs';
 import { open as fsOpen, stat as fsStat } from 'fs/promises';
 import chokidar, { type FSWatcher } from 'chokidar';
 import { getMaxSequenceNumber } from '../db/database.js';
-import { OutputStore } from './output-store.js';
+import { OutputStore } from '../services/output-store.js';
 import {
   applyActivityUpdate,
   applyModelUpdate,
   applySummaryUpdate,
-} from './watcher-session-helpers.js';
+} from '../services/watcher-session-helpers.js';
 import * as logger from '../utils/logger.js';
 import type { SessionOutput } from '../models/index.js';
 

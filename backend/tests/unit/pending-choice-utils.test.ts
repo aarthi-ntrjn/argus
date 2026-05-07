@@ -4,7 +4,7 @@
  * These tests should FAIL until T002 (pending-choice-utils.ts) is implemented.
  */
 import { describe, it, expect } from 'vitest';
-import { parsePendingChoicePayload } from '../../src/services/pending-choice-utils.js';
+import { parsePendingChoicePayload } from '../../src/cli/pending-choice-utils.js';
 
 describe('parsePendingChoicePayload', () => {
   describe('multi-question Claude format ({ questions: [...] })', () => {

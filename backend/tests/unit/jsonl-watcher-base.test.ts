@@ -39,7 +39,7 @@ vi.mock('../../src/services/watcher-session-helpers.js', () => ({
   applySummaryUpdate: mockApplySummary,
 }));
 
-import { JsonlWatcherBase, TAIL_BYTES } from '../../src/services/jsonl-watcher-base.js';
+import { JsonlWatcherBase, TAIL_BYTES } from '../../src/cli/jsonl-watcher-base.js';
 
 // Minimal concrete subclass — parseLine returns one output per non-empty line
 class TestWatcher extends JsonlWatcherBase {

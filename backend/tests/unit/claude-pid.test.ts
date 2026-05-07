@@ -87,7 +87,7 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
     fakeJsonlFiles = ['new-pid-session.jsonl'];
     fakeRegistryEntries = { 'new-pid-session': { pid: 5555, sessionId: 'new-pid-session', cwd: FAKE_REPO_PATH } };
 
-    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    const { ClaudeCodeDetector } = await import('../../src/cli/claude-code/claude-code-detector.js');
     await new ClaudeCodeDetector().scan();
 
     const sessions = dbModule.getSessions({ repositoryId: 'repo-pid-test', type: 'claude-code' });
@@ -117,7 +117,7 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
       model: null,
     });
 
-    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    const { ClaudeCodeDetector } = await import('../../src/cli/claude-code/claude-code-detector.js');
     await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession(sessionId);
@@ -146,7 +146,7 @@ describe('ClaudeCodeDetector - PID via session registry (not psList)', () => {
       model: null,
     });
 
-    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    const { ClaudeCodeDetector } = await import('../../src/cli/claude-code/claude-code-detector.js');
     await new ClaudeCodeDetector().scan();
 
     const session = dbModule.getSession(sessionId);
