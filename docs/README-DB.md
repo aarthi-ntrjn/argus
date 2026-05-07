@@ -126,7 +126,7 @@ The canonical schema is always `backend/src/db/schema.ts`.
 
 ## Data retention
 
-A pruning job runs every 60 seconds (`backend/src/services/pruning-job.ts`):
+A pruning job runs every 60 seconds (`backend/src/db/pruning-job.ts`):
 
 - **Expired sessions**: deletes sessions where `expires_at` has passed.
 - **Output pruning**: trims session output that exceeds `outputRetentionMbPerSession` (default: 10 MB per session, configurable in `~/.argus/config.json`).

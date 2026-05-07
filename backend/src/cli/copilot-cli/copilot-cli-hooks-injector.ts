@@ -1,9 +1,9 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
-import { createTaggedLogger } from '../utils/logger.js';
-import { loadConfig } from '../config/config-loader.js';
-import { getRepositories } from '../db/database.js';
-import type { CliHooksInjector } from './cli-hooks-injector.js';
+import { createTaggedLogger } from '../../utils/logger.js';
+import { loadConfig } from '../../config/config-loader.js';
+import { getRepositories } from '../../db/database.js';
+import type { CliHooksInjector } from '../cli-hooks-injector.js';
 
 const log = createTaggedLogger('[CopilotHooksInjector]', '\x1b[33m');
 

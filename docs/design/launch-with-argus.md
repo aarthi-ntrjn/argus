@@ -8,10 +8,10 @@
 
 | Component | File | Role |
 |---|---|---|
-| `PtyRegistry` | `services/pty-registry.ts` | In-memory registry of pending launchers and claimed sessions |
+| `PtyRegistry` | `launch-pty/pty-registry.ts` | In-memory registry of pending launchers and claimed sessions |
 | Launcher route | `api/routes/launcher.ts` | WebSocket endpoint `/launcher?id={ptyLaunchId}` |
 | `SessionController` | `services/session-controller.ts` | Orchestrates stop, send-prompt, interrupt, dismiss |
-| `SessionPidResolver` | `services/session-pid-resolver.ts` | Resolves PID to sessionId from on-disk session files |
+| `SessionPidResolver` | `cli/session-pid-resolver.ts` | Resolves PID to sessionId from on-disk session files |
 | Session routes | `api/routes/sessions.ts` | REST endpoints for session control actions |
 
 ---

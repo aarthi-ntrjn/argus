@@ -1,9 +1,9 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
-import { createTaggedLogger } from '../utils/logger.js';
-import { loadConfig } from '../config/config-loader.js';
-import type { CliHooksInjector } from './cli-hooks-injector.js';
+import { createTaggedLogger } from '../../utils/logger.js';
+import { loadConfig } from '../../config/config-loader.js';
+import type { CliHooksInjector } from '../cli-hooks-injector.js';
 
 const log = createTaggedLogger('[ClaudeCodeHooksInjector]', '\x1b[34m');
 

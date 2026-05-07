@@ -39,7 +39,7 @@ vi.mock('../../src/api/ws/event-dispatcher.js', () => ({
 const mockHas = vi.hoisted(() => vi.fn().mockReturnValue(false));
 const mockClaimForSession = vi.hoisted(() => vi.fn().mockReturnValue(null));
 const mockGetClaimedPid = vi.hoisted(() => vi.fn().mockReturnValue(null));
-vi.mock('../../src/services/pty-registry.js', () => ({
+vi.mock('../../src/launch-pty/pty-registry.js', () => ({
   ptyRegistry: {
     claimForSession: mockClaimForSession,
     has: mockHas,
@@ -57,7 +57,7 @@ vi.mock('ps-list', () => ({ default: mockPsList }));
 // copilot-cli-detector uses isPidRunning (not ps-list) for liveness checks.
 const mockIsPidRunning = vi.hoisted(() => vi.fn((_pid: number) => false));
 const mockIsExpectedProcess = vi.hoisted(() => vi.fn((_pid: number, _type: string) => true));
-vi.mock('../../src/services/process-utils.js', () => ({
+vi.mock('../../src/utils/process-utils.js', () => ({
   isPidRunning: mockIsPidRunning,
   isExpectedProcess: mockIsExpectedProcess,
   detectYoloModeFromPids: vi.fn().mockReturnValue(null),
@@ -71,7 +71,7 @@ vi.mock('chokidar', () => ({
   },
 }));
 
-import { CopilotCliDetector } from '../../src/services/copilot-cli-detector.js';
+import { CopilotCliDetector } from '../../src/cli/copilot-cli/copilot-cli-detector.js';
 
 describe('CopilotCliDetector', () => {
   let testDir: string;

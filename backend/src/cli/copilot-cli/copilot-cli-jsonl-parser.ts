@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { SessionOutput, OutputType, OutputRole } from '../models/index.js';
+import type { SessionOutput, OutputType, OutputRole } from '../../models/index.js';
 
 interface JsonlEvent {
   type: string;

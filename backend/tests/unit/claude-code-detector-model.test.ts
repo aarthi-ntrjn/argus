@@ -93,7 +93,7 @@ describe('ClaudeCodeDetector — model extraction from JSONL', () => {
     const jsonlPath = join(PROJECT_DIR, `${sessionId}.jsonl`);
     writeFileSync(jsonlPath, makeUserLine(sessionId) + '\n' + makeAssistantLine(sessionId, 'claude-opus-4-5') + '\n');
 
-    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    const { ClaudeCodeDetector } = await import('../../src/cli/claude-code/claude-code-detector.js');
     const detector = new ClaudeCodeDetector();
     await detector.handleHookPayload({ hook_event_name: 'PreToolUse', session_id: sessionId, cwd: TEST_REPO_PATH });
 
@@ -108,7 +108,7 @@ describe('ClaudeCodeDetector — model extraction from JSONL', () => {
     // Initial JSONL has only a user message — no model yet
     writeFileSync(jsonlPath, makeUserLine(sessionId) + '\n');
 
-    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    const { ClaudeCodeDetector } = await import('../../src/cli/claude-code/claude-code-detector.js');
     const detector = new ClaudeCodeDetector();
     await detector.handleHookPayload({ hook_event_name: 'PreToolUse', session_id: sessionId, cwd: TEST_REPO_PATH });
 
@@ -140,7 +140,7 @@ describe('ClaudeCodeDetector — model extraction from JSONL', () => {
       makeUserLine(sessionId) + '\n' + makeAssistantLine(sessionId, 'claude-haiku-4-5') + '\n',
     );
 
-    const { ClaudeCodeDetector } = await import('../../src/services/claude-code-detector.js');
+    const { ClaudeCodeDetector } = await import('../../src/cli/claude-code/claude-code-detector.js');
     const detector = new ClaudeCodeDetector();
     await detector.handleHookPayload({ hook_event_name: 'PreToolUse', session_id: sessionId, cwd: TEST_REPO_PATH });
 

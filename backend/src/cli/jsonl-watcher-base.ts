@@ -2,7 +2,7 @@ import { existsSync } from 'fs';
 import { open as fsOpen, stat as fsStat } from 'fs/promises';
 import chokidar, { type FSWatcher } from 'chokidar';
 import { getMaxSequenceNumber } from '../db/database.js';
-import { OutputStore } from './output-store.js';
+import { OutputStore } from '../db/output-store.js';
 import {
   applyActivityUpdate,
   applyModelUpdate,

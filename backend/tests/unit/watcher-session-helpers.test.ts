@@ -19,7 +19,7 @@ import {
   applyActivityUpdate,
   applyModelUpdate,
   applySummaryUpdate,
-} from '../../src/services/watcher-session-helpers.js';
+} from '../../src/cli/watcher-session-helpers.js';
 
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {

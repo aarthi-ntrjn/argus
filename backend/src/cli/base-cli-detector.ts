@@ -26,9 +26,9 @@ import {
   getSession,
 } from '../db/database.js';
 import { parsePendingChoicePayload } from './pending-choice-utils.js';
-import { telemetryService } from './telemetry-service.js';
-import { ptyRegistry } from './pty-registry.js';
-import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
+import { telemetryService } from '../services/telemetry-service.js';
+import { ptyRegistry } from '../launch-pty/pty-registry.js';
+import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from '../utils/process-utils.js';
 import * as logger from '../utils/logger.js';
 import { JsonlWatcherBase } from './jsonl-watcher-base.js';
 import type { CliHookPayload } from './cli-detector.js';

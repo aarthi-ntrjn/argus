@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
-import { RepositoryScanner } from './repository-scanner.js';
-import { CliManager } from './cli-manager.js';
+import { RepositoryScanner } from '../services/repository-scanner.js';
+import { CliManager } from '../cli/cli-manager.js';
 import { loadConfig } from '../config/config-loader.js';
 import {
   getSessions,
@@ -9,7 +9,7 @@ import {
   updateRepositoryBranch,
 } from '../db/database.js';
 import { broadcast } from '../api/ws/event-dispatcher.js';
-import { getCurrentBranch } from './repository-scanner.js';
+import { getCurrentBranch } from '../services/repository-scanner.js';
 import * as logger from '../utils/logger.js';
 import type { Session, Repository } from '../models/index.js';
 

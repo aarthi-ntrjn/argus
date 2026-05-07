@@ -14,9 +14,9 @@ import {
   upsertSlackThread,
   deleteSlackThread,
 } from '../../db/database.js';
-import { MessageQueue } from '../../services/message-queue.js';
-import type { SessionChange } from '../../services/session-diff-tracker.js';
-import type { PendingChoice } from '../../services/pending-choice-events.js';
+import { MessageQueue } from '../../utils/message-queue.js';
+import type { SessionChange } from '../session-diff-tracker.js';
+import type { PendingChoice } from '../../cli/pending-choice-events.js';
 import {
   SESSION_CREATED,
   SESSION_UPDATED,
@@ -25,7 +25,7 @@ import {
   SESSION_PENDING_CHOICE,
   REPOSITORY_ADDED,
   REPOSITORY_REMOVED,
-} from '../../constants/slack-events.js';
+} from '../../constants/event-names.js';
 import { createTaggedLogger } from '../../utils/logger.js';
 import { loadSlackConfig } from '../../config/slack-config-loader.js';
 

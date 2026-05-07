@@ -58,7 +58,7 @@ function makeSession(sessionId: string, repoId: string): import('../../src/model
 
 describe('CopilotCliDetector — handleHookPayload', () => {
   let dbModule: typeof import('../../src/db/database.js');
-  let detector: import('../../src/services/copilot-cli-detector.js').CopilotCliDetector;
+  let detector: import('../../src/cli/copilot-cli/copilot-cli-detector.js').CopilotCliDetector;
   let repoId: string;
 
   beforeEach(async () => {
@@ -79,7 +79,7 @@ describe('CopilotCliDetector — handleHookPayload', () => {
       lastScannedAt: null,
     });
 
-    const { CopilotCliDetector } = await import('../../src/services/copilot-cli-detector.js');
+    const { CopilotCliDetector } = await import('../../src/cli/copilot-cli/copilot-cli-detector.js');
     detector = new CopilotCliDetector(join(FAKE_HOME_DIR, '.copilot', 'session-state'));
   });
 

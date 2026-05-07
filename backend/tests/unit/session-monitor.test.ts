@@ -28,7 +28,7 @@ vi.mock('ps-list', () => ({
 // Mock process-utils so isPidRunning is driven by the same mockPsListResult array.
 // reconcileClaudeCodeSessions uses isPidRunning directly (not ps-list).
 const mockIsPidRunning = vi.hoisted(() => vi.fn((_pid: number) => false));
-vi.mock('../../src/services/process-utils.js', () => ({
+vi.mock('../../src/utils/process-utils.js', () => ({
   isPidRunning: mockIsPidRunning,
   detectYoloModeFromPids: vi.fn().mockReturnValue(null),
 }));
@@ -52,7 +52,7 @@ vi.mock('../../src/services/repository-scanner.js', () => ({
   getCurrentBranch: vi.fn((..._args: unknown[]) => mockGetCurrentBranchResult),
 }));
 
-vi.mock('../../src/services/copilot-cli-detector.js', () => ({
+vi.mock('../../src/cli/copilot-cli/copilot-cli-detector.js', () => ({
   CopilotCliDetector: vi.fn().mockImplementation(() => ({
     scan: vi.fn(async () => []),
     stop: vi.fn(),
@@ -66,7 +66,7 @@ vi.mock('../../src/services/copilot-cli-detector.js', () => ({
   })),
 }));
 
-vi.mock('../../src/services/claude-code-detector.js', () => ({
+vi.mock('../../src/cli/claude-code/claude-code-detector.js', () => ({
   ClaudeCodeDetector: Object.assign(
     vi.fn().mockImplementation(() => ({
       scan: vi.fn(async () => []),
@@ -106,7 +106,7 @@ describe('SessionMonitor.refreshRepositoryBranches', () => {
     closeDb = db.closeDb;
     insertRepository = db.insertRepository as (r: unknown) => void;
     getRepositories = db.getRepositories as () => unknown[];
-    const mod = await import('../../src/services/session-monitor.js');
+    const mod = await import('../../src/cli/session-monitor.js');
     SessionMonitor = mod.SessionMonitor as unknown as typeof SessionMonitor;
   });
 
