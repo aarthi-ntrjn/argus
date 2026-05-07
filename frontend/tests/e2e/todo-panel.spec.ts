@@ -142,7 +142,7 @@ test.describe('Todo Panel', () => {
     await expect(inputs.nth(2)).toHaveAttribute('aria-label', /edit task: Older task/i);
   });
 
-  test('typing into add row and blurring saves the item', async ({ page }) => {
+  test('typing into add row and tabbing keeps text in input without saving', async ({ page }) => {
     await mockApis(page, []);
     await page.goto('/');
 
@@ -150,7 +150,9 @@ test.describe('Todo Panel', () => {
     await addRow.fill('My new task');
     await addRow.press('Tab');
 
-    await expect(page.getByRole('textbox', { name: /edit task: My new task/i })).toBeVisible();
+    // Blur no longer saves — text stays in the add-row as an active filter
+    await expect(addRow).toHaveValue('My new task');
+    await expect(page.getByRole('textbox', { name: /edit task: My new task/i })).not.toBeVisible();
   });
 
   test('pressing Enter on add row saves and refocuses add row', async ({ page }) => {
