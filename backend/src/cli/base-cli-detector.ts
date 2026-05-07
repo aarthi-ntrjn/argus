@@ -51,6 +51,10 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   // Dedup map: last-emitted signature per session, used to avoid redundant callbacks.
   protected readonly sigCache = new Map<string, string>();
   protected readonly pendingChoices = new Map<string, PendingChoice>();
+  // Timers that delay broadcasting tool-approval pending choices. If PostToolUse
+  // arrives before a timer fires, the choice was auto-approved by a permission rule
+  // and the timer is cancelled — no UI is ever shown.
+  private readonly pendingApprovalTimers = new Map<string, ReturnType<typeof setTimeout>>();
   protected sessionCreatedCallback?: (session: Session) => void;
   protected sessionUpdatedCallback?: (session: Session) => void;
   protected sessionEndedCallback?: (session: Session) => void;
@@ -667,6 +671,11 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     const ended = { ...existing, status: 'ended' as const, endedAt: now };
     this.sigCache.delete(sessionId);
     this.pendingChoices.delete(sessionId);
+    const pendingTimer = this.pendingApprovalTimers.get(sessionId);
+    if (pendingTimer !== undefined) {
+      clearTimeout(pendingTimer);
+      this.pendingApprovalTimers.delete(sessionId);
+    }
     broadcast({ type: 'session.ended', timestamp: now, data: ended });
     telemetryService.sendEvent('session_ended', {
       sessionType: existing.type,
@@ -732,17 +741,29 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       payload.tool_input ?? {},
     );
     this.pendingChoices.set(sessionId, { question, choices, allQuestions });
-    broadcast({
-      type: 'session.pending_choice',
-      timestamp: now,
-      data: { sessionId, question, choices, allQuestions },
-    });
-    pendingChoiceEvents.emit('session.pending_choice', {
-      sessionId,
-      question,
-      choices,
-      allQuestions,
-    });
+
+    // Delay the broadcast. When a permission rule already covers this tool, Claude Code /
+    // Copilot auto-approves it and PostToolUse arrives within milliseconds. If PostToolUse
+    // clears the timer before it fires, the choice was never waiting for the user, so no
+    // UI flicker occurs.
+    const timer = setTimeout(() => {
+      this.pendingApprovalTimers.delete(sessionId);
+      if (!this.pendingChoices.has(sessionId)) {
+        return;
+      }
+      broadcast({
+        type: 'session.pending_choice',
+        timestamp: now,
+        data: { sessionId, question, choices, allQuestions },
+      });
+      pendingChoiceEvents.emit('session.pending_choice', {
+        sessionId,
+        question,
+        choices,
+        allQuestions,
+      });
+    }, 300);
+    this.pendingApprovalTimers.set(sessionId, timer);
   }
 
   protected handlePostToolApproval(
@@ -751,6 +772,14 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     now: string,
   ): void {
     if (!existing) {
+      return;
+    }
+    // Cancel any pending broadcast timer — the tool was resolved before being shown.
+    const timer = this.pendingApprovalTimers.get(sessionId);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.pendingApprovalTimers.delete(sessionId);
+      this.pendingChoices.delete(sessionId);
       return;
     }
     this.pendingChoices.delete(sessionId);
