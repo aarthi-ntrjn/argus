@@ -13,6 +13,8 @@ const HOOK_EVENTS: Array<{ event: string; matcher: string }> = [
   { event: 'SessionEnd', matcher: '' },
   { event: 'PreToolUse', matcher: 'AskUserQuestion' },
   { event: 'PostToolUse', matcher: 'AskUserQuestion' },
+  { event: 'PreToolUse', matcher: '' },
+  { event: 'PostToolUse', matcher: '' },
 ];
 
 interface ClaudeSettings {

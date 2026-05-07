@@ -69,6 +69,15 @@ describe('ClaudeCodeHooksInjector', () => {
       }
     });
 
+    it('PreToolUse and PostToolUse also have a wildcard entry (matcher="")', () => {
+      new InjectorClass().injectForAll();
+      const settings = readSettings();
+      for (const event of ASK_EVENTS) {
+        const matchers = settings.hooks[event].filter(isArgusEntry).map((e: { matcher: string }) => e.matcher);
+        expect(matchers).toContain('');
+      }
+    });
+
     it('injected command references /hooks/claude with default port 7411', () => {
       new InjectorClass().injectForAll();
       const settings = readSettings();
@@ -108,14 +117,20 @@ describe('ClaudeCodeHooksInjector', () => {
       expect(userEntry.hooks[0].command).toBe('echo user-hook');
     });
 
-    it('is idempotent: injecting twice produces exactly one Argus entry per event', () => {
+    it('is idempotent: injecting twice produces exactly one Argus entry per unique matcher per event', () => {
       const injector = new InjectorClass();
       injector.injectForAll();
       injector.injectForAll();
       const settings = readSettings();
-      for (const event of EVENTS) {
+      // SessionStart/SessionEnd have 1 Argus entry each (wildcard matcher only)
+      for (const event of ['SessionStart', 'SessionEnd']) {
         const argusCount = settings.hooks[event].filter(isArgusEntry).length;
         expect(argusCount).toBe(1);
+      }
+      // PreToolUse/PostToolUse have 2 Argus entries each (AskUserQuestion + wildcard)
+      for (const event of ASK_EVENTS) {
+        const argusCount = settings.hooks[event].filter(isArgusEntry).length;
+        expect(argusCount).toBe(2);
       }
     });
 
@@ -166,8 +181,11 @@ describe('ClaudeCodeHooksInjector', () => {
       new InjectorClass().injectForRepo('/some/repo/path');
       expect(existsSync(CLAUDE_SETTINGS_PATH)).toBe(true);
       const settings = readSettings();
-      for (const event of EVENTS) {
+      for (const event of ['SessionStart', 'SessionEnd']) {
         expect(settings.hooks[event].filter(isArgusEntry)).toHaveLength(1);
+      }
+      for (const event of ASK_EVENTS) {
+        expect(settings.hooks[event].filter(isArgusEntry)).toHaveLength(2);
       }
     });
   });

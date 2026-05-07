@@ -135,7 +135,7 @@ describe('CopilotCliDetector — handleHookPayload', () => {
       expect(detector.getPendingChoice(sessionId)).toBeNull();
     });
 
-    it('PreToolUse for a non-ask_user tool does not store a pending choice', async () => {
+    it('PreToolUse for a non-ask_user tool stores a tool approval pending choice', async () => {
       const sessionId = randomUUID();
       dbModule.upsertSession(makeSession(sessionId, repoId));
 
@@ -147,7 +147,10 @@ describe('CopilotCliDetector — handleHookPayload', () => {
         cwd: TEST_REPO_PATH,
       });
 
-      expect(detector.getPendingChoice(sessionId)).toBeNull();
+      const pending = detector.getPendingChoice(sessionId);
+      expect(pending).not.toBeNull();
+      expect(pending?.question).toBe('run_shell_command: ls -la');
+      expect(pending?.choices).toEqual(['Yes, run it', 'No, skip it']);
     });
   });
 

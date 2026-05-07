@@ -1,5 +1,7 @@
 import type { PendingChoiceItem } from '../models/index.js';
 
+const TOOL_APPROVAL_CHOICES = ['Yes, run it', 'No, skip it'];
+
 /**
  * Parses a tool_input payload from either detector (Claude Code or Copilot CLI)
  * into a normalized pending choice structure.
@@ -69,4 +71,40 @@ export function parsePendingChoicePayload(toolInput: Record<string, unknown>): {
 
   const { question, choices } = allQuestions[0];
   return { question, choices, allQuestions };
+}
+
+/**
+ * Builds a pending choice structure for a tool approval event (PreToolUse for
+ * non-ask_user tools). The question is formatted as "<toolName>: <primaryInput>"
+ * where primaryInput is extracted from tool_input using a priority order:
+ * command > file_path > path > first string value. Falls back to toolName only.
+ */
+export function buildToolApprovalChoice(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+): {
+  question: string;
+  choices: string[];
+  allQuestions: PendingChoiceItem[];
+} {
+  const primaryValue = extractPrimaryStringValue(toolInput);
+  const question = primaryValue ? `${toolName}: ${primaryValue}` : toolName;
+  const allQuestions: PendingChoiceItem[] = [{ question, choices: TOOL_APPROVAL_CHOICES }];
+  return { question, choices: TOOL_APPROVAL_CHOICES, allQuestions };
+}
+
+const PRIORITY_KEYS = ['command', 'file_path', 'path'] as const;
+
+function extractPrimaryStringValue(toolInput: Record<string, unknown>): string | null {
+  for (const key of PRIORITY_KEYS) {
+    if (typeof toolInput[key] === 'string' && toolInput[key] !== '') {
+      return toolInput[key] as string;
+    }
+  }
+  for (const value of Object.values(toolInput)) {
+    if (typeof value === 'string' && value !== '') {
+      return value;
+    }
+  }
+  return null;
 }

@@ -25,7 +25,7 @@ import {
   getRepositoryByPath,
   getSession,
 } from '../db/database.js';
-import { parsePendingChoicePayload } from './pending-choice-utils.js';
+import { parsePendingChoicePayload, buildToolApprovalChoice } from './pending-choice-utils.js';
 import { telemetryService } from './telemetry-service.js';
 import { ptyRegistry } from './pty-registry.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from './process-utils.js';
@@ -620,6 +620,20 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     if (hook_event_name === 'PostToolUse' && payload.tool_name === this.askUserToolName) {
       return this.handlePostAskQuestion(session_id, existing, now);
     }
+    if (
+      hook_event_name === 'PreToolUse' &&
+      payload.tool_name &&
+      payload.tool_name !== this.askUserToolName
+    ) {
+      return this.handlePreToolApproval(session_id, existing, payload, now);
+    }
+    if (
+      hook_event_name === 'PostToolUse' &&
+      payload.tool_name &&
+      payload.tool_name !== this.askUserToolName
+    ) {
+      return this.handlePostToolApproval(session_id, existing, now);
+    }
 
     if (!existing) {
       const claimed = cwd ? ptyRegistry.claimForSession(session_id, cwd, this.toolTypeId) : null;
@@ -687,6 +701,47 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   }
 
   protected handlePostAskQuestion(
+    sessionId: string,
+    existing: Session | null | undefined,
+    now: string,
+  ): void {
+    if (!existing) {
+      return;
+    }
+    this.pendingChoices.delete(sessionId);
+    broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
+    pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
+  }
+
+  protected handlePreToolApproval(
+    sessionId: string,
+    existing: Session | null | undefined,
+    payload: CliHookPayload,
+    now: string,
+  ): void {
+    if (!existing) {
+      return;
+    }
+    const toolName = payload.tool_name ?? 'Unknown';
+    const { question, choices, allQuestions } = buildToolApprovalChoice(
+      toolName,
+      payload.tool_input ?? {},
+    );
+    this.pendingChoices.set(sessionId, { question, choices, allQuestions });
+    broadcast({
+      type: 'session.pending_choice',
+      timestamp: now,
+      data: { sessionId, question, choices, allQuestions },
+    });
+    pendingChoiceEvents.emit('session.pending_choice', {
+      sessionId,
+      question,
+      choices,
+      allQuestions,
+    });
+  }
+
+  protected handlePostToolApproval(
     sessionId: string,
     existing: Session | null | undefined,
     now: string,

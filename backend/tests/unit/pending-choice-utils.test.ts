@@ -4,7 +4,10 @@
  * These tests should FAIL until T002 (pending-choice-utils.ts) is implemented.
  */
 import { describe, it, expect } from 'vitest';
-import { parsePendingChoicePayload } from '../../src/services/pending-choice-utils.js';
+import {
+  parsePendingChoicePayload,
+  buildToolApprovalChoice,
+} from '../../src/services/pending-choice-utils.js';
 
 describe('parsePendingChoicePayload', () => {
   describe('multi-question Claude format ({ questions: [...] })', () => {
@@ -128,5 +131,50 @@ describe('parsePendingChoicePayload', () => {
       expect(result.question).toBe('');
       expect(result.allQuestions).toHaveLength(1);
     });
+  });
+});
+
+describe('buildToolApprovalChoice', () => {
+  it('builds question from tool name and command field', () => {
+    const result = buildToolApprovalChoice('Bash', { command: 'rm -rf /' });
+    expect(result.question).toBe('Bash: rm -rf /');
+    expect(result.choices).toEqual(['Yes, run it', 'No, skip it']);
+    expect(result.allQuestions).toHaveLength(1);
+    expect(result.allQuestions[0].question).toBe('Bash: rm -rf /');
+    expect(result.allQuestions[0].choices).toEqual(['Yes, run it', 'No, skip it']);
+  });
+
+  it('prefers command over other fields', () => {
+    const result = buildToolApprovalChoice('Bash', {
+      command: 'echo hello',
+      file_path: '/some/file',
+    });
+    expect(result.question).toBe('Bash: echo hello');
+  });
+
+  it('falls back to file_path when no command present', () => {
+    const result = buildToolApprovalChoice('Write', { file_path: '/src/index.ts' });
+    expect(result.question).toBe('Write: /src/index.ts');
+  });
+
+  it('falls back to path when no command or file_path present', () => {
+    const result = buildToolApprovalChoice('Read', { path: '/etc/hosts' });
+    expect(result.question).toBe('Read: /etc/hosts');
+  });
+
+  it('falls back to first string value in tool_input when no known key present', () => {
+    const result = buildToolApprovalChoice('Computer', { action: 'screenshot', duration: 5 });
+    expect(result.question).toBe('Computer: screenshot');
+  });
+
+  it('uses tool name only when tool_input has no string values', () => {
+    const result = buildToolApprovalChoice('Write', {});
+    expect(result.question).toBe('Write');
+    expect(result.choices).toEqual(['Yes, run it', 'No, skip it']);
+  });
+
+  it('uses tool name only when tool_input is empty object', () => {
+    const result = buildToolApprovalChoice('Unknown', {});
+    expect(result.question).toBe('Unknown');
   });
 });
