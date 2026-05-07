@@ -14,7 +14,7 @@
 
 **Purpose**: Add shared type changes that both user stories depend on.
 
-- [ ] T001 Add `ptyLaunchId?: string | null` field to the `Session` interface in `frontend/src/types.ts`
+- [x] T001 Add `ptyLaunchId?: string | null` field to the `Session` interface in `frontend/src/types.ts`
 
 ---
 
@@ -28,15 +28,15 @@
 
 > **Write these tests FIRST, ensure they FAIL before implementation.**
 
-- [ ] T002 [P] Write unit test asserting `POST /api/v1/sessions/launch-terminal` 202 response body includes a non-empty UUID `ptyLaunchId` field, in `backend/tests/unit/tools-launch-id.test.ts`
-- [ ] T003 [P] Write unit test asserting `launchInTerminal()` in `frontend/src/services/api.ts` returns `{ ptyLaunchId: string }` on 202 (mock fetch), in `frontend/src/services/api.test.ts` (create if absent)
+- [x] T002 [P] Write unit test asserting `POST /api/v1/sessions/launch-terminal` 202 response body includes a non-empty UUID `ptyLaunchId` field, in `backend/tests/unit/tools-launch-id.test.ts`
+- [x] T003 [P] Write unit test asserting `launchInTerminal()` in `frontend/src/services/api.ts` returns `{ ptyLaunchId: string }` on 202 (mock fetch), in `frontend/src/services/api.test.ts` (create if absent)
 
 ### Implementation for Foundation
 
-- [ ] T004 Modify `buildLaunchCmdWithCwd` and `buildLaunchCmdBase` in `backend/src/api/routes/tools.ts` to accept an optional `launchId: string` parameter and append `--launch-id ${launchId}` to the command string (after T002 is confirmed failing)
-- [ ] T005 In the `launch-terminal` POST handler in `backend/src/api/routes/tools.ts`, import `randomUUID` from `node:crypto`, generate `const ptyLaunchId = randomUUID()` before calling the command builder, pass it to the builder, and return `reply.status(202).send({ status: 'launched', ptyLaunchId })` (after T004)
-- [ ] T006 In `backend/src/cli/launch.ts`, extend the arg-parsing loop (lines 42–49) to also parse `--launch-id <uuid>` alongside `--cwd`. If `--launch-id` is present, use that value for `ptyLaunchId` on line 134 instead of calling `randomUUID()` (after T005)
-- [ ] T007 Update `launchInTerminal` in `frontend/src/services/api.ts`: change the 202 branch to `const body = await res.json() as { ptyLaunchId?: string }; return { ptyLaunchId: body.ptyLaunchId }` and update the return type to `Promise<{ ptyLaunchId?: string; cmd?: string }>` (after T003 is confirmed failing, after T005)
+- [x] T004 Modify `buildLaunchCmdWithCwd` and `buildLaunchCmdBase` in `backend/src/api/routes/tools.ts` to accept an optional `launchId: string` parameter and append `--launch-id ${launchId}` to the command string (after T002 is confirmed failing)
+- [x] T005 In the `launch-terminal` POST handler in `backend/src/api/routes/tools.ts`, import `randomUUID` from `node:crypto`, generate `const ptyLaunchId = randomUUID()` before calling the command builder, pass it to the builder, and return `reply.status(202).send({ status: 'launched', ptyLaunchId })` (after T004)
+- [x] T006 In `backend/src/cli/launch.ts`, extend the arg-parsing loop (lines 42–49) to also parse `--launch-id <uuid>` alongside `--cwd`. If `--launch-id` is present, use that value for `ptyLaunchId` on line 134 instead of calling `randomUUID()` (after T005)
+- [x] T007 Update `launchInTerminal` in `frontend/src/services/api.ts`: change the 202 branch to `const body = await res.json() as { ptyLaunchId?: string }; return { ptyLaunchId: body.ptyLaunchId }` and update the return type to `Promise<{ ptyLaunchId?: string; cmd?: string }>` (after T003 is confirmed failing, after T005)
 
 **Checkpoint**: `POST /api/v1/sessions/launch-terminal` returns `{ status: 'launched', ptyLaunchId: '<uuid>' }`. `launchInTerminal()` returns `{ ptyLaunchId }`. Tests T002 and T003 pass.
 
@@ -52,17 +52,17 @@
 
 > **Write these tests FIRST, ensure they FAIL before implementation.**
 
-- [ ] T008 [P] [US1] Write unit tests for `usePendingLaunchers` hook in `frontend/src/hooks/usePendingLaunchers.test.ts`: test `addPending` adds record, `removePending` removes by ptyLaunchId, timeout removes after 30s (use vi.useFakeTimers), multiple simultaneous launchers coexist independently
-- [ ] T009 [P] [US1] Write component test for `PendingSessionCard` in `frontend/src/components/PendingSessionCard/PendingSessionCard.test.tsx`: renders tool name, animated spinner, "Starting..." label; has no interactive controls (no stop or send-prompt buttons)
+- [x] T008 [P] [US1] Write unit tests for `usePendingLaunchers` hook in `frontend/src/hooks/usePendingLaunchers.test.ts`: test `addPending` adds record, `removePending` removes by ptyLaunchId, timeout removes after 30s (use vi.useFakeTimers), multiple simultaneous launchers coexist independently
+- [x] T009 [P] [US1] Write component test for `PendingSessionCard` in `frontend/src/components/PendingSessionCard/PendingSessionCard.test.tsx`: renders tool name, animated spinner, "Starting..." label; has no interactive controls (no stop or send-prompt buttons)
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Create `frontend/src/hooks/usePendingLaunchers.ts`: export `PendingLauncher` type `{ ptyLaunchId, repoPath, tool, createdAt }` and hook `usePendingLaunchers()` returning `{ pendingLaunchers, addPending, removePending }`. `addPending` creates a record, sets a 30s `setTimeout` that calls `removePending`. `removePending` clears the timeout and removes from state. Cleanup on unmount clears all timeouts. (after T008 is confirmed failing)
-- [ ] T011 [US1] Create `frontend/src/components/PendingSessionCard/PendingSessionCard.tsx`: renders a card that matches the visual style of `SessionCard` but is visually distinct (e.g., dashed border or muted background); shows the tool icon (ClaudeIcon or CopilotIcon), tool name (`Claude Code` or `GitHub Copilot CLI`), an animated spinner (CSS or Tailwind `animate-spin`), and a "Starting..." status label; no interactive controls (after T009 is confirmed failing)
-- [ ] T012 [US1] Update `LaunchDropdown.tsx`: `handleLaunch` receives the `ptyLaunchId` from `launchInTerminal()`; if the response is not headless (no `cmd`) and `ptyLaunchId` is set, call a new `onLaunchPending(ptyLaunchId: string)` prop. Add `onLaunchPending: (ptyLaunchId: string) => void` to the `Props` interface (after T010, T011)
-- [ ] T013 [US1] Update `RepoCardProps` interface and `RepoCard.tsx`: add `pendingLaunchers: PendingLauncher[]` and `onLaunchPending: (ptyLaunchId: string) => void` props; render `PendingSessionCard` components above the sessions list for any pending launchers where `launcher.repoPath === repo.path`; pass `onLaunchPending` down to `LaunchDropdown` (after T012)
-- [ ] T014 [US1] In `DashboardPage.tsx` (or the file that renders the list of `RepoCard`s): call `usePendingLaunchers()`, pass `pendingLaunchers` and `addPending` (wrapped as `onLaunchPending(ptyLaunchId)` that calls `addPending({ ptyLaunchId, repoPath: repo.path, tool })`) down to each `RepoCard`. Register a `useEffect` with `onEvent('session.created', ...)` that calls `removePending(session.ptyLaunchId)` when the session has a `ptyLaunchId`. (after T013)
-- [ ] T015 [US1] Run `npm run build --workspace=frontend` and fix any TypeScript or build errors introduced in T010–T014
+- [x] T010 [US1] Create `frontend/src/hooks/usePendingLaunchers.ts`: export `PendingLauncher` type `{ ptyLaunchId, repoPath, tool, createdAt }` and hook `usePendingLaunchers()` returning `{ pendingLaunchers, addPending, removePending }`. `addPending` creates a record, sets a 30s `setTimeout` that calls `removePending`. `removePending` clears the timeout and removes from state. Cleanup on unmount clears all timeouts. (after T008 is confirmed failing)
+- [x] T011 [US1] Create `frontend/src/components/PendingSessionCard/PendingSessionCard.tsx`: renders a card that matches the visual style of `SessionCard` but is visually distinct (e.g., dashed border or muted background); shows the tool icon (ClaudeIcon or CopilotIcon), tool name (`Claude Code` or `GitHub Copilot CLI`), an animated spinner (CSS or Tailwind `animate-spin`), and a "Starting..." status label; no interactive controls (after T009 is confirmed failing)
+- [x] T012 [US1] Update `LaunchDropdown.tsx`: `handleLaunch` receives the `ptyLaunchId` from `launchInTerminal()`; if the response is not headless (no `cmd`) and `ptyLaunchId` is set, call a new `onLaunchPending(ptyLaunchId: string)` prop. Add `onLaunchPending: (ptyLaunchId: string) => void` to the `Props` interface (after T010, T011)
+- [x] T013 [US1] Update `RepoCardProps` interface and `RepoCard.tsx`: add `pendingLaunchers: PendingLauncher[]` and `onLaunchPending: (ptyLaunchId: string) => void` props; render `PendingSessionCard` components above the sessions list for any pending launchers where `launcher.repoPath === repo.path`; pass `onLaunchPending` down to `LaunchDropdown` (after T012)
+- [x] T014 [US1] In `DashboardPage.tsx` (or the file that renders the list of `RepoCard`s): call `usePendingLaunchers()`, pass `pendingLaunchers` and `addPending` (wrapped as `onLaunchPending(ptyLaunchId)` that calls `addPending({ ptyLaunchId, repoPath: repo.path, tool })`) down to each `RepoCard`. Register a `useEffect` with `onEvent('session.created', ...)` that calls `removePending(session.ptyLaunchId)` when the session has a `ptyLaunchId`. (after T013)
+- [x] T015 [US1] Run `npm run build --workspace=frontend` and fix any TypeScript or build errors introduced in T010–T014
 
 **Checkpoint**: After a successful launch, a placeholder card appears immediately in the repo card and disappears when `session.created` arrives with a matching `ptyLaunchId`.
 
@@ -78,12 +78,12 @@
 
 > **Write these tests FIRST, ensure they FAIL before implementation.**
 
-- [ ] T016 [P] [US2] Write unit test in `backend/tests/unit/launcher-pending-gone.test.ts` asserting that when the launcher WebSocket closes and `getClaimedId(ptyLaunchId)` returns `null`, `broadcast` is called with `{ type: 'launcher.pending.gone', data: { ptyLaunchId, repoPath, sessionType } }`
+- [x] T016 [P] [US2] Write unit test in `backend/tests/unit/launcher-pending-gone.test.ts` asserting that when the launcher WebSocket closes and `getClaimedId(ptyLaunchId)` returns `null`, `broadcast` is called with `{ type: 'launcher.pending.gone', data: { ptyLaunchId, repoPath, sessionType } }`
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] In `backend/src/api/routes/launcher.ts`, in the `socket.on('close', ...)` handler's `else if (repoPath)` branch (after the existing `ptyRegistry.unregisterPending` call), add a `broadcast({ type: 'launcher.pending.gone', timestamp: new Date().toISOString(), data: { ptyLaunchId, repoPath, sessionType } })` call. `sessionType` is available from the register message (add it to the connection-scope variable). (after T016 is confirmed failing)
-- [ ] T018 [US2] In `DashboardPage.tsx`, extend the existing `useEffect` from T014 to also register `onEvent('launcher.pending.gone', (data) => { removePending((data as { ptyLaunchId: string }).ptyLaunchId); })` (after T017, after T014)
+- [x] T017 [US2] In `backend/src/api/routes/launcher.ts`, in the `socket.on('close', ...)` handler's `else if (repoPath)` branch (after the existing `ptyRegistry.unregisterPending` call), add a `broadcast({ type: 'launcher.pending.gone', timestamp: new Date().toISOString(), data: { ptyLaunchId, repoPath, sessionType } })` call. `sessionType` is available from the register message (add it to the connection-scope variable). (after T016 is confirmed failing)
+- [x] T018 [US2] In `DashboardPage.tsx`, extend the existing `useEffect` from T014 to also register `onEvent('launcher.pending.gone', (data) => { removePending((data as { ptyLaunchId: string }).ptyLaunchId); })` (after T017, after T014)
 
 **Checkpoint**: Closing a terminal immediately removes its placeholder card without waiting for the 30s timeout.
 
@@ -93,11 +93,11 @@
 
 **Purpose**: Documentation, build verification, full test run.
 
-- [ ] T019 Update `README.md` (root or `docs/README-CONTRIBUTORS.md`) to document the "Launch with Argus" pending session card UX behavior — what the placeholder shows, when it disappears, and the 30-second timeout fallback
-- [ ] T020 [P] Run `npm run lint:fix --workspace=frontend` and `npm run lint:fix --workspace=backend` to auto-fix any lint violations introduced in this feature
-- [ ] T021 [P] Run `npm run build --workspace=frontend` to confirm the production build succeeds with all changes
-- [ ] T022 Run `npm run test --workspace=backend` to confirm all backend tests pass
-- [ ] T023 Run `npm run test --workspace=frontend` to confirm all frontend tests pass
+- [x] T019 Update `README.md` (root or `docs/README-CONTRIBUTORS.md`) to document the "Launch with Argus" pending session card UX behavior — what the placeholder shows, when it disappears, and the 30-second timeout fallback
+- [x] T020 [P] Run `npm run lint:fix --workspace=frontend` and `npm run lint:fix --workspace=backend` to auto-fix any lint violations introduced in this feature
+- [x] T021 [P] Run `npm run build --workspace=frontend` to confirm the production build succeeds with all changes
+- [x] T022 Run `npm run test --workspace=backend` to confirm all backend tests pass
+- [x] T023 Run `npm run test --workspace=frontend` to confirm all frontend tests pass
 
 ---
 

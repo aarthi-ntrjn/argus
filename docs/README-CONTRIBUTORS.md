@@ -91,11 +91,16 @@ scan files on disk → upsert session in SQLite → start chokidar file watcher 
 
 **UpdateService** (`backend/src/services/update-service.ts`): singleton that polls `https://registry.npmjs.org/argus-ai-hub/latest` once per hour to check for newer npm versions. Logger tag: `[UpdateService]`, color: yellow (`\x1b[33m`). Key methods: `checkForUpdates()` (silent on network error), `scheduleChecks()` (call once at startup), `hasUpdate()`, `getStatus()`, `applyUpdate()` (spawns `npm install -g argus-ai-hub@latest`, 25-second timeout resolves instead of rejects so exit always completes). Injected into routes via `setUpdateServiceForRoutes()` and into the health route via `setUpdateService()`. The `autoUpdate` config field (default `true`) controls whether exit handlers call `applyUpdate()` automatically.
 
-**WebSocket events:** `session.created`, `session.updated`, `session.ended`, `session.output`. Dispatched from `event-dispatcher.ts` via `broadcast()`. The frontend's `socket.ts` listens and calls `queryClient.invalidateQueries()` to refresh stale data.
+**WebSocket events:** `session.created`, `session.updated`, `session.ended`, `session.output`, `launcher.pending.gone`. Dispatched from `event-dispatcher.ts` via `broadcast()`. The frontend's `socket.ts` listens and calls `queryClient.invalidateQueries()` to refresh stale data.
 
 **Frontend data flow:** TanStack Query fetches from REST on mount and re-fetches on WS events. Components read from the query cache; they never call the API directly.
 
 **PTY prompt delivery:** `argus launch <tool>` spawns tool in PTY, connects to backend /launcher WebSocket, PtyRegistry maps sessionId to WebSocket, SessionController.sendPrompt() looks up registry and sends message, launcher writes to PTY stdin, then acks back.
+
+**Pending session card (launch UX):** When the user clicks "Launch with Argus", the `POST /api/v1/sessions/launch-terminal` handler generates a `ptyLaunchId` UUID, passes it as `--launch-id` to the spawned terminal subprocess, and returns it in the 202 response body. The frontend's `usePendingLaunchers` hook stores a `PendingLauncher` record keyed by `ptyLaunchId` and renders a `PendingSessionCard` (spinner + tool icon + "Launching..." text) in the matching repo card immediately. The placeholder is removed when:
+1. A `session.created` WS event arrives with a matching `ptyLaunchId` (the real session card replaces it), or
+2. A `launcher.pending.gone` WS event fires (the terminal closed before Claude/Copilot started a session), or
+3. The 30-second timeout in `usePendingLaunchers` fires as a fallback.
 
 ## Testing
 
