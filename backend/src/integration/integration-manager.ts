@@ -32,7 +32,7 @@ import {
   SESSION_ENDED,
   REPOSITORY_ADDED,
   REPOSITORY_REMOVED,
-} from '../constants/slack-events.js';
+} from '../constants/event-names.js';
 import type { App } from '@microsoft/teams.apps';
 
 const log = createTaggedLogger('[Integrations]', '\x1b[33m'); // yellow

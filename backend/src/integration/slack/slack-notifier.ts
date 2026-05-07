@@ -25,7 +25,7 @@ import {
   SESSION_PENDING_CHOICE,
   REPOSITORY_ADDED,
   REPOSITORY_REMOVED,
-} from '../../constants/slack-events.js';
+} from '../../constants/event-names.js';
 import { createTaggedLogger } from '../../utils/logger.js';
 import { loadSlackConfig } from '../../config/slack-config-loader.js';
 
