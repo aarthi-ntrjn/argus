@@ -8,13 +8,13 @@ Argus discovers and tracks AI coding sessions (Claude Code and GitHub Copilot CL
 
 | Component | File | Role |
 |---|---|---|
-| `SessionMonitor` | `services/session-monitor.ts` | Orchestrates the scan loop and broadcasts lifecycle events |
-| `BaseCliDetector` | `services/base-cli-detector.ts` | Abstract scan pipeline and hook dispatch shared by both detectors |
-| `ClaudeCodeDetector` | `services/claude-code-detector.ts` | Reads `~/.claude/sessions/*.json` for Claude sessions |
-| `CopilotCliDetector` | `services/copilot-cli-detector.ts` | Reads `~/.copilot/session-state/*/` for Copilot sessions |
-| `ClaudeCodeHooksInjector` | `services/claude-code-hooks-injector.ts` | Injects hooks into `~/.claude/settings.json` |
-| `CopilotCliHooksInjector` | `services/copilot-cli-hooks-injector.ts` | Injects hooks into each repo's `.github/hooks/hooks.json` |
-| `CliManager` | `services/cli-manager.ts` | Single ownership point for both detectors and injectors |
+| `SessionMonitor` | `cli/session-monitor.ts` | Orchestrates the scan loop and broadcasts lifecycle events |
+| `BaseCliDetector` | `cli/base-cli-detector.ts` | Abstract scan pipeline and hook dispatch shared by both detectors |
+| `ClaudeCodeDetector` | `cli/claude-code/claude-code-detector.ts` | Reads `~/.claude/sessions/*.json` for Claude sessions |
+| `CopilotCliDetector` | `cli/copilot-cli/copilot-cli-detector.ts` | Reads `~/.copilot/session-state/*/` for Copilot sessions |
+| `ClaudeCodeHooksInjector` | `cli/claude-code/claude-code-hooks-injector.ts` | Injects hooks into `~/.claude/settings.json` |
+| `CopilotCliHooksInjector` | `cli/copilot-cli/copilot-cli-hooks-injector.ts` | Injects hooks into each repo's `.github/hooks/hooks.json` |
+| `CliManager` | `cli/cli-manager.ts` | Single ownership point for both detectors and injectors |
 | Hook routes | `api/routes/hooks.ts` | HTTP endpoints `/hooks/claude` and `/hooks/copilot` |
 
 ---

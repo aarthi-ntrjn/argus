@@ -8,12 +8,12 @@ The JSONL watcher system reads per-session output files produced by Claude Code 
 
 | Component | File | Role |
 |---|---|---|
-| `JsonlWatcherBase` | `services/jsonl-watcher-base.ts` | Abstract base: file monitoring, line reading, output storage |
-| `ClaudeCodeJsonlWatcher` | `services/claude-code-jsonl-watcher.ts` | Claude path resolution and pending-choice tracking |
-| `CopilotCliJsonlWatcher` | `services/copilot-cli-jsonl-watcher.ts` | Copilot path resolution and pending-choice detection |
-| `ClaudeCodeJsonlParser` | `services/claude-code-jsonl-parser.ts` | Parses Claude JSONL entries into `SessionOutput[]` |
-| `CopilotCliJsonlParser` | `services/copilot-cli-jsonl-parser.ts` | Parses Copilot JSONL entries into `SessionOutput[]` |
-| `OutputStore` | `services/output-store.ts` | Persists `SessionOutput` rows, manages pagination |
+| `JsonlWatcherBase` | `cli/jsonl-watcher-base.ts` | Abstract base: file monitoring, line reading, output storage |
+| `ClaudeCodeJsonlWatcher` | `cli/claude-code/claude-code-jsonl-watcher.ts` | Claude path resolution and pending-choice tracking |
+| `CopilotCliJsonlWatcher` | `cli/copilot-cli/copilot-cli-jsonl-watcher.ts` | Copilot path resolution and pending-choice detection |
+| `ClaudeCodeJsonlParser` | `cli/claude-code/claude-code-jsonl-parser.ts` | Parses Claude JSONL entries into `SessionOutput[]` |
+| `CopilotCliJsonlParser` | `cli/copilot-cli/copilot-cli-jsonl-parser.ts` | Parses Copilot JSONL entries into `SessionOutput[]` |
+| `OutputStore` | `db/output-store.ts` | Persists `SessionOutput` rows, manages pagination |
 
 ---
 
