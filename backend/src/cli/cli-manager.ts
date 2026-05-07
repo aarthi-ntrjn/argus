@@ -1,7 +1,7 @@
 import { ClaudeCodeDetector } from './claude-code/claude-code-detector.js';
-import { CopilotCliDetector } from './copilot/copilot-cli-detector.js';
+import { CopilotCliDetector } from './copilot-cli/copilot-cli-detector.js';
 import { ClaudeCodeHooksInjector } from './claude-code/claude-code-hooks-injector.js';
-import { CopilotHooksInjector } from './copilot/copilot-cli-hooks-injector.js';
+import { CopilotHooksInjector } from './copilot-cli/copilot-cli-hooks-injector.js';
 import type { Session } from '../models/index.js';
 import type { CliHookPayload } from './cli-detector.js';
 

@@ -38,7 +38,7 @@ function isArgusEntry(entry: { bash?: string; powershell?: string }) {
 
 describe('CopilotHooksInjector', () => {
   let dbModule: typeof import('../../src/db/database.js');
-  let InjectorClass: typeof import('../../src/cli/copilot/copilot-cli-hooks-injector.js').CopilotHooksInjector;
+  let InjectorClass: typeof import('../../src/cli/copilot-cli/copilot-cli-hooks-injector.js').CopilotHooksInjector;
 
   beforeEach(async () => {
     process.env.ARGUS_DB_PATH = join(tmpdir(), `argus-injector-test-${randomUUID()}.db`);
@@ -48,7 +48,7 @@ describe('CopilotHooksInjector', () => {
     mkdirSync(join(TEST_REPO_B, '.git'), { recursive: true });
 
     dbModule = await import('../../src/db/database.js');
-    const mod = await import('../../src/cli/copilot/copilot-cli-hooks-injector.js');
+    const mod = await import('../../src/cli/copilot-cli/copilot-cli-hooks-injector.js');
     InjectorClass = mod.CopilotHooksInjector;
   });
 

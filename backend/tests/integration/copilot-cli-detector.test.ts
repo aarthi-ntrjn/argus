@@ -71,7 +71,7 @@ vi.mock('chokidar', () => ({
   },
 }));
 
-import { CopilotCliDetector } from '../../src/cli/copilot/copilot-cli-detector.js';
+import { CopilotCliDetector } from '../../src/cli/copilot-cli/copilot-cli-detector.js';
 
 describe('CopilotCliDetector', () => {
   let testDir: string;

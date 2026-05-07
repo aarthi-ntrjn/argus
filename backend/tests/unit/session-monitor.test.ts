@@ -52,7 +52,7 @@ vi.mock('../../src/services/repository-scanner.js', () => ({
   getCurrentBranch: vi.fn((..._args: unknown[]) => mockGetCurrentBranchResult),
 }));
 
-vi.mock('../../src/cli/copilot/copilot-cli-detector.js', () => ({
+vi.mock('../../src/cli/copilot-cli/copilot-cli-detector.js', () => ({
   CopilotCliDetector: vi.fn().mockImplementation(() => ({
     scan: vi.fn(async () => []),
     stop: vi.fn(),

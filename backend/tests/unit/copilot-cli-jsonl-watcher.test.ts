@@ -35,7 +35,7 @@ vi.mock('../../src/api/ws/event-dispatcher.js', () => ({
   broadcast: mockBroadcast,
 }));
 
-import { CopilotJsonlWatcher } from '../../src/cli/copilot/copilot-cli-jsonl-watcher.js';
+import { CopilotJsonlWatcher } from '../../src/cli/copilot-cli/copilot-cli-jsonl-watcher.js';
 
 function writeTempJsonl(content: string): string {
   const dir = join(tmpdir(), `argus-copilot-watcher-test-${randomUUID()}`);
