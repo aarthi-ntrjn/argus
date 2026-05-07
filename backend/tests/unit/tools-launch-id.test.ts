@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
+import { existsSync } from 'fs';
 import supertest from 'supertest';
 
 // vi.mock is hoisted — factory must not reference variables defined after it.
@@ -73,6 +74,20 @@ describe('Tools API — launch-terminal returns ptyLaunchId', () => {
     expect(res1.status).toBe(202);
     expect(res2.status).toBe(202);
     expect(res1.body.ptyLaunchId).not.toBe(res2.body.ptyLaunchId);
+  });
+
+  it('launch script path in claudeCmd resolves to a file that exists on disk', async () => {
+    mockSpawnSync.mockReturnValue({ status: 0 }); // simulate claude installed
+    const res = await request.get('/api/v1/tools');
+    expect(res.status).toBe(200);
+
+    const { claudeCmd } = res.body as { claudeCmd?: string };
+    expect(claudeCmd).toBeDefined();
+
+    // Command format: node "/absolute/path/to/launch.js" claude [flags...]
+    const match = claudeCmd!.match(/node "([^"]+)"/);
+    expect(match).not.toBeNull();
+    expect(existsSync(match![1])).toBe(true);
   });
 
   it('passes --launch-id to the spawned terminal command', async () => {
