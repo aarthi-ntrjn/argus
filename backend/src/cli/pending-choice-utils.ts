@@ -137,6 +137,7 @@ export function buildToolApprovalChoice(
   toolName: string,
   toolInput: Record<string, unknown>,
 ): {
+  type: 'tool_approval';
   question: string;
   choices: string[];
   allQuestions: PendingChoiceItem[];
@@ -145,7 +146,7 @@ export function buildToolApprovalChoice(
   const question = primaryValue ? `${toolName}: ${primaryValue}` : toolName;
   const choices = getToolTierChoices(toolName);
   const allQuestions: PendingChoiceItem[] = [{ question, choices }];
-  return { question, choices, allQuestions };
+  return { type: 'tool_approval', question, choices, allQuestions };
 }
 
 const PRIORITY_KEYS = ['command', 'file_path', 'path'] as const;

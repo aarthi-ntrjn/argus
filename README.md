@@ -144,7 +144,7 @@ The alert appears for both read-only and connected sessions. It is never shown f
 
 **Tool approval prompts (non-YOLO / non-`--allow-all` mode):**
 
-When a session is running without auto-approval, any tool use that requires confirmation (bash commands, file writes, etc.) is also surfaced on the session card. The same `PendingChoicePanel` appears with the tool name and input as the question, and "Yes, run it" / "No, skip it" as choices. Both Claude Code and Copilot CLI use the `PreToolUse` hook for this: Claude Code registers a wildcard PreToolUse hook in `~/.claude/settings.json`; Copilot CLI already sends all PreToolUse events. When the tool completes (or is denied), the prompt clears automatically.
+When a session is running without auto-approval, any tool use that requires confirmation (bash commands, file writes, etc.) is also surfaced on the session card. The same `PendingChoicePanel` appears with the tool name and input as the question. Choices are tier-aware: bash/shell commands offer "Yes, don't ask again for this project" (permanent per-project approval), while file-edit tools offer "Yes, don't ask again for this session" (session-only). Both Claude Code and Copilot CLI use the `PreToolUse` hook for this: Claude Code registers a wildcard PreToolUse hook in `~/.claude/settings.json`; Copilot CLI already sends all PreToolUse events. When the tool completes (or is denied), the prompt clears automatically.
 
 ### Prompt Bar
 

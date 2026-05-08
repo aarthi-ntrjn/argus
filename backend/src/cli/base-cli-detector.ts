@@ -695,7 +695,7 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       return;
     }
     const { question, choices, allQuestions } = parsePendingChoicePayload(payload.tool_input ?? {});
-    this.pendingChoices.set(sessionId, { question, choices, allQuestions });
+    this.pendingChoices.set(sessionId, { type: 'ask_user', question, choices, allQuestions });
     broadcast({
       type: 'session.pending_choice',
       timestamp: now,
@@ -740,7 +740,7 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       toolName,
       payload.tool_input ?? {},
     );
-    this.pendingChoices.set(sessionId, { question, choices, allQuestions });
+    this.pendingChoices.set(sessionId, { type: 'tool_approval', question, choices, allQuestions });
 
     // Delay the broadcast. When a permission rule already covers this tool, Claude Code /
     // Copilot auto-approves it and PostToolUse arrives within milliseconds. If PostToolUse

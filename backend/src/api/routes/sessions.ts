@@ -179,7 +179,8 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
             .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
         }
 
-        const skipEnter = raw ? true : !!_cliManager?.getPendingChoice(req.params.id);
+        const pendingChoice = _cliManager?.getPendingChoice(req.params.id);
+        const skipEnter = raw ? true : pendingChoice?.type === 'ask_user';
         const action = await sessionController.sendPrompt(req.params.id, prompt, skipEnter);
         return reply.status(202).send({ actionId: action.id, status: action.status });
       } catch (err: unknown) {
