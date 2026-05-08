@@ -35,6 +35,21 @@ const COPILOT_TIER_TOOLS = new Set([
 ]);
 
 /**
+/**
+ * Claude Code's built-in read-only tool names. These tools are always auto-approved
+ * by Claude Code and never show an interactive prompt regardless of mode.
+ * Skip the pending-choice flow entirely for these.
+ */
+export const CLAUDE_READONLY_TOOL_NAMES = new Set([
+  'LS',
+  'Read',
+  'Glob',
+  'Grep',
+  'TodoRead',
+  'WebSearch',
+]);
+
+/**
  * Claude Code's built-in read-only Bash command stems. These are always auto-approved
  * by Claude Code before the hook fires; PostToolUse may arrive late or not at all.
  * We skip the pending-choice flow entirely for these rather than relying on the debounce.
