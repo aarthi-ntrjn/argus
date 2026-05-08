@@ -25,7 +25,7 @@ import {
   getRepositoryByPath,
   getSession,
 } from '../db/database.js';
-import { parsePendingChoicePayload, buildToolApprovalChoice, isClaudeReadOnlyBashCommand, CLAUDE_READONLY_TOOL_NAMES } from './pending-choice-utils.js';
+import { parsePendingChoicePayload, buildToolApprovalChoice, isClaudeReadOnlyBashCommand, CLAUDE_READONLY_TOOL_NAMES, COPILOT_READONLY_TOOL_NAMES } from './pending-choice-utils.js';
 import { telemetryService } from '../services/telemetry-service.js';
 import { ptyRegistry } from '../launch-pty/pty-registry.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from '../utils/process-utils.js';
@@ -739,6 +739,11 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     // Native read-only tools (LS, Read, Glob, Grep, etc.) and read-only Bash commands
     // are always auto-approved by Claude Code — skip the pending-choice flow entirely.
     if (CLAUDE_READONLY_TOOL_NAMES.has(toolName)) {
+      return;
+    }
+    // Copilot CLI read-only tools (view, glob, grep, report_intent, etc.) are always
+    // auto-approved by the Copilot agent — skip the pending-choice flow entirely.
+    if (COPILOT_READONLY_TOOL_NAMES.has(toolName)) {
       return;
     }
     if (

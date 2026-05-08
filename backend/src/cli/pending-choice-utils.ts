@@ -50,6 +50,45 @@ export const CLAUDE_READONLY_TOOL_NAMES = new Set([
 ]);
 
 /**
+ * Copilot CLI's built-in read-only tool names. These tools are always auto-approved
+ * by the Copilot CLI agent and never show an interactive prompt.
+ * Skip the pending-choice flow entirely for these.
+ */
+export const COPILOT_READONLY_TOOL_NAMES = new Set([
+  'view',        // list directory contents or read file
+  'glob',        // file pattern matching
+  'grep',        // text search in files
+  'report_intent', // internal meta tool — always auto-approved
+  'fetch_copilot_cli_documentation', // read-only docs lookup
+  'list_powershell',
+  'read_powershell',
+  'stop_powershell',
+  'list_agents',
+  'read_agent',
+  'sql',         // session DB queries (read-only from the hook perspective)
+  'ide-get_diagnostics',
+  'ide-get_selection',
+  'github-mcp-server-search_code',
+  'github-mcp-server-search_repositories',
+  'github-mcp-server-search_issues',
+  'github-mcp-server-search_pull_requests',
+  'github-mcp-server-search_users',
+  'github-mcp-server-list_issues',
+  'github-mcp-server-list_pull_requests',
+  'github-mcp-server-list_branches',
+  'github-mcp-server-list_commits',
+  'github-mcp-server-list_copilot_spaces',
+  'github-mcp-server-get_file_contents',
+  'github-mcp-server-get_commit',
+  'github-mcp-server-get_copilot_space',
+  'github-mcp-server-issue_read',
+  'github-mcp-server-pull_request_read',
+  'github-mcp-server-actions_get',
+  'github-mcp-server-actions_list',
+  'github-mcp-server-get_job_logs',
+]);
+
+/**
  * Claude Code's built-in read-only Bash command stems. These are always auto-approved
  * by Claude Code before the hook fires; PostToolUse may arrive late or not at all.
  * We skip the pending-choice flow entirely for these rather than relying on the debounce.

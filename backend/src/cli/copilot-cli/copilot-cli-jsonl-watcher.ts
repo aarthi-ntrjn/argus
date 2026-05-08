@@ -2,6 +2,7 @@ import { join } from 'path';
 import { broadcast } from '../../api/ws/event-dispatcher.js';
 import { parseJsonlLine } from './copilot-cli-jsonl-parser.js';
 import { JsonlWatcherBase } from '../jsonl-watcher-base.js';
+import { pendingChoiceEvents } from '../pending-choice-events.js';
 import type { SessionOutput } from '../../models/index.js';
 
 export class CopilotJsonlWatcher extends JsonlWatcherBase {
@@ -55,6 +56,9 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
             timestamp: now,
             data: { sessionId },
           });
+        } else {
+          // A non-ask_user tool completed — cancel any pending approval timer.
+          pendingChoiceEvents.emit('session.tool_result_seen', sessionId);
         }
       }
     }
