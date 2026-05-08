@@ -176,13 +176,13 @@ describe('ClaudeCodeDetector — hook-based pending choice', () => {
       hook_event_name: 'PreToolUse',
       session_id: sessionId,
       tool_name: 'Bash',
-      tool_input: { command: 'ls -la' },
+      tool_input: { command: 'touch /tmp/argus-test.txt' },
       cwd: TEST_REPO_PATH,
     });
 
     const pending = detector.getPendingChoice(sessionId);
     expect(pending).not.toBeNull();
-    expect(pending?.question).toBe('Bash: ls -la');
+    expect(pending?.question).toBe('Bash: touch /tmp/argus-test.txt');
     expect(pending?.choices).toEqual(['Yes', "Yes, don't ask again for this project", 'No']);
   });
 

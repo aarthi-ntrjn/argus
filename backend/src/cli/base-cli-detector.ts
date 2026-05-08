@@ -25,7 +25,7 @@ import {
   getRepositoryByPath,
   getSession,
 } from '../db/database.js';
-import { parsePendingChoicePayload, buildToolApprovalChoice } from './pending-choice-utils.js';
+import { parsePendingChoicePayload, buildToolApprovalChoice, isClaudeReadOnlyBashCommand } from './pending-choice-utils.js';
 import { telemetryService } from '../services/telemetry-service.js';
 import { ptyRegistry } from '../launch-pty/pty-registry.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from '../utils/process-utils.js';
@@ -736,6 +736,18 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       return;
     }
     const toolName = payload.tool_name ?? 'Unknown';
+    // Claude Code's built-in read-only Bash commands are always auto-approved. PostToolUse
+    // does fire for them (~400ms after PreToolUse), but for faster commands the gap can be
+    // shorter than the debounce timer. Skipping known read-only commands here is a
+    // belt-and-suspenders guard on top of the timer-cancellation path below.
+    if (
+      toolName === 'Bash' &&
+      isClaudeReadOnlyBashCommand(
+        typeof payload.tool_input?.command === 'string' ? payload.tool_input.command : '',
+      )
+    ) {
+      return;
+    }
     const { question, choices, allQuestions } = buildToolApprovalChoice(
       toolName,
       payload.tool_input ?? {},

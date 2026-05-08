@@ -34,6 +34,47 @@ const COPILOT_TIER_TOOLS = new Set([
   'edit',             // write kind (per official docs)
 ]);
 
+/**
+ * Claude Code's built-in read-only Bash command stems. These are always auto-approved
+ * by Claude Code before the hook fires; PostToolUse may arrive late or not at all.
+ * We skip the pending-choice flow entirely for these rather than relying on the debounce.
+ */
+const CLAUDE_READONLY_BASH_STEMS = new Set([
+  'ls', 'cat', 'head', 'tail', 'grep', 'find', 'wc', 'diff', 'stat', 'du', 'cd',
+]);
+
+/**
+ * Read-only git subcommands. A Bash command starting with "git <subcommand>" where
+ * the subcommand is in this set is always auto-approved by Claude Code.
+ */
+const CLAUDE_READONLY_GIT_SUBCOMMANDS = new Set([
+  'status', 'log', 'diff', 'show', 'branch', 'remote', 'tag', 'stash',
+  'describe', 'shortlog', 'blame', 'ls-files', 'ls-tree', 'rev-parse',
+  'rev-list', 'for-each-ref',
+]);
+
+/**
+ * Returns true if the Bash command is in Claude Code's built-in read-only set.
+ * These commands are auto-approved by Claude Code and will never show an interactive
+ * prompt — PostToolUse either fires very late or not at all, making the debounce
+ * timer unreliable. Skipping the pending-choice flow entirely is the correct approach.
+ */
+export function isClaudeReadOnlyBashCommand(command: string): boolean {
+  const trimmed = command.trimStart();
+  // Extract the first token (binary name), stopping at space, tab, or semicolon.
+  const stem = trimmed.split(/[\s;|&<>]/)[0] ?? '';
+  if (CLAUDE_READONLY_BASH_STEMS.has(stem)) {
+    return true;
+  }
+  // Read-only git: "git <readonly-subcommand> ..."
+  if (stem === 'git') {
+    const rest = trimmed.slice(stem.length).trimStart();
+    const subcommand = rest.split(/\s/)[0] ?? '';
+    return CLAUDE_READONLY_GIT_SUBCOMMANDS.has(subcommand);
+  }
+  return false;
+}
+
 const BASH_TIER_CHOICES = ['Yes', "Yes, don't ask again for this project", 'No'];
 const EDIT_TIER_CHOICES = ['Yes', "Yes, don't ask again for this session", 'No'];
 const COPILOT_TIER_CHOICES = ['Yes, allow once', 'Yes, allow for this session', 'No, reject'];
