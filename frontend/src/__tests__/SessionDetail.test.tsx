@@ -59,13 +59,15 @@ describe('SessionDetail — role badges', () => {
 });
 
 describe('SessionDetail — type badges', () => {
-  it('shows TOOL badge for tool_use items', () => {
+  it('shows TOOL badge for tool_use items', async () => {
+    const user = userEvent.setup();
     render(
       <SessionDetail
         sessionId="s1"
         items={[output({ type: 'tool_use', role: null, content: 'run_bash()' })]}
       />,
     );
+    await user.click(screen.getByRole('button', { name: /expand tool calls/i }));
     expect(screen.getByText('TOOL')).toBeInTheDocument();
   });
 
@@ -102,7 +104,8 @@ describe('SessionDetail — type badges', () => {
 });
 
 describe('SessionDetail — tool names', () => {
-  it('shows the tool name as a badge in the content column for tool_use items', () => {
+  it('shows the tool name as a badge in the content column for tool_use items', async () => {
+    const user = userEvent.setup();
     render(
       <SessionDetail
         sessionId="s1"
@@ -116,6 +119,7 @@ describe('SessionDetail — tool names', () => {
         ]}
       />,
     );
+    await user.click(screen.getByRole('button', { name: /expand tool calls/i }));
     expect(screen.getByText('read_file')).toBeInTheDocument();
   });
 
@@ -176,7 +180,8 @@ describe('SessionDetail — content rendering', () => {
     expect(screen.getByText('npm test').tagName).toBe('CODE');
   });
 
-  it('renders all items when multiple output entries are provided', () => {
+  it('renders all items when multiple output entries are provided', async () => {
+    const user = userEvent.setup();
     const items = [
       output({
         id: '1',
@@ -204,9 +209,10 @@ describe('SessionDetail — content rendering', () => {
     render(<SessionDetail sessionId="s1" items={items} />);
     expect(screen.getByText('YOU')).toBeInTheDocument();
     expect(screen.getByText('AI')).toBeInTheDocument();
-    expect(screen.getByText('TOOL')).toBeInTheDocument();
     expect(screen.getByText('First message')).toBeInTheDocument();
     expect(screen.getByText('Second message')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /expand tool calls/i }));
+    expect(screen.getByText('TOOL')).toBeInTheDocument();
   });
 });
 
@@ -392,7 +398,8 @@ describe('SessionDetail — focused mode (default)', () => {
     expect(screen.getByText('all tests passed')).toBeInTheDocument();
   });
 
-  it('shows compact summary for tool_use rows — not raw JSON', () => {
+  it('shows compact summary for tool_use rows — not raw JSON', async () => {
+    const user = userEvent.setup();
     const jsonContent = JSON.stringify({ path: 'src/App.tsx', old_str: 'foo', new_str: 'bar' });
     const items = [
       output({
@@ -405,11 +412,13 @@ describe('SessionDetail — focused mode (default)', () => {
       }),
     ];
     render(<SessionDetail sessionId="s1" items={items} />);
+    expect(screen.queryByText(jsonContent)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /expand tool calls/i }));
     expect(screen.getByText('Edit: src/App.tsx')).toBeInTheDocument();
     expect(screen.queryByText(jsonContent)).not.toBeInTheDocument();
   });
 
-  it('shows expand button for tool_use rows to reveal full JSON', () => {
+  it('shows the tool call group collapsed by default for in-flight tool_use', () => {
     const items = [
       output({
         id: '1',
@@ -421,10 +430,11 @@ describe('SessionDetail — focused mode (default)', () => {
       }),
     ];
     render(<SessionDetail sessionId="s1" items={items} />);
-    expect(screen.getByRole('button', { name: /show details/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /expand tool calls/i })).toBeInTheDocument();
+    expect(screen.queryByText('src/App.tsx')).not.toBeInTheDocument();
   });
 
-  it('reveals tool_use full content after clicking expand', async () => {
+  it('reveals tool_use content after expanding the tool group', async () => {
     const user = userEvent.setup();
     const items = [
       output({
@@ -437,8 +447,8 @@ describe('SessionDetail — focused mode (default)', () => {
       }),
     ];
     render(<SessionDetail sessionId="s1" items={items} />);
-    await user.click(screen.getByRole('button', { name: /show details/i }));
-    expect(screen.getByText('src/App.tsx')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /expand tool calls/i }));
+    expect(screen.getByText('Read: src/App.tsx')).toBeInTheDocument();
   });
 
   it('always shows error rows regardless of display mode', () => {

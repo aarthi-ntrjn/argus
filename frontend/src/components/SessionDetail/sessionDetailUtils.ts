@@ -67,11 +67,13 @@ export function isAlwaysVisible(item: SessionOutput): boolean {
 
 export type ToolGroupItem =
   | { kind: 'tool_pair'; toolUse: SessionOutput; toolResult: SessionOutput }
+  | { kind: 'tool_pending'; toolUse: SessionOutput }
   | { kind: 'single'; item: SessionOutput };
 
 export type DisplayItem =
   | { kind: 'single'; item: SessionOutput }
   | { kind: 'tool_pair'; toolUse: SessionOutput; toolResult: SessionOutput }
+  | { kind: 'tool_pending'; toolUse: SessionOutput }
   | { kind: 'tool_group'; groupItems: ToolGroupItem[] };
 
 /**
@@ -109,7 +111,7 @@ export function buildDisplayItems(items: SessionOutput[], focused: boolean): Dis
           toolResult: pairedResultIds.get(item.toolCallId)!,
         });
       } else {
-        result.push({ kind: 'single', item });
+        result.push({ kind: 'tool_pending', toolUse: item });
       }
     } else if (item.type === 'tool_result') {
       // Orphaned or already consumed — drop in focused mode
@@ -144,18 +146,18 @@ function groupConsecutiveToolPairs(items: DisplayItem[]): DisplayItem[] {
       continue;
     }
 
-    if (cur.kind !== 'tool_pair') {
+    if (cur.kind !== 'tool_pair' && cur.kind !== 'tool_pending') {
       result.push(cur);
       i++;
       continue;
     }
 
-    // Start a group — collect consecutive tool_pairs, skipping empty assistant messages.
+    // Start a group — collect consecutive tool_pairs/tool_pendings, skipping empty assistant messages.
     const groupItems: ToolGroupItem[] = [];
 
     while (i < items.length) {
       const item = items[i];
-      if (item.kind === 'tool_pair') {
+      if (item.kind === 'tool_pair' || item.kind === 'tool_pending') {
         groupItems.push(item);
         i++;
       } else if (

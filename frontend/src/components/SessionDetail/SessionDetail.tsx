@@ -3,7 +3,12 @@ import type { Components } from 'react-markdown';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { SessionOutput, OutputDisplayMode } from '../../types';
-import { summariseToolUse, fullToolUseText, buildDisplayItems } from './sessionDetailUtils';
+import {
+  summariseToolUse,
+  fullToolUseText,
+  buildDisplayItems,
+} from './sessionDetailUtils';
+import type { ToolGroupItem } from './sessionDetailUtils';
 
 interface Props {
   sessionId: string;
@@ -281,18 +286,17 @@ export default function SessionDetail({
     >
       {displayItems.map((di) => {
         if (di.kind === 'tool_group') {
-          const pairs = di.groupItems.filter((gi) => gi.kind === 'tool_pair') as Array<{
-            kind: 'tool_pair';
-            toolUse: SessionOutput;
-            toolResult: SessionOutput;
-          }>;
-          const groupId = pairs[0].toolUse.id;
+          const toolCallItems = di.groupItems.filter(
+            (gi): gi is Extract<ToolGroupItem, { toolUse: SessionOutput }> =>
+              gi.kind === 'tool_pair' || gi.kind === 'tool_pending'
+          );
+          const groupId = toolCallItems[0].toolUse.id;
           const isExpanded = expandedIds.has(groupId);
-          const toolNames = pairs.map((p) => p.toolUse.toolName).filter(Boolean);
+          const toolNames = toolCallItems.map((p) => p.toolUse.toolName).filter(Boolean);
           const uniqueNames = [...new Set(toolNames)];
           const nameSummary =
             uniqueNames.slice(0, 3).join(', ') + (uniqueNames.length > 3 ? ', …' : '');
-          const summary = `${pairs.length} tool call${pairs.length === 1 ? '' : 's'}${nameSummary ? `: ${nameSummary}` : ''}`;
+          const summary = `${toolCallItems.length} tool call${toolCallItems.length === 1 ? '' : 's'}${nameSummary ? `: ${nameSummary}` : ''}`;
           return (
             <div
               key={groupId}
@@ -330,6 +334,41 @@ export default function SessionDetail({
                               onExpandFull={expandFull}
                               markdownComponents={markdownComponents}
                             />
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (gi.kind === 'tool_pending') {
+                      const typeInfo = getBadge(gi.toolUse);
+                      const badgeColor = dark ? typeInfo.dark : typeInfo.light;
+                      return (
+                        <div key={gi.toolUse.id} className="flex gap-3 items-start">
+                          <div className="flex flex-col gap-0.5 w-24 shrink-0">
+                            <span
+                              className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap self-start ${badgeColor}`}
+                            >
+                              {typeInfo.label}
+                            </span>
+                            <span
+                              className={`text-[10px] whitespace-nowrap ${dark ? 'text-gray-400' : 'text-gray-600'}`}
+                            >
+                              {formatTime(gi.toolUse.timestamp)}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              {renderToolNameBadge(gi.toolUse.toolName, dark)}
+                              <span
+                                className={`break-words ${dark ? 'text-gray-200' : 'text-gray-800'}`}
+                              >
+                                {summariseToolUse(gi.toolUse)}
+                              </span>
+                              <span
+                                className={`text-[10px] ${dark ? 'text-gray-500' : 'text-gray-400'}`}
+                              >
+                                running…
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );
@@ -428,6 +467,10 @@ export default function SessionDetail({
               </div>
             </div>
           );
+        }
+
+        if (di.kind === 'tool_pending') {
+          return null;
         }
 
         const { item } = di;
