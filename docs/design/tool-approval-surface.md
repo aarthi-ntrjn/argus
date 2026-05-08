@@ -267,3 +267,105 @@ Frontend sendChoiceWithPrompt(sessionId, choiceNumber, answerText)
 When a session ends, `handleSessionEnd` cancels all pending approval broadcast timers
 for that session and removes its entry from `pendingChoices`. This prevents memory leaks
 and stale approval cards from appearing after a session terminates mid-tool.
+
+---
+
+## Testing guide
+
+Each scenario below states what to ask Claude Code or Copilot to do, what the expected
+Argus UI behaviour is, and what a correct terminal response looks like.
+
+### Claude Code — Bash tier (permanent "don't ask again")
+
+These show choices: **Yes / Yes, don't ask again for this project / No**
+
+| Prompt to Claude Code | Notes |
+|---|---|
+| `run: touch /tmp/argus-test.txt` | Simplest write command |
+| `run: mkdir /tmp/argus-test-dir` | Directory creation |
+| `run: curl https://example.com` | Network access (not in read-only set) |
+| `run: npm install` | Package install |
+| `run: git commit -m "test"` | Destructive git operation |
+
+Selecting **"Yes, don't ask again for this project"** writes a permanent allow rule to
+`~/.claude/settings.json`. The next time the same command runs, `PostToolUse` should
+arrive within 500ms and Argus should suppress the card entirely.
+
+### Claude Code — Edit tier (session-scoped "don't ask again")
+
+These show choices: **Yes / Yes, don't ask again for this session / No**
+
+| Prompt to Claude Code | Notes |
+|---|---|
+| `edit the file README.md and add a blank line` | Edit tool |
+| `create a new file /tmp/argus-write-test.txt with content "hello"` | Write tool |
+
+Selecting **"Yes, don't ask again for this session"** allows further edits in the same
+session without re-prompting. Restarting the session resets the approval.
+
+### Claude Code — auto-approved (should NOT show any Argus UI)
+
+These are Claude Code's built-in read-only set. The approval card must never appear.
+
+| Prompt to Claude Code | Tool used |
+|---|---|
+| `list files in the current directory` | `ls` |
+| `show me the contents of README.md` | `cat` |
+| `search for the word "test" in src/` | `grep` |
+| `what is the git status?` | `git status` |
+| `show me the last 5 git commits` | `git log` |
+
+If the approval card flickers briefly and disappears, the debounce timer is too short.
+Increase the value in `handlePreToolApproval` (currently 500ms).
+
+### Claude Code — ask_user (AskUserQuestion)
+
+Ask Claude Code a question that it will forward to the user. Example prompt:
+
+> Before you proceed, ask me whether I want verbose or quiet output.
+
+The approval card should appear immediately (no debounce), show the question text and
+the option list from Claude's payload, and disappear as soon as you select an answer.
+Selecting an option followed by typing additional text in the prompt bar tests the
+two-step ask_user flow.
+
+### Claude Code — yolo mode
+
+Start the session with `--dangerously-skip-permissions`. Ask Claude to run a normally
+gated command like `touch /tmp/yolo-test.txt`. The approval card must never appear
+regardless of what command is run.
+
+### Copilot CLI — shell kind
+
+These show choices: **Yes, allow once / Yes, allow for this session / No, reject**
+
+| Prompt to Copilot | Notes |
+|---|---|
+| `run: touch /tmp/copilot-test.txt` | Basic shell write |
+| `run: mkdir /tmp/copilot-dir` | Directory creation |
+| `run: curl https://example.com` | Network (shell kind, gated by default) |
+
+Selecting **"Yes, allow for this session"** should suppress the card on the next
+identical command within the same session.
+
+### Copilot CLI — write kind
+
+| Prompt to Copilot | Notes |
+|---|---|
+| `edit README.md and add a blank line at the top` | write-kind tool |
+| `create a new file /tmp/copilot-write.txt` | write-kind tool |
+
+### Copilot CLI — auto-approved (should NOT show any Argus UI)
+
+Read-only operations are auto-approved by Copilot. The card must not appear.
+
+| Prompt to Copilot | Expected |
+|---|---|
+| `list files in the current directory` | No card |
+| `search for the word "TODO" in this repo` | No card |
+| `read the contents of README.md` | No card |
+
+### Copilot CLI — yolo mode
+
+Start the session with `--yolo` or `--allow-all`. The approval card must never appear.
+
