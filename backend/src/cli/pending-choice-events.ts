@@ -1,9 +1,8 @@
 import { EventEmitter } from 'events';
+import type { PendingChoice as BasePendingChoice } from '../models/index.js';
 
-export interface PendingChoice {
+export interface PendingChoice extends BasePendingChoice {
   sessionId: string;
-  question: string;
-  choices: string[];
 }
 
 /**

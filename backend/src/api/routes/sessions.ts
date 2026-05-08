@@ -5,14 +5,15 @@ import { SessionController } from '../../services/session-controller.js';
 import { ptyRegistry } from '../../launch-pty/pty-registry.js';
 import { telemetryService } from '../../services/telemetry-service.js';
 import { broadcast } from '../ws/event-dispatcher.js';
+import type { PendingChoice } from '../../models/index.js';
 
 let _cliManager: {
-  getPendingChoice(sessionId: string): unknown;
+  getPendingChoice(sessionId: string): PendingChoice | null;
   clearPendingChoice(sessionId: string): void;
 } | null = null;
 
 export function setCliManager(manager: {
-  getPendingChoice(sessionId: string): unknown;
+  getPendingChoice(sessionId: string): PendingChoice | null;
   clearPendingChoice(sessionId: string): void;
 }): void {
   _cliManager = manager;
