@@ -149,9 +149,9 @@ function SessionCard({ session, selected, onSelect }: Props) {
             ref={promptBarRef}
             session={session}
             customChoiceNumber={customChoiceNumber}
-            implicitChoiceNumber={pendingChoice ? implicitChoiceNumber : null}
+            implicitChoiceNumber={pendingChoice?.type === 'ask_user' ? implicitChoiceNumber : null}
             onCustomAnswerSent={() => setCustomChoiceNumber(null)}
-            onPromptSent={pendingChoice ? () => setQuestionIdx((i) => i + 1) : undefined}
+            onPromptSent={pendingChoice?.type === 'ask_user' ? () => setQuestionIdx((i) => i + 1) : undefined}
           />
         </div>
       )}
