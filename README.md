@@ -71,7 +71,7 @@ Output lines carry type badges so you always know what's what: **YOU** (your inp
 
 The output pane has two display modes, toggled via the **Focused / Verbose** button in the pane header:
 
-- **Focused** (default): hides noisy tool results. Tool calls show a compact one-line summary. Click **show result** on any row to expand it inline. Your messages, AI replies, status changes, and errors are always visible.
+- **Focused** (default): hides noisy tool results. Consecutive tool calls are grouped into a collapsible counter bar — click the bar to expand and inspect individual calls. In-flight tool calls (awaiting a result) are folded into the bar immediately so the stream does not jump. Click **show result** on any completed call to expand it inline. Your messages, AI replies, status changes, and errors are always visible.
 
   <img src="docs/images/argus-stream-focused.png" alt="Focused Mode" height="300">
 

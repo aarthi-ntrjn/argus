@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('argus:onboarding', JSON.stringify({
       schemaVersion: 1, userId: null,
-      dashboardTour: { status: 'completed', completedAt: '2024-01-01T00:00:00.000Z', skippedAt: null },
+      dashboardTour: { status: 'completed', completedAt: '2024-01-01T00:00:00.000Z', skippedAt: null, seenRepoSteps: true },
       sessionHints: { dismissed: [] },
     }));
   });
@@ -116,8 +116,11 @@ test.describe('SC-007: Output Stream & Model Display', () => {
     const outputPane = page.getByRole('region', { name: /session output/i });
     await expect(outputPane).toBeVisible({ timeout: 3000 });
 
-    // The tool_use output content should be visible
+    // In focused mode tool_use items are folded into a collapsed group — expand to see content
+    await outputPane.getByRole('button', { name: /expand tool calls/i }).click();
     await expect(outputPane.getByText('read_file(main.ts)').first()).toBeVisible();
+    // The tool group bar has no YOU/AI role badge — only the count label
+    await expect(outputPane.getByText('TOOL', { exact: true })).toBeVisible();
   });
 
   // ─── US3: Model on session detail page ─────────────────────────────────────

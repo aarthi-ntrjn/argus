@@ -3,11 +3,7 @@ import type { Components } from 'react-markdown';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { SessionOutput, OutputDisplayMode } from '../../types';
-import {
-  summariseToolUse,
-  fullToolUseText,
-  buildDisplayItems,
-} from './sessionDetailUtils';
+import { summariseToolUse, fullToolUseText, buildDisplayItems } from './sessionDetailUtils';
 import type { ToolGroupItem } from './sessionDetailUtils';
 
 interface Props {
@@ -288,7 +284,7 @@ export default function SessionDetail({
         if (di.kind === 'tool_group') {
           const toolCallItems = di.groupItems.filter(
             (gi): gi is Extract<ToolGroupItem, { toolUse: SessionOutput }> =>
-              gi.kind === 'tool_pair' || gi.kind === 'tool_pending'
+              gi.kind === 'tool_pair' || gi.kind === 'tool_pending',
           );
           const groupId = toolCallItems[0].toolUse.id;
           const isExpanded = expandedIds.has(groupId);
