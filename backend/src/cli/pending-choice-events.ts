@@ -12,5 +12,8 @@ export interface PendingChoice extends BasePendingChoice {
  * Events:
  *   'session.pending_choice'          (choice: PendingChoice)
  *   'session.pending_choice.resolved' (sessionId: string)
+ *   'session.tool_result_seen'        (sessionId: string) — a non-AskUserQuestion tool
+ *                                     completed in the JSONL stream; used to cancel the
+ *                                     pending-approval debounce timer before it fires.
  */
 export const pendingChoiceEvents = new EventEmitter();

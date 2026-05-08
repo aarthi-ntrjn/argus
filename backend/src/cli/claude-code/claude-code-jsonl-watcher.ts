@@ -49,6 +49,10 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
             data: { sessionId },
           });
           pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
+        } else {
+          // A different tool completed — signal so the pending-approval debounce
+          // timer can be cancelled before the approval card is shown.
+          pendingChoiceEvents.emit('session.tool_result_seen', sessionId);
         }
       }
 

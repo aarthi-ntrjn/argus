@@ -754,11 +754,24 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     );
     this.pendingChoices.set(sessionId, { type: 'tool_approval', question, choices, allQuestions });
 
-    // Delay the broadcast. When a permission rule already covers this tool, Claude Code /
-    // Copilot auto-approves it and PostToolUse arrives within milliseconds. If PostToolUse
-    // clears the timer before it fires, the choice was never waiting for the user, so no
-    // UI flicker occurs.
+    // Cancel the approval card if the JSONL stream shows the tool already completed
+    // (auto-approved by a rule) before the debounce timer fires.
+    const cancelOnToolResult = (sid: string) => {
+      if (sid !== sessionId) {
+        return;
+      }
+      pendingChoiceEvents.off('session.tool_result_seen', cancelOnToolResult);
+      clearTimeout(timer);
+      this.pendingApprovalTimers.delete(sessionId);
+      this.pendingChoices.delete(sessionId);
+    };
+    pendingChoiceEvents.on('session.tool_result_seen', cancelOnToolResult);
+
+    // Delay the broadcast. PostToolUse (HTTP) and the JSONL tool_result_seen event both
+    // cancel this timer if the tool was auto-approved. If neither fires within 500ms the
+    // tool is genuinely waiting for the user, so we show the approval card.
     const timer = setTimeout(() => {
+      pendingChoiceEvents.off('session.tool_result_seen', cancelOnToolResult);
       this.pendingApprovalTimers.delete(sessionId);
       if (!this.pendingChoices.has(sessionId)) {
         return;
