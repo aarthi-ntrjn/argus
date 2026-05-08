@@ -762,7 +762,7 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
         choices,
         allQuestions,
       });
-    }, 300);
+    }, 500);
     this.pendingApprovalTimers.set(sessionId, timer);
   }
 
