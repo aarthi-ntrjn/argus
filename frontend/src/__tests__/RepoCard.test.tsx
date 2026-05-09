@@ -93,6 +93,15 @@ describe('RepoCard link indicators', () => {
       expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/issues');
     });
 
+    it('renders branch chip as a link to the branch tree', () => {
+      renderCard(makeRepo());
+      const link = screen.getByRole('link', { name: /branch feature\/foo on github/i });
+      expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/tree/feature%2Ffoo');
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(link).toHaveTextContent('feature/foo');
+    });
+
     it('renders repo name as a link to repo home', () => {
       renderCard(makeRepo());
       const link = screen.getByRole('link', { name: /open repository on github/i });
@@ -124,6 +133,12 @@ describe('RepoCard link indicators', () => {
       renderCard(makeRepo());
       fireEvent.click(screen.getByRole('link', { name: /issues on github/i }));
       expect(api.postTelemetryEvent).toHaveBeenCalledWith('repo_card_issues_opened');
+    });
+
+    it('emits repo_card_branch_opened on branch-chip link click', () => {
+      renderCard(makeRepo());
+      fireEvent.click(screen.getByRole('link', { name: /branch feature\/foo on github/i }));
+      expect(api.postTelemetryEvent).toHaveBeenCalledWith('repo_card_branch_opened');
     });
 
     it('emits repo_card_home_opened on repo-name link click', () => {
@@ -164,6 +179,13 @@ describe('RepoCard link indicators', () => {
       expect(screen.queryByRole('link', { name: /github actions/i })).toBeNull();
       expect(screen.queryByRole('link', { name: /issues on github/i })).toBeNull();
       expect(screen.queryByRole('link', { name: /open repository on github/i })).toBeNull();
+      expect(screen.queryByRole('link', { name: /branch .* on github/i })).toBeNull();
+    });
+
+    it('still shows the branch chip as plain text', () => {
+      renderCard(makeRepo({ remoteUrl: 'https://gitlab.com/owner/repo' }));
+      expect(screen.getByText(/feature\/foo/)).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /feature\/foo/i })).toBeNull();
     });
 
     it('renders repo name as plain text', () => {

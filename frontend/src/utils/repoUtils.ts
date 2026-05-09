@@ -10,6 +10,7 @@ export const REPO_CARD_LINK_KINDS = [
   'issues',
   'home',
   'compare',
+  'branch',
 ] as const;
 export type RepoCardLinkKind = (typeof REPO_CARD_LINK_KINDS)[number];
 
@@ -116,10 +117,22 @@ export function buildGitHubHomeUrl(remoteUrl: string | null | undefined): string
   return parsed ? parsed.baseUrl : null;
 }
 
+export function buildGitHubBranchUrl(
+  remoteUrl: string | null | undefined,
+  branch: string | null | undefined,
+): string | null {
+  const parsed = parseGitHubRemote(remoteUrl);
+  if (!parsed || !branch) {
+    return null;
+  }
+  return `${parsed.baseUrl}/tree/${encodeURIComponent(branch)}`;
+}
+
 export const REPO_CARD_TELEMETRY_EVENTS: Record<Exclude<RepoCardLinkKind, 'compare'>, string> = {
   pr: 'repo_card_pr_opened',
   commits: 'repo_card_commits_opened',
   actions: 'repo_card_actions_opened',
   issues: 'repo_card_issues_opened',
   home: 'repo_card_home_opened',
+  branch: 'repo_card_branch_opened',
 };

@@ -65,6 +65,15 @@ buildGitHubPrListUrl(remoteUrl: string | null | undefined, branch: string | null
 | GitHub remote (`branch` ignored) | `'https://github.com/owner/repo'` |
 | Non-GitHub remote | `null` |
 
+### Function: `buildGitHubBranchUrl`
+
+| Inputs | Output |
+|---|---|
+| GitHub remote, branch = `'feature/foo'` | `'https://github.com/owner/repo/tree/feature%2Ffoo'` |
+| GitHub remote, branch = `'master'` | `'https://github.com/owner/repo/tree/master'` |
+| GitHub remote, branch = `null` | `null` |
+| Non-GitHub remote, any branch | `null` |
+
 ### Function: `buildGitHubCompareUrl` (existing — unchanged behavior)
 
 Already covered by `frontend/src/__tests__/repoUtils.test.ts`. Refactor MUST keep all existing test cases passing.
@@ -74,7 +83,7 @@ Already covered by `frontend/src/__tests__/repoUtils.test.ts`. Refactor MUST kee
 ### Indicator row order (FR-014)
 
 ```
-[branch chip] [GitCompare] [GitPullRequest] [GitCommit] [PlayCircle] [CircleDot]
+[branch chip — clickable on GitHub] [GitCompare] [GitPullRequest] [GitCommit] [PlayCircle] [CircleDot]
 ```
 
 ### Per-indicator render rules
@@ -86,6 +95,7 @@ Already covered by `frontend/src/__tests__/repoUtils.test.ts`. Refactor MUST kee
 | `actions` | same as `pr` | Open `buildGitHubActionsUrl(...)`; emit `repo_card_actions_opened`; stop propagation |
 | `issues` | `parseGitHubRemote(remoteUrl) !== null` (branch not required) | Open `buildGitHubIssuesUrl(...)`; emit `repo_card_issues_opened`; stop propagation |
 | `home` (repo name as link) | `parseGitHubRemote(remoteUrl) !== null` | Wrap `<h2>` content in `<a>`; emit `repo_card_home_opened`; stop propagation |
+| `branch` (branch chip as link) | `parseGitHubRemote(remoteUrl) !== null && branch !== null` | Replace branch-chip `<span>` with `<a>` linking to `buildGitHubBranchUrl(...)`; emit `repo_card_branch_opened`; stop propagation; preserve existing chip styling |
 | `compare` | unchanged | unchanged |
 
 ### A11y / DOM contract

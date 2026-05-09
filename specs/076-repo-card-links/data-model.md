@@ -36,13 +36,13 @@ Returned as `ParsedGitHubRemote | null`. `null` means: no remote, or the remote 
 Discriminator for telemetry keys and (later, if needed) for any shared rendering logic.
 
 ```ts
-type RepoCardLinkKind = 'pr' | 'commits' | 'actions' | 'issues' | 'home' | 'compare';
+type RepoCardLinkKind = 'pr' | 'commits' | 'actions' | 'issues' | 'home' | 'compare' | 'branch';
 ```
 
 Defined as a `const` set per CLAUDE.md "no magic strings":
 
 ```ts
-const REPO_CARD_LINK_KINDS = ['pr', 'commits', 'actions', 'issues', 'home', 'compare'] as const;
+const REPO_CARD_LINK_KINDS = ['pr', 'commits', 'actions', 'issues', 'home', 'compare', 'branch'] as const;
 type RepoCardLinkKind = typeof REPO_CARD_LINK_KINDS[number];
 ```
 
@@ -55,6 +55,7 @@ const REPO_CARD_TELEMETRY_EVENTS: Record<Exclude<RepoCardLinkKind, 'compare'>, s
   actions:  'repo_card_actions_opened',
   issues:   'repo_card_issues_opened',
   home:     'repo_card_home_opened',
+  branch:   'repo_card_branch_opened',
 };
 // 'compare' continues to use the pre-existing 'repo_diff_opened' event,
 // which remains hard-coded at its existing call site.
@@ -71,6 +72,7 @@ export function buildGitHubCommitsUrl(remoteUrl: string | null | undefined, bran
 export function buildGitHubActionsUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
 export function buildGitHubIssuesUrl(remoteUrl: string | null | undefined): string | null;
 export function buildGitHubHomeUrl(remoteUrl: string | null | undefined): string | null;
+export function buildGitHubBranchUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
 // existing:
 export function buildGitHubCompareUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
 ```

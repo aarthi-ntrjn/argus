@@ -2,6 +2,7 @@ import type { Repository, Session } from '../../types';
 import type { PendingLauncher } from '../../hooks/usePendingLaunchers';
 import {
   buildGitHubActionsUrl,
+  buildGitHubBranchUrl,
   buildGitHubCommitsUrl,
   buildGitHubCompareUrl,
   buildGitHubHomeUrl,
@@ -81,6 +82,7 @@ export default function RepoCard({
   const commitsUrl = buildGitHubCommitsUrl(repo.remoteUrl, repo.branch);
   const actionsUrl = buildGitHubActionsUrl(repo.remoteUrl, repo.branch);
   const issuesUrl = buildGitHubIssuesUrl(repo.remoteUrl);
+  const branchUrl = buildGitHubBranchUrl(repo.remoteUrl, repo.branch);
 
   return (
     <div data-tour-id="dashboard-repo-card" className="bg-white rounded-lg shadow p-4 md:p-6">
@@ -149,11 +151,27 @@ export default function RepoCard({
         </div>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           <p className="text-xs text-gray-500 font-mono truncate max-w-full">{repo.path}</p>
-          {repo.branch && (
-            <span className="inline-flex items-center gap-1 text-xs font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-              ⎇ {repo.branch}
-            </span>
-          )}
+          {repo.branch &&
+            (branchUrl ? (
+              <a
+                href={branchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Branch ${repo.branch} on GitHub`}
+                aria-label={`Branch ${repo.branch} on GitHub`}
+                className="inline-flex items-center gap-1 text-xs font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded hover:bg-blue-100 hover:underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  postTelemetryEvent(REPO_CARD_TELEMETRY_EVENTS.branch);
+                }}
+              >
+                ⎇ {repo.branch}
+              </a>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-xs font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                ⎇ {repo.branch}
+              </span>
+            ))}
           <IndicatorIcon
             href={compareUrl}
             label="View diff on GitHub"

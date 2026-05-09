@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildGitHubActionsUrl,
+  buildGitHubBranchUrl,
   buildGitHubCommitsUrl,
   buildGitHubCompareUrl,
   buildGitHubHomeUrl,
@@ -207,6 +208,38 @@ describe('buildGitHubActionsUrl', () => {
   it('builds branch-filtered Actions URL with URL-encoded branch', () => {
     expect(buildGitHubActionsUrl('https://github.com/owner/repo', 'feature/foo')).toBe(
       'https://github.com/owner/repo/actions?query=branch%3Afeature%2Ffoo',
+    );
+  });
+});
+
+describe('buildGitHubBranchUrl', () => {
+  it('returns null when remoteUrl is null', () => {
+    expect(buildGitHubBranchUrl(null, 'feature/foo')).toBeNull();
+  });
+
+  it('returns null when branch is null', () => {
+    expect(buildGitHubBranchUrl('https://github.com/owner/repo', null)).toBeNull();
+  });
+
+  it('returns null for non-GitHub remote', () => {
+    expect(buildGitHubBranchUrl('https://gitlab.com/owner/repo', 'feature')).toBeNull();
+  });
+
+  it('builds tree URL for a feature branch with URL-encoded segments', () => {
+    expect(buildGitHubBranchUrl('https://github.com/owner/repo', 'feature/foo')).toBe(
+      'https://github.com/owner/repo/tree/feature%2Ffoo',
+    );
+  });
+
+  it('builds tree URL for the default branch', () => {
+    expect(buildGitHubBranchUrl('https://github.com/owner/repo', 'master')).toBe(
+      'https://github.com/owner/repo/tree/master',
+    );
+  });
+
+  it('works for SSH remote', () => {
+    expect(buildGitHubBranchUrl('git@github.com:owner/repo.git', 'main')).toBe(
+      'https://github.com/owner/repo/tree/main',
     );
   });
 });

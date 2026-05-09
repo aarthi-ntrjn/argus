@@ -10,6 +10,7 @@
 ### Session 2026-05-09
 
 - Q: How should Argus discover whether the current branch has an open PR? → A: Frontend-only. No PR-detection in Argus. The pull-request indicator always renders (when a GitHub remote and branch are known) and links to GitHub's filtered open-PR list (`/pulls?q=is:pr+is:open+head:<branch>`). GitHub itself handles all three cases: 0 PRs (offers a "New pull request" button), 1 PR (visible in the list, one click to open), N PRs (filtered list).
+- Q: Should the branch chip itself be clickable? → A: Yes. The branch chip on each repo card MUST link to the branch's tree view on GitHub (`/tree/<branch>`) when the remote is GitHub. Same telemetry pattern as the other indicators (`repo_card_branch_opened`).
 
 ## Overview
 
@@ -121,7 +122,8 @@ The user wants a quick path to the repository's open issues from the card, usefu
 - **FR-011**: All branch segments embedded in URLs MUST be URL-encoded.
 - **FR-012**: When the current branch is unknown (e.g. detached HEAD), the system MUST hide all branch-scoped indicators (PR-for-branch, commits-for-branch, actions-for-branch) but MAY still render repo-scoped indicators (repo home, issues).
 - **FR-013**: Each indicator click MUST emit a telemetry event identifying which link was clicked (consistent with the existing `repo_diff_opened` telemetry event), so we can later measure relative usage and prune unused links.
-- **FR-014**: The set and order of indicators in the metadata row MUST be: branch chip, compare (existing), open-PR, commits, actions, issues. This keeps the most-actionable indicator (PR) closest to the existing diff link the user already scans.
+- **FR-014**: The set and order of indicators in the metadata row MUST be: branch chip (now clickable on GitHub remotes), compare (existing), open-PR, commits, actions, issues. This keeps the most-actionable indicator (PR) closest to the existing diff link the user already scans.
+- **FR-015**: The branch chip MUST link to the branch tree view on GitHub (`/tree/<branch>`) when the remote is recognized as GitHub. On non-GitHub remotes (or when there is no remote), the branch chip MUST render as plain text (current behavior). Click MUST stop propagation and emit `repo_card_branch_opened`.
 
 ### Key Entities
 

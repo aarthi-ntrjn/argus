@@ -46,6 +46,10 @@ test.describe('SC-076: Repo card GitHub link indicators', () => {
     await expect(home).toHaveAttribute('href', 'https://github.com/owner/repo');
     await expect(home).toHaveAttribute('target', '_blank');
 
+    const branch = ghCard.getByRole('link', { name: /branch feature\/foo on github/i });
+    await expect(branch).toHaveAttribute('href', 'https://github.com/owner/repo/tree/feature%2Ffoo');
+    await expect(branch).toHaveAttribute('target', '_blank');
+
     const pr = ghCard.getByRole('link', { name: /pull requests on github/i });
     await expect(pr).toHaveAttribute(
       'href',
