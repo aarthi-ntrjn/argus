@@ -641,6 +641,54 @@ describe('SessionDetail — tool groups (focused mode)', () => {
     expect(summaries).toHaveLength(2);
   });
 
+  it('shows THINK badge for thinking items in verbose mode', () => {
+    render(
+      <SessionDetail
+        sessionId="s1"
+        items={[output({ type: 'thinking', role: null, content: 'Analyzing the codebase.' })]}
+        displayMode="verbose"
+      />,
+    );
+    expect(screen.getByText('THINK')).toBeInTheDocument();
+    expect(screen.getByText('Analyzing the codebase.')).toBeInTheDocument();
+  });
+
+  it('shows (redacted) placeholder for redacted thinking content in verbose mode', () => {
+    render(
+      <SessionDetail
+        sessionId="s1"
+        items={[output({ type: 'thinking', role: null, content: '[redacted]' })]}
+        displayMode="verbose"
+      />,
+    );
+    expect(screen.getByText('THINK')).toBeInTheDocument();
+    expect(screen.getByText('(redacted)')).toBeInTheDocument();
+  });
+
+  it('shows thinking collapsed in focused mode with an expand button', () => {
+    render(
+      <SessionDetail
+        sessionId="s1"
+        items={[output({ id: 'think-1', type: 'thinking', role: null, content: 'Deep thought.' })]}
+      />,
+    );
+    expect(screen.getByText('THINK')).toBeInTheDocument();
+    expect(screen.queryByText('Deep thought.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /expand thinking/i })).toBeInTheDocument();
+  });
+
+  it('reveals thinking content after clicking expand in focused mode', async () => {
+    const user = userEvent.setup();
+    render(
+      <SessionDetail
+        sessionId="s1"
+        items={[output({ id: 'think-1', type: 'thinking', role: null, content: 'Deep thought.' })]}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: /expand thinking/i }));
+    expect(screen.getByText('Deep thought.')).toBeInTheDocument();
+  });
+
   it('skips empty assistant messages between pairs (keeps them in one group)', () => {
     const items = [
       output({

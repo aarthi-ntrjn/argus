@@ -33,6 +33,11 @@ const TYPE_LABELS: Record<string, BadgeStyle> = {
     light: 'bg-yellow-100 text-yellow-700',
     dark: 'bg-yellow-900 text-yellow-300',
   },
+  thinking: {
+    label: 'THINK',
+    light: 'bg-amber-100 text-amber-700',
+    dark: 'bg-amber-900 text-amber-300',
+  },
 };
 
 const ROLE_LABELS: Record<string, BadgeStyle> = {
@@ -131,6 +136,46 @@ function ContentCell({
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
           {item.content}
         </ReactMarkdown>
+      </div>
+    );
+  }
+
+  if (item.type === 'thinking') {
+    const thinkingText =
+      item.content === '[redacted]'
+        ? '(redacted)'
+        : item.content === ''
+          ? '(empty)'
+          : item.content;
+    const isCollapsed = isFocused && !isExpanded;
+    return (
+      <div>
+        {isCollapsed ? (
+          <button
+            aria-label="Expand thinking"
+            onClick={() => onToggle(item.id)}
+            className={`icon-btn text-xs underline ${dark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            show reasoning
+          </button>
+        ) : (
+          <div>
+            <span
+              className={`min-w-0 break-words whitespace-pre-wrap ${dark ? 'text-amber-200' : 'text-amber-900'}`}
+            >
+              {thinkingText}
+            </span>
+            {isFocused && (
+              <button
+                aria-label="Collapse thinking"
+                onClick={() => onToggle(item.id)}
+                className={`icon-btn block text-xs underline mt-1 ${dark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                hide
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
   }
