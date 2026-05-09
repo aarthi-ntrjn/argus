@@ -31,8 +31,8 @@ No new dependencies, lint config, or build tooling are needed for this feature. 
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T001 [P] Extend `frontend/src/__tests__/repoUtils.test.ts` with failing tests for `parseGitHubRemote` (TC-01, TC-02, TC-03, TC-11). Run `npm run test --workspace=frontend -- repoUtils` and confirm they fail.
-- [ ] T002 Add `ParsedGitHubRemote` type, `REPO_CARD_LINK_KINDS` const, `RepoCardLinkKind` type, and the `parseGitHubRemote(remoteUrl)` helper to `frontend/src/utils/repoUtils.ts`. Refactor existing `buildGitHubCompareUrl` to call `parseGitHubRemote` instead of inlining the parse. T001 tests MUST now pass and the existing compare-URL tests MUST still pass.
+- [x] T001 [P] Extend `frontend/src/__tests__/repoUtils.test.ts` with failing tests for `parseGitHubRemote` (TC-01, TC-02, TC-03, TC-11). Run `npm run test --workspace=frontend -- repoUtils` and confirm they fail.
+- [x] T002 Add `ParsedGitHubRemote` type, `REPO_CARD_LINK_KINDS` const, `RepoCardLinkKind` type, and the `parseGitHubRemote(remoteUrl)` helper to `frontend/src/utils/repoUtils.ts`. Refactor existing `buildGitHubCompareUrl` to call `parseGitHubRemote` instead of inlining the parse. T001 tests MUST now pass and the existing compare-URL tests MUST still pass.
 
 **Checkpoint**: Foundation ready. User stories can now begin in priority order.
 
@@ -46,13 +46,13 @@ No new dependencies, lint config, or build tooling are needed for this feature. 
 
 ### Tests for User Story 1 ⚠️ Write first, see them fail
 
-- [ ] T003 [P] [US1] Add unit tests TC-04 and TC-05 for `buildGitHubPrListUrl` in `frontend/src/__tests__/repoUtils.test.ts`. Confirm failing.
-- [ ] T004 [P] [US1] Create `frontend/src/__tests__/RepoCard.test.tsx` with TC-15 (PR-icon-only slice): renders the `GitPullRequest` icon for a GitHub remote with branch set; click stops propagation; click calls `postTelemetryEvent('repo_card_pr_opened')`. Mock `postTelemetryEvent` from `services/api`. Confirm failing.
+- [x] T003 [P] [US1] Add unit tests TC-04 and TC-05 for `buildGitHubPrListUrl` in `frontend/src/__tests__/repoUtils.test.ts`. Confirm failing.
+- [x] T004 [P] [US1] Create `frontend/src/__tests__/RepoCard.test.tsx` with TC-15 (PR-icon-only slice): renders the `GitPullRequest` icon for a GitHub remote with branch set; click stops propagation; click calls `postTelemetryEvent('repo_card_pr_opened')`. Mock `postTelemetryEvent` from `services/api`. Confirm failing.
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Implement `buildGitHubPrListUrl(remoteUrl, branch)` in `frontend/src/utils/repoUtils.ts` per data-model.md. T003 MUST now pass.
-- [ ] T006 [US1] Render the PR indicator in `frontend/src/components/RepoCard/RepoCard.tsx` next to the existing `GitCompare` icon. Use `lucide-react`'s `GitPullRequest` at size 14. Wire the click handler to `postTelemetryEvent('repo_card_pr_opened')` and stop propagation. T004 MUST now pass. Run `npm run build --workspace=frontend` per CLAUDE.md.
+- [x] T005 [US1] Implement `buildGitHubPrListUrl(remoteUrl, branch)` in `frontend/src/utils/repoUtils.ts` per data-model.md. T003 MUST now pass.
+- [x] T006 [US1] Render the PR indicator in `frontend/src/components/RepoCard/RepoCard.tsx` next to the existing `GitCompare` icon. Use `lucide-react`'s `GitPullRequest` at size 14. Wire the click handler to `postTelemetryEvent('repo_card_pr_opened')` and stop propagation. T004 MUST now pass. Run `npm run build --workspace=frontend` per CLAUDE.md.
 
 **Checkpoint**: US1 standalone-shippable. Demo: dashboard shows PR icon on every repo card with a GitHub remote.
 
@@ -66,13 +66,13 @@ No new dependencies, lint config, or build tooling are needed for this feature. 
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T007 [P] [US2] Add unit tests TC-06 and TC-07 for `buildGitHubCommitsUrl` in `frontend/src/__tests__/repoUtils.test.ts`. Confirm failing.
-- [ ] T008 [P] [US2] Add component test TC-16 (commits slice) in `frontend/src/__tests__/RepoCard.test.tsx`: commits icon renders, click emits `repo_card_commits_opened`, click does not bubble. Confirm failing.
+- [x] T007 [P] [US2] Add unit tests TC-06 and TC-07 for `buildGitHubCommitsUrl` in `frontend/src/__tests__/repoUtils.test.ts`. Confirm failing.
+- [x] T008 [P] [US2] Add component test TC-16 (commits slice) in `frontend/src/__tests__/RepoCard.test.tsx`: commits icon renders, click emits `repo_card_commits_opened`, click does not bubble. Confirm failing.
 
 ### Implementation for User Story 2
 
-- [ ] T009 [US2] Implement `buildGitHubCommitsUrl(remoteUrl, branch)` in `frontend/src/utils/repoUtils.ts`. T007 passes.
-- [ ] T010 [US2] Render the commits indicator in `RepoCard.tsx`. Wire click → `postTelemetryEvent('repo_card_commits_opened')`. T008 passes. Rebuild frontend.
+- [x] T009 [US2] Implement `buildGitHubCommitsUrl(remoteUrl, branch)` in `frontend/src/utils/repoUtils.ts`. T007 passes.
+- [x] T010 [US2] Render the commits indicator in `RepoCard.tsx`. Wire click → `postTelemetryEvent('repo_card_commits_opened')`. T008 passes. Rebuild frontend.
 
 **Checkpoint**: US1 + US2 functional.
 
@@ -86,13 +86,13 @@ No new dependencies, lint config, or build tooling are needed for this feature. 
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T011 [P] [US3] Add unit tests for `buildGitHubHomeUrl` in `frontend/src/__tests__/repoUtils.test.ts`: positive case (`'https://github.com/o/r'` returns `'https://github.com/o/r'`), trailing-`.git` case, SSH-form case, and negative case (`'https://gitlab.com/o/r'` returns `null` — TC-10 from contracts/repo-card-links.md). Confirm failing.
-- [ ] T012 [P] [US3] Component test in `RepoCard.test.tsx`: with GitHub remote, repo-name renders as `<a>` with correct href and emits `repo_card_home_opened` on click; with non-GitHub remote, repo-name is plain text (no `<a>`). Confirm failing.
+- [x] T011 [P] [US3] Add unit tests for `buildGitHubHomeUrl` in `frontend/src/__tests__/repoUtils.test.ts`: positive case (`'https://github.com/o/r'` returns `'https://github.com/o/r'`), trailing-`.git` case, SSH-form case, and negative case (`'https://gitlab.com/o/r'` returns `null` — TC-10 from contracts/repo-card-links.md). Confirm failing.
+- [x] T012 [P] [US3] Component test in `RepoCard.test.tsx`: with GitHub remote, repo-name renders as `<a>` with correct href and emits `repo_card_home_opened` on click; with non-GitHub remote, repo-name is plain text (no `<a>`). Confirm failing.
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Implement `buildGitHubHomeUrl(remoteUrl)` in `repoUtils.ts`. T011 passes.
-- [ ] T014 [US3] In `RepoCard.tsx`, conditionally wrap the `<h2>` content in `<a>` when `parseGitHubRemote(remoteUrl)` is not null. Preserve existing styling; add `hover:underline`. Wire click → `postTelemetryEvent('repo_card_home_opened')`. T012 passes. Rebuild frontend.
+- [x] T013 [US3] Implement `buildGitHubHomeUrl(remoteUrl)` in `repoUtils.ts`. T011 passes.
+- [x] T014 [US3] In `RepoCard.tsx`, conditionally wrap the `<h2>` content in `<a>` when `parseGitHubRemote(remoteUrl)` is not null. Preserve existing styling; add `hover:underline`. Wire click → `postTelemetryEvent('repo_card_home_opened')`. T012 passes. Rebuild frontend.
 
 **Checkpoint**: US1 + US2 + US3 functional.
 
@@ -104,13 +104,13 @@ No new dependencies, lint config, or build tooling are needed for this feature. 
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T015 [P] [US4] Add unit test TC-08 for `buildGitHubActionsUrl` in `repoUtils.test.ts`. Confirm failing.
-- [ ] T016 [P] [US4] Component test: actions icon renders for GitHub remote with branch set, hidden otherwise; click emits `repo_card_actions_opened`. Confirm failing.
+- [x] T015 [P] [US4] Add unit test TC-08 for `buildGitHubActionsUrl` in `repoUtils.test.ts`. Confirm failing.
+- [x] T016 [P] [US4] Component test: actions icon renders for GitHub remote with branch set, hidden otherwise; click emits `repo_card_actions_opened`. Confirm failing.
 
 ### Implementation for User Story 4
 
-- [ ] T017 [US4] Implement `buildGitHubActionsUrl(remoteUrl, branch)` in `repoUtils.ts`. T015 passes.
-- [ ] T018 [US4] Render actions indicator in `RepoCard.tsx`. Wire click → `postTelemetryEvent('repo_card_actions_opened')`. T016 passes. Rebuild frontend.
+- [x] T017 [US4] Implement `buildGitHubActionsUrl(remoteUrl, branch)` in `repoUtils.ts`. T015 passes.
+- [x] T018 [US4] Render actions indicator in `RepoCard.tsx`. Wire click → `postTelemetryEvent('repo_card_actions_opened')`. T016 passes. Rebuild frontend.
 
 **Checkpoint**: US1..US4 functional.
 
@@ -122,13 +122,13 @@ No new dependencies, lint config, or build tooling are needed for this feature. 
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T019 [P] [US5] Add unit test TC-09 (corrected: `buildGitHubIssuesUrl` returns `.../issues` for GitHub remote, `null` otherwise) in `repoUtils.test.ts`. Confirm failing.
-- [ ] T020 [P] [US5] Component test: issues icon renders for GitHub remote even when `branch` is null; click emits `repo_card_issues_opened`. Confirm failing.
+- [x] T019 [P] [US5] Add unit test TC-09 (corrected: `buildGitHubIssuesUrl` returns `.../issues` for GitHub remote, `null` otherwise) in `repoUtils.test.ts`. Confirm failing.
+- [x] T020 [P] [US5] Component test: issues icon renders for GitHub remote even when `branch` is null; click emits `repo_card_issues_opened`. Confirm failing.
 
 ### Implementation for User Story 5
 
-- [ ] T021 [US5] Implement `buildGitHubIssuesUrl(remoteUrl)` in `repoUtils.ts`. T019 passes.
-- [ ] T022 [US5] Render issues indicator in `RepoCard.tsx`. Wire click → `postTelemetryEvent('repo_card_issues_opened')`. T020 passes. Rebuild frontend.
+- [x] T021 [US5] Implement `buildGitHubIssuesUrl(remoteUrl)` in `repoUtils.ts`. T019 passes.
+- [x] T022 [US5] Render issues indicator in `RepoCard.tsx`. Wire click → `postTelemetryEvent('repo_card_issues_opened')`. T020 passes. Rebuild frontend.
 
 **Checkpoint**: All user stories functional.
 
@@ -136,12 +136,12 @@ No new dependencies, lint config, or build tooling are needed for this feature. 
 
 ## Phase 8: Polish & Cross-Cutting
 
-- [ ] T023 [P] Add component test TC-13 (non-GitHub remote → no new icons, repo-name plain text) and TC-14 (`branch: null` → only `issues` and home-link render) to `RepoCard.test.tsx`. These exercise the visibility-gating logic of all five indicators together.
-- [ ] T024 [P] Add Playwright e2e `frontend/tests/e2e/sc-076-repo-card-links.spec.ts` covering the happy path: dashboard with one GitHub-remote repo on a feature branch, all five new indicators visible, each link has correct `href` and `target="_blank"`.
-- [ ] T025 Update `README.md` per Constitution §XI: brief mention of the repo-card link indicators (PR, commits, actions, issues, home) under the "Dashboard" section. Keep to two sentences.
-- [ ] T026 Run full frontend lint+format: `npm run lint:fix --workspace=frontend && npm run format --workspace=frontend`. Confirm clean.
-- [ ] T027 Run full frontend test suite: `npm run test --workspace=frontend`. Confirm green.
-- [ ] T028 Run frontend build: `npm run build --workspace=frontend`. Confirm green.
+- [x] T023 [P] Add component test TC-13 (non-GitHub remote → no new icons, repo-name plain text) and TC-14 (`branch: null` → only `issues` and home-link render) to `RepoCard.test.tsx`. These exercise the visibility-gating logic of all five indicators together.
+- [x] T024 [P] Add Playwright e2e `frontend/tests/e2e/sc-076-repo-card-links.spec.ts` covering the happy path: dashboard with one GitHub-remote repo on a feature branch, all five new indicators visible, each link has correct `href` and `target="_blank"`.
+- [x] T025 Update `README.md` per Constitution §XI: brief mention of the repo-card link indicators (PR, commits, actions, issues, home) under the "Dashboard" section. Keep to two sentences.
+- [x] T026 Run full frontend lint+format: `npm run lint:fix --workspace=frontend && npm run format --workspace=frontend`. Confirm clean.
+- [x] T027 Run full frontend test suite: `npm run test --workspace=frontend`. Confirm green.
+- [x] T028 Run frontend build: `npm run build --workspace=frontend`. Confirm green.
 
 ---
 

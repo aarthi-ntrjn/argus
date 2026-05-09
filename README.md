@@ -171,6 +171,8 @@ Paths are normalized on entry: trailing slashes and mixed separators are strippe
 
 Each repo card shows the current branch name and, when the remote is a GitHub repository, a **compare link icon** (external link) next to the branch badge. Clicking it opens the GitHub compare page for that branch against master in a new tab. On the default branch (master or main), the link opens the repository's compare page directly.
 
+Alongside the compare icon, repo cards also show four more GitHub link indicators when the remote is a GitHub repository: open pull requests filtered to the current branch, commits on the current branch, GitHub Actions runs filtered to the branch, and the repository's issues list. The repository name itself becomes a link to the repo's GitHub home page. All indicators open in a new tab and are hidden for non-GitHub remotes (no broken links).
+
 ## To Tackle
 
 <img src="docs/images/argus-todo.png" alt="To Tackle Panel" height="300">
