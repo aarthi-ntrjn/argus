@@ -145,11 +145,15 @@ describe('buildDisplayItems', () => {
     }
   });
 
-  it('focused mode emits unpaired tool_use (result not yet arrived) as single', () => {
+  it('focused mode folds unpaired tool_use (result not yet arrived) into a tool_group as tool_pending', () => {
     const items = [output({ id: '1', type: 'tool_use', toolCallId: 'call-pending' })];
     const result = buildDisplayItems(items, true);
     expect(result).toHaveLength(1);
-    expect(result[0].kind).toBe('single');
+    expect(result[0].kind).toBe('tool_group');
+    if (result[0].kind === 'tool_group') {
+      expect(result[0].groupItems).toHaveLength(1);
+      expect(result[0].groupItems[0].kind).toBe('tool_pending');
+    }
   });
 
   it('focused mode pairs by ID even when not adjacent (empty assistant message skipped)', () => {

@@ -19,6 +19,7 @@ vi.mock('../../src/utils/process-utils.js', async (importOriginal) => {
   return {
     ...actual,
     isPidRunning: vi.fn(() => true),
+    isExpectedProcess: vi.fn(() => true),
   };
 });
 
