@@ -1,9 +1,7 @@
-const DEFAULT_BRANCHES = new Set(['master', 'main']);
-
 const GITHUB_HTTPS_PREFIX = 'https://github.com/';
 const GITHUB_SSH_PREFIX = 'git@github.com:';
 
-export const REPO_CARD_LINK_KINDS = ['pr', 'home', 'compare', 'branch'] as const;
+export const REPO_CARD_LINK_KINDS = ['pr', 'home', 'branch'] as const;
 export type RepoCardLinkKind = (typeof REPO_CARD_LINK_KINDS)[number];
 
 export interface ParsedGitHubRemote {
@@ -42,20 +40,6 @@ export function parseGitHubRemote(remoteUrl: string | null | undefined): ParsedG
   };
 }
 
-export function buildGitHubCompareUrl(
-  remoteUrl: string | null | undefined,
-  branch: string | null | undefined,
-): string | null {
-  const parsed = parseGitHubRemote(remoteUrl);
-  if (!parsed || !branch) {
-    return null;
-  }
-  if (DEFAULT_BRANCHES.has(branch)) {
-    return `${parsed.baseUrl}/compare`;
-  }
-  return `${parsed.baseUrl}/compare/master...${branch}`;
-}
-
 export function buildGitHubPrUrl(
   remoteUrl: string | null | undefined,
   branch: string | null | undefined,
@@ -83,7 +67,7 @@ export function buildGitHubBranchUrl(
   return `${parsed.baseUrl}/tree/${encodeURIComponent(branch)}`;
 }
 
-export const REPO_CARD_TELEMETRY_EVENTS: Record<Exclude<RepoCardLinkKind, 'compare'>, string> = {
+export const REPO_CARD_TELEMETRY_EVENTS: Record<RepoCardLinkKind, string> = {
   pr: 'repo_card_pr_opened',
   home: 'repo_card_home_opened',
   branch: 'repo_card_branch_opened',

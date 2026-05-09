@@ -57,7 +57,7 @@ Each card is a live snapshot of a session:
 
 ### Session Detail Page
 
-The drill-in link on any session card opens a full-page view. At the top, when the session belongs to a registered repository, a **repo context bar** shows the repository name, full path, current branch badge, and a GitHub compare link. Below that is the session status card, followed by the full output stream. When a session has ended, the prompt input bar is replaced with a **This session has ended** notice.
+The drill-in link on any session card opens a full-page view. At the top, when the session belongs to a registered repository, a **repo context bar** shows the repository name, full path, current branch badge, and (when the remote is GitHub) the same set of clickable surfaces as the dashboard repo card: linkable repo name, linkable branch chip, and a pull-request icon. Below that is the session status card, followed by the full output stream. When a session has ended, the prompt input bar is replaced with a **This session has ended** notice.
 
 ### Session Output
 
@@ -169,9 +169,7 @@ Argus scans that folder recursively for git repos and registers all new ones in 
 
 Paths are normalized on entry: trailing slashes and mixed separators are stripped, and spaces in paths (common on Linux) are handled correctly. Both the path you type and the working directory reported by Claude/Copilot are normalized the same way, so sessions always match their registered repo.
 
-Each repo card shows the current branch name and, when the remote is a GitHub repository, a **compare link icon** (external link) next to the branch badge. Clicking it opens the GitHub compare page for that branch against master in a new tab. On the default branch (master or main), the link opens the repository's compare page directly.
-
-Alongside the compare icon, the card also shows a pull-request icon that links to GitHub's `/pull/new/<branch>` page: when no PR exists for the branch yet, GitHub presents the "Open a pull request" form so the user can open one in one click; when a PR already exists, GitHub shows that page with a banner pointing to the existing PR. The repository name itself becomes a link to the repo's GitHub home page, and the branch chip is a link to the branch's tree view on GitHub. All indicators open in a new tab and are hidden for non-GitHub remotes (no broken links).
+Each repo card shows the current branch name and, when the remote is a GitHub repository, three clickable surfaces: the repository name links to the repo's GitHub home page, the branch chip links to the branch's tree view on GitHub, and a pull-request icon links to GitHub's `/pull/new/<branch>` page (when no PR exists yet, GitHub presents the "Open a pull request" form so the user can open one in one click; when a PR already exists, GitHub shows that page with a banner pointing to the existing PR). The same three clickable surfaces appear in the **repo context bar** at the top of the session detail page. All indicators open in a new tab and are hidden for non-GitHub remotes (no broken links).
 
 ## To Tackle
 

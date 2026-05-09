@@ -11,13 +11,13 @@
 
 - Q: How should Argus discover whether the current branch has an open PR? → A: Frontend-only. No PR-detection in Argus. The pull-request indicator always renders when a GitHub remote and branch are known. It links to GitHub's `/pull/new/<branch>` URL: when no PR exists for the branch, GitHub shows the "Open a pull request" form; when one already exists, GitHub shows that form with a banner pointing to the existing PR. Either way the user lands somewhere useful with no Argus-side detection logic.
 - Q: Should the branch chip itself be clickable? → A: Yes. The branch chip on each repo card MUST link to the branch's tree view on GitHub (`/tree/<branch>`) when the remote is GitHub. Same telemetry pattern as the other indicators (`repo_card_branch_opened`).
-- Q: Are the Actions, Issues, and Commits indicators worth keeping? → A: No, drop all three. Issues is off-mission for the session-monitoring use case (reachable via the repo-home link in two clicks). Actions is dead pixel space on repos without CI configured. Commits duplicates the existing Compare view, which already lists commits on its destination page in addition to showing the diff. The remaining set (PR, repo home, branch chip, plus the existing compare) covers the actual monitoring workflow without redundancy.
+- Q: Are the Actions, Issues, Commits, and Compare indicators worth keeping? → A: No, drop all four from both the dashboard repo card and the session-detail repo context bar. Issues is off-mission for session monitoring (reachable from repo home in two clicks). Actions is dead pixel space on repos without CI. Commits duplicates Compare's destination. Compare overlaps with the new PR indicator: `/pull/new/<branch>` is the same surface a user reaches by clicking "Create pull request" from the compare view. The final indicator set on both surfaces is: linkable repo name (home), linkable branch chip (tree), and PR icon (`/pull/new/<branch>`). The shared rendering lives in `frontend/src/components/RepoLinks.tsx` so both surfaces stay in sync by construction.
 
 ## Overview
 
-Each repo card on the Argus dashboard already surfaces the current branch and a "compare" link. The user wants to expand the set of GitHub-hosted links shown on each repo card so that, while monitoring sessions, they can jump directly to the most useful views of the underlying repository without leaving Argus.
+Each repo card on the Argus dashboard previously surfaced only the current branch and a "compare" link. The user wants to expand the set of GitHub-hosted links shown on each repo card so that, while monitoring sessions, they can jump directly to the most useful views of the underlying repository without leaving Argus.
 
-This spec defines which repository links are relevant, how they should appear, and how they behave when the underlying repository is not hosted on GitHub.
+This spec defines which repository links are relevant, how they should appear, and how they behave when the underlying repository is not hosted on GitHub. The same set of clickable surfaces is applied to **both** the dashboard repo card and the session-detail repo context bar so the two surfaces behave identically. The pre-existing compare link is removed from both surfaces: the new PR indicator (which lands on `/pull/new/<branch>`) reaches the same PR-creation surface in one click and supersedes it.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -57,7 +57,7 @@ The user wants a one-click way to jump to the repo's GitHub home page from the c
 
 - The repository has no remote configured (local-only). All GitHub-derived indicators are hidden; the existing branch chip still renders.
 - The remote URL points to a GitHub Enterprise host or a non-GitHub provider (GitLab, Bitbucket, Azure DevOps). For v1, only `github.com` (HTTPS or SSH form) is supported; non-GitHub remotes show no link indicators. This avoids generating broken URLs.
-- The branch is detached HEAD or unknown. Branch-scoped indicators (PR for branch, branch chip, compare) are hidden; the repo-home link may still render.
+- The branch is detached HEAD or unknown. Branch-scoped indicators (PR for branch, branch chip) are hidden; the repo-home link may still render.
 - The branch name contains characters that need URL encoding (e.g. `/`, `#`). The system MUST URL-encode branch segments before building links.
 - The user has many repo cards on screen. Adding link indicators MUST NOT measurably degrade dashboard render or scroll performance (see SC-004).
 - The user clicks an indicator. Clicks on indicators MUST NOT trigger the repo-card-level click behavior (e.g. opening sessions). Each indicator's click handler stops propagation.
@@ -66,7 +66,7 @@ The user wants a one-click way to jump to the repo's GitHub home page from the c
 
 ### Functional Requirements
 
-- **FR-001**: Each repo card MUST display a set of zero or more GitHub link indicators alongside the existing branch chip and "compare" indicator, in the metadata row directly under the repository name.
+- **FR-001**: Each repo card MUST display a set of zero or more GitHub link indicators alongside the branch chip in the metadata row directly under the repository name.
 - **FR-002**: Each indicator MUST be a small icon (no text label by default) with a tooltip that describes the destination ("Open pull request on GitHub", "View commits on GitHub", etc.) and an `aria-label` matching the tooltip text for screen readers.
 - **FR-003**: Each indicator MUST open its destination in a new browser tab (`target="_blank"` with `rel="noopener noreferrer"`) and MUST stop click-propagation so it does not trigger card-level interactions.
 - **FR-004**: The system MUST recognize GitHub remote URLs in both HTTPS form (`https://github.com/<owner>/<repo>.git`) and SSH form (`git@github.com:<owner>/<repo>.git`), stripping any trailing `.git`.
@@ -74,14 +74,15 @@ The user wants a one-click way to jump to the repo's GitHub home page from the c
 - **FR-006**: The "open pull request" indicator MUST link to GitHub's `/pull/new/<branch>` URL for the current branch. The indicator is rendered whenever the repo has a recognized GitHub remote and a known branch; it is NOT conditional on whether a PR actually exists. Argus MUST NOT call the GitHub API or shell out to `gh` to determine PR state.
 - **FR-008**: The repository name MUST link to the repo home (`https://github.com/<owner>/<repo>`) when a GitHub remote is detected, and remain plain (non-link) text otherwise.
 - **FR-011**: All branch segments embedded in URLs MUST be URL-encoded.
-- **FR-012**: When the current branch is unknown (e.g. detached HEAD), the system MUST hide all branch-scoped indicators (PR-for-branch, branch chip, compare) but MAY still render repo-scoped indicators (repo home).
-- **FR-013**: Each indicator click MUST emit a telemetry event identifying which link was clicked (consistent with the existing `repo_diff_opened` telemetry event), so we can later measure relative usage and prune unused links.
-- **FR-014**: The set and order of indicators in the metadata row MUST be: branch chip (clickable on GitHub remotes), compare (existing), PR. The repo-name (also a link on GitHub remotes) sits in the header row above.
+- **FR-012**: When the current branch is unknown (e.g. detached HEAD), the system MUST hide all branch-scoped indicators (PR-for-branch, branch chip) but MAY still render repo-scoped indicators (repo home).
+- **FR-013**: Each indicator click MUST emit a telemetry event identifying which link was clicked (consistent with the existing `repo_diff_opened` telemetry event used by other GitHub link surfaces), so we can later measure relative usage and prune unused links.
+- **FR-014**: The set and order of indicators in the metadata row MUST be: branch chip (clickable on GitHub remotes), PR. The repo-name (also a link on GitHub remotes) sits in the header row above. The compare icon previously rendered on the repo card and on the session-detail context bar is removed by this feature.
+- **FR-016**: Both the dashboard repo card and the session-detail repo context bar MUST render the same three GitHub-link surfaces (repo name, branch chip, PR icon) using the same shared components from `frontend/src/components/RepoLinks.tsx`. Visibility rules, telemetry events, click-propagation behavior, and accessibility labels MUST be identical on both surfaces.
 - **FR-015**: The branch chip MUST link to the branch tree view on GitHub (`/tree/<branch>`) when the remote is recognized as GitHub. On non-GitHub remotes (or when there is no remote), the branch chip MUST render as plain text (current behavior). Click MUST stop propagation and emit `repo_card_branch_opened`.
 
 ### Key Entities
 
-- **RepoCardLink**: A single clickable indicator on the repo card. Attributes: kind (one of `pr`, `home`, `branch`, `compare`), destination URL, tooltip/aria-label text, visibility condition (requires GitHub remote, and for branch-scoped kinds also requires a known branch). Behavior: opens in new tab, stops propagation, emits a telemetry event keyed by kind.
+- **RepoCardLink**: A single clickable indicator on the repo card. Attributes: kind (one of `pr`, `home`, `branch`), destination URL, tooltip/aria-label text, visibility condition (requires GitHub remote, and for branch-scoped kinds also requires a known branch). Behavior: opens in new tab, stops propagation, emits a telemetry event keyed by kind.
 - **RepositoryRemote**: The Git remote associated with a repository. Attributes: raw URL, derived host (e.g. `github.com`), derived `<owner>/<repo>` slug, whether the remote is recognized as GitHub. Used to gate which `RepoCardLink`s appear on a card.
 
 ## Success Criteria *(mandatory)*

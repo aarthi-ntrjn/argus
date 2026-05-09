@@ -36,20 +36,20 @@ Returned as `ParsedGitHubRemote | null`. `null` means: no remote, or the remote 
 Discriminator for telemetry keys and (later, if needed) for any shared rendering logic.
 
 ```ts
-type RepoCardLinkKind = 'pr' | 'home' | 'compare' | 'branch';
+type RepoCardLinkKind = 'pr' | 'home' | 'branch';
 ```
 
 Defined as a `const` set per CLAUDE.md "no magic strings":
 
 ```ts
-const REPO_CARD_LINK_KINDS = ['pr', 'home', 'compare', 'branch'] as const;
+const REPO_CARD_LINK_KINDS = ['pr', 'home', 'branch'] as const;
 type RepoCardLinkKind = typeof REPO_CARD_LINK_KINDS[number];
 ```
 
 ### Telemetry event names
 
 ```ts
-const REPO_CARD_TELEMETRY_EVENTS: Record<Exclude<RepoCardLinkKind, 'compare'>, string> = {
+const REPO_CARD_TELEMETRY_EVENTS: Record<RepoCardLinkKind, string> = {
   pr:       'repo_card_pr_opened',
   home:     'repo_card_home_opened',
   branch:   'repo_card_branch_opened',
@@ -67,8 +67,6 @@ export function parseGitHubRemote(remoteUrl: string | null | undefined): ParsedG
 export function buildGitHubPrUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
 export function buildGitHubHomeUrl(remoteUrl: string | null | undefined): string | null;
 export function buildGitHubBranchUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
-// existing:
-export function buildGitHubCompareUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
 ```
 
 ## Validation rules

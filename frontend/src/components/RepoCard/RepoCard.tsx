@@ -1,18 +1,10 @@
 import type { Repository, Session } from '../../types';
 import type { PendingLauncher } from '../../hooks/usePendingLaunchers';
-import {
-  buildGitHubBranchUrl,
-  buildGitHubCompareUrl,
-  buildGitHubHomeUrl,
-  buildGitHubPrUrl,
-  REPO_CARD_TELEMETRY_EVENTS,
-} from '../../utils/repoUtils';
-import { postTelemetryEvent } from '../../services/api';
-import { GitCompare, GitPullRequest } from 'lucide-react';
 import Badge from '../Badge';
 import LaunchDropdown from '../LaunchDropdown/LaunchDropdown';
 import SessionCard from '../SessionCard/SessionCard';
 import PendingSessionCard from '../PendingSessionCard/PendingSessionCard';
+import { RepoBranchChip, RepoNameLink, RepoPrIndicator } from '../RepoLinks';
 
 export interface RepoWithSessions extends Repository {
   sessions: Session[];
@@ -32,35 +24,6 @@ interface RepoCardProps {
   onLaunchPending: (ptyLaunchId: string, tool: 'claude' | 'copilot') => void;
 }
 
-interface IndicatorIconProps {
-  href: string | null;
-  label: string;
-  telemetryEvent: string;
-  children: React.ReactNode;
-}
-
-function IndicatorIcon({ href, label, telemetryEvent, children }: IndicatorIconProps) {
-  if (!href) {
-    return null;
-  }
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={label}
-      aria-label={label}
-      className="inline-flex items-center text-gray-400 hover:text-gray-700"
-      onClick={(e) => {
-        e.stopPropagation();
-        postTelemetryEvent(telemetryEvent);
-      }}
-    >
-      {children}
-    </a>
-  );
-}
-
 export default function RepoCard({
   repo,
   skipConfirm,
@@ -73,34 +36,12 @@ export default function RepoCard({
   onLaunchError,
   onLaunchPending,
 }: RepoCardProps) {
-  const homeUrl = buildGitHubHomeUrl(repo.remoteUrl);
-  const compareUrl = buildGitHubCompareUrl(repo.remoteUrl, repo.branch);
-  const prUrl = buildGitHubPrUrl(repo.remoteUrl, repo.branch);
-  const branchUrl = buildGitHubBranchUrl(repo.remoteUrl, repo.branch);
-
   return (
     <div data-tour-id="dashboard-repo-card" className="bg-white rounded-lg shadow p-4 md:p-6">
       <div className="mb-4">
         <div className="flex justify-between items-center">
           <h2 className="text-lg md:text-xl font-semibold text-gray-900">
-            {homeUrl ? (
-              <a
-                href={homeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Open repository on GitHub"
-                aria-label="Open repository on GitHub"
-                className="hover:underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  postTelemetryEvent(REPO_CARD_TELEMETRY_EVENTS.home);
-                }}
-              >
-                {repo.name}
-              </a>
-            ) : (
-              repo.name
-            )}
+            <RepoNameLink repo={repo} />
           </h2>
           <div className="flex items-center gap-2">
             <Badge>
@@ -145,41 +86,8 @@ export default function RepoCard({
         </div>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           <p className="text-xs text-gray-500 font-mono truncate max-w-full">{repo.path}</p>
-          {repo.branch &&
-            (branchUrl ? (
-              <a
-                href={branchUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={`Branch ${repo.branch} on GitHub`}
-                aria-label={`Branch ${repo.branch} on GitHub`}
-                className="inline-flex items-center gap-1 text-xs font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded hover:bg-blue-100 hover:underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  postTelemetryEvent(REPO_CARD_TELEMETRY_EVENTS.branch);
-                }}
-              >
-                ⎇ {repo.branch}
-              </a>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                ⎇ {repo.branch}
-              </span>
-            ))}
-          <IndicatorIcon
-            href={compareUrl}
-            label="View diff on GitHub"
-            telemetryEvent="repo_diff_opened"
-          >
-            <GitCompare size={14} aria-hidden="true" />
-          </IndicatorIcon>
-          <IndicatorIcon
-            href={prUrl}
-            label="Open or view pull request on GitHub"
-            telemetryEvent={REPO_CARD_TELEMETRY_EVENTS.pr}
-          >
-            <GitPullRequest size={14} aria-hidden="true" />
-          </IndicatorIcon>
+          <RepoBranchChip repo={repo} />
+          <RepoPrIndicator repo={repo} />
         </div>
       </div>
       {repo.sessions.length === 0 && pendingLaunchers.length === 0 ? (

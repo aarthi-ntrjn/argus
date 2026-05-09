@@ -49,16 +49,26 @@ buildGitHubPrUrl(remoteUrl: string | null | undefined, branch: string | null | u
 | GitHub remote, branch = `null` | `null` |
 | Non-GitHub remote, any branch | `null` |
 
-### Function: `buildGitHubCompareUrl` (existing — unchanged behavior)
+### Function: `buildGitHubCompareUrl` (removed)
 
-Already covered by `frontend/src/__tests__/repoUtils.test.ts`. Refactor MUST keep all existing test cases passing.
+Previously used by both the repo card and the session-detail repo context bar. With both surfaces now using the new PR indicator (which lands on `/pull/new/<branch>`, the same destination "Create pull request" reached from the compare view), the compare URL builder has no remaining callers and was deleted. Its tests were removed with it.
 
-## Component contract: `frontend/src/components/RepoCard/RepoCard.tsx`
+## Component contract: `frontend/src/components/RepoLinks.tsx`
+
+A single shared module exports three components used by both `RepoCard` and `RepoContextBar` so the two surfaces are guaranteed to render identically:
+
+- `<RepoNameLink repo={...} />` — wraps `repo.name` in an `<a>` to the repo home when `parseGitHubRemote` succeeds; otherwise renders the bare name.
+- `<RepoBranchChip repo={...} />` — renders `⎇ <branch>` either as an `<a>` to `/tree/<branch>` (GitHub remote) or as a `<span>` (otherwise). Returns `null` when `branch` is null.
+- `<RepoPrIndicator repo={...} />` — renders the PR icon as an `<a>` to `/pull/new/<branch>`; returns `null` when no GitHub remote or no branch.
+
+All three components handle: `target="_blank"`, `rel="noopener noreferrer"`, `aria-label`, `title`, `e.stopPropagation()`, and the matching `postTelemetryEvent` call. The accessible name and telemetry event for each component are fixed and identical regardless of which surface mounts them.
+
+## Surface contract: `frontend/src/components/RepoCard/RepoCard.tsx` and `RepoContextBar.tsx`
 
 ### Indicator row order (FR-014)
 
 ```
-[branch chip — clickable on GitHub] [GitCompare] [GitPullRequest]
+[branch chip — clickable on GitHub] [GitPullRequest]
 ```
 
 ### Per-indicator render rules
@@ -68,7 +78,6 @@ Already covered by `frontend/src/__tests__/repoUtils.test.ts`. Refactor MUST kee
 | `pr` | `parseGitHubRemote(remoteUrl) !== null && branch !== null` | Open `buildGitHubPrUrl(...)` in new tab; emit `repo_card_pr_opened`; stop propagation |
 | `home` (repo name as link) | `parseGitHubRemote(remoteUrl) !== null` | Wrap `<h2>` content in `<a>`; emit `repo_card_home_opened`; stop propagation |
 | `branch` (branch chip as link) | `parseGitHubRemote(remoteUrl) !== null && branch !== null` | Replace branch-chip `<span>` with `<a>` linking to `buildGitHubBranchUrl(...)`; emit `repo_card_branch_opened`; stop propagation; preserve existing chip styling |
-| `compare` | unchanged | unchanged |
 
 ### A11y / DOM contract
 
