@@ -22,7 +22,7 @@ export default function PendingSessionCard({ tool }: Props) {
   return (
     <div
       aria-label={`Launching ${label} session`}
-      className="interactive-card p-4 border-gray-200 opacity-75 cursor-default select-none"
+      className="interactive-card animate-fade-in p-4 border-gray-200 opacity-75 cursor-default select-none"
     >
       <div className="flex items-center gap-2">
         <span
