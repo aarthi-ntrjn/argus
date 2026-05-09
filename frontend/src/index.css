@@ -38,4 +38,18 @@
   .scroll-hover:hover::-webkit-scrollbar-thumb {
     background-color: rgb(203 213 225);
   }
+
+  /* Fade-in on mount: used for cards that appear/replace other elements. */
+  .animate-fade-in {
+    animation: fade-in 0.25s ease-out both;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
