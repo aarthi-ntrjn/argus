@@ -63,14 +63,13 @@ function SessionCard({ session, selected, onSelect }: Props) {
   const promptBarRef = useRef<SessionPromptBarHandle>(null);
 
   const items = lastOutput?.items ?? [];
-  const firstThinkingItem = items.find((i) => i.type === 'thinking') ?? null;
-  const lastAssistantMessage =
-    [...items].reverse().find((i) => i.type === 'message' && i.role === 'assistant') ?? null;
-  const previewItem = firstThinkingItem ?? lastAssistantMessage;
-  const rawContent = previewItem?.content?.trim() ?? null;
-  const previewContent =
-    rawContent === '[redacted]' ? '(redacted)' : rawContent === '' ? null : rawContent;
-  const toolCallCount = items.filter((i) => i.type === 'tool_use').length;
+  const previewItem =
+    [...items]
+      .reverse()
+      .find(
+        (i: import('../../types').SessionOutput) => i.type === 'message' && i.role === 'assistant',
+      ) ?? null;
+  const previewContent = previewItem?.content?.trim() ?? null;
   const isTerminated = session.status === 'ended' || session.status === 'completed';
   const pendingChoice = isTerminated ? null : hookPendingChoice;
 
@@ -123,35 +122,26 @@ function SessionCard({ session, selected, onSelect }: Props) {
         className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 break-words font-mono min-h-[2.5rem] ${previewContent ? 'text-gray-300' : 'text-gray-500 italic'}`}
       >
         {previewContent ? (
-          firstThinkingItem ? (
-            <span className="text-amber-300">{previewContent}</span>
-          ) : (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                p: ({ children }) => <span>{children}</span>,
-                code: ({ children }) => (
-                  <code className="bg-gray-700 rounded px-0.5">{children}</code>
-                ),
-                strong: ({ children }) => (
-                  <strong className="text-white font-semibold">{children}</strong>
-                ),
-                em: ({ children }) => <em>{children}</em>,
-                a: ({ children }) => <span className="text-blue-400 underline">{children}</span>,
-              }}
-            >
-              {previewContent}
-            </ReactMarkdown>
-          )
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              p: ({ children }) => <span>{children}</span>,
+              code: ({ children }) => (
+                <code className="bg-gray-700 rounded px-0.5">{children}</code>
+              ),
+              strong: ({ children }) => (
+                <strong className="text-white font-semibold">{children}</strong>
+              ),
+              em: ({ children }) => <em>{children}</em>,
+              a: ({ children }) => <span className="text-blue-400 underline">{children}</span>,
+            }}
+          >
+            {previewContent}
+          </ReactMarkdown>
         ) : (
           'Waiting for output...'
         )}
       </div>
-      {toolCallCount > 0 && (
-        <p className="text-xs text-gray-500 mt-1">
-          {toolCallCount} tool call{toolCallCount === 1 ? '' : 's'}
-        </p>
-      )}
 
       {session.launchMode === 'pty' && (
         <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
