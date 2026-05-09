@@ -1,8 +1,16 @@
 import type { Repository, Session } from '../../types';
 import type { PendingLauncher } from '../../hooks/usePendingLaunchers';
-import { buildGitHubCompareUrl } from '../../utils/repoUtils';
+import {
+  buildGitHubActionsUrl,
+  buildGitHubCommitsUrl,
+  buildGitHubCompareUrl,
+  buildGitHubHomeUrl,
+  buildGitHubIssuesUrl,
+  buildGitHubPrListUrl,
+  REPO_CARD_TELEMETRY_EVENTS,
+} from '../../utils/repoUtils';
 import { postTelemetryEvent } from '../../services/api';
-import { GitCompare } from 'lucide-react';
+import { CircleDot, GitCommit, GitCompare, GitPullRequest, PlayCircle } from 'lucide-react';
 import Badge from '../Badge';
 import LaunchDropdown from '../LaunchDropdown/LaunchDropdown';
 import SessionCard from '../SessionCard/SessionCard';
@@ -26,6 +34,35 @@ interface RepoCardProps {
   onLaunchPending: (ptyLaunchId: string, tool: 'claude' | 'copilot') => void;
 }
 
+interface IndicatorIconProps {
+  href: string | null;
+  label: string;
+  telemetryEvent: string;
+  children: React.ReactNode;
+}
+
+function IndicatorIcon({ href, label, telemetryEvent, children }: IndicatorIconProps) {
+  if (!href) {
+    return null;
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={label}
+      aria-label={label}
+      className="inline-flex items-center text-gray-400 hover:text-gray-700"
+      onClick={(e) => {
+        e.stopPropagation();
+        postTelemetryEvent(telemetryEvent);
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 export default function RepoCard({
   repo,
   skipConfirm,
@@ -38,11 +75,37 @@ export default function RepoCard({
   onLaunchError,
   onLaunchPending,
 }: RepoCardProps) {
+  const homeUrl = buildGitHubHomeUrl(repo.remoteUrl);
+  const compareUrl = buildGitHubCompareUrl(repo.remoteUrl, repo.branch);
+  const prUrl = buildGitHubPrListUrl(repo.remoteUrl, repo.branch);
+  const commitsUrl = buildGitHubCommitsUrl(repo.remoteUrl, repo.branch);
+  const actionsUrl = buildGitHubActionsUrl(repo.remoteUrl, repo.branch);
+  const issuesUrl = buildGitHubIssuesUrl(repo.remoteUrl);
+
   return (
     <div data-tour-id="dashboard-repo-card" className="bg-white rounded-lg shadow p-4 md:p-6">
       <div className="mb-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900">{repo.name}</h2>
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900">
+            {homeUrl ? (
+              <a
+                href={homeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open repository on GitHub"
+                aria-label="Open repository on GitHub"
+                className="hover:underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  postTelemetryEvent(REPO_CARD_TELEMETRY_EVENTS.home);
+                }}
+              >
+                {repo.name}
+              </a>
+            ) : (
+              repo.name
+            )}
+          </h2>
           <div className="flex items-center gap-2">
             <Badge>
               {repo.sessions.length} session{repo.sessions.length !== 1 ? 's' : ''}
@@ -91,22 +154,41 @@ export default function RepoCard({
               ⎇ {repo.branch}
             </span>
           )}
-          {buildGitHubCompareUrl(repo.remoteUrl, repo.branch) && (
-            <a
-              href={buildGitHubCompareUrl(repo.remoteUrl, repo.branch)!}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="View diff on GitHub"
-              aria-label="View diff on GitHub"
-              className="inline-flex items-center text-gray-400 hover:text-gray-700"
-              onClick={(e) => {
-                e.stopPropagation();
-                postTelemetryEvent('repo_diff_opened');
-              }}
-            >
-              <GitCompare size={14} aria-hidden="true" />
-            </a>
-          )}
+          <IndicatorIcon
+            href={compareUrl}
+            label="View diff on GitHub"
+            telemetryEvent="repo_diff_opened"
+          >
+            <GitCompare size={14} aria-hidden="true" />
+          </IndicatorIcon>
+          <IndicatorIcon
+            href={prUrl}
+            label="Pull requests on GitHub"
+            telemetryEvent={REPO_CARD_TELEMETRY_EVENTS.pr}
+          >
+            <GitPullRequest size={14} aria-hidden="true" />
+          </IndicatorIcon>
+          <IndicatorIcon
+            href={commitsUrl}
+            label="Commits on GitHub"
+            telemetryEvent={REPO_CARD_TELEMETRY_EVENTS.commits}
+          >
+            <GitCommit size={14} aria-hidden="true" />
+          </IndicatorIcon>
+          <IndicatorIcon
+            href={actionsUrl}
+            label="GitHub Actions for this branch"
+            telemetryEvent={REPO_CARD_TELEMETRY_EVENTS.actions}
+          >
+            <PlayCircle size={14} aria-hidden="true" />
+          </IndicatorIcon>
+          <IndicatorIcon
+            href={issuesUrl}
+            label="Issues on GitHub"
+            telemetryEvent={REPO_CARD_TELEMETRY_EVENTS.issues}
+          >
+            <CircleDot size={14} aria-hidden="true" />
+          </IndicatorIcon>
         </div>
       </div>
       {repo.sessions.length === 0 && pendingLaunchers.length === 0 ? (
