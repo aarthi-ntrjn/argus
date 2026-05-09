@@ -75,7 +75,7 @@ A user monitors sessions from both Claude Code and Copilot CLI on the same dashb
 - **FR-005**: When an assistant text reply is the most recent output (no subsequent tool calls), the preview MUST show the text reply and no tool call count (existing behavior preserved).
 - **FR-006**: When tool calls are the most recent output (session is still working), the preview MUST show the tool call count instead of "Waiting for output...".
 - **FR-007**: When tool calls have occurred after the most recent assistant text reply, the preview MUST show the last text reply with the subsequent tool call count appended inline (e.g., "Here are the results... +8 tool calls").
-- **FR-009**: The backend MUST trigger a `session.updated` broadcast when tool call output is recorded for a session, so the session card refreshes its output snapshot in response.
+- **FR-009**: The backend MUST trigger a `session.updated` broadcast when tool call output is recorded for a session. _(Already implemented: `applyActivityUpdate` in `jsonl-watcher-base.ts` fires `session.updated` on every new output batch, including tool_use events. No backend change needed.)_
 
 ### Key Entities
 
