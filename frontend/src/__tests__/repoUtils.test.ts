@@ -1,5 +1,51 @@
 import { describe, it, expect } from 'vitest';
-import { buildGitHubCompareUrl } from '../utils/repoUtils';
+import { buildGitHubCompareUrl, parseGitHubRemote } from '../utils/repoUtils';
+
+describe('parseGitHubRemote', () => {
+  it('returns null when remoteUrl is null', () => {
+    expect(parseGitHubRemote(null)).toBeNull();
+  });
+
+  it('returns null when remoteUrl is undefined', () => {
+    expect(parseGitHubRemote(undefined)).toBeNull();
+  });
+
+  it('returns null for empty string', () => {
+    expect(parseGitHubRemote('')).toBeNull();
+  });
+
+  it('parses HTTPS GitHub remote without .git suffix', () => {
+    expect(parseGitHubRemote('https://github.com/owner/repo')).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+      baseUrl: 'https://github.com/owner/repo',
+    });
+  });
+
+  it('parses HTTPS GitHub remote with .git suffix', () => {
+    expect(parseGitHubRemote('https://github.com/owner/repo.git')).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+      baseUrl: 'https://github.com/owner/repo',
+    });
+  });
+
+  it('parses SSH GitHub remote', () => {
+    expect(parseGitHubRemote('git@github.com:owner/repo.git')).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+      baseUrl: 'https://github.com/owner/repo',
+    });
+  });
+
+  it('returns null for GitLab remote', () => {
+    expect(parseGitHubRemote('https://gitlab.com/owner/repo')).toBeNull();
+  });
+
+  it('returns null for GitHub Enterprise remote', () => {
+    expect(parseGitHubRemote('https://github.example.com/owner/repo')).toBeNull();
+  });
+});
 
 describe('buildGitHubCompareUrl', () => {
   it('returns null when remoteUrl is null', () => {
