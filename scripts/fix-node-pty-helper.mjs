@@ -8,7 +8,7 @@ const MODE_MASK = 0o777;
 const LOG_TAG = '[Postinstall]';
 const SPAWN_HELPER_BASENAME = 'spawn-helper';
 
-if (process.platform === 'win32') {
+if (process.platform !== 'darwin') {
   process.exit(0);
 }
 
