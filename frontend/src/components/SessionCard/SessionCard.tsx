@@ -137,12 +137,18 @@ function SessionCard({ session, selected, onSelect }: Props) {
             </ReactMarkdown>
           )}
         </div>
-        {(preview.kind === 'tool-count-only' || preview.kind === 'text-plus-count') && (
-          <span className="absolute right-1.5 top-1 bg-purple-950 text-white text-xs px-1.5 py-0.5 rounded font-mono not-italic">
-            <span className="inline-block animate-spin" style={{ animationDuration: '3s' }}>↻</span>{' '}
-            {preview.count} tools
-          </span>
-        )}
+        {(() => {
+          const showBadge = preview.kind === 'tool-count-only' || preview.kind === 'text-plus-count';
+          const toolCount = showBadge ? (preview as { count: number }).count : 0;
+          return (
+            <span
+              className={`absolute right-1.5 top-1 bg-purple-950 text-white text-xs px-1.5 py-0.5 rounded font-mono not-italic transition-opacity duration-200 ${showBadge ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            >
+              <span className="inline-block animate-spin" style={{ animationDuration: '3s' }}>↻</span>{' '}
+              {toolCount} tools
+            </span>
+          );
+        })()}
       </div>
 
       {session.launchMode === 'pty' && (
