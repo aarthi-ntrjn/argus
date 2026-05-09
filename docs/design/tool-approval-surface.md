@@ -50,7 +50,7 @@ when an auto-approved tool has resolved so it can cancel the pending broadcast t
 Copilot CLI reads hooks from a per-repo file at `.github/hooks/hooks.json`. Argus
 injects via `CopilotHooksInjector.injectForRepo()` for every registered repository.
 Four events are used: `sessionStart`, `sessionEnd`, `preToolUse`, `postToolUse` (no
-per-tool matcher — Copilot fires a single preToolUse for all tools).
+per-tool matcher; Copilot fires a single preToolUse for all tools).
 
 Hook commands include both bash and PowerShell variants for cross-platform support:
 
@@ -67,12 +67,12 @@ server restart, so the files stay clean across port changes.
 ## Yolo mode
 
 When a session is running in yolo mode (`session.yoloMode = true`), the AI tool has been
-started with `--yolo` / `--allow-all` (Copilot) or `bypassPermissions` / `--dangerously-skip-permissions`
-(Claude Code). In this mode:
+started with `--allow-all` (Copilot CLI) or `--dangerously-skip-permissions` (Claude Code).
+In this mode:
 
 - The AI tool auto-approves every tool call without showing an interactive prompt.
 - `PreToolUse` hooks still fire, but `handlePreToolApproval` returns immediately on
-  `existing.yoloMode === true` — no pending choice is stored, no timer is started, no
+  `existing.yoloMode === true`: no pending choice is stored, no timer is started, no
   UI event is broadcast.
 - `ask_user` prompts are unaffected by yolo mode: they always surface because they
   represent questions the agent has for the user, not permission gates.
@@ -84,13 +84,13 @@ during the scan cycle (`detectYoloModeFromPids` in `process-utils.ts`).
 
 ## Non-yolo mode: the full pipeline
 
-### Step 1 — PreToolUse hook fires
+### Step 1: PreToolUse hook fires
 
 When Claude Code or Copilot is about to execute a tool, it fires `PreToolUse` with a
 JSON payload containing `tool_name` and `tool_input`. The hook reaches
 `BaseCliDetector.handlePreToolApproval()`.
 
-### Step 2 — Build the pending choice
+### Step 2: Build the pending choice
 
 `buildToolApprovalChoice(toolName, toolInput)` constructs the choices to display:
 
@@ -101,7 +101,7 @@ JSON payload containing `tool_name` and `tool_input`. The hook reaches
 
 The result is stored in `pendingChoices.set(sessionId, { type: 'tool_approval', ... })`.
 
-### Step 3 — 500ms debounce timer
+### Step 3: 500ms debounce timer
 
 Instead of broadcasting `session.pending_choice` immediately, Argus starts a 500ms
 timer. This is the auto-approval suppression gate:
@@ -127,7 +127,7 @@ PreToolUse
               → broadcast session.pending_choice (user action required)
 ```
 
-### Step 4 — UI renders the approval card
+### Step 4: UI renders the approval card
 
 The frontend receives `session.pending_choice` via WebSocket and stores it in the
 React Query cache under `['session-pending-choice', sessionId]`. `SessionCard` renders
@@ -136,10 +136,10 @@ React Query cache under `['session-pending-choice', sessionId]`. `SessionCard` r
 The panel shows:
 - The question (tool name + primary input value)
 - Tier-appropriate choice buttons (see Tier model)
-- A "Type an answer" button (for ask_user flows only — irrelevant for tool approvals)
+- A "Type an answer" button (for ask_user flows only, irrelevant for tool approvals)
 - An Esc interrupt button
 
-### Step 5 — User responds
+### Step 5: User responds
 
 **Clicking a choice button** in `PendingChoicePanel`:
 - Calls `sendPrompt(session.id, "1")` (or "2", "3")
@@ -154,7 +154,7 @@ The panel shows:
 - `implicitChoiceNumber` is NOT wired for `tool_approval` pending choices, so the prompt
   bar sends the text directly without the two-step ask_user wrapper
 
-### Step 6 — PostToolUse resolves the choice
+### Step 6: PostToolUse resolves the choice
 
 After the user selects and the AI tool processes the decision, `PostToolUse` fires.
 `handlePostToolApproval` broadcasts `session.pending_choice.resolved`, which clears the
@@ -188,7 +188,7 @@ though the blank-matcher hooks do still fire and are resolved immediately by Pos
 
 Copilot CLI collapses tools into kinds rather than named tools. The approval prompt
 always offers three choices with session-or-once granularity (no in-prompt permanent
-option — permanent rules require `--allow-tool` CLI flags):
+option (permanent rules require `--allow-tool` CLI flags):
 
 | Tier | Tools | Choices |
 |---|---|---|
@@ -227,7 +227,7 @@ The distinction matters in two places:
 
 Claude Code's `AskUserQuestion` tool fires two dedicated hook events with their own
 matcher (`PreToolUse / AskUserQuestion`, `PostToolUse / AskUserQuestion`). There is no
-debounce timer — the broadcast is immediate because there is no auto-approval for user
+There is no debounce timer; the broadcast is immediate because there is no auto-approval for user
 questions. The choices are parsed from the tool payload via `parsePendingChoicePayload`.
 
 Copilot CLI uses the same `preToolUse` / `postToolUse` hook events for ask_user as for
@@ -272,100 +272,25 @@ and stale approval cards from appearing after a session terminates mid-tool.
 
 ## Testing guide
 
-Each scenario below states what to ask Claude Code or Copilot to do, what the expected
-Argus UI behaviour is, and what a correct terminal response looks like.
+| Platform | Scenario | Sample prompt | Expected UI |
+|---|---|---|---|
+| Claude Code | Bash tier | `run: touch /tmp/argus-test.txt` | Approval card: Yes / Yes, don't ask again for this project / No |
+| Claude Code | Bash tier | `run: curl https://example.com` | Approval card: Yes / Yes, don't ask again for this project / No |
+| Claude Code | Bash tier | `run: npm install` | Approval card: Yes / Yes, don't ask again for this project / No |
+| Claude Code | Bash tier | `run: git commit -m "test"` | Approval card: Yes / Yes, don't ask again for this project / No |
+| Claude Code | Edit tier | `edit README.md and add a blank line` | Approval card: Yes / Yes, don't ask again for this session / No |
+| Claude Code | Edit tier | `create a new file /tmp/test.txt with content "hello"` | Approval card: Yes / Yes, don't ask again for this session / No |
+| Claude Code | Auto-approved | `list files in the current directory` | No card (ls is read-only) |
+| Claude Code | Auto-approved | `show me the contents of README.md` | No card (cat is read-only) |
+| Claude Code | Auto-approved | `what is the git status?` | No card (git status is read-only) |
+| Claude Code | ask_user | `Before proceeding, ask me whether I want verbose or quiet output` | Immediate card, no debounce; choices from payload |
+| Claude Code | Yolo mode | `run: touch /tmp/yolo-test.txt` (launch with `--dangerously-skip-permissions`) | No card ever |
+| Copilot CLI | Shell kind | `run: touch /tmp/copilot-test.txt` | Approval card: Yes, allow once / Yes, allow for this session / No, reject |
+| Copilot CLI | Shell kind | `run: curl https://example.com` | Approval card: Yes, allow once / Yes, allow for this session / No, reject |
+| Copilot CLI | Write kind | `edit README.md and add a blank line at the top` | Approval card: Yes, allow once / Yes, allow for this session / No, reject |
+| Copilot CLI | Auto-approved | `list files in the current directory` | No card |
+| Copilot CLI | Auto-approved | `read the contents of README.md` | No card |
+| Copilot CLI | Yolo mode | `run: touch /tmp/copilot-test.txt` (launch with `--allow-all`) | No card ever |
 
-### Claude Code — Bash tier (permanent "don't ask again")
-
-These show choices: **Yes / Yes, don't ask again for this project / No**
-
-| Prompt to Claude Code | Notes |
-|---|---|
-| `run: touch /tmp/argus-test.txt` | Simplest write command |
-| `run: mkdir /tmp/argus-test-dir` | Directory creation |
-| `run: curl https://example.com` | Network access (not in read-only set) |
-| `run: npm install` | Package install |
-| `run: git commit -m "test"` | Destructive git operation |
-
-Selecting **"Yes, don't ask again for this project"** writes a permanent allow rule to
-`~/.claude/settings.json`. The next time the same command runs, `PostToolUse` should
-arrive within 500ms and Argus should suppress the card entirely.
-
-### Claude Code — Edit tier (session-scoped "don't ask again")
-
-These show choices: **Yes / Yes, don't ask again for this session / No**
-
-| Prompt to Claude Code | Notes |
-|---|---|
-| `edit the file README.md and add a blank line` | Edit tool |
-| `create a new file /tmp/argus-write-test.txt with content "hello"` | Write tool |
-
-Selecting **"Yes, don't ask again for this session"** allows further edits in the same
-session without re-prompting. Restarting the session resets the approval.
-
-### Claude Code — auto-approved (should NOT show any Argus UI)
-
-These are Claude Code's built-in read-only set. The approval card must never appear.
-
-| Prompt to Claude Code | Tool used |
-|---|---|
-| `list files in the current directory` | `ls` |
-| `show me the contents of README.md` | `cat` |
-| `search for the word "test" in src/` | `grep` |
-| `what is the git status?` | `git status` |
-| `show me the last 5 git commits` | `git log` |
-
-If the approval card flickers briefly and disappears, the debounce timer is too short.
-Increase the value in `handlePreToolApproval` (currently 500ms).
-
-### Claude Code — ask_user (AskUserQuestion)
-
-Ask Claude Code a question that it will forward to the user. Example prompt:
-
-> Before you proceed, ask me whether I want verbose or quiet output.
-
-The approval card should appear immediately (no debounce), show the question text and
-the option list from Claude's payload, and disappear as soon as you select an answer.
-Selecting an option followed by typing additional text in the prompt bar tests the
-two-step ask_user flow.
-
-### Claude Code — yolo mode
-
-Start the session with `--dangerously-skip-permissions`. Ask Claude to run a normally
-gated command like `touch /tmp/yolo-test.txt`. The approval card must never appear
-regardless of what command is run.
-
-### Copilot CLI — shell kind
-
-These show choices: **Yes, allow once / Yes, allow for this session / No, reject**
-
-| Prompt to Copilot | Notes |
-|---|---|
-| `run: touch /tmp/copilot-test.txt` | Basic shell write |
-| `run: mkdir /tmp/copilot-dir` | Directory creation |
-| `run: curl https://example.com` | Network (shell kind, gated by default) |
-
-Selecting **"Yes, allow for this session"** should suppress the card on the next
-identical command within the same session.
-
-### Copilot CLI — write kind
-
-| Prompt to Copilot | Notes |
-|---|---|
-| `edit README.md and add a blank line at the top` | write-kind tool |
-| `create a new file /tmp/copilot-write.txt` | write-kind tool |
-
-### Copilot CLI — auto-approved (should NOT show any Argus UI)
-
-Read-only operations are auto-approved by Copilot. The card must not appear.
-
-| Prompt to Copilot | Expected |
-|---|---|
-| `list files in the current directory` | No card |
-| `search for the word "TODO" in this repo` | No card |
-| `read the contents of README.md` | No card |
-
-### Copilot CLI — yolo mode
-
-Start the session with `--yolo` or `--allow-all`. The approval card must never appear.
+If the approval card flickers briefly and then disappears for an auto-approved prompt, the debounce timer is too short. Increase the value in `handlePreToolApproval` (currently 500ms).
 
