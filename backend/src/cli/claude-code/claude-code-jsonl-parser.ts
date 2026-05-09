@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { SessionOutput, OutputRole } from '../../models/index.js';
+import type { SessionOutput, OutputRole, OutputType } from '../../models/index.js';
 
 interface ContentBlock {
   type: string;
@@ -121,6 +121,24 @@ function parseAssistantEntry(
   const results: SessionOutput[] = [];
   let blockIndex = 0;
   const nextId = () => (makeId ? makeId(blockIndex++) : randomUUID());
+  const push = (
+    type: OutputType,
+    role: OutputRole | null,
+    blockContent: string,
+    toolName: string | null,
+    toolCallId: string | null,
+  ) =>
+    results.push({
+      id: nextId(),
+      sessionId,
+      timestamp,
+      type,
+      role,
+      content: blockContent,
+      toolName,
+      toolCallId,
+      sequenceNumber,
+    });
 
   if (!Array.isArray(content)) {
     return results;
@@ -128,53 +146,19 @@ function parseAssistantEntry(
 
   for (const block of content) {
     if (block.type === 'text') {
-      results.push({
-        id: nextId(),
-        sessionId,
-        timestamp,
-        type: 'message',
-        role: 'assistant' as OutputRole,
-        content: block.text ?? '',
-        toolName: null,
-        toolCallId: null,
-        sequenceNumber,
-      });
+      push('message', 'assistant' as OutputRole, block.text ?? '', null, null);
     } else if (block.type === 'tool_use') {
-      results.push({
-        id: nextId(),
-        sessionId,
-        timestamp,
-        type: 'tool_use',
-        role: null,
-        content: JSON.stringify(block.input ?? {}),
-        toolName: block.name ?? null,
-        toolCallId: block.id ?? null,
-        sequenceNumber,
-      });
+      push(
+        'tool_use',
+        null,
+        JSON.stringify(block.input ?? {}),
+        block.name ?? null,
+        block.id ?? null,
+      );
     } else if (block.type === 'thinking') {
-      results.push({
-        id: nextId(),
-        sessionId,
-        timestamp,
-        type: 'thinking',
-        role: null,
-        content: block.thinking ?? '',
-        toolName: null,
-        toolCallId: null,
-        sequenceNumber,
-      });
+      push('thinking', null, block.thinking ?? '', null, null);
     } else if (block.type === 'redacted_thinking') {
-      results.push({
-        id: nextId(),
-        sessionId,
-        timestamp,
-        type: 'thinking',
-        role: null,
-        content: '[redacted]',
-        toolName: null,
-        toolCallId: null,
-        sequenceNumber,
-      });
+      push('thinking', null, '[redacted]', null, null);
     }
   }
 
