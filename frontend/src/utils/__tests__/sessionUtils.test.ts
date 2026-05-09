@@ -146,4 +146,36 @@ describe('derivePreviewState', () => {
       expect(result.count).toBe(2);
     }
   });
+
+  // New-turn reset: user sends a follow-up prompt
+  it('returns waiting when user message follows an assistant message (new turn, no tools yet)', () => {
+    const items = [
+      assistantMsg(1, 'Previous reply'),
+      makeItem({ type: 'message', role: 'user', content: 'follow-up', sequenceNumber: 2 }),
+    ];
+    expect(derivePreviewState(items, false).kind).toBe('waiting');
+  });
+
+  it('returns tool-count-only (not text-plus-count) when tool calls arrive after a user follow-up', () => {
+    const items = [
+      assistantMsg(1, 'Previous reply'),
+      makeItem({ type: 'message', role: 'user', content: 'follow-up', sequenceNumber: 2 }),
+      toolUse(3),
+      toolUse(4),
+    ];
+    const result = derivePreviewState(items, false);
+    expect(result.kind).toBe('tool-count-only');
+    if (result.kind === 'tool-count-only') {
+      expect(result.count).toBe(2);
+    }
+  });
+
+  it('does NOT reset on new turn when session is terminated (shows last reply)', () => {
+    const items = [
+      assistantMsg(1, 'Final reply'),
+      makeItem({ type: 'message', role: 'user', content: 'ignored follow-up', sequenceNumber: 2 }),
+    ];
+    const result = derivePreviewState(items, true);
+    expect(result.kind).toBe('text-only');
+  });
 });

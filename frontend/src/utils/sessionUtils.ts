@@ -40,6 +40,22 @@ export function derivePreviewState(items: SessionOutput[], isTerminated: boolean
       : { kind: 'waiting' };
   }
 
+  // If the user sent a new prompt after the last assistant reply, treat it as a
+  // fresh turn: hide the old reply and only count tool calls in the new turn.
+  const lastUser = [...items]
+    .reverse()
+    .find((i) => i.type === 'message' && i.role === 'user') ?? null;
+  const newTurnStarted =
+    lastUser !== null &&
+    (lastAssistant === null || lastUser.sequenceNumber > lastAssistant.sequenceNumber);
+
+  if (newTurnStarted) {
+    const toolCount = items.filter(
+      (i) => i.type === 'tool_use' && i.sequenceNumber > lastUser.sequenceNumber,
+    ).length;
+    return toolCount > 0 ? { kind: 'tool-count-only', count: toolCount } : { kind: 'waiting' };
+  }
+
   const boundary = lastAssistant?.sequenceNumber ?? -1;
   const toolCount = items.filter(
     (i) => i.type === 'tool_use' && i.sequenceNumber > boundary,
