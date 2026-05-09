@@ -140,7 +140,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
         {(preview.kind === 'tool-count-only' || preview.kind === 'text-plus-count') && (
           <span className="absolute right-1.5 top-1 bg-purple-950 text-white text-xs px-1.5 py-0.5 rounded font-mono not-italic">
             <span className="inline-block animate-spin" style={{ animationDuration: '3s' }}>↻</span>{' '}
-            {preview.count}
+            {preview.count} tools
           </span>
         )}
       </div>

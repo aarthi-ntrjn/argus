@@ -251,23 +251,23 @@ describe('SessionCard — last output preview', () => {
     expect(screen.queryByText('tool output')).not.toBeInTheDocument();
   });
 
-  it('shows "↻ 3 tool calls" overlay when 3 tool_use items and no assistant message', async () => {
+  it('shows "↻ 3 tools" overlay when 3 tool_use items and no assistant message', async () => {
     renderCard(makeSession(), [
       makeOutput({ type: 'tool_use', role: null, content: '', sequenceNumber: 1 }),
       makeOutput({ type: 'tool_use', role: null, content: '', id: 'out-2', sequenceNumber: 2 }),
       makeOutput({ type: 'tool_use', role: null, content: '', id: 'out-3', sequenceNumber: 3 }),
     ]);
     await waitFor(() =>
-      expect(screen.getByText('3', { exact: false })).toBeInTheDocument(),
+      expect(screen.getByText('3 tools', { exact: false })).toBeInTheDocument(),
     );
   });
 
-  it('shows "↻ 1 tool call" (singular) overlay when exactly 1 tool_use and no assistant message', async () => {
+  it('shows "↻ 1 tools" overlay when exactly 1 tool_use and no assistant message', async () => {
     renderCard(makeSession(), [
       makeOutput({ type: 'tool_use', role: null, content: '', sequenceNumber: 1 }),
     ]);
     await waitFor(() =>
-      expect(screen.getByText('1', { exact: false })).toBeInTheDocument(),
+      expect(screen.getByText('1 tools', { exact: false })).toBeInTheDocument(),
     );
   });
 });
