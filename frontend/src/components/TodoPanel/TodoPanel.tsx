@@ -374,7 +374,7 @@ export default function TodoPanel() {
             onChange={(e) => setFilterText(e.target.value)}
             onBlur={(e) => handleBlur(DRAFT_ID, e.target.value)}
             onKeyDown={(e) => handleKeyDown(e, DRAFT_ID, 0)}
-            placeholder="Add a task…"
+            placeholder="Add or search tasks"
             aria-label="New task"
             className="flex-1 min-w-0 text-sm px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700 placeholder-gray-400"
           />

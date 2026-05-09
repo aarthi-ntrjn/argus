@@ -112,7 +112,7 @@ function initWin32GetName(): Win32Fn<string | null> | null {
       }
     };
   } catch {
-    return null; // koffi unavailable — isExpectedProcess will fail open
+    return null; // koffi unavailable — isExpectedProcess will fail closed
   }
 }
 
@@ -229,15 +229,15 @@ export function isExpectedProcess(pid: number, type: SessionType): boolean {
   if (PLATFORM === 'win32') {
     const name = getProcessNameWin32(pid);
     if (!name) {
-      return true;
-    } // cannot verify — fail open
+      return false;
+    } // cannot verify — fail closed
     return isAiToolName(name, type);
   }
   // Linux/Mac: use the full command line — handles node-wrapped binaries like copilot.
   const cmdLine = getProcessCommandLine(pid);
   if (!cmdLine) {
-    return true;
-  } // cannot verify — fail open
+    return false;
+  } // cannot verify — fail closed
   return isAiToolCmdLine(cmdLine, type);
 }
 
