@@ -135,7 +135,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
           </ReactMarkdown>
         )}
         {preview.kind === 'tool-count-only' && (
-          <span className="text-gray-300">
+          <span className="text-purple-400">
             Running... {preview.count === 1 ? '1 tool call' : `${preview.count} tool calls`}
           </span>
         )}
@@ -157,7 +157,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
             >
               {preview.content}
             </ReactMarkdown>
-            <span className="text-gray-400">
+            <span className="text-purple-400">
               {' '}
               +{preview.count === 1 ? '1 tool call' : `${preview.count} tool calls`}
             </span>
