@@ -4,6 +4,7 @@ import { parseClaudeJsonlLine } from './claude-code-jsonl-parser.js';
 import { JsonlWatcherBase } from '../jsonl-watcher-base.js';
 import { broadcast } from '../../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from '../pending-choice-events.js';
+
 import type { SessionOutput } from '../../models/index.js';
 
 const TOOL_USE_INTERRUPTED_SENTINEL = '[Request interrupted by user for tool use]';
@@ -24,6 +25,14 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
     return parseClaudeJsonlLine(line, sessionId, seq, makeId);
   }
 
+  // Claude Code holds JSONL flush until the user resolves a paused tool approval. Any
+  // line that lands after a PreToolUse hook fires therefore signals that approval has
+  // already happened. handlePreToolApproval listens for this to cancel or resolve the
+  // pending approval card without waiting for tool execution to complete.
+  protected override onRawLine(_line: string, sessionId: string): void {
+    pendingChoiceEvents.emit('session.jsonl_advanced', sessionId);
+  }
+
   protected override onNewOutputs(sessionId: string, outputs: SessionOutput[]): void {
     const now = new Date().toISOString();
 
@@ -39,21 +48,18 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
 
       // Any tool_result for a tracked AskUserQuestion call resolves the pending choice
       // (covers normal answer, "clarify" rejection, and interrupt rejection)
-      if (output.type === 'tool_result' && output.toolCallId) {
-        const pendingId = this.pendingAskUserCallIds.get(sessionId);
-        if (pendingId === output.toolCallId) {
-          this.pendingAskUserCallIds.delete(sessionId);
-          broadcast({
-            type: 'session.pending_choice.resolved',
-            timestamp: now,
-            data: { sessionId },
-          });
-          pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
-        } else {
-          // A different tool completed — signal so the pending-approval debounce
-          // timer can be cancelled before the approval card is shown.
-          pendingChoiceEvents.emit('session.tool_result_seen', sessionId);
-        }
+      if (
+        output.type === 'tool_result' &&
+        output.toolCallId &&
+        this.pendingAskUserCallIds.get(sessionId) === output.toolCallId
+      ) {
+        this.pendingAskUserCallIds.delete(sessionId);
+        broadcast({
+          type: 'session.pending_choice.resolved',
+          timestamp: now,
+          data: { sessionId },
+        });
+        pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
       }
 
       // Belt-and-suspenders: interrupt sentinel clears any lingering banner even if

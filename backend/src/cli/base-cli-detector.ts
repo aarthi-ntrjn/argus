@@ -765,24 +765,34 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     );
     this.pendingChoices.set(sessionId, { type: 'tool_approval', question, choices, allQuestions });
 
-    // Cancel the approval card if the JSONL stream shows the tool already completed
-    // (auto-approved by a rule) before the debounce timer fires.
-    const cancelOnToolResult = (sid: string) => {
+    // The Claude Code JSONL flush is held until the user resolves a paused tool call,
+    // so any post-hook line means approval has happened. Cancel the debounce timer
+    // (or, if it has already fired, broadcast resolution to clear the card).
+    const cancelOnJsonlAdvanced = (sid: string) => {
       if (sid !== sessionId) {
         return;
       }
-      pendingChoiceEvents.off('session.tool_result_seen', cancelOnToolResult);
-      clearTimeout(timer);
-      this.pendingApprovalTimers.delete(sessionId);
-      this.pendingChoices.delete(sessionId);
+      pendingChoiceEvents.off('session.jsonl_advanced', cancelOnJsonlAdvanced);
+      const pending = this.pendingApprovalTimers.get(sessionId);
+      if (pending !== undefined) {
+        clearTimeout(pending);
+        this.pendingApprovalTimers.delete(sessionId);
+        this.pendingChoices.delete(sessionId);
+        return;
+      }
+      if (this.pendingChoices.has(sessionId)) {
+        this.pendingChoices.delete(sessionId);
+        const ts = new Date().toISOString();
+        broadcast({ type: 'session.pending_choice.resolved', timestamp: ts, data: { sessionId } });
+        pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
+      }
     };
-    pendingChoiceEvents.on('session.tool_result_seen', cancelOnToolResult);
+    pendingChoiceEvents.on('session.jsonl_advanced', cancelOnJsonlAdvanced);
 
-    // Delay the broadcast. PostToolUse (HTTP) and the JSONL tool_result_seen event both
-    // cancel this timer if the tool was auto-approved. If neither fires within 500ms the
+    // Delay the broadcast. PostToolUse (HTTP) and the JSONL jsonl_advanced event both
+    // resolve this timer once approval is observed. If neither fires within 500ms the
     // tool is genuinely waiting for the user, so we show the approval card.
     const timer = setTimeout(() => {
-      pendingChoiceEvents.off('session.tool_result_seen', cancelOnToolResult);
       this.pendingApprovalTimers.delete(sessionId);
       if (!this.pendingChoices.has(sessionId)) {
         return;
@@ -820,6 +830,11 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       clearTimeout(timer);
       this.pendingApprovalTimers.delete(sessionId);
       this.pendingChoices.delete(sessionId);
+      return;
+    }
+    // The jsonl_advanced cancel may have already cleared the card; broadcast resolved
+    // only if a pending choice still exists.
+    if (!this.pendingChoices.has(sessionId)) {
       return;
     }
     this.pendingChoices.delete(sessionId);
