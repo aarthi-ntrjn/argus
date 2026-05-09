@@ -26,7 +26,6 @@ export function RepoNameLink({ repo }: RepoNameLinkProps) {
       target="_blank"
       rel="noopener noreferrer"
       title="Open repository on GitHub"
-      aria-label="Open repository on GitHub"
       className="hover:underline"
       onClick={(e) => {
         e.stopPropagation();

@@ -42,7 +42,7 @@ test.describe('SC-076: Repo card GitHub link indicators', () => {
       has: page.getByRole('heading', { name: 'argus' }),
     });
 
-    const home = ghCard.getByRole('link', { name: /open repository on github/i });
+    const home = ghCard.getByRole('link', { name: 'argus' });
     await expect(home).toHaveAttribute('href', 'https://github.com/owner/repo');
     await expect(home).toHaveAttribute('target', '_blank');
 
@@ -67,6 +67,6 @@ test.describe('SC-076: Repo card GitHub link indicators', () => {
     await expect(
       glCard.getByRole('link', { name: /open or view pull request on github/i }),
     ).toHaveCount(0);
-    await expect(glCard.getByRole('link', { name: /open repository on github/i })).toHaveCount(0);
+    await expect(glCard.getByRole('link', { name: 'gitlab-thing' })).toHaveCount(0);
   });
 });

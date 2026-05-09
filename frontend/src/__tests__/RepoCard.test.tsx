@@ -80,7 +80,7 @@ describe('RepoCard link indicators', () => {
 
     it('renders repo name as a link to repo home', () => {
       renderCard(makeRepo());
-      const link = screen.getByRole('link', { name: /open repository on github/i });
+      const link = screen.getByRole('link', { name: 'argus' });
       expect(link).toHaveAttribute('href', 'https://github.com/owner/repo');
       expect(link).toHaveTextContent('argus');
     });
@@ -101,7 +101,7 @@ describe('RepoCard link indicators', () => {
 
     it('emits repo_card_home_opened on repo-name link click', () => {
       renderCard(makeRepo());
-      fireEvent.click(screen.getByRole('link', { name: /open repository on github/i }));
+      fireEvent.click(screen.getByRole('link', { name: 'argus' }));
       expect(api.postTelemetryEvent).toHaveBeenCalledWith('repo_card_home_opened');
     });
 
@@ -133,7 +133,7 @@ describe('RepoCard link indicators', () => {
     it('hides all GitHub-specific indicators', () => {
       renderCard(makeRepo({ remoteUrl: 'https://gitlab.com/owner/repo' }));
       expect(screen.queryByRole('link', { name: /pull request on github/i })).toBeNull();
-      expect(screen.queryByRole('link', { name: /open repository on github/i })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'argus' })).toBeNull();
       expect(screen.queryByRole('link', { name: /branch .* on github/i })).toBeNull();
     });
 
@@ -154,7 +154,7 @@ describe('RepoCard link indicators', () => {
       renderCard(makeRepo({ branch: null }));
       expect(screen.queryByRole('link', { name: /pull request on github/i })).toBeNull();
       expect(screen.queryByRole('link', { name: /branch .* on github/i })).toBeNull();
-      expect(screen.getByRole('link', { name: /open repository on github/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'argus' })).toBeInTheDocument();
     });
   });
 
