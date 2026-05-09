@@ -4,8 +4,8 @@ description: Full release pipeline — bump version, push to public, and publish
 
 ## Invocation rules
 
-**ONLY execute this skill when the user explicitly types `/release` as a standalone command.**
-Do NOT execute it in response to any paraphrase or implied intent. The user must type the exact slash command `/release`.
+**ONLY execute this skill when the user explicitly types `/bump-public-release` as a standalone command.**
+Do NOT execute it in response to any paraphrase or implied intent. The user must type the exact slash command `/bump-public-release`.
 
 If this skill was not triggered by the exact command `/release`, stop immediately without taking any action.
 
