@@ -89,20 +89,17 @@ async function mockApis(page: Page, sessions: unknown[], outputMap: Record<strin
 // SC-001: Session card shows tool call count when only tool_use events present
 test.describe('SC-077: Tool call count in session card preview', () => {
 
-  test('preview shows "Running... N tool calls" when only tool_use items and no assistant message', async ({ page }) => {
+  test('preview shows tool count badge when only tool_use items and no assistant message', async ({ page }) => {
     await mockApis(page, [SESSION_TOOL_ONLY], { [SESSION_TOOL_ONLY.id]: TOOL_USE_ITEMS });
     await page.goto('/');
-    await expect(page.getByText(/tool call/i).first()).toBeVisible({ timeout: 5000 });
-    const preview = page.getByText(/Running\.\.\. 3 tool calls/);
-    await expect(preview).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/3 tools/i).first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('preview shows assistant text with "+N tool calls" suffix when text-plus-count state', async ({ page }) => {
+  test('preview shows assistant text with tool count badge when text-plus-count state', async ({ page }) => {
     await mockApis(page, [SESSION_TEXT_PLUS], { [SESSION_TEXT_PLUS.id]: TEXT_PLUS_ITEMS });
     await page.goto('/');
-    await expect(page.getByText(/tool call/i).first()).toBeVisible({ timeout: 5000 });
-    const preview = page.getByText(/\+2 tool calls/);
-    await expect(preview).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Starting analysis...').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/2 tools/i).first()).toBeVisible({ timeout: 5000 });
   });
 
 });
