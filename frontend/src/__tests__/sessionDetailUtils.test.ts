@@ -233,6 +233,32 @@ describe('buildDisplayItems', () => {
     }
   });
 
+  it('verbose mode: thinking items pass through as single items', () => {
+    const items = [
+      output({ id: '1', type: 'thinking', role: null, content: 'Reasoning...' }),
+      output({ id: '2', type: 'message', role: 'assistant', content: 'Done.' }),
+    ];
+    const result = buildDisplayItems(items, false);
+    expect(result).toHaveLength(2);
+    expect(result[0].kind).toBe('single');
+    if (result[0].kind === 'single') {
+      expect(result[0].item.type).toBe('thinking');
+    }
+  });
+
+  it('focused mode: thinking items pass through as single items (not dropped)', () => {
+    const items = [
+      output({ id: '1', type: 'thinking', role: null, content: 'Reasoning...' }),
+      output({ id: '2', type: 'message', role: 'assistant', content: 'Done.' }),
+    ];
+    const result = buildDisplayItems(items, true);
+    // thinking is not dropped in focused mode — its visibility is handled by the renderer
+    const thinkingItems = result.filter(
+      (di) => di.kind === 'single' && di.item.type === 'thinking',
+    );
+    expect(thinkingItems).toHaveLength(1);
+  });
+
   it('focused mode splits groups broken by a user message', () => {
     const items = [
       output({ id: '1', type: 'tool_use', toolCallId: 'call-1' }),

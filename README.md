@@ -54,7 +54,7 @@ Each card is a live snapshot of a session:
 - **Elapsed time** representing how long since the session start
 - **Drill in link**: displays a larger view of the session.
 - **Current prompt**: the most recent question you asked, shown below the badges and updated live as the conversation progresses
-- **Last output preview**: up to 2 lines of the most recent AI reply, rendered with markdown formatting
+- **Last output preview**: up to 2 lines of the most recent AI reply, rendered with markdown formatting. When the session has thinking events, the preview shows the thinking content instead of the message text. A **tool call count** indicator appears below the preview when the session made tool calls.
 - **Send prompt input and button**: (only in live sessions) Type a prompt and send to the CLI session from Argus.
 - **Focus button** (crosshair icon): brings the originating terminal window to the foreground. Shown for all active sessions; disabled when no PID is known.
 
@@ -68,13 +68,13 @@ The drill-in link on any session card opens a full-page view. At the top, when t
 
 Click any card to open a **live output pane** on the right inline. The card list stays visible on the left. Click another card to switch sessions. The selected session is persisted across page refreshes. Click the **X** icon in the output pane header to close it. When the selected session ends, Argus automatically switches to the next active session, or closes the pane if no active sessions remain.
 
-Output lines carry type badges so you always know what's what: **YOU** (your input), **AI** (assistant reply), **TOOL** (tool call), **RESULT** (tool result), **STATUS** (status change), **ERR** (error). These are streamed in real time, including tool calls.
+Output lines carry type badges so you always know what's what: **YOU** (your input), **AI** (assistant reply), **TOOL** (tool call), **RESULT** (tool result), **STATUS** (status change), **ERR** (error), **THINK** (model reasoning). These are streamed in real time, including tool calls and thinking blocks.
 
 #### Focused and Verbose Mode
 
 The output pane has two display modes, toggled via the **Focused / Verbose** button in the pane header:
 
-- **Focused** (default): hides noisy tool results. Consecutive tool calls are grouped into a collapsible counter bar — click the bar to expand and inspect individual calls. In-flight tool calls (awaiting a result) are folded into the bar immediately so the stream does not jump. Click **show result** on any completed call to expand it inline. Your messages, AI replies, status changes, and errors are always visible.
+- **Focused** (default): hides noisy tool results. Consecutive tool calls are grouped into a collapsible counter bar — click the bar to expand and inspect individual calls. In-flight tool calls (awaiting a result) are folded into the bar immediately so the stream does not jump. Click **show result** on any completed call to expand it inline. Thinking blocks appear collapsed (click **show reasoning** to expand inline). Your messages, AI replies, status changes, and errors are always visible.
 
   <img src="docs/images/argus-stream-focused.png" alt="Focused Mode" height="300">
 

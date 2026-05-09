@@ -102,6 +102,48 @@ describe('parseClaudeJsonlLine', () => {
     expect(result[1].role).toBeNull();
   });
 
+  it('parses assistant entry with thinking block → thinking output with role null', () => {
+    const line = makeAssistantEntry([{ type: 'thinking', thinking: 'The user wants to refactor auth.' }]);
+    const result = parseClaudeJsonlLine(line, SESSION_ID, 7);
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('thinking');
+    expect(result[0].role).toBeNull();
+    expect(result[0].content).toBe('The user wants to refactor auth.');
+    expect(result[0].toolName).toBeNull();
+    expect(result[0].toolCallId).toBeNull();
+    expect(result[0].sequenceNumber).toBe(7);
+  });
+
+  it('parses redacted_thinking block → thinking output with content [redacted]', () => {
+    const line = makeAssistantEntry([{ type: 'redacted_thinking', data: 'encryptedpayload==' }]);
+    const result = parseClaudeJsonlLine(line, SESSION_ID, 8);
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('thinking');
+    expect(result[0].content).toBe('[redacted]');
+    expect(result[0].role).toBeNull();
+  });
+
+  it('parses assistant entry with thinking + text + tool_use → three outputs in order', () => {
+    const line = makeAssistantEntry([
+      { type: 'thinking', thinking: 'Let me check the file.' },
+      { type: 'text', text: 'Reading now.' },
+      { type: 'tool_use', id: 'toolu_1', name: 'Read', input: { path: 'foo.ts' } },
+    ]);
+    const result = parseClaudeJsonlLine(line, SESSION_ID, 9);
+    expect(result).toHaveLength(3);
+    expect(result[0].type).toBe('thinking');
+    expect(result[1].type).toBe('message');
+    expect(result[2].type).toBe('tool_use');
+  });
+
+  it('parses thinking block with empty text → content is empty string (not [redacted])', () => {
+    const line = makeAssistantEntry([{ type: 'thinking', thinking: '' }]);
+    const result = parseClaudeJsonlLine(line, SESSION_ID, 10);
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('thinking');
+    expect(result[0].content).toBe('');
+  });
+
   it('returns empty array for malformed/partial JSON', () => {
     expect(parseClaudeJsonlLine('not json', SESSION_ID, 1)).toEqual([]);
     expect(parseClaudeJsonlLine('{incomplete', SESSION_ID, 1)).toEqual([]);

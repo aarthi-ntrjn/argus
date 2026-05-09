@@ -1,6 +1,6 @@
 # argus2 Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-05-06
+Auto-generated from all feature plans. Last updated: 2026-05-08
 
 ## Active Technologies
 - TypeScript 5.9, Node.js 22 + node-pty (new), Fastify 5, better-sqlite3, ws, @fastify/websocket (020-fix-send-prompts)
@@ -35,6 +35,8 @@ Auto-generated from all feature plans. Last updated: 2026-05-06
 - N/A (dev tooling only — reports written to `coverage/` directories) (064-code-coverage)
 - TypeScript (Node.js 20, ESM) + Fastify (backend HTTP), ws (WebSockets), better-sqlite3, vitest (testing) (072-bash-approval-surface)
 - SQLite via `better-sqlite3` — no schema changes required (072-bash-approval-surface)
+- TypeScript 5.x (Node.js 22 backend, React 18 frontend) + better-sqlite3 (backend storage), React Query (frontend data fetching), Tailwind CSS (styling) (074-thinking-events-output)
+- SQLite via existing `session_output` table — no schema changes required (074-thinking-events-output)
 
 - TypeScript 5.9 (frontend + backend) + Fastify 5.x (backend), React 18 + TailwindCSS 3 + React Query (frontend), better-sqlite3 (storage), pino (logging), vitest + Playwright (testing) (014-engineer-todo-list)
 
@@ -56,6 +58,7 @@ TypeScript 5.9 (frontend + backend): Follow standard conventions
 
 ## Recent Changes
 - 072-bash-approval-surface: Added TypeScript (Node.js 20, ESM) + Fastify (backend HTTP), ws (WebSockets), better-sqlite3, vitest (testing)
+- 074-thinking-events-output: Added TypeScript 5.x (Node.js 22 backend, React 18 frontend) + better-sqlite3 (backend storage), React Query (frontend data fetching), Tailwind CSS (styling)
 - 063-copilot-hooks: Added TypeScript, Node.js 18+ (same as existing backend) + Fastify (existing), `fs` (built-in), SQLite via `better-sqlite3` (existing)
 - 064-code-coverage: Added TypeScript 5.9, Node.js >= 22 + Vitest 3.1.1, @vitest/coverage-v8 3.1.1 (installed in both workspaces)
 
