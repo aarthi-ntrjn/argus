@@ -632,11 +632,15 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     }
 
     const session = await this.upsertActiveSession(session_id, repo, existing, now);
-    this.sigCache.set(session.id, this.sessionSignature(session));
-    if (existing) {
-      broadcast({ type: 'session.updated', timestamp: now, data: session });
-    } else {
+    const sig = this.sessionSignature(session);
+    // Check sigCache AFTER the await: if a concurrent hook already handled this session,
+    // sigCache will already have it and we must fire session.updated, not session.created.
+    const isNew = !existing && !this.sigCache.has(session.id);
+    this.sigCache.set(session.id, sig);
+    if (isNew) {
       this.sessionCreatedCallback?.(session);
+    } else {
+      broadcast({ type: 'session.updated', timestamp: now, data: session });
     }
   }
 
