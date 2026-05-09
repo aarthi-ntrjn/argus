@@ -61,36 +61,12 @@ describe('RepoCard link indicators', () => {
   });
 
   describe('GitHub remote with feature branch', () => {
-    it('renders pull-request indicator with correct href and rel', () => {
+    it('renders pull-request indicator pointing at /pull/new/<branch>', () => {
       renderCard(makeRepo());
-      const link = screen.getByRole('link', { name: /pull requests on github/i });
-      expect(link).toHaveAttribute(
-        'href',
-        'https://github.com/owner/repo/pulls?q=is%3Apr+is%3Aopen+head%3Afeature%2Ffoo',
-      );
+      const link = screen.getByRole('link', { name: /open or view pull request on github/i });
+      expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/pull/new/feature%2Ffoo');
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    });
-
-    it('renders commits indicator with branch-scoped href', () => {
-      renderCard(makeRepo());
-      const link = screen.getByRole('link', { name: /commits on github/i });
-      expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/commits/feature%2Ffoo');
-    });
-
-    it('renders Actions indicator with branch-filtered href', () => {
-      renderCard(makeRepo());
-      const link = screen.getByRole('link', { name: /github actions/i });
-      expect(link).toHaveAttribute(
-        'href',
-        'https://github.com/owner/repo/actions?query=branch%3Afeature%2Ffoo',
-      );
-    });
-
-    it('renders issues indicator with /issues href', () => {
-      renderCard(makeRepo());
-      const link = screen.getByRole('link', { name: /issues on github/i });
-      expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/issues');
     });
 
     it('renders branch chip as a link to the branch tree', () => {
@@ -113,26 +89,8 @@ describe('RepoCard link indicators', () => {
   describe('telemetry and propagation', () => {
     it('emits repo_card_pr_opened on PR-indicator click', () => {
       renderCard(makeRepo());
-      fireEvent.click(screen.getByRole('link', { name: /pull requests on github/i }));
+      fireEvent.click(screen.getByRole('link', { name: /open or view pull request on github/i }));
       expect(api.postTelemetryEvent).toHaveBeenCalledWith('repo_card_pr_opened');
-    });
-
-    it('emits repo_card_commits_opened on commits-indicator click', () => {
-      renderCard(makeRepo());
-      fireEvent.click(screen.getByRole('link', { name: /commits on github/i }));
-      expect(api.postTelemetryEvent).toHaveBeenCalledWith('repo_card_commits_opened');
-    });
-
-    it('emits repo_card_actions_opened on Actions-indicator click', () => {
-      renderCard(makeRepo());
-      fireEvent.click(screen.getByRole('link', { name: /github actions/i }));
-      expect(api.postTelemetryEvent).toHaveBeenCalledWith('repo_card_actions_opened');
-    });
-
-    it('emits repo_card_issues_opened on issues-indicator click', () => {
-      renderCard(makeRepo());
-      fireEvent.click(screen.getByRole('link', { name: /issues on github/i }));
-      expect(api.postTelemetryEvent).toHaveBeenCalledWith('repo_card_issues_opened');
     });
 
     it('emits repo_card_branch_opened on branch-chip link click', () => {
@@ -165,7 +123,7 @@ describe('RepoCard link indicators', () => {
           />
         </div>,
       );
-      fireEvent.click(screen.getByRole('link', { name: /pull requests on github/i }));
+      fireEvent.click(screen.getByRole('link', { name: /open or view pull request on github/i }));
       expect(cardClick).not.toHaveBeenCalled();
       expect(container).toBeTruthy();
     });
@@ -174,10 +132,7 @@ describe('RepoCard link indicators', () => {
   describe('non-GitHub remote', () => {
     it('hides all GitHub-specific indicators', () => {
       renderCard(makeRepo({ remoteUrl: 'https://gitlab.com/owner/repo' }));
-      expect(screen.queryByRole('link', { name: /pull requests on github/i })).toBeNull();
-      expect(screen.queryByRole('link', { name: /commits on github/i })).toBeNull();
-      expect(screen.queryByRole('link', { name: /github actions/i })).toBeNull();
-      expect(screen.queryByRole('link', { name: /issues on github/i })).toBeNull();
+      expect(screen.queryByRole('link', { name: /pull request on github/i })).toBeNull();
       expect(screen.queryByRole('link', { name: /open repository on github/i })).toBeNull();
       expect(screen.queryByRole('link', { name: /branch .* on github/i })).toBeNull();
     });
@@ -195,12 +150,10 @@ describe('RepoCard link indicators', () => {
   });
 
   describe('GitHub remote with null branch', () => {
-    it('hides branch-scoped indicators but shows repo-scoped ones', () => {
+    it('hides branch-scoped indicators but shows repo-home link', () => {
       renderCard(makeRepo({ branch: null }));
-      expect(screen.queryByRole('link', { name: /pull requests on github/i })).toBeNull();
-      expect(screen.queryByRole('link', { name: /commits on github/i })).toBeNull();
-      expect(screen.queryByRole('link', { name: /github actions/i })).toBeNull();
-      expect(screen.getByRole('link', { name: /issues on github/i })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /pull request on github/i })).toBeNull();
+      expect(screen.queryByRole('link', { name: /branch .* on github/i })).toBeNull();
       expect(screen.getByRole('link', { name: /open repository on github/i })).toBeInTheDocument();
     });
   });

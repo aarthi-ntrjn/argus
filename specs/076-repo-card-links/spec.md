@@ -9,8 +9,9 @@
 
 ### Session 2026-05-09
 
-- Q: How should Argus discover whether the current branch has an open PR? → A: Frontend-only. No PR-detection in Argus. The pull-request indicator always renders (when a GitHub remote and branch are known) and links to GitHub's filtered open-PR list (`/pulls?q=is:pr+is:open+head:<branch>`). GitHub itself handles all three cases: 0 PRs (offers a "New pull request" button), 1 PR (visible in the list, one click to open), N PRs (filtered list).
+- Q: How should Argus discover whether the current branch has an open PR? → A: Frontend-only. No PR-detection in Argus. The pull-request indicator always renders when a GitHub remote and branch are known. It links to GitHub's `/pull/new/<branch>` URL: when no PR exists for the branch, GitHub shows the "Open a pull request" form; when one already exists, GitHub shows that form with a banner pointing to the existing PR. Either way the user lands somewhere useful with no Argus-side detection logic.
 - Q: Should the branch chip itself be clickable? → A: Yes. The branch chip on each repo card MUST link to the branch's tree view on GitHub (`/tree/<branch>`) when the remote is GitHub. Same telemetry pattern as the other indicators (`repo_card_branch_opened`).
+- Q: Are the Actions, Issues, and Commits indicators worth keeping? → A: No, drop all three. Issues is off-mission for the session-monitoring use case (reachable via the repo-home link in two clicks). Actions is dead pixel space on repos without CI configured. Commits duplicates the existing Compare view, which already lists commits on its destination page in addition to showing the diff. The remaining set (PR, repo home, branch chip, plus the existing compare) covers the actual monitoring workflow without redundancy.
 
 ## Overview
 
@@ -20,35 +21,20 @@ This spec defines which repository links are relevant, how they should appear, a
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Jump to the open pull request for the current branch (Priority: P1)
+### User Story 1 - Jump to the pull request for the current branch (Priority: P1)
 
-While watching a session work on a feature branch, the user wants to glance at the repo card and click straight through to GitHub's open-PR list filtered to that branch. This is the single most valuable link because it answers "is my change up for review yet, and what is its current state?" without needing to re-derive the branch name and craft a URL.
+While watching a session work on a feature branch, the user wants to glance at the repo card and click straight through to GitHub's PR surface for that branch. This is the single most valuable link because it answers "is my change up for review yet, and if not, can I open one in one more click?" without needing to re-derive the branch name and craft a URL.
 
 **Why this priority**: This is the user's primary daily action when supervising agentic coding sessions. A previous attempt to add this link was reverted (see commit `e27f2590`); reintroducing it correctly is the core value of this feature.
 
-**Independent Test**: Given a repo card on a GitHub remote with a known branch, clicking the pull-request indicator opens GitHub's open-PR list filtered to that branch in a new tab. Given a non-GitHub remote, no pull-request indicator is shown.
+**Independent Test**: Given a repo card on a GitHub remote with a known branch, clicking the pull-request indicator opens GitHub's `/pull/new/<branch>` page in a new tab. Given a non-GitHub remote, no pull-request indicator is shown.
 
 **Acceptance Scenarios**:
 
-1. **Given** a repo card whose branch is `feature/foo`, **When** the user clicks the pull-request indicator, **Then** `https://github.com/<owner>/<repo>/pulls?q=is%3Apr+is%3Aopen+head%3Afeature%2Ffoo` opens in a new browser tab.
-2. **Given** a repo card whose branch has one or more open PRs, **When** the user lands on the filtered list, **Then** those PRs are visible there (rendered by GitHub itself, not by Argus).
-3. **Given** a repo card whose branch has no open PRs, **When** the user lands on the filtered list, **Then** GitHub's empty-state with the "New pull request" button is shown (Argus does not pre-filter this case out).
+1. **Given** a repo card whose branch is `feature/foo`, **When** the user clicks the pull-request indicator, **Then** `https://github.com/<owner>/<repo>/pull/new/feature%2Ffoo` opens in a new browser tab.
+2. **Given** a repo card whose branch has no open PR, **When** the user lands on the destination, **Then** GitHub's "Open a pull request" form is shown so the user can open one immediately.
+3. **Given** a repo card whose branch already has an open PR, **When** the user lands on the destination, **Then** GitHub shows the same form with a banner: "There's already a pull request for this branch: #N" linking to the existing PR.
 4. **Given** a repo whose remote URL is not GitHub, **When** the card renders, **Then** no pull-request indicator is shown.
-
----
-
-### User Story 2 - Browse recent commits on the current branch (Priority: P2)
-
-The user wants to see what has actually been committed by the active session(s) on the current branch. From the repo card they should be able to open GitHub's commits view, scoped to the current branch, in one click.
-
-**Why this priority**: Useful for verifying that an autonomous session has produced the expected commits and reviewing their messages, but the user typically reaches for this only after they have already noticed something interesting in the session output.
-
-**Independent Test**: Given a repo card on a non-default branch, clicking the commits indicator opens GitHub's commits view filtered to that branch. On the default branch (`master` or `main`), it opens the default commits view.
-
-**Acceptance Scenarios**:
-
-1. **Given** a repo card whose branch is `feature/foo`, **When** the user clicks the commits indicator, **Then** GitHub's `/commits/feature/foo` page opens in a new tab.
-2. **Given** a repo card whose branch is the repo's default branch, **When** the user clicks the commits indicator, **Then** GitHub's default commits page opens in a new tab.
 
 ---
 
@@ -67,40 +53,11 @@ The user wants a one-click way to jump to the repo's GitHub home page from the c
 
 ---
 
-### User Story 4 - See CI / Actions status for the current branch (Priority: P3)
-
-The user wants to see at a glance whether GitHub Actions on the current branch is passing or failing, and click through to the workflow runs for that branch.
-
-**Why this priority**: Helpful for catching regressions but secondary to the PR and commit links. Many users will not have Actions configured.
-
-**Independent Test**: Clicking the actions indicator opens GitHub's Actions view filtered to the current branch.
-
-**Acceptance Scenarios**:
-
-1. **Given** a repo card on branch `feature/foo`, **When** the user clicks the actions indicator, **Then** GitHub's Actions page filtered by that branch opens in a new tab.
-2. **Given** a non-GitHub remote, **When** the card renders, **Then** the actions indicator is hidden.
-
----
-
-### User Story 5 - Open the issues list (Priority: P3)
-
-The user wants a quick path to the repository's open issues from the card, useful when triaging or referencing issue numbers from session output.
-
-**Why this priority**: Convenient but rarely time-critical compared to PRs and commits.
-
-**Independent Test**: Clicking the issues indicator opens the GitHub issues list for the repository.
-
-**Acceptance Scenarios**:
-
-1. **Given** a repo card with a GitHub remote, **When** the user clicks the issues indicator, **Then** the open-issues list for that repo opens in a new tab.
-
----
-
 ### Edge Cases
 
 - The repository has no remote configured (local-only). All GitHub-derived indicators are hidden; the existing branch chip still renders.
 - The remote URL points to a GitHub Enterprise host or a non-GitHub provider (GitLab, Bitbucket, Azure DevOps). For v1, only `github.com` (HTTPS or SSH form) is supported; non-GitHub remotes show no link indicators. This avoids generating broken URLs.
-- The branch is detached HEAD or unknown. Branch-scoped indicators (PR for branch, commits for branch, actions for branch) are hidden; the repo-home link may still render.
+- The branch is detached HEAD or unknown. Branch-scoped indicators (PR for branch, branch chip, compare) are hidden; the repo-home link may still render.
 - The branch name contains characters that need URL encoding (e.g. `/`, `#`). The system MUST URL-encode branch segments before building links.
 - The user has many repo cards on screen. Adding link indicators MUST NOT measurably degrade dashboard render or scroll performance (see SC-004).
 - The user clicks an indicator. Clicks on indicators MUST NOT trigger the repo-card-level click behavior (e.g. opening sessions). Each indicator's click handler stops propagation.
@@ -114,20 +71,17 @@ The user wants a quick path to the repository's open issues from the card, usefu
 - **FR-003**: Each indicator MUST open its destination in a new browser tab (`target="_blank"` with `rel="noopener noreferrer"`) and MUST stop click-propagation so it does not trigger card-level interactions.
 - **FR-004**: The system MUST recognize GitHub remote URLs in both HTTPS form (`https://github.com/<owner>/<repo>.git`) and SSH form (`git@github.com:<owner>/<repo>.git`), stripping any trailing `.git`.
 - **FR-005**: For non-GitHub remotes (and for repos with no remote), the system MUST hide all GitHub-specific indicators rather than rendering broken or misleading links.
-- **FR-006**: The "open pull request" indicator MUST link to GitHub's filtered open-PR list for the current branch (`/pulls?q=is:pr+is:open+head:<branch>`). The indicator is rendered whenever the repo has a recognized GitHub remote and a known branch; it is NOT conditional on whether an open PR actually exists. Argus MUST NOT call the GitHub API or shell out to `gh` to determine PR state.
-- **FR-007**: The "view commits" indicator MUST link to GitHub's commits view scoped to the current branch (`/commits/<branch>`), or to the repo's default commits view when on the default branch (`master` or `main`).
+- **FR-006**: The "open pull request" indicator MUST link to GitHub's `/pull/new/<branch>` URL for the current branch. The indicator is rendered whenever the repo has a recognized GitHub remote and a known branch; it is NOT conditional on whether a PR actually exists. Argus MUST NOT call the GitHub API or shell out to `gh` to determine PR state.
 - **FR-008**: The repository name MUST link to the repo home (`https://github.com/<owner>/<repo>`) when a GitHub remote is detected, and remain plain (non-link) text otherwise.
-- **FR-009**: The "view actions" indicator MUST link to GitHub Actions filtered by the current branch (`/actions?query=branch:<branch>`).
-- **FR-010**: The "view issues" indicator MUST link to the GitHub open-issues list (`/issues`).
 - **FR-011**: All branch segments embedded in URLs MUST be URL-encoded.
-- **FR-012**: When the current branch is unknown (e.g. detached HEAD), the system MUST hide all branch-scoped indicators (PR-for-branch, commits-for-branch, actions-for-branch) but MAY still render repo-scoped indicators (repo home, issues).
+- **FR-012**: When the current branch is unknown (e.g. detached HEAD), the system MUST hide all branch-scoped indicators (PR-for-branch, branch chip, compare) but MAY still render repo-scoped indicators (repo home).
 - **FR-013**: Each indicator click MUST emit a telemetry event identifying which link was clicked (consistent with the existing `repo_diff_opened` telemetry event), so we can later measure relative usage and prune unused links.
-- **FR-014**: The set and order of indicators in the metadata row MUST be: branch chip (now clickable on GitHub remotes), compare (existing), open-PR, commits, actions, issues. This keeps the most-actionable indicator (PR) closest to the existing diff link the user already scans.
+- **FR-014**: The set and order of indicators in the metadata row MUST be: branch chip (clickable on GitHub remotes), compare (existing), PR. The repo-name (also a link on GitHub remotes) sits in the header row above.
 - **FR-015**: The branch chip MUST link to the branch tree view on GitHub (`/tree/<branch>`) when the remote is recognized as GitHub. On non-GitHub remotes (or when there is no remote), the branch chip MUST render as plain text (current behavior). Click MUST stop propagation and emit `repo_card_branch_opened`.
 
 ### Key Entities
 
-- **RepoCardLink**: A single clickable indicator on the repo card. Attributes: kind (one of `pr`, `commits`, `actions`, `issues`, `home`, `compare`), destination URL, tooltip/aria-label text, visibility condition (requires GitHub remote, and for branch-scoped kinds also requires a known branch). Behavior: opens in new tab, stops propagation, emits a telemetry event keyed by kind.
+- **RepoCardLink**: A single clickable indicator on the repo card. Attributes: kind (one of `pr`, `home`, `branch`, `compare`), destination URL, tooltip/aria-label text, visibility condition (requires GitHub remote, and for branch-scoped kinds also requires a known branch). Behavior: opens in new tab, stops propagation, emits a telemetry event keyed by kind.
 - **RepositoryRemote**: The Git remote associated with a repository. Attributes: raw URL, derived host (e.g. `github.com`), derived `<owner>/<repo>` slug, whether the remote is recognized as GitHub. Used to gate which `RepoCardLink`s appear on a card.
 
 ## Success Criteria *(mandatory)*

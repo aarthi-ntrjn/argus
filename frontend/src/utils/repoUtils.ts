@@ -3,15 +3,7 @@ const DEFAULT_BRANCHES = new Set(['master', 'main']);
 const GITHUB_HTTPS_PREFIX = 'https://github.com/';
 const GITHUB_SSH_PREFIX = 'git@github.com:';
 
-export const REPO_CARD_LINK_KINDS = [
-  'pr',
-  'commits',
-  'actions',
-  'issues',
-  'home',
-  'compare',
-  'branch',
-] as const;
+export const REPO_CARD_LINK_KINDS = ['pr', 'home', 'compare', 'branch'] as const;
 export type RepoCardLinkKind = (typeof REPO_CARD_LINK_KINDS)[number];
 
 export interface ParsedGitHubRemote {
@@ -64,7 +56,7 @@ export function buildGitHubCompareUrl(
   return `${parsed.baseUrl}/compare/master...${branch}`;
 }
 
-export function buildGitHubPrListUrl(
+export function buildGitHubPrUrl(
   remoteUrl: string | null | undefined,
   branch: string | null | undefined,
 ): string | null {
@@ -72,44 +64,7 @@ export function buildGitHubPrListUrl(
   if (!parsed || !branch) {
     return null;
   }
-  const params = new URLSearchParams();
-  params.set('q', `is:pr is:open head:${branch}`);
-  return `${parsed.baseUrl}/pulls?${params.toString()}`;
-}
-
-export function buildGitHubCommitsUrl(
-  remoteUrl: string | null | undefined,
-  branch: string | null | undefined,
-): string | null {
-  const parsed = parseGitHubRemote(remoteUrl);
-  if (!parsed || !branch) {
-    return null;
-  }
-  if (DEFAULT_BRANCHES.has(branch)) {
-    return `${parsed.baseUrl}/commits`;
-  }
-  return `${parsed.baseUrl}/commits/${encodeURIComponent(branch)}`;
-}
-
-export function buildGitHubActionsUrl(
-  remoteUrl: string | null | undefined,
-  branch: string | null | undefined,
-): string | null {
-  const parsed = parseGitHubRemote(remoteUrl);
-  if (!parsed || !branch) {
-    return null;
-  }
-  const params = new URLSearchParams();
-  params.set('query', `branch:${branch}`);
-  return `${parsed.baseUrl}/actions?${params.toString()}`;
-}
-
-export function buildGitHubIssuesUrl(remoteUrl: string | null | undefined): string | null {
-  const parsed = parseGitHubRemote(remoteUrl);
-  if (!parsed) {
-    return null;
-  }
-  return `${parsed.baseUrl}/issues`;
+  return `${parsed.baseUrl}/pull/new/${encodeURIComponent(branch)}`;
 }
 
 export function buildGitHubHomeUrl(remoteUrl: string | null | undefined): string | null {
@@ -130,9 +85,6 @@ export function buildGitHubBranchUrl(
 
 export const REPO_CARD_TELEMETRY_EVENTS: Record<Exclude<RepoCardLinkKind, 'compare'>, string> = {
   pr: 'repo_card_pr_opened',
-  commits: 'repo_card_commits_opened',
-  actions: 'repo_card_actions_opened',
-  issues: 'repo_card_issues_opened',
   home: 'repo_card_home_opened',
   branch: 'repo_card_branch_opened',
 };

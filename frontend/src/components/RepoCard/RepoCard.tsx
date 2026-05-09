@@ -1,17 +1,14 @@
 import type { Repository, Session } from '../../types';
 import type { PendingLauncher } from '../../hooks/usePendingLaunchers';
 import {
-  buildGitHubActionsUrl,
   buildGitHubBranchUrl,
-  buildGitHubCommitsUrl,
   buildGitHubCompareUrl,
   buildGitHubHomeUrl,
-  buildGitHubIssuesUrl,
-  buildGitHubPrListUrl,
+  buildGitHubPrUrl,
   REPO_CARD_TELEMETRY_EVENTS,
 } from '../../utils/repoUtils';
 import { postTelemetryEvent } from '../../services/api';
-import { CircleDot, GitCommit, GitCompare, GitPullRequest, PlayCircle } from 'lucide-react';
+import { GitCompare, GitPullRequest } from 'lucide-react';
 import Badge from '../Badge';
 import LaunchDropdown from '../LaunchDropdown/LaunchDropdown';
 import SessionCard from '../SessionCard/SessionCard';
@@ -78,10 +75,7 @@ export default function RepoCard({
 }: RepoCardProps) {
   const homeUrl = buildGitHubHomeUrl(repo.remoteUrl);
   const compareUrl = buildGitHubCompareUrl(repo.remoteUrl, repo.branch);
-  const prUrl = buildGitHubPrListUrl(repo.remoteUrl, repo.branch);
-  const commitsUrl = buildGitHubCommitsUrl(repo.remoteUrl, repo.branch);
-  const actionsUrl = buildGitHubActionsUrl(repo.remoteUrl, repo.branch);
-  const issuesUrl = buildGitHubIssuesUrl(repo.remoteUrl);
+  const prUrl = buildGitHubPrUrl(repo.remoteUrl, repo.branch);
   const branchUrl = buildGitHubBranchUrl(repo.remoteUrl, repo.branch);
 
   return (
@@ -181,31 +175,10 @@ export default function RepoCard({
           </IndicatorIcon>
           <IndicatorIcon
             href={prUrl}
-            label="Pull requests on GitHub"
+            label="Open or view pull request on GitHub"
             telemetryEvent={REPO_CARD_TELEMETRY_EVENTS.pr}
           >
             <GitPullRequest size={14} aria-hidden="true" />
-          </IndicatorIcon>
-          <IndicatorIcon
-            href={commitsUrl}
-            label="Commits on GitHub"
-            telemetryEvent={REPO_CARD_TELEMETRY_EVENTS.commits}
-          >
-            <GitCommit size={14} aria-hidden="true" />
-          </IndicatorIcon>
-          <IndicatorIcon
-            href={actionsUrl}
-            label="GitHub Actions for this branch"
-            telemetryEvent={REPO_CARD_TELEMETRY_EVENTS.actions}
-          >
-            <PlayCircle size={14} aria-hidden="true" />
-          </IndicatorIcon>
-          <IndicatorIcon
-            href={issuesUrl}
-            label="Issues on GitHub"
-            telemetryEvent={REPO_CARD_TELEMETRY_EVENTS.issues}
-          >
-            <CircleDot size={14} aria-hidden="true" />
           </IndicatorIcon>
         </div>
       </div>

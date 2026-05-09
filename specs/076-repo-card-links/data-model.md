@@ -36,13 +36,13 @@ Returned as `ParsedGitHubRemote | null`. `null` means: no remote, or the remote 
 Discriminator for telemetry keys and (later, if needed) for any shared rendering logic.
 
 ```ts
-type RepoCardLinkKind = 'pr' | 'commits' | 'actions' | 'issues' | 'home' | 'compare' | 'branch';
+type RepoCardLinkKind = 'pr' | 'home' | 'compare' | 'branch';
 ```
 
 Defined as a `const` set per CLAUDE.md "no magic strings":
 
 ```ts
-const REPO_CARD_LINK_KINDS = ['pr', 'commits', 'actions', 'issues', 'home', 'compare', 'branch'] as const;
+const REPO_CARD_LINK_KINDS = ['pr', 'home', 'compare', 'branch'] as const;
 type RepoCardLinkKind = typeof REPO_CARD_LINK_KINDS[number];
 ```
 
@@ -51,9 +51,6 @@ type RepoCardLinkKind = typeof REPO_CARD_LINK_KINDS[number];
 ```ts
 const REPO_CARD_TELEMETRY_EVENTS: Record<Exclude<RepoCardLinkKind, 'compare'>, string> = {
   pr:       'repo_card_pr_opened',
-  commits:  'repo_card_commits_opened',
-  actions:  'repo_card_actions_opened',
-  issues:   'repo_card_issues_opened',
   home:     'repo_card_home_opened',
   branch:   'repo_card_branch_opened',
 };
@@ -67,10 +64,7 @@ All new builders are pure functions in `frontend/src/utils/repoUtils.ts`. Each r
 
 ```ts
 export function parseGitHubRemote(remoteUrl: string | null | undefined): ParsedGitHubRemote | null;
-export function buildGitHubPrListUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
-export function buildGitHubCommitsUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
-export function buildGitHubActionsUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
-export function buildGitHubIssuesUrl(remoteUrl: string | null | undefined): string | null;
+export function buildGitHubPrUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
 export function buildGitHubHomeUrl(remoteUrl: string | null | undefined): string | null;
 export function buildGitHubBranchUrl(remoteUrl: string | null | undefined, branch: string | null | undefined): string | null;
 // existing:
@@ -81,8 +75,7 @@ export function buildGitHubCompareUrl(remoteUrl: string | null | undefined, bran
 
 - `parseGitHubRemote` MUST accept both `https://github.com/<owner>/<repo>(.git)?` and `git@github.com:<owner>/<repo>(.git)?` forms; trailing `.git` is stripped.
 - All branch values embedded in URLs MUST go through `encodeURIComponent` (FR-011).
-- `buildGitHubCommitsUrl` MUST return the `/commits` path (no branch segment) when `branch` is `master` or `main`, mirroring the existing `buildGitHubCompareUrl` default-branch behavior.
-- `buildGitHubIssuesUrl` and `buildGitHubHomeUrl` are repo-scoped and ignore branch entirely (FR-012 says repo-scoped indicators MAY render even with unknown branch).
+- `buildGitHubHomeUrl` is repo-scoped and ignores branch entirely (FR-012 says repo-scoped indicators MAY render even with unknown branch).
 - All other builders are branch-scoped and MUST return `null` when `branch` is null/empty (FR-012).
 
 ## State transitions

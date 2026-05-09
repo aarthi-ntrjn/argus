@@ -1,12 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildGitHubActionsUrl,
   buildGitHubBranchUrl,
-  buildGitHubCommitsUrl,
   buildGitHubCompareUrl,
   buildGitHubHomeUrl,
-  buildGitHubIssuesUrl,
-  buildGitHubPrListUrl,
+  buildGitHubPrUrl,
   parseGitHubRemote,
 } from '../utils/repoUtils';
 
@@ -100,66 +97,34 @@ describe('buildGitHubCompareUrl', () => {
   });
 });
 
-describe('buildGitHubPrListUrl', () => {
+describe('buildGitHubPrUrl', () => {
   it('returns null when remoteUrl is null', () => {
-    expect(buildGitHubPrListUrl(null, 'feature')).toBeNull();
+    expect(buildGitHubPrUrl(null, 'feature')).toBeNull();
   });
 
   it('returns null when branch is null', () => {
-    expect(buildGitHubPrListUrl('https://github.com/owner/repo', null)).toBeNull();
+    expect(buildGitHubPrUrl('https://github.com/owner/repo', null)).toBeNull();
   });
 
   it('returns null for non-GitHub remote', () => {
-    expect(buildGitHubPrListUrl('https://gitlab.com/owner/repo', 'feature')).toBeNull();
+    expect(buildGitHubPrUrl('https://gitlab.com/owner/repo', 'feature')).toBeNull();
   });
 
-  it('builds filtered open-PR list URL for a feature branch with slash', () => {
-    expect(buildGitHubPrListUrl('https://github.com/owner/repo', 'feature/foo')).toBe(
-      'https://github.com/owner/repo/pulls?q=is%3Apr+is%3Aopen+head%3Afeature%2Ffoo',
+  it('builds new-or-existing-PR URL for a feature branch with slash', () => {
+    expect(buildGitHubPrUrl('https://github.com/owner/repo', 'feature/foo')).toBe(
+      'https://github.com/owner/repo/pull/new/feature%2Ffoo',
     );
   });
 
   it('URL-encodes branch with space', () => {
-    expect(buildGitHubPrListUrl('https://github.com/owner/repo', 'feat/foo bar')).toBe(
-      'https://github.com/owner/repo/pulls?q=is%3Apr+is%3Aopen+head%3Afeat%2Ffoo+bar',
+    expect(buildGitHubPrUrl('https://github.com/owner/repo', 'feat/foo bar')).toBe(
+      'https://github.com/owner/repo/pull/new/feat%2Ffoo%20bar',
     );
   });
 
-  it('works for SSH remote', () => {
-    expect(buildGitHubPrListUrl('git@github.com:owner/repo.git', 'master')).toBe(
-      'https://github.com/owner/repo/pulls?q=is%3Apr+is%3Aopen+head%3Amaster',
-    );
-  });
-});
-
-describe('buildGitHubCommitsUrl', () => {
-  it('returns null when remoteUrl is null', () => {
-    expect(buildGitHubCommitsUrl(null, 'feature')).toBeNull();
-  });
-
-  it('returns null when branch is null', () => {
-    expect(buildGitHubCommitsUrl('https://github.com/owner/repo', null)).toBeNull();
-  });
-
-  it('returns null for non-GitHub remote', () => {
-    expect(buildGitHubCommitsUrl('https://gitlab.com/owner/repo', 'feature')).toBeNull();
-  });
-
-  it('returns base commits URL when on master branch', () => {
-    expect(buildGitHubCommitsUrl('https://github.com/owner/repo', 'master')).toBe(
-      'https://github.com/owner/repo/commits',
-    );
-  });
-
-  it('returns base commits URL when on main branch', () => {
-    expect(buildGitHubCommitsUrl('https://github.com/owner/repo', 'main')).toBe(
-      'https://github.com/owner/repo/commits',
-    );
-  });
-
-  it('builds branch-scoped commits URL with URL-encoded branch', () => {
-    expect(buildGitHubCommitsUrl('https://github.com/owner/repo', 'feature/foo')).toBe(
-      'https://github.com/owner/repo/commits/feature%2Ffoo',
+  it('works for SSH remote on default branch', () => {
+    expect(buildGitHubPrUrl('git@github.com:owner/repo.git', 'master')).toBe(
+      'https://github.com/owner/repo/pull/new/master',
     );
   });
 });
@@ -192,26 +157,6 @@ describe('buildGitHubHomeUrl', () => {
   });
 });
 
-describe('buildGitHubActionsUrl', () => {
-  it('returns null when remoteUrl is null', () => {
-    expect(buildGitHubActionsUrl(null, 'feature')).toBeNull();
-  });
-
-  it('returns null when branch is null', () => {
-    expect(buildGitHubActionsUrl('https://github.com/owner/repo', null)).toBeNull();
-  });
-
-  it('returns null for non-GitHub remote', () => {
-    expect(buildGitHubActionsUrl('https://gitlab.com/owner/repo', 'feature')).toBeNull();
-  });
-
-  it('builds branch-filtered Actions URL with URL-encoded branch', () => {
-    expect(buildGitHubActionsUrl('https://github.com/owner/repo', 'feature/foo')).toBe(
-      'https://github.com/owner/repo/actions?query=branch%3Afeature%2Ffoo',
-    );
-  });
-});
-
 describe('buildGitHubBranchUrl', () => {
   it('returns null when remoteUrl is null', () => {
     expect(buildGitHubBranchUrl(null, 'feature/foo')).toBeNull();
@@ -240,28 +185,6 @@ describe('buildGitHubBranchUrl', () => {
   it('works for SSH remote', () => {
     expect(buildGitHubBranchUrl('git@github.com:owner/repo.git', 'main')).toBe(
       'https://github.com/owner/repo/tree/main',
-    );
-  });
-});
-
-describe('buildGitHubIssuesUrl', () => {
-  it('returns null when remoteUrl is null', () => {
-    expect(buildGitHubIssuesUrl(null)).toBeNull();
-  });
-
-  it('returns null for non-GitHub remote', () => {
-    expect(buildGitHubIssuesUrl('https://gitlab.com/owner/repo')).toBeNull();
-  });
-
-  it('builds issues URL for HTTPS remote', () => {
-    expect(buildGitHubIssuesUrl('https://github.com/owner/repo')).toBe(
-      'https://github.com/owner/repo/issues',
-    );
-  });
-
-  it('works for SSH remote', () => {
-    expect(buildGitHubIssuesUrl('git@github.com:owner/repo.git')).toBe(
-      'https://github.com/owner/repo/issues',
     );
   });
 });
