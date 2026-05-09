@@ -132,15 +132,25 @@ describe('derivePreviewState', () => {
 
   // exactly 0 tool_use with no assistant message → waiting
   it('returns waiting when active with user-only messages and no tool_use', () => {
-    const items = [makeItem({ type: 'message', role: 'user', content: 'hello', sequenceNumber: 1 })];
+    const items = [
+      makeItem({ type: 'message', role: 'user', content: 'hello', sequenceNumber: 1 }),
+    ];
     const result = derivePreviewState(items, false);
     expect(result.kind).toBe('waiting');
   });
 
   // Copilot CLI fixture: tool_use with null role → tool-count-only
   it('is platform-agnostic: Copilot CLI tool_use items (null role) are counted', () => {
-    const copilotToolUse = makeItem({ type: 'tool_use', role: null, content: '', sequenceNumber: 1 });
-    const result = derivePreviewState([copilotToolUse, { ...copilotToolUse, id: 'out-2', sequenceNumber: 2 }], false);
+    const copilotToolUse = makeItem({
+      type: 'tool_use',
+      role: null,
+      content: '',
+      sequenceNumber: 1,
+    });
+    const result = derivePreviewState(
+      [copilotToolUse, { ...copilotToolUse, id: 'out-2', sequenceNumber: 2 }],
+      false,
+    );
     expect(result.kind).toBe('tool-count-only');
     if (result.kind === 'tool-count-only') {
       expect(result.count).toBe(2);

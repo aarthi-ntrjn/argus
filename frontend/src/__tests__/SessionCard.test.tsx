@@ -257,18 +257,14 @@ describe('SessionCard — last output preview', () => {
       makeOutput({ type: 'tool_use', role: null, content: '', id: 'out-2', sequenceNumber: 2 }),
       makeOutput({ type: 'tool_use', role: null, content: '', id: 'out-3', sequenceNumber: 3 }),
     ]);
-    await waitFor(() =>
-      expect(screen.getByText('3 tools', { exact: false })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('3 tools', { exact: false })).toBeInTheDocument());
   });
 
   it('shows "↻ 1 tools" overlay when exactly 1 tool_use and no assistant message', async () => {
     renderCard(makeSession(), [
       makeOutput({ type: 'tool_use', role: null, content: '', sequenceNumber: 1 }),
     ]);
-    await waitFor(() =>
-      expect(screen.getByText('1 tools', { exact: false })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('1 tools', { exact: false })).toBeInTheDocument());
   });
 });
 

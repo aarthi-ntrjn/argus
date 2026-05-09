@@ -30,9 +30,8 @@ export type PreviewState =
 
 /** Derives the preview state for the session card from the output item snapshot. */
 export function derivePreviewState(items: SessionOutput[], isTerminated: boolean): PreviewState {
-  const lastAssistant = [...items]
-    .reverse()
-    .find((i) => i.type === 'message' && i.role === 'assistant') ?? null;
+  const lastAssistant =
+    [...items].reverse().find((i) => i.type === 'message' && i.role === 'assistant') ?? null;
 
   if (isTerminated) {
     return lastAssistant && lastAssistant.content?.trim()
@@ -42,9 +41,8 @@ export function derivePreviewState(items: SessionOutput[], isTerminated: boolean
 
   // If the user sent a new prompt after the last assistant reply, treat it as a
   // fresh turn: hide the old reply and only count tool calls in the new turn.
-  const lastUser = [...items]
-    .reverse()
-    .find((i) => i.type === 'message' && i.role === 'user') ?? null;
+  const lastUser =
+    [...items].reverse().find((i) => i.type === 'message' && i.role === 'user') ?? null;
   const newTurnStarted =
     lastUser !== null &&
     (lastAssistant === null || lastUser.sequenceNumber > lastAssistant.sequenceNumber);
