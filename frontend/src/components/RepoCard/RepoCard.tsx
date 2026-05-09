@@ -2,7 +2,7 @@ import type { Repository, Session } from '../../types';
 import type { PendingLauncher } from '../../hooks/usePendingLaunchers';
 import { buildGitHubCompareUrl } from '../../utils/repoUtils';
 import { postTelemetryEvent } from '../../services/api';
-import { GitCompare, GitPullRequest } from 'lucide-react';
+import { GitCompare } from 'lucide-react';
 import Badge from '../Badge';
 import LaunchDropdown from '../LaunchDropdown/LaunchDropdown';
 import SessionCard from '../SessionCard/SessionCard';
@@ -105,22 +105,6 @@ export default function RepoCard({
               }}
             >
               <GitCompare size={14} aria-hidden="true" />
-            </a>
-          )}
-          {repo.prUrl && (
-            <a
-              href={repo.prUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="View pull request on GitHub"
-              aria-label="View pull request on GitHub"
-              className="inline-flex items-center text-gray-400 hover:text-purple-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                postTelemetryEvent('repo_pr_opened');
-              }}
-            >
-              <GitPullRequest size={14} aria-hidden="true" />
             </a>
           )}
         </div>

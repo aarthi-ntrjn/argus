@@ -1,10 +1,9 @@
 import { randomUUID } from 'crypto';
-import type { SessionOutput, OutputRole, OutputType } from '../../models/index.js';
+import type { SessionOutput, OutputRole } from '../../models/index.js';
 
 interface ContentBlock {
   type: string;
   text?: string;
-  thinking?: string;
   tool_use_id?: string;
   content?: unknown;
   id?: string;
@@ -121,24 +120,6 @@ function parseAssistantEntry(
   const results: SessionOutput[] = [];
   let blockIndex = 0;
   const nextId = () => (makeId ? makeId(blockIndex++) : randomUUID());
-  const push = (
-    type: OutputType,
-    role: OutputRole | null,
-    blockContent: string,
-    toolName: string | null,
-    toolCallId: string | null,
-  ) =>
-    results.push({
-      id: nextId(),
-      sessionId,
-      timestamp,
-      type,
-      role,
-      content: blockContent,
-      toolName,
-      toolCallId,
-      sequenceNumber,
-    });
 
   if (!Array.isArray(content)) {
     return results;
@@ -146,19 +127,29 @@ function parseAssistantEntry(
 
   for (const block of content) {
     if (block.type === 'text') {
-      push('message', 'assistant' as OutputRole, block.text ?? '', null, null);
+      results.push({
+        id: nextId(),
+        sessionId,
+        timestamp,
+        type: 'message',
+        role: 'assistant' as OutputRole,
+        content: block.text ?? '',
+        toolName: null,
+        toolCallId: null,
+        sequenceNumber,
+      });
     } else if (block.type === 'tool_use') {
-      push(
-        'tool_use',
-        null,
-        JSON.stringify(block.input ?? {}),
-        block.name ?? null,
-        block.id ?? null,
-      );
-    } else if (block.type === 'thinking') {
-      push('thinking', null, block.thinking ?? '', null, null);
-    } else if (block.type === 'redacted_thinking') {
-      push('thinking', null, '[redacted]', null, null);
+      results.push({
+        id: nextId(),
+        sessionId,
+        timestamp,
+        type: 'tool_use',
+        role: null,
+        content: JSON.stringify(block.input ?? {}),
+        toolName: block.name ?? null,
+        toolCallId: block.id ?? null,
+        sequenceNumber,
+      });
     }
   }
 

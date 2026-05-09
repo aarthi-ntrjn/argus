@@ -20,13 +20,7 @@ export type PidSource = 'session_registry' | 'pty_registry' | 'lockfile';
 export type ControlActionType = 'stop' | 'send_prompt' | 'interrupt';
 export type ControlActionStatus = 'pending' | 'sent' | 'completed' | 'failed' | 'not_supported';
 export type RepositorySource = 'config' | 'ui';
-export type OutputType =
-  | 'message'
-  | 'tool_use'
-  | 'tool_result'
-  | 'error'
-  | 'status_change'
-  | 'thinking';
+export type OutputType = 'message' | 'tool_use' | 'tool_result' | 'error' | 'status_change';
 export type OutputRole = 'user' | 'assistant';
 
 export interface Repository {

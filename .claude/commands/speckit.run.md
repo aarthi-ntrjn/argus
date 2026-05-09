@@ -251,7 +251,6 @@ If `$ARGUMENTS` is empty, do NOT error. Instead, detect the current feature and 
 - **Never wait between phases** unless a user-input gate is triggered.
 - **Always commit** after each phase with the feature number and a descriptive message.
 - **Always push** after each commit (`git push`).
-- **Never invoke `/merge`** — the pipeline ends after IMPLEMENT. After printing the final summary, tell the user they can run `/merge` when they are ready. Do not invoke it automatically.
 - If `$ARGUMENTS` is empty, run Phase 0 (RESUME DETECTION) — do NOT error immediately. Only error if no in-progress feature is found on the current branch.
 - If any script or tool fails, halt with a clear error and the exact command that failed.
 - Constitution violations in Phase 5 that cannot be justified MUST block implementation.
