@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.17] - 2026-05-09
+
+### Added
+
+- **Tool call count badge**: Session cards now show a spinning overlay badge with a live tool call count while the AI is processing tool calls. The badge fades in when tool calls begin and disappears when the AI is idle.
+- **Prompt clear on send**: The previous AI reply is cleared from the session card preview when the user sends a new prompt, so the card always reflects the current exchange.
+- **Repo card GitHub links**: Repository cards now show a clickable branch chip that links to the branch on GitHub, and a PR indicator that opens a new pull request for that branch. Both links open in a new tab.
+- **Pending session card**: A placeholder spinner card now appears in the session list the moment a user clicks "Launch with Argus", providing immediate visual feedback before the session connects.
+- **Todo list filter**: The add-todo input field now doubles as a live filter for the todo list. Typing narrows the rows in real time; pressing Enter adds a new item. The Delete key removes a focused todo row.
+- **Copilot CLI hooks integration**: Copilot CLI sessions now participate in the Attention Needed (pending choice) system via hooks, unified with the Claude Code hook pipeline. Session lifecycle events and ask_user prompts are handled consistently across both AI platforms.
+
+### Fixed
+
+- **Security**: Upgraded `@fastify/static`, `fastify`, and `postcss` to patch known vulnerabilities.
+- **Integration update noise**: Eliminated duplicate session.updated broadcasts to Teams and Slack caused by `lastActivityAt` changes and resting-state transitions.
+- **Integration status push**: Integration start/stop status is now broadcast via WebSocket immediately on change, rather than requiring a page refresh.
+- **Focus-refetch eliminated**: Queries driven by WebSocket (sessions, todos, settings, available tools, update status) no longer silently re-fetch when the browser tab regains focus.
+- **Update status push**: The software update status is now pushed via WebSocket rather than polled every 60 seconds.
+- **Process identity verification**: `isExpectedProcess` now fails closed when process identity cannot be verified, preventing ghost PID false-positives from OS PID reuse.
+- **Tool group stream jump**: In-flight `tool_use` entries are now folded into the active tool group to prevent the output stream from jumping mid-render.
+- **Launch script path**: Fixed a broken launch path (dist/cli to dist/launch-pty) introduced by the backend source reorganization.
+- **Notifier seeding**: Active sessions are now seeded into Teams and Slack notifiers on startup, so integrations receive updates for sessions that were already running when the notifier initialized.
+
+---
+
 ## [0.1.16] - 2026-05-04
 
 ### Added
