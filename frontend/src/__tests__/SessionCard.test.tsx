@@ -250,6 +250,26 @@ describe('SessionCard — last output preview', () => {
     await waitFor(() => expect(screen.getByText('second reply')).toBeInTheDocument());
     expect(screen.queryByText('tool output')).not.toBeInTheDocument();
   });
+
+  it('shows "Running... 3 tool calls" when 3 tool_use items and no assistant message', async () => {
+    renderCard(makeSession(), [
+      makeOutput({ type: 'tool_use', role: null, content: '', sequenceNumber: 1 }),
+      makeOutput({ type: 'tool_use', role: null, content: '', id: 'out-2', sequenceNumber: 2 }),
+      makeOutput({ type: 'tool_use', role: null, content: '', id: 'out-3', sequenceNumber: 3 }),
+    ]);
+    await waitFor(() =>
+      expect(screen.getByText('Running... 3 tool calls')).toBeInTheDocument(),
+    );
+  });
+
+  it('shows "Running... 1 tool call" (singular) when exactly 1 tool_use and no assistant message', async () => {
+    renderCard(makeSession(), [
+      makeOutput({ type: 'tool_use', role: null, content: '', sequenceNumber: 1 }),
+    ]);
+    await waitFor(() =>
+      expect(screen.getByText('Running... 1 tool call')).toBeInTheDocument(),
+    );
+  });
 });
 
 describe('SessionCard — hook-aware pending choice (T016)', () => {
