@@ -4,6 +4,7 @@ import type { SessionOutput, OutputRole } from '../../models/index.js';
 interface ContentBlock {
   type: string;
   text?: string;
+  thinking?: string;
   tool_use_id?: string;
   content?: unknown;
   id?: string;
@@ -148,6 +149,30 @@ function parseAssistantEntry(
         content: JSON.stringify(block.input ?? {}),
         toolName: block.name ?? null,
         toolCallId: block.id ?? null,
+        sequenceNumber,
+      });
+    } else if (block.type === 'thinking') {
+      results.push({
+        id: nextId(),
+        sessionId,
+        timestamp,
+        type: 'thinking',
+        role: null,
+        content: block.thinking ?? '',
+        toolName: null,
+        toolCallId: null,
+        sequenceNumber,
+      });
+    } else if (block.type === 'redacted_thinking') {
+      results.push({
+        id: nextId(),
+        sessionId,
+        timestamp,
+        type: 'thinking',
+        role: null,
+        content: '[redacted]',
+        toolName: null,
+        toolCallId: null,
         sequenceNumber,
       });
     }
