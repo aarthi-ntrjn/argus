@@ -10,6 +10,7 @@ import { useIntegrationControl } from '../hooks/useIntegrationControl';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { useRepositoryManagement } from '../hooks/useRepositoryManagement';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { usePendingLaunchers } from '../hooks/usePendingLaunchers';
 import { Button } from '../components/Button';
 import { SettingsPanel } from '../components/SettingsPanel';
 import {
@@ -29,6 +30,7 @@ import { buildDashboardTourSteps, REPO_CATCH_UP_STEPS } from '../config/dashboar
 import RepoCard from '../components/RepoCard/RepoCard';
 import type { RepoWithSessions } from '../components/RepoCard/RepoCard';
 import FolderInputDialog from '../components/FolderInputDialog/FolderInputDialog';
+import { onEvent } from '../services/socket';
 import type { Session } from '../types';
 
 const ENDED_STATUSES = new Set(['completed', 'ended']);
@@ -120,6 +122,25 @@ export default function DashboardPage() {
     message: string;
   } | null>(null);
 
+  const { pendingLaunchers, addPending, removePending } = usePendingLaunchers();
+
+  useEffect(() => {
+    const offCreated = onEvent('session.created', (data) => {
+      const session = data as Session;
+      if (session.ptyLaunchId) {
+        removePending(session.ptyLaunchId);
+      }
+    });
+    const offGone = onEvent('launcher.pending.gone', (data) => {
+      const { ptyLaunchId } = data as { ptyLaunchId: string };
+      removePending(ptyLaunchId);
+    });
+    return () => {
+      offCreated();
+      offGone();
+    };
+  }, [removePending]);
+
   async function handleUpdateNow() {
     setIsUpdating(true);
     setUpdateBanner(null);
@@ -189,6 +210,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ['repositories'],
     queryFn: getRepositories,
+    refetchOnWindowFocus: false,
   });
 
   const {
@@ -198,6 +220,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ['sessions'],
     queryFn: () => getSessions(),
+    refetchOnWindowFocus: false,
   });
 
   // When the selected session ends, auto-switch to the first still-active session
@@ -329,19 +352,26 @@ export default function DashboardPage() {
   // Repo cards list — shared between mobile sessions tab and desktop layout
   const repoList = (
     <div className="space-y-6">
-      {reposWithSessions.map((repo) => (
-        <RepoCard
-          key={repo.id}
-          repo={repo}
-          skipConfirm={skipConfirm}
-          selectedSessionId={selectedSessionId}
-          isMobile={isMobile}
-          onRemoveById={handleRemoveRepoById}
-          onSetRemoveConfirm={setRemoveConfirmId}
-          onSelectSession={handleSessionSelect}
-          onLaunchError={setLaunchError}
-        />
-      ))}
+      {reposWithSessions.map((repo) => {
+        const repoPending = Array.from(pendingLaunchers.values()).filter(
+          (pl) => pl.repoPath === repo.path,
+        );
+        return (
+          <RepoCard
+            key={repo.id}
+            repo={repo}
+            skipConfirm={skipConfirm}
+            selectedSessionId={selectedSessionId}
+            isMobile={isMobile}
+            pendingLaunchers={repoPending}
+            onRemoveById={handleRemoveRepoById}
+            onSetRemoveConfirm={setRemoveConfirmId}
+            onSelectSession={handleSessionSelect}
+            onLaunchError={setLaunchError}
+            onLaunchPending={(id, tool) => addPending(id, repo.path, tool)}
+          />
+        );
+      })}
     </div>
   );
 

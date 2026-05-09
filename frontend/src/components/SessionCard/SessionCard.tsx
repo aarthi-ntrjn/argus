@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Session } from '../../types';
 import { getSessionOutput } from '../../services/api';
-import { isInactive, type PendingChoice } from '../../utils/sessionUtils';
+import { isInactive, derivePreviewState, type PendingChoice } from '../../utils/sessionUtils';
 import { useArgusSettings } from '../../hooks/useArgusSettings';
 import SessionPromptBar, {
   type SessionPromptBarHandle,
@@ -63,14 +63,8 @@ function SessionCard({ session, selected, onSelect }: Props) {
   const promptBarRef = useRef<SessionPromptBarHandle>(null);
 
   const items = lastOutput?.items ?? [];
-  const previewItem =
-    [...items]
-      .reverse()
-      .find(
-        (i: import('../../types').SessionOutput) => i.type === 'message' && i.role === 'assistant',
-      ) ?? null;
-  const previewContent = previewItem?.content?.trim() ?? null;
   const isTerminated = session.status === 'ended' || session.status === 'completed';
+  const preview = derivePreviewState(items, isTerminated);
   const pendingChoice = isTerminated ? null : hookPendingChoice;
 
   return (
@@ -79,7 +73,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
       tabIndex={0}
       aria-pressed={selected}
       aria-label={`Session ${session.id.slice(0, 8)} — ${session.status}. Press Enter to ${selected ? 'close' : 'view'} output.`}
-      className={`interactive-card p-4 ${selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-neutral-400 hover:bg-neutral-100'} ${isInactive(session, thresholdMs) && !selected ? 'opacity-75' : ''}`}
+      className={`interactive-card animate-fade-in p-4 ${selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-neutral-400 hover:bg-neutral-100'} ${isInactive(session, thresholdMs) && !selected ? 'opacity-75' : ''}`}
       onClick={() => onSelect?.(session.id)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -118,29 +112,46 @@ function SessionCard({ session, selected, onSelect }: Props) {
       )}
 
       {/* Last output preview — fixed 2-line height */}
-      <div
-        className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 break-words font-mono min-h-[2.5rem] ${previewContent ? 'text-gray-300' : 'text-gray-500 italic'}`}
-      >
-        {previewContent ? (
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              p: ({ children }) => <span>{children}</span>,
-              code: ({ children }) => (
-                <code className="bg-gray-700 rounded px-0.5">{children}</code>
-              ),
-              strong: ({ children }) => (
-                <strong className="text-white font-semibold">{children}</strong>
-              ),
-              em: ({ children }) => <em>{children}</em>,
-              a: ({ children }) => <span className="text-blue-400 underline">{children}</span>,
-            }}
-          >
-            {previewContent}
-          </ReactMarkdown>
-        ) : (
-          'Waiting for output...'
-        )}
+      <div className="relative mt-2">
+        <div
+          className={`text-xs bg-gray-900 px-2 py-1 rounded line-clamp-2 break-words font-mono min-h-[2.5rem] ${preview.kind === 'waiting' || preview.kind === 'tool-count-only' ? 'text-gray-500 italic' : 'text-gray-300'}`}
+        >
+          {(preview.kind === 'waiting' || preview.kind === 'tool-count-only') &&
+            'Waiting for output...'}
+          {(preview.kind === 'text-only' || preview.kind === 'text-plus-count') && (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <span>{children}</span>,
+                code: ({ children }) => (
+                  <code className="bg-gray-700 rounded px-0.5">{children}</code>
+                ),
+                strong: ({ children }) => (
+                  <strong className="text-white font-semibold">{children}</strong>
+                ),
+                em: ({ children }) => <em>{children}</em>,
+                a: ({ children }) => <span className="text-blue-400 underline">{children}</span>,
+              }}
+            >
+              {preview.content}
+            </ReactMarkdown>
+          )}
+        </div>
+        {(() => {
+          const showBadge =
+            preview.kind === 'tool-count-only' || preview.kind === 'text-plus-count';
+          const toolCount = showBadge ? (preview as { count: number }).count : 0;
+          return (
+            <span
+              className={`absolute right-1.5 top-1 bg-purple-950 text-white text-xs px-1.5 py-0.5 rounded font-mono not-italic transition-opacity duration-200 ${showBadge ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            >
+              <span className="inline-block animate-spin" style={{ animationDuration: '3s' }}>
+                ↻
+              </span>{' '}
+              {toolCount} tools
+            </span>
+          );
+        })()}
       </div>
 
       {session.launchMode === 'pty' && (

@@ -39,7 +39,7 @@ vi.mock('../../src/api/ws/event-dispatcher.js', () => ({
 const mockHas = vi.hoisted(() => vi.fn().mockReturnValue(false));
 const mockClaimForSession = vi.hoisted(() => vi.fn().mockReturnValue(null));
 const mockGetClaimedPid = vi.hoisted(() => vi.fn().mockReturnValue(null));
-vi.mock('../../src/services/pty-registry.js', () => ({
+vi.mock('../../src/launch-pty/pty-registry.js', () => ({
   ptyRegistry: {
     claimForSession: mockClaimForSession,
     has: mockHas,
@@ -57,7 +57,7 @@ vi.mock('ps-list', () => ({ default: mockPsList }));
 // copilot-cli-detector uses isPidRunning (not ps-list) for liveness checks.
 const mockIsPidRunning = vi.hoisted(() => vi.fn((_pid: number) => false));
 const mockIsExpectedProcess = vi.hoisted(() => vi.fn((_pid: number, _type: string) => true));
-vi.mock('../../src/services/process-utils.js', () => ({
+vi.mock('../../src/utils/process-utils.js', () => ({
   isPidRunning: mockIsPidRunning,
   isExpectedProcess: mockIsExpectedProcess,
   detectYoloModeFromPids: vi.fn().mockReturnValue(null),
@@ -71,7 +71,7 @@ vi.mock('chokidar', () => ({
   },
 }));
 
-import { CopilotCliDetector } from '../../src/services/copilot-cli-detector.js';
+import { CopilotCliDetector } from '../../src/cli/copilot-cli/copilot-cli-detector.js';
 
 describe('CopilotCliDetector', () => {
   let testDir: string;
@@ -100,20 +100,26 @@ updated_at: ${new Date().toISOString()}
   });
 
   beforeEach(() => {
-    mockClaimForSession.mockClear();
-    mockHas.mockClear();
-    mockGetSession.mockClear();
-    mockPsList.mockClear();
+    // mockReset (not mockClear) so mockReturnValueOnce queues from prior tests
+    // don't leak into this one. Re-establish defaults after reset.
+    mockClaimForSession.mockReset();
+    mockClaimForSession.mockReturnValue(null);
+    mockHas.mockReset();
+    mockHas.mockReturnValue(false);
+    mockGetSession.mockReset();
+    mockGetSession.mockReturnValue(undefined);
+    mockPsList.mockReset();
+    mockPsList.mockResolvedValue([]);
     mockBroadcast.mockClear();
     mockUpsertSession.mockClear();
     mockIsPidRunning.mockReset();
-    mockIsPidRunning.mockReturnValue(false); // default: testPid not running
+    mockIsPidRunning.mockReturnValue(false);
     mockIsExpectedProcess.mockReset();
-    mockIsExpectedProcess.mockReturnValue(true); // default: process name check passes
-    mockPsList.mockResolvedValue([]); // default: no running processes
+    mockIsExpectedProcess.mockReturnValue(true);
   });
 
   it('detects session directory with lock file', async () => {
+    mockIsPidRunning.mockReturnValueOnce(true);
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
     expect(sessions.length).toBeGreaterThanOrEqual(1);
@@ -122,11 +128,14 @@ updated_at: ${new Date().toISOString()}
     expect(session?.pid).toBe(testPid);
   });
 
-  it('marks session as ended when PID not running', async () => {
+  it('skips entry with non-running PID (caller handles ending via dropped-off detection)', async () => {
+    // PID not running by default. The base scan() filters out dead-pid entries
+    // before calling processSessionEntry, so the entry never produces a session.
+    // Sessions tracked as active in the DB are ended by dispatchSessionEvents'
+    // dropped-off check (covered by handleSessionEnd-style tests elsewhere).
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
-    const session = sessions.find((s) => s.id === testSessionId);
-    expect(session?.status).toBe('ended');
+    expect(sessions.find((s) => s.id === testSessionId)).toBeUndefined();
   });
 
   it('sets launchMode=pty when ptyRegistry has a pending connection for the same cwd', async () => {
@@ -147,17 +156,13 @@ updated_at: ${new Date().toISOString()}
     expect(mockClaimForSession).toHaveBeenCalledWith(testSessionId, testRepoCwd, 'copilot-cli');
   });
 
-  it('does not claim pending PTY connection for a non-running (ended) session', async () => {
-    // isRunning = false (default mockPsList returns [] — testPid not running)
-    // The pending WS should NOT be claimed by an ended session so a new active session
-    // in the same cwd can claim it instead. Do NOT set mockReturnValueOnce here —
-    // claimForSession must not be called at all.
-
+  it('does not claim pending PTY connection for a non-running session', async () => {
+    // isRunning = false (default). The base scan() filters out dead-pid entries
+    // before processSessionEntry runs, so claimForSession must not be called.
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
-    const session = sessions.find((s) => s.id === testSessionId);
 
-    expect(session?.launchMode).toBeNull();
+    expect(sessions.find((s) => s.id === testSessionId)).toBeUndefined();
     expect(mockClaimForSession).not.toHaveBeenCalled();
   });
 
@@ -175,31 +180,33 @@ updated_at: ${new Date().toISOString()}
     expect(session?.pidSource).toBe('lockfile');
   });
 
-  it('re-claims a new pending WS when alreadyClaimed=true, WS disconnected, and process still running (Argus restart)', async () => {
-    // Make testPid appear running so the re-link path is exercised
+  it('preserves existing PTY metadata when alreadyClaimed=true, WS disconnected, and process still running (no re-link)', async () => {
+    // A real Argus restart re-binds the launcher via promotePendingToSession in launcher.ts
+    // BEFORE scan runs, so ptyRegistry.has() is true at scan time. This test covers the
+    // distinct case where the launcher process itself died and a new launcher connected for
+    // the same repo. We must NOT silently re-bind the new launcher's WS to the existing
+    // sessionId: that new launcher just spawned a new CLI process with its own sessionId.
     mockIsPidRunning.mockReturnValueOnce(true);
     mockPsList.mockResolvedValueOnce([{ pid: testPid, name: 'copilot', ppid: 1 }]);
-    // Simulate: DB has launchMode:'pty' but in-memory WS is gone (Argus restarted)
     mockGetSession.mockReturnValueOnce({
       id: testSessionId,
       launchMode: 'pty',
-      pid: 11111,
+      pid: testPid,
       hostPid: 10000,
       pidSource: 'pty_registry' as const,
       status: 'active',
     });
     mockHas.mockReturnValueOnce(false);
-    mockClaimForSession.mockReturnValueOnce({ pid: 22222, hostPid: 20000 });
 
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
     const session = sessions.find((s) => s.id === testSessionId);
 
     expect(session?.launchMode).toBe('pty');
-    expect(session?.pid).toBe(22222);
-    expect(session?.hostPid).toBe(20000);
+    expect(session?.pid).toBe(testPid);
+    expect(session?.hostPid).toBe(10000);
     expect(session?.pidSource).toBe('pty_registry');
-    expect(mockClaimForSession).toHaveBeenCalledWith(testSessionId, testRepoCwd, 'copilot-cli');
+    expect(mockClaimForSession).not.toHaveBeenCalled();
   });
 
   it('skips ended+not-running session and does not re-claim (no re-claim)', async () => {
@@ -431,21 +438,24 @@ updated_at: ${new Date().toISOString()}
 `);
   });
 
-  it('marks session as ended when PID is alive but belongs to wrong process (new session)', async () => {
-    // PID is alive but isExpectedProcess returns false — a recycled PID owned by an unrelated process.
+  it('skips entry when PID is alive but belongs to wrong process (PID reuse)', async () => {
+    // PID is alive but isExpectedProcess returns false — a recycled PID owned by an unrelated
+    // process. The base scan() filters this out via isExpectedProcessAlive before
+    // processSessionEntry is called.
     mockIsPidRunning.mockReturnValueOnce(true);
     mockIsExpectedProcess.mockReturnValueOnce(false);
 
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
-    const session = sessions.find((s) => s.id === testSessionId);
 
-    expect(session?.status).toBe('ended');
+    expect(sessions.find((s) => s.id === testSessionId)).toBeUndefined();
+    expect(mockIsExpectedProcess).toHaveBeenCalledWith(testPid, SessionTypes.COPILOT_CLI);
   });
 
-  it('marks session as ended when PID is alive but belongs to wrong process (active session in DB)', async () => {
-    // Simulate ghost: DB has the session as active, PID is alive but belongs to wrong process.
-    // This is the "stale lock file + PID recycled by code.exe" scenario.
+  it('skips PID-reuse entry even when DB has the session as active (dropped-off ends it later)', async () => {
+    // Stale lock file + PID recycled by an unrelated process. The DB tracks the session
+    // as active, but the live process at this PID is something else. scan() filters
+    // out the entry, and dispatchSessionEvents' dropped-off check ends the DB row.
     mockIsPidRunning.mockReturnValueOnce(true);
     mockIsExpectedProcess.mockReturnValueOnce(false);
     mockGetSession.mockReturnValueOnce({
@@ -459,9 +469,8 @@ updated_at: ${new Date().toISOString()}
 
     const detector = new CopilotCliDetector(testDir);
     const sessions = await detector.scan();
-    const session = sessions.find((s) => s.id === testSessionId);
 
-    expect(session?.status).toBe('ended');
+    expect(sessions.find((s) => s.id === testSessionId)).toBeUndefined();
     expect(mockIsExpectedProcess).toHaveBeenCalledWith(testPid, SessionTypes.COPILOT_CLI);
   });
 });

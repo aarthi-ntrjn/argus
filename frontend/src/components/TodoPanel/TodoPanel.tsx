@@ -12,13 +12,11 @@ import type { TodoItem } from '../../types';
 
 type RowId = string;
 
-function newDraftId() {
-  return 'draft-' + crypto.randomUUID();
-}
-
 function isDraft(id: RowId) {
   return id.startsWith('draft-');
 }
+
+const DRAFT_ID = 'draft-add-row';
 
 function formatRelativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -72,7 +70,16 @@ function TodoRow({
 }: TodoRowProps) {
   const { done } = todo;
   return (
-    <li key={todo.id} className="group flex items-center gap-2 px-4 py-[3px]">
+    <li
+      key={todo.id}
+      className="group flex items-center gap-2 px-4 py-[3px]"
+      onKeyDown={(e) => {
+        if (e.key === 'Delete') {
+          e.preventDefault();
+          onDelete(todo.id);
+        }
+      }}
+    >
       <Checkbox
         checked={done}
         onChange={() => onToggle(todo.id, done)}
@@ -148,22 +155,10 @@ export default function TodoPanel() {
   const toggleTodo = useToggleTodo();
   const deleteTodo = useDeleteTodo();
 
-  // Single persistent add row at the bottom. Changing the ID unmounts/remounts
-  // the input (resetting it to empty) without any visible flicker.
-  const [addRowId, setAddRowId] = useState(() => newDraftId());
-  const shouldFocusAdd = useRef(false);
-  const resetAddRow = useCallback(() => {
-    shouldFocusAdd.current = true;
-    setAddRowId(newDraftId());
-  }, []);
-
-  // After remount (key change), focus the new input
-  useEffect(() => {
-    if (shouldFocusAdd.current) {
-      shouldFocusAdd.current = false;
-      addRowRef.current?.focus();
-    }
-  }, [addRowId]);
+  // Controlled input value: doubles as the live filter and the new-todo draft text.
+  // Typing filters the list below; Enter creates a todo and clears this back to ''.
+  // Blur does nothing — text stays so the filter remains active.
+  const [filterText, setFilterText] = useState('');
 
   const [showDone, setShowDone] = useState(() => {
     const v = localStorage.getItem('argus.todo.showDone');
@@ -188,13 +183,16 @@ export default function TodoPanel() {
     localStorage.setItem('argus.todo.wrapText', String(wrapText));
   }, [wrapText]);
 
-  const reversedTodos = useMemo(
-    () => [...todos].reverse().filter((todo) => showDone || !todo.done),
-    [todos, showDone],
-  );
+  const needle = filterText.trim().toLowerCase();
 
-  // Track IDs submitted via Enter so handleBlur doesn't double-save.
-  const savingIds = useRef<Set<string>>(new Set());
+  const reversedTodos = useMemo(
+    () =>
+      [...todos]
+        .reverse()
+        .filter((todo) => showDone || !todo.done)
+        .filter((todo) => needle === '' || todo.text.toLowerCase().includes(needle)),
+    [todos, showDone, needle],
+  );
 
   const addRowRef = useRef<HTMLInputElement>(null);
   const todoRefsMap = useRef<Map<string, HTMLTextAreaElement | null>>(new Map());
@@ -205,13 +203,13 @@ export default function TodoPanel() {
     }, 0);
   }, []);
 
-  const focusRow = useCallback((index: number, reversedTodos: typeof todos) => {
+  const focusRow = useCallback((index: number, reversedTodosArg: typeof todos) => {
     if (index === 0) {
       setTimeout(() => {
         addRowRef.current?.focus();
       }, 0);
     } else {
-      const target = reversedTodos[index - 1];
+      const target = reversedTodosArg[index - 1];
       if (target) {
         setTimeout(() => {
           todoRefsMap.current.get(target.id)?.focus();
@@ -222,25 +220,12 @@ export default function TodoPanel() {
 
   const handleBlur = useCallback(
     (id: RowId, value: string) => {
-      if (savingIds.current.has(id)) {
-        return;
-      }
-      const text = value.trim();
-
+      // Blur on the draft (add) row does nothing: text stays as the active filter.
       if (isDraft(id)) {
-        if (text.length > 0) {
-          savingIds.current.add(id);
-          createTodo.mutate(text, {
-            onSuccess: () => {
-              savingIds.current.delete(id);
-              resetAddRow();
-            },
-            onError: () => savingIds.current.delete(id),
-          });
-        }
         return;
       }
 
+      const text = value.trim();
       const todo = todos.find((t) => t.id === id);
       if (!todo) {
         return;
@@ -251,7 +236,7 @@ export default function TodoPanel() {
         updateTodoText.mutate({ id, text });
       }
     },
-    [todos, createTodo, updateTodoText, deleteTodo, resetAddRow],
+    [todos, updateTodoText, deleteTodo],
   );
 
   const handleKeyDown = useCallback(
@@ -259,7 +244,7 @@ export default function TodoPanel() {
       e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
       id: RowId,
       index: number,
-      reversedTodos: typeof todos = [],
+      reversedTodosArg: typeof todos = [],
     ) => {
       const value = e.currentTarget.value;
 
@@ -269,13 +254,11 @@ export default function TodoPanel() {
 
         if (isDraft(id)) {
           if (text.length > 0) {
-            savingIds.current.add(id);
             createTodo.mutate(text, {
               onSuccess: () => {
-                savingIds.current.delete(id);
-                resetAddRow();
+                setFilterText('');
+                addRowRef.current?.focus();
               },
-              onError: () => savingIds.current.delete(id),
             });
           }
         } else {
@@ -291,11 +274,11 @@ export default function TodoPanel() {
           deleteTodo.mutate(id);
         }
         if (index > 0) {
-          focusRow(index - 1, reversedTodos);
+          focusRow(index - 1, reversedTodosArg);
         }
       }
     },
-    [todos, createTodo, updateTodoText, deleteTodo, resetAddRow, focusAddRow, focusRow],
+    [todos, createTodo, updateTodoText, deleteTodo, focusAddRow, focusRow],
   );
 
   return (
@@ -385,13 +368,13 @@ export default function TodoPanel() {
             +
           </span>
           <input
-            key={addRowId}
             ref={addRowRef}
             type="text"
-            defaultValue=""
-            onBlur={(e) => handleBlur(addRowId, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(e, addRowId, 0)}
-            placeholder="Add a task…"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            onBlur={(e) => handleBlur(DRAFT_ID, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(e, DRAFT_ID, 0)}
+            placeholder="Add or search tasks"
             aria-label="New task"
             className="flex-1 min-w-0 text-sm px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700 placeholder-gray-400"
           />
@@ -401,7 +384,10 @@ export default function TodoPanel() {
         {isError && (
           <div className="px-4 py-6 text-center text-sm text-red-600">Failed to load todos.</div>
         )}
-        {!isLoading && !isError && todos.length > 0 && (
+        {!isLoading && !isError && reversedTodos.length === 0 && needle !== '' && (
+          <p className="px-4 py-6 text-center text-sm text-gray-500">No todos match your filter.</p>
+        )}
+        {!isLoading && !isError && todos.length > 0 && reversedTodos.length > 0 && (
           <ul className="divide-y divide-gray-50 py-1">
             {reversedTodos.map((todo, index) => (
               <TodoRow
@@ -414,7 +400,10 @@ export default function TodoPanel() {
                 todoRefsMap={todoRefsMap}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
-                onDelete={(id) => deleteTodo.mutate(id)}
+                onDelete={(id) => {
+                  deleteTodo.mutate(id);
+                  focusAddRow();
+                }}
                 onToggle={(id, done) => toggleTodo.mutate({ id, done: !done })}
               />
             ))}

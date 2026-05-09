@@ -121,4 +121,67 @@ describe('Hooks API', () => {
       expect(res.status).toBe(200);
     });
   });
+
+  describe('POST /hooks/copilot — event query parameter validation', () => {
+    it('returns 400 for missing event param', async () => {
+      const res = await request
+        .post('/hooks/copilot')
+        .send({ sessionId: VALID_UUID, cwd: '/some/path' });
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: 'INVALID_HOOK_EVENT' });
+    });
+
+    it('returns 400 for unrecognized event param', async () => {
+      const res = await request
+        .post('/hooks/copilot?event=unknownEvent')
+        .send({ sessionId: VALID_UUID });
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: 'INVALID_HOOK_EVENT' });
+    });
+
+    it('returns 400 for case-mismatch event param (must be camelCase)', async () => {
+      const res = await request
+        .post('/hooks/copilot?event=SessionStart')
+        .send({ sessionId: VALID_UUID });
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: 'INVALID_HOOK_EVENT' });
+    });
+  });
+
+  describe('POST /hooks/copilot — sessionId validation', () => {
+    it('returns 400 when sessionId is absent and cwd matches no repo', async () => {
+      const res = await request
+        .post('/hooks/copilot?event=sessionStart')
+        .send({ cwd: '/nonexistent/path' });
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: 'INVALID_SESSION_ID' });
+    });
+
+    it('returns 400 for non-UUID sessionId', async () => {
+      const res = await request
+        .post('/hooks/copilot?event=preToolUse')
+        .send({ sessionId: 'not-a-uuid', cwd: '/some/path' });
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: 'INVALID_SESSION_ID' });
+    });
+
+    it('returns 200 for valid UUID sessionId with unrecognized cwd (silent discard)', async () => {
+      const res = await request
+        .post('/hooks/copilot?event=sessionStart')
+        .send({ sessionId: VALID_UUID, cwd: '/nonexistent/path' });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ ok: true });
+    });
+  });
+
+  describe('POST /hooks/copilot — body size limit', () => {
+    it('returns 413 for body exceeding 64 KB', async () => {
+      const largeBody = JSON.stringify({ sessionId: VALID_UUID, data: 'x'.repeat(70 * 1024) });
+      const res = await request
+        .post('/hooks/copilot?event=sessionStart')
+        .set('Content-Type', 'application/json')
+        .send(largeBody);
+      expect(res.status).toBe(413);
+    });
+  });
 });

@@ -2,8 +2,8 @@ import { basename } from 'path';
 import { randomUUID } from 'crypto';
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
-import { ptyRegistry } from '../../services/pty-registry.js';
-import { resolveSessionIdByPid } from '../../services/session-pid-resolver.js';
+import { ptyRegistry } from '../../launch-pty/pty-registry.js';
+import { resolveSessionIdByPid } from '../../cli/session-pid-resolver.js';
 import {
   getSession,
   getSessionByPtyLaunchId,
@@ -13,7 +13,7 @@ import {
   insertRepository,
 } from '../../db/database.js';
 import { broadcast } from '../ws/event-dispatcher.js';
-import { detectYoloModeFromPids, isPidRunning } from '../../services/process-utils.js';
+import { detectYoloModeFromPids, isPidRunning } from '../../utils/process-utils.js';
 import type { Repository } from '../../models/index.js';
 import type { SessionType } from '../../models/index.js';
 import { telemetryService } from '../../services/telemetry-service.js';
@@ -348,7 +348,13 @@ const launcherRoutes: FastifyPluginAsync = async (fastify) => {
           }
         } else if (repoPath) {
           // Never claimed — claude never started or crashed before first hook.
+          const sessionType = ptyRegistry.getPendingSessionType(ptyLaunchId);
           ptyRegistry.unregisterPending(repoPath, ptyLaunchId);
+          broadcast({
+            type: 'launcher.pending.gone',
+            timestamp: new Date().toISOString(),
+            data: { ptyLaunchId, repoPath, sessionType: sessionType ?? 'claude-code' },
+          });
           fastify.log.info(
             { ptyLaunchId, repoPath, code },
             '[Launcher] disconnected before Claude hook, no session created',

@@ -5,8 +5,7 @@ export function useUpdateStatus(): UpdateStatus | undefined {
   const { data } = useQuery({
     queryKey: ['update-status'],
     queryFn: getUpdateStatus,
-    refetchInterval: 60_000,
-    staleTime: 55_000,
+    refetchOnWindowFocus: false,
   });
   return data;
 }

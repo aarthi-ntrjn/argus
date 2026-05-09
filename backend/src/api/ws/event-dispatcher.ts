@@ -5,7 +5,23 @@ import type {
   SessionOutput,
   ControlAction,
   PendingChoiceItem,
+  SessionType,
 } from '../../models/index.js';
+import type { UpdateStatus } from '../../services/update-service.js';
+
+export interface IntegrationStatusPayload {
+  integrationsEnabled: boolean;
+  slack: {
+    connectionStatus: 'connected' | 'stopped' | 'unconfigured';
+    notifier: { running: boolean } | null;
+    listener: { running: boolean } | null;
+  };
+  teams: {
+    connectionStatus: 'connected' | 'stopped' | 'unconfigured';
+    notifier: { running: boolean } | null;
+    listener: { running: boolean } | null;
+  };
+}
 
 export type WsEventType =
   | 'session.created'
@@ -17,12 +33,19 @@ export type WsEventType =
   | 'action.updated'
   | 'repository.added'
   | 'repository.updated'
-  | 'repository.removed';
+  | 'repository.removed'
+  | 'update.status'
+  | 'launcher.pending.gone';
 
 export type WsEvent =
   | { type: 'session.created'; timestamp: string; data: Session }
   | { type: 'session.updated'; timestamp: string; data: Session }
   | { type: 'session.ended'; timestamp: string; data: Session }
+  | {
+      type: 'launcher.pending.gone';
+      timestamp: string;
+      data: { ptyLaunchId: string; repoPath: string; sessionType: SessionType };
+    }
   | {
       type: 'session.pending_choice';
       timestamp: string;
@@ -42,7 +65,9 @@ export type WsEvent =
   | { type: 'action.updated'; timestamp: string; data: ControlAction }
   | { type: 'repository.added'; timestamp: string; data: Repository }
   | { type: 'repository.updated'; timestamp: string; data: Repository }
-  | { type: 'repository.removed'; timestamp: string; data: { id: string } };
+  | { type: 'repository.removed'; timestamp: string; data: { id: string } }
+  | { type: 'update.status'; timestamp: string; data: UpdateStatus }
+  | { type: 'integration.status'; timestamp: string; data: IntegrationStatusPayload };
 
 const clients = new Set<WebSocket>();
 

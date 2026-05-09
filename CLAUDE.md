@@ -15,9 +15,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Scripts**: All scripts (`.ps1`, `.sh`, `.mjs`, etc.) must go in `scripts/`. The `.specify/scripts/powershell/` folder is strictly reserved for scripts invoked directly by Speckit workflow steps. Do not put application or dev tooling scripts there.
 - **Documentation**: All `README-*.md` files must go in `docs/`. The only README at the repo root is `README.md`.
 
+## File Naming
+
+Backend service files are named by the AI platform they belong to, using a consistent prefix:
+
+- Files specific to Claude Code must be prefixed `claude-code-` (e.g. `claude-code-detector.ts`, `claude-code-hooks-injector.ts`, `claude-code-jsonl-watcher.ts`).
+- Files specific to Copilot CLI must be prefixed `copilot-cli-` (e.g. `copilot-cli-detector.ts`, `copilot-cli-hooks-injector.ts`, `copilot-cli-jsonl-watcher.ts`).
+- Shared/cross-cutting files do not carry a platform prefix.
+
+This applies to both source files and their corresponding test files.
+
 ## Writing Style
 
 - **Never use em dashes** (`—`) in any documentation, comments, or content. They are tiresome to read. Use a comma, colon, parentheses, or rewrite the sentence instead.
+
+## React Query Rules
+
+**`refetchOnWindowFocus` must always be `false`.** Never write a `useQuery` without `refetchOnWindowFocus: false`. The default (`true`) silently fires HTTP requests every time the user switches back to the tab, even when the data is kept current by WebSocket push or by mutations that call `setQueryData`. This has caused repeated bugs in this codebase. If you believe a query genuinely needs focus-refetch, stop and get explicit approval from the user before omitting the flag.
 
 ## Coding Style
 
@@ -28,6 +42,14 @@ All code must pass `npm run lint` and `npm run format` in both the `backend` and
 - **No `any` type** in production code. Use typed assertions (`err as { status?: number }`) or proper interfaces instead. Test files are exempt.
 - Formatting (indentation, spacing, quotes, trailing commas) is owned by **Prettier** — do not fight it. Run `npm run format --workspace=<backend|frontend>` to apply.
 - After generating new code, run `npm run lint:fix --workspace=<backend|frontend>` to auto-fix any violations before committing.
+
+## Comments
+
+Only add comments when they clarify intent that is not obvious from the code itself. Never describe what the code does — describe why it exists or what decision it encodes.
+
+- **Class-level docblocks**: Explain what the class is responsible for and any non-obvious design constraints (e.g. why it is global vs. per-repo). Keep to 2-4 sentences.
+- **Method comments**: One line, stating what the method achieves from the caller's point of view, not how it does it.
+- **Inline comments**: Use sparingly, only for genuinely surprising logic (e.g. a workaround, an edge case the reader could not infer). Never comment self-explanatory code.
 
 ## Decision Making
 
@@ -56,7 +78,7 @@ The Teams and Slack integrations live under `backend/src/integration/{teams,slac
 
 **Layering:** Notifiers handle outbound notifications only. Listeners handle inbound commands only. Notifiers do not parse commands. Listeners do not send session notifications. Cross-cutting concerns (rate limiting, DB access) go through shared services in `backend/src/services/`, not duplicated in each integration.
 
-**Session diff logic lives in `SessionDiffTracker` (`backend/src/services/session-diff-tracker.ts`), not in notifiers.** Notifiers own one `SessionDiffTracker` instance each. In `onSessionCreated`, call `diffTracker.seed(session)` after the thread is created. In `onSessionUpdated`, call `diffTracker.update(session)` — it returns `null` (no baseline, skip), `[]` (no changes, skip), or a `SessionChange[]` to format and send. In `onSessionEnded`, call `diffTracker.clear(session.id)` after posting. Notifiers must not contain their own field comparison logic, baseline maps, or formatting of "what changed" — only platform-specific message formatting and network calls.
+**Session diff logic lives in `SessionDiffTracker` (`backend/src/integration/session-diff-tracker.ts`), not in notifiers.** Notifiers own one `SessionDiffTracker` instance each. In `onSessionCreated`, call `diffTracker.seed(session)` after the thread is created. In `onSessionUpdated`, call `diffTracker.update(session)` — it returns `null` (no baseline, skip), `[]` (no changes, skip), or a `SessionChange[]` to format and send. In `onSessionEnded`, call `diffTracker.clear(session.id)` after posting. Notifiers must not contain their own field comparison logic, baseline maps, or formatting of "what changed" — only platform-specific message formatting and network calls.
 
 **API:** Start/stop endpoints live in `backend/src/api/routes/integrations.ts`. Any new integration must be registered there.
 

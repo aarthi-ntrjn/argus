@@ -1,3 +1,6 @@
+import type { SessionChange } from '../integration/session-diff-tracker.js';
+export type { SessionChange };
+
 export type SessionType = 'copilot-cli' | 'claude-code';
 
 export const SessionTypes = {
@@ -31,15 +34,6 @@ export interface Repository {
   remoteUrl?: string | null;
 }
 
-export interface ClaudeSessionRegistryEntry {
-  pid: number;
-  sessionId: string;
-  cwd: string;
-  startedAt: number;
-  kind: string;
-  entrypoint: string;
-}
-
 export interface Session {
   id: string;
   repositoryId: string;
@@ -59,6 +53,7 @@ export interface Session {
   yoloMode: boolean | null;
   ptyLaunchId?: string | null;
   ptyConnected?: boolean | null;
+  isResting?: boolean;
 }
 
 export interface SessionOutput {
@@ -203,9 +198,12 @@ export interface NotificationIntegration {
   readonly isRunning: boolean;
   initialize(): Promise<boolean>;
   onSessionCreated(session: Session): Promise<void>;
-  onSessionUpdated(session: Session): Promise<void>;
+  onSessionUpdated(session: Session, changes: SessionChange[]): Promise<void>;
   onSessionEnded(session: Session): Promise<void>;
   onSessionOutput(sessionId: string, outputs: SessionOutput[]): Promise<void>;
+  onPendingChoice(choice: PendingChoice): Promise<void>;
+  onRepositoryAdded(repo: Repository): Promise<void>;
+  onRepositoryRemoved(repo: Repository): Promise<void>;
   shutdown(): void;
 }
 

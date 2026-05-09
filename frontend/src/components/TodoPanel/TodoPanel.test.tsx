@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TodoPanel from './TodoPanel';
@@ -357,6 +357,59 @@ describe('TodoPanel', () => {
     });
   });
 
+  describe('Delete key on todo item', () => {
+    it('calls deleteTodo when Delete is pressed while the todo textarea is focused', async () => {
+      mockUseTodos.mockReturnValue({
+        data: baseTodos,
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useTodos>);
+      const mutate = vi.fn();
+      mockUseDeleteTodo.mockReturnValue(
+        makeMutation({ mutate }) as unknown as ReturnType<typeof useDeleteTodo>,
+      );
+      renderPanel();
+      const input = screen.getByRole('textbox', { name: /edit task: First task/i });
+      await userEvent.click(input);
+      await userEvent.keyboard('{Delete}');
+      expect(mutate).toHaveBeenCalledWith('1');
+    });
+
+    it('calls deleteTodo when Delete is pressed while the todo checkbox is focused', async () => {
+      mockUseTodos.mockReturnValue({
+        data: baseTodos,
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useTodos>);
+      const mutate = vi.fn();
+      mockUseDeleteTodo.mockReturnValue(
+        makeMutation({ mutate }) as unknown as ReturnType<typeof useDeleteTodo>,
+      );
+      renderPanel();
+      const checkbox = screen.getByRole('checkbox', { name: /mark "First task"/i });
+      await userEvent.click(checkbox);
+      await userEvent.keyboard('{Delete}');
+      expect(mutate).toHaveBeenCalledWith('1');
+    });
+
+    it('does not delete on Delete key pressed in the add-row', async () => {
+      mockUseTodos.mockReturnValue({
+        data: baseTodos,
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useTodos>);
+      const mutate = vi.fn();
+      mockUseDeleteTodo.mockReturnValue(
+        makeMutation({ mutate }) as unknown as ReturnType<typeof useDeleteTodo>,
+      );
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.click(addRow);
+      await userEvent.keyboard('{Delete}');
+      expect(mutate).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Backspace on empty input', () => {
     it('calls deleteTodo when Backspace is pressed on empty real todo', async () => {
       mockUseTodos.mockReturnValue({
@@ -432,6 +485,131 @@ describe('TodoPanel', () => {
         input.blur();
       });
       expect(mutate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('live filter (add-row doubles as filter input)', () => {
+    beforeEach(() => {
+      mockUseTodos.mockReturnValue({
+        data: baseTodos,
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useTodos>);
+    });
+
+    it('filters todos to only those containing the typed text (case-insensitive)', async () => {
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, 'first');
+      expect(screen.getByRole('textbox', { name: /edit task: First task/i })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: /edit task: Done task/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('filter is case-insensitive', async () => {
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, 'DONE');
+      expect(screen.getByRole('textbox', { name: /edit task: Done task/i })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: /edit task: First task/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('clearing the add-row restores all items', async () => {
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, 'first');
+      await userEvent.clear(addRow);
+      expect(screen.getByRole('textbox', { name: /edit task: First task/i })).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /edit task: Done task/i })).toBeInTheDocument();
+    });
+
+    it('whitespace-only input is treated as empty (all items shown)', async () => {
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, '   ');
+      expect(screen.getByRole('textbox', { name: /edit task: First task/i })).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /edit task: Done task/i })).toBeInTheDocument();
+    });
+
+    it('shows empty state message when filter matches nothing', async () => {
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, 'xyz');
+      expect(screen.getByText(/no todos match your filter/i)).toBeInTheDocument();
+    });
+
+    it('handles regex-special characters without throwing', () => {
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      // Characters like [ ( . * would break RegExp() but includes() is safe
+      fireEvent.change(addRow, { target: { value: '[(.*)]' } });
+      expect(addRow).toHaveValue('[(.*)]');
+    });
+
+    it('blurring the add-row does NOT call createTodo', async () => {
+      const mutate = vi.fn();
+      mockUseCreateTodo.mockReturnValue(makeMutation({ mutate }));
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, 'first');
+      act(() => {
+        addRow.blur();
+      });
+      expect(mutate).not.toHaveBeenCalled();
+    });
+
+    it('blurring the add-row leaves the typed text in the input', async () => {
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, 'first');
+      act(() => {
+        addRow.blur();
+      });
+      expect(addRow).toHaveValue('first');
+    });
+
+    it('pressing Enter creates a todo and clears the input', async () => {
+      const mutate = vi.fn().mockImplementation((_text, { onSuccess } = {}) => {
+        onSuccess?.();
+      });
+      mockUseCreateTodo.mockReturnValue(makeMutation({ mutate }));
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, 'first{Enter}');
+      expect(mutate).toHaveBeenCalledWith('first', expect.any(Object));
+      expect(addRow).toHaveValue('');
+    });
+  });
+
+  describe('filter + show-completed toggle compose', () => {
+    beforeEach(() => {
+      mockUseTodos.mockReturnValue({
+        data: baseTodos,
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useTodos>);
+    });
+
+    it('filter applies only to undone items when show-completed is off', async () => {
+      renderPanel();
+      await userEvent.click(screen.getByTitle(/hide completed|show completed/i));
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, 'task');
+      expect(screen.getByRole('textbox', { name: /edit task: First task/i })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: /edit task: Done task/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('filter shows both done and undone matching items when show-completed is on', async () => {
+      renderPanel();
+      const addRow = screen.getByRole('textbox', { name: /new task/i });
+      await userEvent.type(addRow, 'task');
+      expect(screen.getByRole('textbox', { name: /edit task: First task/i })).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /edit task: Done task/i })).toBeInTheDocument();
     });
   });
 });

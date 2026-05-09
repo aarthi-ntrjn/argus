@@ -6,7 +6,7 @@ import type { TodoItem } from '../types';
 const QUERY_KEY = ['todos'];
 
 export function useTodos(): UseQueryResult<TodoItem[], Error> {
-  return useQuery({ queryKey: QUERY_KEY, queryFn: getTodos });
+  return useQuery({ queryKey: QUERY_KEY, queryFn: getTodos, refetchOnWindowFocus: false });
 }
 
 export function useCreateTodo(): UseMutationResult<TodoItem, Error, string> {

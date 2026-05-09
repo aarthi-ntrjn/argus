@@ -79,9 +79,8 @@ test.describe('To Tackle panel (real server)', () => {
     }
   });
 
-  test('typing in the add row and blurring creates a new todo', async ({ page }) => {
+  test('typing in the add row and blurring keeps text in input without saving', async ({ page }) => {
     const api = await request.newContext({ baseURL: BASE_URL });
-    let createdId: string | undefined;
 
     try {
       await page.goto('/');
@@ -89,15 +88,15 @@ test.describe('To Tackle panel (real server)', () => {
       await addRow.fill('E2E blur task');
       await addRow.press('Tab');
 
-      await expect(page.getByRole('textbox', { name: /edit task: E2E blur task/i })).toBeVisible();
+      // Blur no longer saves — text stays in the add-row as an active filter
+      await expect(addRow).toHaveValue('E2E blur task');
+      await expect(page.getByRole('textbox', { name: /edit task: E2E blur task/i })).not.toBeVisible();
 
       const res = await api.get('/api/v1/todos');
       const todos = await res.json() as { id: string; text: string }[];
       const created = todos.find(t => t.text === 'E2E blur task');
-      expect(created).toBeDefined();
-      createdId = created!.id;
+      expect(created).toBeUndefined();
     } finally {
-      if (createdId) await deleteTodo(api, createdId);
       await api.dispose();
     }
   });
@@ -183,7 +182,11 @@ test.describe('To Tackle panel (real server)', () => {
     try {
       await page.goto('/');
       const input = page.getByRole('textbox', { name: /edit task: Backspace delete E2E/i });
-      await input.fill('');
+      await input.click();
+      await page.keyboard.press('Control+A');
+      // First Backspace clears selected text (value was non-empty at keydown, so no deletion triggered).
+      // Second Backspace presses with value already '' and triggers the empty-row deletion handler.
+      await page.keyboard.press('Backspace');
       await input.press('Backspace');
 
       await expect(page.getByRole('textbox', { name: /edit task: Backspace delete E2E/i })).not.toBeVisible();

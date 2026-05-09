@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseClaudeJsonlLine, parseModel } from '../../src/services/claude-code-jsonl-parser.js';
+import { parseClaudeJsonlLine, parseModel } from '../../src/cli/claude-code/claude-code-jsonl-parser.js';
 
 const SESSION_ID = 'test-session-1';
 

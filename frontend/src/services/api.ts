@@ -171,19 +171,20 @@ export async function getAvailableTools(): Promise<AvailableTools> {
   return apiFetch<AvailableTools>('/tools');
 }
 
-// Returns { cmd } when the server cannot open a terminal (headless/Codespaces),
+// Returns { ptyLaunchId } on success, { cmd } when the server cannot open a terminal (headless/Codespaces),
 // so the caller can show the command for manual execution. Throws on other errors.
 export async function launchInTerminal(
   tool: ToolCommand,
   repoPath?: string,
-): Promise<{ cmd?: string }> {
+): Promise<{ ptyLaunchId?: string; cmd?: string }> {
   const res = await fetch(`${BASE}/sessions/launch-terminal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tool, repoPath }),
   });
   if (res.status === 202) {
-    return {};
+    const body = (await res.json()) as { ptyLaunchId?: string };
+    return { ptyLaunchId: body.ptyLaunchId };
   }
   if (res.status === 422) {
     const body = (await res.json()) as { cmd?: string };

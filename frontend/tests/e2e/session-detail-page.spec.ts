@@ -249,8 +249,9 @@ test.describe('Session Detail Page', () => {
   test('shows TOOL badge for tool_use items', async ({ page }) => {
     await mockSession(page, {}, [makeOutput({ type: 'tool_use', role: null, content: 'ls -la', toolName: 'bash' })]);
     await page.goto(`/sessions/${SESSION_ID}`);
+    await page.getByRole('button', { name: /expand tool calls/i }).click();
     await expect(page.getByText('TOOL', { exact: true })).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('ls -la')).toBeVisible();
+    await expect(page.getByText('bash: ls -la')).toBeVisible();
   });
 
   test('shows RESULT badge for tool_result items', async ({ page }) => {
@@ -281,6 +282,7 @@ test.describe('Session Detail Page', () => {
   test('shows tool name badge for tool_use items', async ({ page }) => {
     await mockSession(page, {}, [makeOutput({ type: 'tool_use', role: null, content: 'cat README.md', toolName: 'bash' })]);
     await page.goto(`/sessions/${SESSION_ID}`);
+    await page.getByRole('button', { name: /expand tool calls/i }).click();
     // Tool name appears as a colored badge pill (not bracket notation)
     await expect(page.getByText('bash', { exact: true })).toBeVisible({ timeout: 5000 });
   });

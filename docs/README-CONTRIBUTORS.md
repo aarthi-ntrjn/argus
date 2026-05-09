@@ -22,7 +22,7 @@ See [README-ARCH.md](README-ARCH.md) for the full architecture diagram and desig
 
 For a detailed comparison of how Claude Code and Copilot CLI sessions differ at the stream, parser, and state level, see [README-CLI-COMPARISON.md](README-CLI-COMPARISON.md).
 
-**The short version:** The backend polls every 5 seconds for new sessions. Claude Code sessions are detected by watching `~/.claude/projects/**/*.jsonl` and via hooks injected into `~/.claude/settings.json`. Copilot CLI sessions are detected by reading `~/.copilot/session-state/` workspace files and lock files. All output is stored in SQLite and pushed to the browser over WebSockets. TanStack Query handles REST caching and cache invalidation on WS events.
+**The short version:** The backend polls every 5 seconds for new sessions. Claude Code sessions are detected by watching `~/.claude/projects/**/*.jsonl` and via hooks injected into `~/.claude/settings.json`. Copilot CLI sessions are detected by reading `~/.copilot/session-state/` workspace files and lock files, and via hooks injected into `.github/hooks/hooks.json` in each registered repository. All output is stored in SQLite and pushed to the browser over WebSockets. TanStack Query handles REST caching and cache invalidation on WS events.
 
 Key design choices:
 
@@ -91,11 +91,16 @@ scan files on disk → upsert session in SQLite → start chokidar file watcher 
 
 **UpdateService** (`backend/src/services/update-service.ts`): singleton that polls `https://registry.npmjs.org/argus-ai-hub/latest` once per hour to check for newer npm versions. Logger tag: `[UpdateService]`, color: yellow (`\x1b[33m`). Key methods: `checkForUpdates()` (silent on network error), `scheduleChecks()` (call once at startup), `hasUpdate()`, `getStatus()`, `applyUpdate()` (spawns `npm install -g argus-ai-hub@latest`, 25-second timeout resolves instead of rejects so exit always completes). Injected into routes via `setUpdateServiceForRoutes()` and into the health route via `setUpdateService()`. The `autoUpdate` config field (default `true`) controls whether exit handlers call `applyUpdate()` automatically.
 
-**WebSocket events:** `session.created`, `session.updated`, `session.ended`, `session.output`. Dispatched from `event-dispatcher.ts` via `broadcast()`. The frontend's `socket.ts` listens and calls `queryClient.invalidateQueries()` to refresh stale data.
+**WebSocket events:** `session.created`, `session.updated`, `session.ended`, `session.output`, `launcher.pending.gone`. Dispatched from `event-dispatcher.ts` via `broadcast()`. The frontend's `socket.ts` listens and calls `queryClient.invalidateQueries()` to refresh stale data.
 
 **Frontend data flow:** TanStack Query fetches from REST on mount and re-fetches on WS events. Components read from the query cache; they never call the API directly.
 
 **PTY prompt delivery:** `argus launch <tool>` spawns tool in PTY, connects to backend /launcher WebSocket, PtyRegistry maps sessionId to WebSocket, SessionController.sendPrompt() looks up registry and sends message, launcher writes to PTY stdin, then acks back.
+
+**Pending session card (launch UX):** When the user clicks "Launch with Argus", the `POST /api/v1/sessions/launch-terminal` handler generates a `ptyLaunchId` UUID, passes it as `--launch-id` to the spawned terminal subprocess, and returns it in the 202 response body. The frontend's `usePendingLaunchers` hook stores a `PendingLauncher` record keyed by `ptyLaunchId` and renders a `PendingSessionCard` (spinner + tool icon + "Launching..." text) in the matching repo card immediately. The placeholder is removed when:
+1. A `session.created` WS event arrives with a matching `ptyLaunchId` (the real session card replaces it), or
+2. A `launcher.pending.gone` WS event fires (the terminal closed before Claude/Copilot started a session), or
+3. The 30-second timeout in `usePendingLaunchers` fires as a fallback.
 
 ## Testing
 
@@ -153,6 +158,7 @@ Tour targets use stable `data-tour-id` attribute selectors (e.g. `[data-tour-id=
 | `POST` | `/api/v1/fs/pick-folder` | Open native OS folder picker, returns selected path |
 | `POST` | `/api/v1/fs/scan-folder` | Recursively scan a folder for git repos, returns list |
 | `POST` | `/hooks/claude` | Receive push events from Claude Code hooks (internal) |
+| `POST` | `/hooks/copilot` | Receive push events from Copilot CLI hooks (internal, `?event=` param) |
 | `GET` | `/api/health` | Health check |
 | `GET` | `/api/metrics` | Session, output, and action record counts |
 
@@ -164,7 +170,7 @@ Argus is a single-user localhost tool (`127.0.0.1` only). The following hardenin
 |------|-----------|
 | **Process control** | Stop/interrupt requests validate PID ownership in two stages: (1) the session must have a PID on record, and (2) the OS process at that PID must match the AI tool allowlist (Claude/Copilot). Requests that fail either check are rejected with 422 or 403. |
 | **Shell injection** | All `taskkill` calls on Windows use `spawnSync` with an explicit args array: no shell string interpolation. |
-| **Hook endpoint** | `POST /hooks/claude` enforces a 64 KB body limit, validates `session_id` as UUID v4, and ignores `cwd` values not registered as known repositories. Payloads attempting to overwrite an active session's PID are rejected with 409. |
+| **Hook endpoints** | `POST /hooks/claude` enforces a 64 KB body limit, validates `session_id` as UUID v4, and ignores `cwd` values not registered as known repositories. Payloads attempting to overwrite an active session's PID are rejected with 409. `POST /hooks/copilot` enforces the same body limit, requires a valid `?event=` query parameter (one of `sessionStart`, `sessionEnd`, `preToolUse`, `postToolUse`), and validates `sessionId` as UUID v4 or requires `cwd` to match a registered repository. |
 | **Filesystem routes** | Browse, scan, and scan-folder endpoints resolve and validate all user-supplied paths against `homedir()` and registered repository paths. Paths outside this boundary return 403. Recursive directory scans skip symlinks to prevent traversal loops. |
 | **Launcher WebSocket** | The /launcher route only accepts connections from processes on 127.0.0.1. The `register` message validates that the `repositoryPath` resolves to an existing directory. Session IDs are validated as non-empty strings. |
 | **HTTP headers** | All responses include `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY`. No server version or runtime information is exposed. |

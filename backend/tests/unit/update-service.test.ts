@@ -94,6 +94,36 @@ describe('UpdateService', () => {
       expect(service.getStatus().lastChecked).not.toBeNull();
       expect(new Date(service.getStatus().lastChecked!).getTime()).toBeGreaterThan(0);
     });
+
+    it('calls broadcastFn with current status after a successful check', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ version: '2.0.0' }),
+      }));
+      const broadcastFn = vi.fn();
+      service.setBroadcastCallback(broadcastFn);
+      await service.checkForUpdates();
+      expect(broadcastFn).toHaveBeenCalledOnce();
+      expect(broadcastFn).toHaveBeenCalledWith(
+        expect.objectContaining({ updateAvailable: true, latestVersion: '2.0.0' }),
+      );
+    });
+
+    it('does not call broadcastFn when network request fails', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network error')));
+      const broadcastFn = vi.fn();
+      service.setBroadcastCallback(broadcastFn);
+      await service.checkForUpdates();
+      expect(broadcastFn).not.toHaveBeenCalled();
+    });
+
+    it('does not call broadcastFn when response is not ok', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+      const broadcastFn = vi.fn();
+      service.setBroadcastCallback(broadcastFn);
+      await service.checkForUpdates();
+      expect(broadcastFn).not.toHaveBeenCalled();
+    });
   });
 
   describe('hasUpdate()', () => {

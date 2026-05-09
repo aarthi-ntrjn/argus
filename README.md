@@ -51,13 +51,17 @@ Each card is a live snapshot of a session:
 - **Elapsed time** representing how long since the session start
 - **Drill in link**: displays a larger view of the session.
 - **Current prompt**: the most recent question you asked, shown below the badges and updated live as the conversation progresses
-- **Last output preview**: up to 2 lines of the most recent AI reply, rendered with markdown formatting
+- **Last output preview**: up to 2 lines of the session's current output state, rendered in a dark monospace box. Four display states:
+  - *Waiting for output...* (italic, gray) — no output received yet
+  - Assistant reply text (markdown-rendered) — AI replied, no active tool calls
+  - `Running... N tool call(s)` — AI is executing tools with no prior reply visible
+  - Assistant reply text + `+N tool call(s)` suffix — AI replied and is now making further tool calls
 - **Send prompt input and button**: (only in live sessions) Type a prompt and send to the CLI session from Argus.
 - **Focus button** (crosshair icon): brings the originating terminal window to the foreground. Shown for all active sessions; disabled when no PID is known.
 
 ### Session Detail Page
 
-The drill-in link on any session card opens a full-page view. At the top, when the session belongs to a registered repository, a **repo context bar** shows the repository name, full path, current branch badge, and a GitHub compare link. Below that is the session status card, followed by the full output stream. When a session has ended, the prompt input bar is replaced with a **This session has ended** notice.
+The drill-in link on any session card opens a full-page view. At the top, when the session belongs to a registered repository, a **repo context bar** shows the repository name, full path, current branch badge, and (when the remote is GitHub) the same set of clickable surfaces as the dashboard repo card: linkable repo name, linkable branch chip, and a pull-request icon. Below that is the session status card, followed by the full output stream. When a session has ended, the prompt input bar is replaced with a **This session has ended** notice.
 
 ### Session Output
 
@@ -71,7 +75,7 @@ Output lines carry type badges so you always know what's what: **YOU** (your inp
 
 The output pane has two display modes, toggled via the **Focused / Verbose** button in the pane header:
 
-- **Focused** (default): hides noisy tool results. Tool calls show a compact one-line summary. Click **show result** on any row to expand it inline. Your messages, AI replies, status changes, and errors are always visible.
+- **Focused** (default): hides noisy tool results. Consecutive tool calls are grouped into a collapsible counter bar — click the bar to expand and inspect individual calls. In-flight tool calls (awaiting a result) are folded into the bar immediately so the stream does not jump. Click **show result** on any completed call to expand it inline. Your messages, AI replies, status changes, and errors are always visible.
 
   <img src="docs/images/argus-stream-focused.png" alt="Focused Mode" height="300">
 
@@ -117,6 +121,8 @@ The button is shown for all active sessions and is disabled (greyed out) when Ar
 To send prompts to a session, start it through Argus.This gives Argus a direct PTY write channel to the process.
 
 The easiest way is to click the **Launch with Argus** dropdown in any repo card header and select **Launch Claude** or **Launch Copilot**. If neither tool is detected on your PATH, the dropdown shows install links for [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started) and [GitHub Copilot CLI](https://github.com/features/copilot/cli/).
+
+Immediately after clicking, a **placeholder session card** with a spinner appears in the repo's session list so you have visual confirmation that the launch is in progress. The placeholder is replaced by the real session card once the AI tool starts up. If the terminal closes before a session is established, the placeholder is removed automatically. A 30-second timeout clears it as a fallback if neither event arrives.
 
 #### Headless Environments (Codespaces, SSH, no TTY)
 
@@ -167,7 +173,7 @@ Argus scans that folder recursively for git repos and registers all new ones in 
 
 Paths are normalized on entry: trailing slashes and mixed separators are stripped, and spaces in paths (common on Linux) are handled correctly. Both the path you type and the working directory reported by Claude/Copilot are normalized the same way, so sessions always match their registered repo.
 
-Each repo card shows the current branch name and, when the remote is a GitHub repository, a **compare link icon** (external link) next to the branch badge. Clicking it opens the GitHub compare page for that branch against master in a new tab. On the default branch (master or main), the link opens the repository's compare page directly.
+Each repo card shows the current branch name and, when the remote is a GitHub repository, three clickable surfaces: the repository name links to the repo's GitHub home page, the branch chip links to the branch's tree view on GitHub, and a pull-request icon links to GitHub's `/pull/new/<branch>` page (when no PR exists yet, GitHub presents the "Open a pull request" form so the user can open one in one click; when a PR already exists, GitHub shows that page with a banner pointing to the existing PR). The same three clickable surfaces appear in the **repo context bar** at the top of the session detail page. All indicators open in a new tab and are hidden for non-GitHub remotes (no broken links).
 
 ## To Tackle
 
@@ -175,7 +181,9 @@ Each repo card shows the current branch name and, when the remote is a GitHub re
 
 The **To Tackle** panel lives on the right side of the dashboard.Use it to jot down tasks, reminders, or notes essentially your brain dump.
 
-- Add items with the input at the top, press **Enter** to save
+- **Type to filter**: typing in the input at the top filters the list in real time; the list narrows to items whose text contains what you typed (case-insensitive)
+- Press **Enter** to save the typed text as a new item; the filter clears and the full list is restored
+- Tab out or click away to keep the typed text in the input and leave the filter active; clear the input manually to remove the filter
 - Check off completed items; toggle visibility of done items with the button in the header
 - Delete items with the trash icon that appears on hover
 - Toggle timestamps on/off to see when each item was added

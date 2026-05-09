@@ -391,3 +391,61 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 **Why it was missed**: The engine warning is a `warn`, not an error, so `npm install` still succeeds. The package was likely added as a preparatory step for switching from `node-pty` to its prebuilt-binary variant, but the import was never updated.
 **How to prevent**: When adding a new dependency, verify it is actually imported somewhere before committing (`grep -r "from '<package>'" src/`). `npm warn EBADENGINE` on install is the real detection signal — treat it as a hard error in CI rather than a ignorable warning. A per-package unit test is not the right guard here; it catches only one specific package and not the general pattern.
 **Fix summary**: Removed `"@homebridge/node-pty-prebuilt-multiarch": "^0.13.1"` from `dependencies` in `package.json` and `backend/package.json`; ran `npm install` to drop it from the lockfile.
+
+## T127 — Update status polled every 60 seconds instead of pushed via WebSocket
+
+**Date**: 2026-05-06
+**Symptom**: Network inspector showed `GET /api/v1/update/status` firing every 60 seconds, even though the backend only checks npm every 4 hours.
+**Root cause**: Two missing pieces: (1) `frontend/src/hooks/useUpdateStatus.ts:8` had `refetchInterval: 60_000` — React Query was polling unconditionally regardless of the backend's 4-hour schedule. (2) `UpdateService.checkForUpdates()` never called `broadcast()`, so there was no WebSocket push alternative and polling was the only way the frontend could ever learn of a status change.
+**Why it was missed**: The polling interval was likely set during development for quick feedback and never revisited before shipping. Because `UpdateService` had no broadcast mechanism, the lack of push was invisible — the UI "worked" via polling and nobody noticed the 240x over-polling.
+**How to prevent**: Any new `useQuery` with a `refetchInterval` should be justified: the comment should name the specific reason polling is needed (e.g., "backend has no push for this event"). If the backend has a `broadcast()` bus (as this project does), adding a WebSocket event type should be the default choice over client-side polling. Code review should flag `refetchInterval` without a matching "no push available" comment.
+**Fix summary**: Added `'update.status'` WsEvent type and broadcast call in `UpdateService.checkForUpdates()` via an injected callback; wired the callback in `server.ts`; added `update.status` handler in `socket.ts` to update the React Query cache; removed `refetchInterval` and `staleTime` from `useUpdateStatus.ts`.
+
+## T128 — WebSocket-driven queries refetch unnecessarily on window focus
+
+**Date**: 2026-05-06
+**Symptom**: Switching back to the Argus tab after using another app triggered HTTP requests for sessions, repositories, session output, and update status — even though WebSocket push already keeps all of those up to date.
+**Root cause**: React Query's `refetchOnWindowFocus` defaults to `true` and treats any query with `staleTime: 0` (the default) as stale on every focus event. Seven queries across five files had no `refetchOnWindowFocus: false`, so each tab-focus fired redundant HTTP calls for data the WebSocket had already delivered.
+**Why it was missed**: The default is silent — no warning, no log, just extra requests visible only in the network inspector. WebSocket and polling can coexist without error, so the redundancy goes unnoticed until someone checks network traffic.
+**How to prevent**: When a query's cache is kept fresh by a WebSocket handler in `socket.ts`, add `refetchOnWindowFocus: false` at the same time the WebSocket handler is wired up. The two changes are coupled: adding push without disabling focus-refetch leaves the redundancy in place. Code review should check that any `useQuery` for a WebSocket-pushed key carries this flag.
+**Fix summary**: Added `refetchOnWindowFocus: false` to seven `useQuery` calls: `['sessions']` and `['repositories']` in `DashboardPage.tsx`; `['session', id]` and `['repositories']` in `SessionPage.tsx`; `['update-status']` in `useUpdateStatus.ts`; `['session-output', id]` in `OutputPane.tsx` and `SessionPromptBar.tsx`.
+
+## T129 — argus-settings refetches on window focus despite mutations keeping cache current
+
+**Date**: 2026-05-06
+**Symptom**: Tabbing back to Argus 30+ seconds after last using the settings panel triggered a `GET /api/v1/settings` request even though nothing had changed.
+**Root cause**: `useArgusSettings.ts` had `staleTime: 30_000` but no `refetchOnWindowFocus: false`. Every settings write goes through `patchSetting`, which calls `queryClient.setQueryData` on success, so the cache is always current — but React Query still considers data stale after 30 seconds and fires a focus-refetch regardless.
+**Why it was missed**: The mutation-updates-cache pattern prevents staleness in practice but does not signal to React Query that external changes cannot occur. The focus-refetch behaviour is invisible unless you watch the network inspector around the time you switch tabs.
+**How to prevent**: Any query whose only mutation path calls `setQueryData` (not just `invalidateQueries`) on success effectively owns its own freshness. Add `refetchOnWindowFocus: false` to those queries — the mutation is the source of truth, not a background refetch.
+**Fix summary**: Added `refetchOnWindowFocus: false` to the `useQuery` in `useArgusSettings.ts`.
+
+## T130 — Integration status has no WebSocket push so frontend polls on window focus
+
+**Date**: 2026-05-06
+**Symptom**: Tabbing back to the Argus UI after switching away triggered a `GET /api/v1/integrations` request even when nothing had changed in Slack or Teams.
+**Root cause**: The four start/stop route handlers in `integrations.ts` never called `broadcast()` after changing state, so the frontend had no push signal and relied on focus-refetch as its only way to learn of changes.
+**Why it was missed**: Integration status was treated the same as purely frontend-owned data (settings, todos) but it is not — the backend can independently lose a connection. The missing broadcast was never noticed because focus-refetch masked it.
+**How to prevent**: Any backend state that can change independently of a frontend action needs a WebSocket event. When adding a start/stop route, add the broadcast at the same time. The pattern: extract a `buildStatusPayload()` helper shared by the GET handler and the broadcast so the shapes stay in sync.
+**Fix summary**: Added `IntegrationStatusPayload` type and `'integration.status'` WsEvent to `event-dispatcher.ts`; extracted `buildStatusPayload()` and `broadcastStatus()` helpers in `integrations.ts` and called `broadcastStatus()` in all four start/stop handlers; added `integration.status` handler in `socket.ts`; added `refetchOnWindowFocus: false` to `useIntegrationControl.ts`.
+
+---
+
+## T131 — Duplicate session.updated broadcasts on every activity
+
+**Date**: 2026-05-06
+**Symptom**: Every time Claude Code emitted a tool use or message (triggering `applyActivityUpdate()`), the frontend received a redundant `session.updated` WebSocket event roughly 5 seconds later from the scan cycle.
+**Root cause**: `applyActivityUpdate()` in `watcher-session-helpers.ts` updates `lastActivityAt` in the DB and calls `broadcast()` directly, but never updates `lastEmittedSessions` in `SessionMonitor`. Because `sessionSignature()` included `lastActivityAt`, the next scan cycle saw the changed signature and fired a second `monitor.emit('session.updated')`, which produced a second `broadcast()` to all clients.
+**Why it was missed**: The two broadcast paths (direct broadcast in the watcher vs. scan-based emit from SessionMonitor) were never audited together. There was also no test that verified the scan does not re-emit when only activity-timestamp fields change.
+**How to prevent**: `sessionSignature()` must only include fields that represent meaningful UI state changes: status, model, pid, launchMode, etc. Fields that are updated continuously during normal operation (lastActivityAt) must not be in the signature or the scan will always re-broadcast after activity.
+**Fix summary**: Removed `lastActivityAt` from `sessionSignature()` in `session-monitor.ts` and added `yoloMode` (which was tracked by SessionDiffTracker but missing from scan dedup); added regression test verifying the scan does not emit session.updated when only lastActivityAt changes.
+
+---
+
+## T132 — Resting state never delivered to Teams/Slack
+
+**Date**: 2026-05-06
+**Symptom**: When a Claude Code session crossed the resting threshold, the Teams/Slack notifier never posted a "session is resting" update, even though the frontend did correctly show the resting badge.
+**Root cause**: The resting block in `SessionMonitor.runScan()` called `broadcast()` directly to push the WebSocket event, bypassing `monitor.emit('session.updated')`. Teams/Slack notifiers subscribe to `monitor.on('session.updated')` in `server.ts`, so they never received the resting transition. Similarly, when activity resumed, the `restingNotifiedSessions.delete()` call happened unconditionally with no corresponding emit, so notifiers had no way to send an "activity resumed" message.
+**Why it was missed**: The resting block was added as a WebSocket-only feature with no thought given to integration notifiers. The two delivery paths (direct broadcast vs. event emitter) diverged silently.
+**How to prevent**: Any SessionMonitor state change that should reach integrations must go through `this.emit('session.updated', session)`. Never call `broadcast()` directly from inside SessionMonitor for session state that integrations care about. The rule: SessionMonitor owns the event bus; notifiers subscribe to it.
+**Fix summary**: Added `isResting?: boolean` to the `Session` interface; changed resting block to `this.emit('session.updated', { ...session, isResting: true })` and activity-resumed block to guard with `has()` then emit `isResting: false`; added `isResting` field to `SessionDiffTracker` with special handling to skip comparison when `session.isResting === undefined` (DB sessions), preserving the baseline across regular scan-based emits.

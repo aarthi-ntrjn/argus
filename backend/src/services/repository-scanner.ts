@@ -130,3 +130,40 @@ export class RepositoryScanner {
     return repo;
   }
 }
+
+export async function findGitRepos(
+  dirPath: string,
+  results: Array<{ path: string; name: string }> = [],
+): Promise<Array<{ path: string; name: string }>> {
+  // If this dir is itself a git repo, add it and don't recurse into it
+  if (existsSync(join(dirPath, '.git'))) {
+    results.push({ path: dirPath, name: basename(dirPath) });
+    return results;
+  }
+  let entries;
+  try {
+    entries = await fs.readdir(dirPath, { withFileTypes: true });
+  } catch {
+    return results;
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    if (entry.name === 'node_modules' || entry.name === '.git') {
+      continue;
+    }
+    const fullPath = join(dirPath, entry.name);
+    try {
+      const stat = await fs.lstat(fullPath);
+      // Skip symlinks to avoid loops
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    await findGitRepos(fullPath, results);
+  }
+  return results;
+}

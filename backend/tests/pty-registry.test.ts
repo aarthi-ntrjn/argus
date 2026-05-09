@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PtyRegistry } from '../src/services/pty-registry.js';
+import { PtyRegistry } from '../src/launch-pty/pty-registry.js';
 
 // Minimal WebSocket mock: only what PtyRegistry uses
 function makeMockWs() {

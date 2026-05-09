@@ -6,7 +6,7 @@ vi.mock('../../src/db/database.js', () => ({
   updateControlAction: vi.fn(),
 }));
 
-vi.mock('../../src/services/pty-registry.js', () => ({
+vi.mock('../../src/launch-pty/pty-registry.js', () => ({
   ptyRegistry: {
     has: vi.fn(),
     sendPrompt: vi.fn(),
@@ -147,7 +147,7 @@ describe('SessionController — sendPrompt PTY routing', () => {
 
   it('returns failed action immediately when PTY session has no connected launcher', async () => {
     const { getSession, insertControlAction } = await import('../../src/db/database.js');
-    const { ptyRegistry } = await import('../../src/services/pty-registry.js');
+    const { ptyRegistry } = await import('../../src/launch-pty/pty-registry.js');
     const { SessionController } = await import('../../src/services/session-controller.js');
     (getSession as ReturnType<typeof vi.fn>).mockReturnValue(makeSession());
     (insertControlAction as ReturnType<typeof vi.fn>).mockImplementation(() => {});
@@ -162,7 +162,7 @@ describe('SessionController — sendPrompt PTY routing', () => {
 
   it('returns pending action and fires delivery when PTY launcher is connected', async () => {
     const { getSession, insertControlAction } = await import('../../src/db/database.js');
-    const { ptyRegistry } = await import('../../src/services/pty-registry.js');
+    const { ptyRegistry } = await import('../../src/launch-pty/pty-registry.js');
     const { SessionController } = await import('../../src/services/session-controller.js');
     (getSession as ReturnType<typeof vi.fn>).mockReturnValue(makeSession());
     (insertControlAction as ReturnType<typeof vi.fn>).mockImplementation(() => {});

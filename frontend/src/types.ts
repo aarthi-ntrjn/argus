@@ -50,6 +50,8 @@ export interface Session {
   model: string | null;
   reconciled: boolean;
   yoloMode: boolean | null;
+  isResting?: boolean;
+  ptyLaunchId?: string | null;
 }
 
 export interface SessionOutput {

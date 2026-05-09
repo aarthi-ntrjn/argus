@@ -5,6 +5,7 @@ import { platform } from 'os';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { randomUUID } from 'node:crypto';
 import { loadConfig } from '../../config/config-loader.js';
 import { ToolCommands } from '../../models/index.js';
 import type { ToolCommand } from '../../models/index.js';
@@ -22,15 +23,21 @@ const YOLO_FLAGS: Record<ToolCommand, string> = {
 };
 
 // Base command (no --cwd): safe to copy and run manually from any directory.
-function buildLaunchCmdBase(tool: ToolCommand, yoloMode = false): string {
-  const launchScript = path.join(ARGUS_ROOT, 'backend', 'dist', 'cli', 'launch.js');
+function buildLaunchCmdBase(tool: ToolCommand, yoloMode = false, launchId?: string): string {
+  const launchScript = path.join(ARGUS_ROOT, 'backend', 'dist', 'launch-pty', 'launch.js');
   const base = `node "${launchScript}" ${tool}`;
-  return yoloMode ? `${base} ${YOLO_FLAGS[tool]}` : base;
+  const withYolo = yoloMode ? `${base} ${YOLO_FLAGS[tool]}` : base;
+  return launchId ? `${withYolo} --launch-id ${launchId}` : withYolo;
 }
 
 // Full command with --cwd baked in: used when the backend spawns the terminal.
-function buildLaunchCmdWithCwd(tool: ToolCommand, repoPath: string, yoloMode = false): string {
-  return `${buildLaunchCmdBase(tool, yoloMode)} --cwd "${repoPath}"`;
+function buildLaunchCmdWithCwd(
+  tool: ToolCommand,
+  repoPath: string,
+  yoloMode = false,
+  launchId?: string,
+): string {
+  return `${buildLaunchCmdBase(tool, yoloMode, launchId)} --cwd "${repoPath}"`;
 }
 
 function isInstalled(cmd: string): boolean {
@@ -144,12 +151,13 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       const { tool, repoPath } = req.body;
       const { yoloMode } = loadConfig();
+      const ptyLaunchId = randomUUID();
       const cmd = repoPath
-        ? buildLaunchCmdWithCwd(tool, repoPath, yoloMode)
-        : buildLaunchCmdBase(tool, yoloMode);
+        ? buildLaunchCmdWithCwd(tool, repoPath, yoloMode, ptyLaunchId)
+        : buildLaunchCmdBase(tool, yoloMode, ptyLaunchId);
       try {
         openTerminalWithCommand(cmd);
-        return reply.status(202).send({ status: 'launched' });
+        return reply.status(202).send({ status: 'launched', ptyLaunchId });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         logger.warn(`[LaunchTerminal] ${message}`);
