@@ -112,35 +112,13 @@ function SessionCard({ session, selected, onSelect }: Props) {
       )}
 
       {/* Last output preview — fixed 2-line height */}
-      <div
-        className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 break-words font-mono min-h-[2.5rem] ${preview.kind === 'waiting' ? 'text-gray-500 italic' : 'text-gray-300'}`}
-      >
-        {preview.kind === 'waiting' && 'Waiting for output...'}
-        {preview.kind === 'text-only' && (
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              p: ({ children }) => <span>{children}</span>,
-              code: ({ children }) => (
-                <code className="bg-gray-700 rounded px-0.5">{children}</code>
-              ),
-              strong: ({ children }) => (
-                <strong className="text-white font-semibold">{children}</strong>
-              ),
-              em: ({ children }) => <em>{children}</em>,
-              a: ({ children }) => <span className="text-blue-400 underline">{children}</span>,
-            }}
-          >
-            {preview.content}
-          </ReactMarkdown>
-        )}
-        {preview.kind === 'tool-count-only' && (
-          <span className="text-purple-400">
-            Running... {preview.count === 1 ? '1 tool call' : `${preview.count} tool calls`}
-          </span>
-        )}
-        {preview.kind === 'text-plus-count' && (
-          <>
+      <div className="relative mt-2">
+        <div
+          className={`text-xs bg-gray-900 px-2 py-1 rounded line-clamp-2 break-words font-mono min-h-[2.5rem] ${preview.kind === 'waiting' || preview.kind === 'tool-count-only' ? 'text-gray-500 italic' : 'text-gray-300'}`}
+        >
+          {(preview.kind === 'waiting' || preview.kind === 'tool-count-only') &&
+            'Waiting for output...'}
+          {(preview.kind === 'text-only' || preview.kind === 'text-plus-count') && (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
@@ -157,11 +135,12 @@ function SessionCard({ session, selected, onSelect }: Props) {
             >
               {preview.content}
             </ReactMarkdown>
-            <span className="text-purple-400">
-              {' '}
-              +{preview.count === 1 ? '1 tool call' : `${preview.count} tool calls`}
-            </span>
-          </>
+          )}
+        </div>
+        {(preview.kind === 'tool-count-only' || preview.kind === 'text-plus-count') && (
+          <span className="absolute right-1.5 top-1 bg-purple-950 text-purple-300 text-xs px-1.5 py-0.5 rounded font-mono not-italic">
+            ↻ {preview.count === 1 ? '1 tool call' : `${preview.count} tool calls`}
+          </span>
         )}
       </div>
 
