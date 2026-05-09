@@ -41,7 +41,7 @@
 
   /* Fade-in on mount: used for cards that appear/replace other elements. */
   .animate-fade-in {
-    animation: fade-in 0.15s ease-out both;
+    animation: fade-in 0.25s ease-out both;
   }
 }
 
