@@ -37,7 +37,7 @@ With this feature, when tool calls have occurred after the most recent assistant
 
 **Acceptance Scenarios**:
 
-1. **Given** a session has an assistant text reply followed by one or more tool calls, **When** the user views the session card, **Then** the preview indicates both the last reply and the number of subsequent tool calls (e.g., last message excerpt + "then 8 more tool calls").
+1. **Given** a session has an assistant text reply followed by one or more tool calls, **When** the user views the session card, **Then** the preview shows the last reply text with the tool call count appended inline (e.g., "Here are the results... +8 tool calls").
 2. **Given** a session is ended or completed, **When** the user views the session card, **Then** the preview shows only the last assistant text message and no tool call count (tool count is not relevant for finished sessions).
 
 ---
@@ -69,13 +69,13 @@ A user monitors sessions from both Claude Code and Copilot CLI on the same dashb
 ### Functional Requirements
 
 - **FR-001**: The session card preview MUST display the number of tool calls made in the current work cycle when the session is active and the most recent output is a tool call (not an assistant text message).
-- **FR-002**: The tool call count MUST be derived from tool call events in the session output stream, covering both Claude Code and Copilot CLI session types.
+- **FR-002**: The tool call count MUST be derived from tool call events in the session output stream, covering both Claude Code and Copilot CLI session types. The backend MUST emit a notification when tool call output is recorded so the session card refreshes its output snapshot.
 - **FR-003**: The tool call count displayed MUST represent calls made since the most recent assistant text reply. If no assistant text reply exists yet in the session, the count covers all tool calls in the available output history.
 - **FR-004**: When the session is ended or completed, the preview MUST NOT show a tool call count — it MUST show the last assistant text message only (or "Waiting for output..." if none exists).
 - **FR-005**: When an assistant text reply is the most recent output (no subsequent tool calls), the preview MUST show the text reply and no tool call count (existing behavior preserved).
 - **FR-006**: When tool calls are the most recent output (session is still working), the preview MUST show the tool call count instead of "Waiting for output...".
-- **FR-007**: When tool calls have occurred after the most recent assistant text reply, the preview MUST show both the last text reply and the subsequent tool call count.
-- **FR-008**: The tool call count label MUST use correct singular/plural grammar ("1 tool call", "N tool calls").
+- **FR-007**: When tool calls have occurred after the most recent assistant text reply, the preview MUST show the last text reply with the subsequent tool call count appended inline (e.g., "Here are the results... +8 tool calls").
+- **FR-009**: The backend MUST trigger a `session.updated` broadcast when tool call output is recorded for a session, so the session card refreshes its output snapshot in response.
 
 ### Key Entities
 
@@ -92,10 +92,18 @@ A user monitors sessions from both Claude Code and Copilot CLI on the same dashb
 - **SC-004**: Both Claude Code and Copilot CLI session cards display the tool call count in an identical format, with zero platform-specific omissions.
 - **SC-005**: The singular/plural label is grammatically correct in 100% of cases (1 tool call vs N tool calls).
 
+## Clarifications
+
+### Session 2026-05-09
+
+- Q: Should the tool call count be derived from the full work cycle or the existing limited output query? → A: The tool call count is already correctly computed in the full output pane. The root problem is that the backend does not emit a session update event when new tool calls are recorded, so the session card's cached output snapshot never refreshes. The fix is: (1) the backend must fire a session-level notification when tool call output is recorded, and (2) the session card must react to that notification to refresh its output snapshot and then derive the count from it.
+
+- Q: When a reply exists and subsequent tool calls have occurred, how should the preview display them? → A: Show the reply text with the count appended inline (e.g., "Here are the results... +8 tool calls").
+
 ## Assumptions
 
-- Tool call events are already captured in the session output stream for both Claude Code and Copilot CLI under a dedicated output type; no new backend event capture is required.
-- The session card preview area currently queries recent output events; the tool call count can be derived from the same query with no additional API calls.
-- "Current work cycle" is defined per the FR-003 scoping rule; no server-side aggregation is needed.
+- Tool call count logic is already correctly implemented in the full output pane; no new counting logic needs to be invented.
+- The backend currently does NOT emit a session-level notification when tool call output is recorded; this must be added as part of this feature.
+- Once the backend emits the notification, the session card can refresh its output snapshot and derive the count from the same output stream — no additional API is needed.
 - The count is read-only informational display; no interaction or drill-down into individual tool calls is in scope for this feature.
-- Animation or real-time streaming of the count is out of scope; the count updates on the same polling/push cadence as other session card data.
+- Animation or real-time streaming of the count is out of scope; the count updates on the same event-driven cadence as other session card data.
