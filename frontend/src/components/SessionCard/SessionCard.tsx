@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Session } from '../../types';
 import { getSessionOutput } from '../../services/api';
-import { isInactive, type PendingChoice } from '../../utils/sessionUtils';
+import { isInactive, derivePreviewState, type PendingChoice } from '../../utils/sessionUtils';
 import { useArgusSettings } from '../../hooks/useArgusSettings';
 import SessionPromptBar, {
   type SessionPromptBarHandle,
@@ -63,14 +63,8 @@ function SessionCard({ session, selected, onSelect }: Props) {
   const promptBarRef = useRef<SessionPromptBarHandle>(null);
 
   const items = lastOutput?.items ?? [];
-  const previewItem =
-    [...items]
-      .reverse()
-      .find(
-        (i: import('../../types').SessionOutput) => i.type === 'message' && i.role === 'assistant',
-      ) ?? null;
-  const previewContent = previewItem?.content?.trim() ?? null;
   const isTerminated = session.status === 'ended' || session.status === 'completed';
+  const preview = derivePreviewState(items, isTerminated);
   const pendingChoice = isTerminated ? null : hookPendingChoice;
 
   return (
@@ -119,9 +113,10 @@ function SessionCard({ session, selected, onSelect }: Props) {
 
       {/* Last output preview — fixed 2-line height */}
       <div
-        className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 break-words font-mono min-h-[2.5rem] ${previewContent ? 'text-gray-300' : 'text-gray-500 italic'}`}
+        className={`text-xs bg-gray-900 mt-2 px-2 py-1 rounded line-clamp-2 break-words font-mono min-h-[2.5rem] ${preview.kind === 'waiting' ? 'text-gray-500 italic' : 'text-gray-300'}`}
       >
-        {previewContent ? (
+        {preview.kind === 'waiting' && 'Waiting for output...'}
+        {preview.kind === 'text-only' && (
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -136,10 +131,37 @@ function SessionCard({ session, selected, onSelect }: Props) {
               a: ({ children }) => <span className="text-blue-400 underline">{children}</span>,
             }}
           >
-            {previewContent}
+            {preview.content}
           </ReactMarkdown>
-        ) : (
-          'Waiting for output...'
+        )}
+        {preview.kind === 'tool-count-only' && (
+          <span className="text-gray-300">
+            Running... {preview.count === 1 ? '1 tool call' : `${preview.count} tool calls`}
+          </span>
+        )}
+        {preview.kind === 'text-plus-count' && (
+          <>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <span>{children}</span>,
+                code: ({ children }) => (
+                  <code className="bg-gray-700 rounded px-0.5">{children}</code>
+                ),
+                strong: ({ children }) => (
+                  <strong className="text-white font-semibold">{children}</strong>
+                ),
+                em: ({ children }) => <em>{children}</em>,
+                a: ({ children }) => <span className="text-blue-400 underline">{children}</span>,
+              }}
+            >
+              {preview.content}
+            </ReactMarkdown>
+            <span className="text-gray-400">
+              {' '}
+              +{preview.count === 1 ? '1 tool call' : `${preview.count} tool calls`}
+            </span>
+          </>
         )}
       </div>
 
