@@ -86,7 +86,7 @@ No new dependencies, lint config, or build tooling are needed for this feature. 
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T011 [P] [US3] Add unit test TC-09 (oh wait — TC-10 covers home-on-non-GitHub returning null) plus a positive test: `buildGitHubHomeUrl('https://github.com/o/r')` returns `'https://github.com/o/r'`. Add to `repoUtils.test.ts`. Confirm failing.
+- [ ] T011 [P] [US3] Add unit tests for `buildGitHubHomeUrl` in `frontend/src/__tests__/repoUtils.test.ts`: positive case (`'https://github.com/o/r'` returns `'https://github.com/o/r'`), trailing-`.git` case, SSH-form case, and negative case (`'https://gitlab.com/o/r'` returns `null` — TC-10 from contracts/repo-card-links.md). Confirm failing.
 - [ ] T012 [P] [US3] Component test in `RepoCard.test.tsx`: with GitHub remote, repo-name renders as `<a>` with correct href and emits `repo_card_home_opened` on click; with non-GitHub remote, repo-name is plain text (no `<a>`). Confirm failing.
 
 ### Implementation for User Story 3
