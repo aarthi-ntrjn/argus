@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { sendPrompt } from '../../services/api';
 import type { Session } from '../../types';
 import type { PendingChoice, PendingChoiceItem } from '../../utils/sessionUtils';
@@ -40,6 +40,24 @@ export default function PendingChoicePanel({
   const showSubmitPanel = questions.length > 1;
   const allSelected = idx >= questions.length;
   const current = questions[Math.min(idx, questions.length - 1)];
+  const rejectChoiceCount = current.choices.length;
+
+  // For Copilot CLI, ESC should send the last choice (No, reject) rather than \x1b,
+  // because Copilot's permission prompt ignores \x1b and expects a numbered choice.
+  useEffect(() => {
+    if (!canSend || session.type !== 'copilot-cli') {
+      return;
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        void sendPrompt(session.id, String(rejectChoiceCount));
+      }
+    };
+    document.addEventListener('keydown', handleKey, { capture: true });
+    return () => document.removeEventListener('keydown', handleKey, { capture: true });
+  }, [canSend, session.type, session.id, rejectChoiceCount]);
   const handleChoice = async (choice: string) => {
     if (!canSend) {
       return;
@@ -194,11 +212,15 @@ export default function PendingChoicePanel({
                     disabled={sending}
                     onClick={(e) => {
                       e.stopPropagation();
-                      void sendPrompt(session.id, '\x1b', { raw: true });
+                      if (session.type === 'copilot-cli') {
+                        void sendPrompt(session.id, String(current.choices.length));
+                      } else {
+                        void sendPrompt(session.id, '\x1b', { raw: true });
+                      }
                     }}
                     className="text-left justify-start text-gray-400 border-gray-200"
                   >
-                    Press Esc to interrupt
+                    {session.type === 'copilot-cli' ? 'Esc — No, reject' : 'Press Esc to interrupt'}
                   </Button>
                 </>
               )}

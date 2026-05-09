@@ -46,7 +46,7 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
           this.pendingPermissionCallIds.set(sessionId, toolCallId);
         }
         pendingChoiceEvents.emit('session.permission_requested', sessionId, kind, commandText);
-      } else if (type === 'tool.execution_complete') {
+      } else if (type === 'tool.execution_complete' || type === 'tool.execution_failed') {
         const toolCallId = typeof data?.toolCallId === 'string' ? data.toolCallId : '';
         const pendingId = this.pendingPermissionCallIds.get(sessionId);
         if (pendingId && toolCallId === pendingId) {
