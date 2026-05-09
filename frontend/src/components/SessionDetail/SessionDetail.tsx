@@ -142,11 +142,7 @@ function ContentCell({
 
   if (item.type === 'thinking') {
     const thinkingText =
-      item.content === '[redacted]'
-        ? '(redacted)'
-        : item.content === ''
-          ? '(empty)'
-          : item.content;
+      item.content === '[redacted]' ? '(redacted)' : item.content === '' ? '(empty)' : item.content;
     const isCollapsed = isFocused && !isExpanded;
     return (
       <div>

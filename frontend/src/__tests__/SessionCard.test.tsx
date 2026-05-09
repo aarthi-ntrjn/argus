@@ -259,16 +259,33 @@ describe('SessionCard — thinking preview and tool count', () => {
 
   it('shows thinking content in preview when thinking events are present', async () => {
     renderCard(makeSession(), [
-      makeOutput({ type: 'thinking', role: null, content: 'Let me reason through this.', sequenceNumber: 1 }),
-      makeOutput({ type: 'message', role: 'assistant', content: 'Here is my answer.', sequenceNumber: 2 }),
+      makeOutput({
+        type: 'thinking',
+        role: null,
+        content: 'Let me reason through this.',
+        sequenceNumber: 1,
+      }),
+      makeOutput({
+        type: 'message',
+        role: 'assistant',
+        content: 'Here is my answer.',
+        sequenceNumber: 2,
+      }),
     ]);
-    await waitFor(() => expect(screen.getByText('Let me reason through this.')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('Let me reason through this.')).toBeInTheDocument(),
+    );
     expect(screen.queryByText('Here is my answer.')).not.toBeInTheDocument();
   });
 
   it('falls back to last assistant message when no thinking events are present', async () => {
     renderCard(makeSession(), [
-      makeOutput({ type: 'message', role: 'assistant', content: 'Regular reply.', sequenceNumber: 1 }),
+      makeOutput({
+        type: 'message',
+        role: 'assistant',
+        content: 'Regular reply.',
+        sequenceNumber: 1,
+      }),
     ]);
     await waitFor(() => expect(screen.getByText('Regular reply.')).toBeInTheDocument());
   });
@@ -282,16 +299,39 @@ describe('SessionCard — thinking preview and tool count', () => {
 
   it('shows tool call count when tool_use events are present', async () => {
     renderCard(makeSession(), [
-      makeOutput({ type: 'tool_use', role: null, content: 'ls', toolName: 'Bash', sequenceNumber: 1 }),
-      makeOutput({ type: 'tool_use', role: null, content: 'read', toolName: 'Read', sequenceNumber: 2 }),
-      makeOutput({ type: 'tool_use', role: null, content: 'write', toolName: 'Write', sequenceNumber: 3 }),
+      makeOutput({
+        type: 'tool_use',
+        role: null,
+        content: 'ls',
+        toolName: 'Bash',
+        sequenceNumber: 1,
+      }),
+      makeOutput({
+        type: 'tool_use',
+        role: null,
+        content: 'read',
+        toolName: 'Read',
+        sequenceNumber: 2,
+      }),
+      makeOutput({
+        type: 'tool_use',
+        role: null,
+        content: 'write',
+        toolName: 'Write',
+        sequenceNumber: 3,
+      }),
     ]);
     await waitFor(() => expect(screen.getByText(/3 tool calls/)).toBeInTheDocument());
   });
 
   it('does not show tool count when no tool_use events are present', async () => {
     renderCard(makeSession(), [
-      makeOutput({ type: 'message', role: 'assistant', content: 'No tools used.', sequenceNumber: 1 }),
+      makeOutput({
+        type: 'message',
+        role: 'assistant',
+        content: 'No tools used.',
+        sequenceNumber: 1,
+      }),
     ]);
     await waitFor(() => expect(screen.getByText('No tools used.')).toBeInTheDocument());
     expect(screen.queryByText(/tool call/)).not.toBeInTheDocument();
@@ -299,8 +339,19 @@ describe('SessionCard — thinking preview and tool count', () => {
 
   it('shows both thinking preview and tool count when both are present', async () => {
     renderCard(makeSession(), [
-      makeOutput({ type: 'thinking', role: null, content: 'Thinking about it.', sequenceNumber: 1 }),
-      makeOutput({ type: 'tool_use', role: null, content: 'ls', toolName: 'Bash', sequenceNumber: 2 }),
+      makeOutput({
+        type: 'thinking',
+        role: null,
+        content: 'Thinking about it.',
+        sequenceNumber: 1,
+      }),
+      makeOutput({
+        type: 'tool_use',
+        role: null,
+        content: 'ls',
+        toolName: 'Bash',
+        sequenceNumber: 2,
+      }),
     ]);
     await waitFor(() => expect(screen.getByText('Thinking about it.')).toBeInTheDocument());
     expect(screen.getByText(/1 tool call/)).toBeInTheDocument();
