@@ -8,6 +8,10 @@ import type { SessionOutput } from '../../models/index.js';
 export class CopilotJsonlWatcher extends JsonlWatcherBase {
   protected readonly tag = '[CopilotDetector]';
 
+  // Tracks the toolCallId of a pending permission.requested per session so we can
+  // resolve the approval card when tool.execution_complete fires for the same tool.
+  private readonly pendingPermissionCallIds = new Map<string, string>();
+
   protected parseLine(
     line: string,
     sessionId: string,
@@ -15,6 +19,44 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
     makeId: (blockIndex: number) => string,
   ): SessionOutput[] {
     return parseJsonlLine(line, sessionId, seq, makeId);
+  }
+
+  protected override onRawLine(line: string, sessionId: string): void {
+    try {
+      const event = JSON.parse(line) as { type?: string; data?: Record<string, unknown> };
+      const type = event.type;
+      const data = event.data;
+
+      if (type === 'permission.requested') {
+        const req = data?.permissionRequest as Record<string, unknown> | undefined;
+        if (!req) {
+          return;
+        }
+        const toolCallId = typeof req.toolCallId === 'string' ? req.toolCallId : '';
+        const kind = typeof req.kind === 'string' ? req.kind : 'shell';
+        // Prefer fullCommandText; fall back to intention for write-kind tools.
+        const commandText =
+          typeof req.fullCommandText === 'string' && req.fullCommandText
+            ? req.fullCommandText
+            : typeof req.intention === 'string'
+              ? req.intention
+              : '';
+
+        if (toolCallId) {
+          this.pendingPermissionCallIds.set(sessionId, toolCallId);
+        }
+        pendingChoiceEvents.emit('session.permission_requested', sessionId, kind, commandText);
+      } else if (type === 'tool.execution_complete') {
+        const toolCallId = typeof data?.toolCallId === 'string' ? data.toolCallId : '';
+        const pendingId = this.pendingPermissionCallIds.get(sessionId);
+        if (pendingId && toolCallId === pendingId) {
+          this.pendingPermissionCallIds.delete(sessionId);
+          pendingChoiceEvents.emit('session.permission_resolved', sessionId);
+        }
+      }
+    } catch {
+      // Ignore malformed lines.
+    }
   }
 
   protected override onNewOutputs(sessionId: string, outputs: SessionOutput[]): void {
@@ -56,12 +98,19 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
             timestamp: now,
             data: { sessionId },
           });
-        } else {
-          // A non-ask_user tool completed — cancel any pending approval timer.
-          pendingChoiceEvents.emit('session.tool_result_seen', sessionId);
         }
       }
     }
+  }
+
+  override closeWatcher(sessionId: string): void {
+    this.pendingPermissionCallIds.delete(sessionId);
+    super.closeWatcher(sessionId);
+  }
+
+  override stopWatchers(): void {
+    this.pendingPermissionCallIds.clear();
+    super.stopWatchers();
   }
 
   async watchFile(sessionId: string, dirPath: string): Promise<void> {

@@ -731,6 +731,11 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     if (!existing) {
       return;
     }
+    // Copilot CLI drives approval cards via permission.requested JSONL events, not the
+    // PreToolUse hook. The hook is batched per-turn with toolName undefined, so bail early.
+    if (this.toolTypeId === 'copilot-cli') {
+      return;
+    }
     // In yolo mode the tool is auto-approved — no interactive prompt is shown.
     if (existing.yoloMode) {
       return;
@@ -803,6 +808,10 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     now: string,
   ): void {
     if (!existing) {
+      return;
+    }
+    // Copilot CLI resolves approval cards via permission_resolved JSONL events, not here.
+    if (this.toolTypeId === 'copilot-cli') {
       return;
     }
     // Cancel any pending broadcast timer — the tool was resolved before being shown.
