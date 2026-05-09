@@ -219,6 +219,24 @@ export function parsePendingChoicePayload(toolInput: Record<string, unknown>): {
 }
 
 /**
+ * Builds a pending choice for a Copilot CLI permission.requested event.
+ * The kind field from the JSONL event ('shell' or 'write') determines the label.
+ * Choices are always the standard Copilot three-option set.
+ */
+export function buildCopilotPermissionChoice(
+  kind: string,
+  commandText: string,
+): {
+  question: string;
+  choices: string[];
+  allQuestions: PendingChoiceItem[];
+} {
+  const question = commandText ? `${kind}: ${commandText}` : kind;
+  const allQuestions: PendingChoiceItem[] = [{ question, choices: COPILOT_TIER_CHOICES }];
+  return { question, choices: COPILOT_TIER_CHOICES, allQuestions };
+}
+
+/**
  * Builds a pending choice structure for a tool approval event (PreToolUse for
  * non-ask_user tools). The question is formatted as "<toolName>: <primaryInput>"
  * where primaryInput is extracted from tool_input using a priority order:
