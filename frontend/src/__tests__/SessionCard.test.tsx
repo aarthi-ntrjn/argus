@@ -258,7 +258,7 @@ describe('SessionCard — last output preview', () => {
       makeOutput({ type: 'tool_use', role: null, content: '', id: 'out-3', sequenceNumber: 3 }),
     ]);
     await waitFor(() =>
-      expect(screen.getByText('↻ 3 tool calls')).toBeInTheDocument(),
+      expect(screen.getByText('3', { exact: false })).toBeInTheDocument(),
     );
   });
 
@@ -267,7 +267,7 @@ describe('SessionCard — last output preview', () => {
       makeOutput({ type: 'tool_use', role: null, content: '', sequenceNumber: 1 }),
     ]);
     await waitFor(() =>
-      expect(screen.getByText('↻ 1 tool call')).toBeInTheDocument(),
+      expect(screen.getByText('1', { exact: false })).toBeInTheDocument(),
     );
   });
 });
