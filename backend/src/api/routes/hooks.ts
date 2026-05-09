@@ -52,6 +52,7 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
   // Processes SessionStart, SessionEnd, and all PreToolUse/PostToolUse events.
   // AskUserQuestion tool events surface ask_user prompts; all other tool events
   // surface tool approval prompts (bash commands, file writes, etc.).
+  // Yolo-mode sessions skip approval prompts — that filtering happens at session level.
   app.post<{ Body: HookPayload }>(
     '/hooks/claude',
     { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },

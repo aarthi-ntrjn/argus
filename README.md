@@ -1,10 +1,8 @@
 # Argus
 
-
-Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every session live, send commands, and stop runaway agents, all from a single browser tab.
+Your command centerfor Claude Code and GitHub Copilot CLI sessions. Watch every session live, send commands, and stop runaway agents, all from a single browser tab.
 
 ## Links
-
 
 - **Landing Page**: [aarthi-ntrjn.github.io/argus](https://aarthi-ntrjn.github.io/argus)
 - **npm**: [npmjs.com/package/argus-ai-hub](https://www.npmjs.com/package/argus-ai-hub)
@@ -12,7 +10,6 @@ Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every
 - **Contributor docs**: [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md)
 
 ## Requirements
-
 
 - Node.js 22 LTS
 - [GitHub Copilot CLI](https://github.com/features/copilot/cli/) and/or [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started) installed
