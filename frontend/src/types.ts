@@ -36,6 +36,7 @@ export interface Repository {
   lastScannedAt: string | null;
   branch: string | null;
   remoteUrl?: string | null;
+  prUrl?: string | null;
 }
 
 export interface Session {
