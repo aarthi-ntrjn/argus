@@ -1,9 +1,8 @@
 import { EventEmitter } from 'events';
+import type { PendingChoice as BasePendingChoice } from '../models/index.js';
 
-export interface PendingChoice {
+export interface PendingChoice extends BasePendingChoice {
   sessionId: string;
-  question: string;
-  choices: string[];
 }
 
 /**
@@ -13,5 +12,17 @@ export interface PendingChoice {
  * Events:
  *   'session.pending_choice'          (choice: PendingChoice)
  *   'session.pending_choice.resolved' (sessionId: string)
+ *   'session.pretooluse_ack'          (sessionId: string, toolUseId: string) — the JSONL
+ *                                     attachment for a PreToolUse hook completion landed.
+ *                                     Claude Code holds the JSONL flush until the user
+ *                                     approves a paused tool call, so this attachment
+ *                                     appearing means approval has happened. Used to
+ *                                     cancel or resolve the pending-approval card.
+ *   'session.permission_requested'    (sessionId: string, kind: string, commandText: string)
+ *                                     — Copilot CLI emitted permission.requested in JSONL;
+ *                                     the approval card should be shown immediately.
+ *   'session.permission_resolved'     (sessionId: string)
+ *                                     — Copilot CLI tool.execution_complete matched the
+ *                                     pending permission toolCallId; resolve the card.
  */
 export const pendingChoiceEvents = new EventEmitter();

@@ -25,11 +25,14 @@ import {
   getRepositoryByPath,
   getSession,
 } from '../db/database.js';
-import { parsePendingChoicePayload } from './pending-choice-utils.js';
+import { parsePendingChoicePayload, buildToolApprovalChoice, isClaudeReadOnlyBashCommand, CLAUDE_READONLY_TOOL_NAMES, COPILOT_READONLY_TOOL_NAMES } from './pending-choice-utils.js';
 import { telemetryService } from '../services/telemetry-service.js';
 import { ptyRegistry } from '../launch-pty/pty-registry.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from '../utils/process-utils.js';
 import * as logger from '../utils/logger.js';
+import { createTaggedLogger } from '../utils/logger.js';
+
+const hookLog = createTaggedLogger('[PreToolHook]', '\x1b[95m');
 import { JsonlWatcherBase } from './jsonl-watcher-base.js';
 import type { CliHookPayload } from './cli-detector.js';
 
@@ -51,6 +54,10 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
   // Dedup map: last-emitted signature per session, used to avoid redundant callbacks.
   protected readonly sigCache = new Map<string, string>();
   protected readonly pendingChoices = new Map<string, PendingChoice>();
+  // Timers that delay broadcasting tool-approval pending choices. If PostToolUse
+  // arrives before a timer fires, the choice was auto-approved by a permission rule
+  // and the timer is cancelled — no UI is ever shown.
+  private readonly pendingApprovalTimers = new Map<string, ReturnType<typeof setTimeout>>();
   protected sessionCreatedCallback?: (session: Session) => void;
   protected sessionUpdatedCallback?: (session: Session) => void;
   protected sessionEndedCallback?: (session: Session) => void;
@@ -620,6 +627,20 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     if (hook_event_name === 'PostToolUse' && payload.tool_name === this.askUserToolName) {
       return this.handlePostAskQuestion(session_id, existing, now);
     }
+    if (
+      hook_event_name === 'PreToolUse' &&
+      payload.tool_name &&
+      payload.tool_name !== this.askUserToolName
+    ) {
+      return this.handlePreToolApproval(session_id, existing, payload, now);
+    }
+    if (
+      hook_event_name === 'PostToolUse' &&
+      payload.tool_name &&
+      payload.tool_name !== this.askUserToolName
+    ) {
+      return this.handlePostToolApproval(session_id, existing, now);
+    }
 
     if (!existing) {
       const claimed = cwd ? ptyRegistry.claimForSession(session_id, cwd, this.toolTypeId) : null;
@@ -632,11 +653,15 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     }
 
     const session = await this.upsertActiveSession(session_id, repo, existing, now);
-    this.sigCache.set(session.id, this.sessionSignature(session));
-    if (existing) {
-      broadcast({ type: 'session.updated', timestamp: now, data: session });
-    } else {
+    const sig = this.sessionSignature(session);
+    // Check sigCache AFTER the await: if a concurrent hook already handled this session,
+    // sigCache will already have it and we must fire session.updated, not session.created.
+    const isNew = !existing && !this.sigCache.has(session.id);
+    this.sigCache.set(session.id, sig);
+    if (isNew) {
       this.sessionCreatedCallback?.(session);
+    } else {
+      broadcast({ type: 'session.updated', timestamp: now, data: session });
     }
   }
 
@@ -653,6 +678,11 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     const ended = { ...existing, status: 'ended' as const, endedAt: now };
     this.sigCache.delete(sessionId);
     this.pendingChoices.delete(sessionId);
+    const pendingTimer = this.pendingApprovalTimers.get(sessionId);
+    if (pendingTimer !== undefined) {
+      clearTimeout(pendingTimer);
+      this.pendingApprovalTimers.delete(sessionId);
+    }
     broadcast({ type: 'session.ended', timestamp: now, data: ended });
     telemetryService.sendEvent('session_ended', {
       sessionType: existing.type,
@@ -672,7 +702,7 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       return;
     }
     const { question, choices, allQuestions } = parsePendingChoicePayload(payload.tool_input ?? {});
-    this.pendingChoices.set(sessionId, { question, choices, allQuestions });
+    this.pendingChoices.set(sessionId, { type: 'ask_user', question, choices, allQuestions });
     broadcast({
       type: 'session.pending_choice',
       timestamp: now,
@@ -692,6 +722,140 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     now: string,
   ): void {
     if (!existing) {
+      return;
+    }
+    this.pendingChoices.delete(sessionId);
+    broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
+    pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
+  }
+
+  protected handlePreToolApproval(
+    sessionId: string,
+    existing: Session | null | undefined,
+    payload: CliHookPayload,
+    now: string,
+  ): void {
+    const toolName = payload.tool_name ?? 'Unknown';
+    const toolUseId = typeof payload.tool_use_id === 'string' ? payload.tool_use_id : null;
+    hookLog.info(
+      `handlePreToolApproval sessionId=${sessionId} toolType=${this.toolTypeId} toolName=${toolName} toolUseId=${toolUseId ?? 'none'} yoloMode=${existing?.yoloMode ?? 'n/a'} hasExisting=${!!existing}`,
+    );
+    if (!existing) {
+      return;
+    }
+    // In yolo mode the tool is auto-approved — no interactive prompt is shown.
+    if (existing.yoloMode) {
+      return;
+    }
+    // Native read-only tools (LS, Read, Glob, Grep, etc.) and read-only Bash commands
+    // are always auto-approved by Claude Code — skip the pending-choice flow entirely.
+    if (CLAUDE_READONLY_TOOL_NAMES.has(toolName)) {
+      return;
+    }
+    // Copilot CLI read-only tools (view, glob, grep, report_intent, etc.) are always
+    // auto-approved by the Copilot agent — skip the pending-choice flow entirely.
+    if (COPILOT_READONLY_TOOL_NAMES.has(toolName)) {
+      return;
+    }
+    if (
+      toolName === 'Bash' &&
+      isClaudeReadOnlyBashCommand(
+        typeof payload.tool_input?.command === 'string' ? payload.tool_input.command : '',
+      )
+    ) {
+      return;
+    }
+    const { question, choices, allQuestions } = buildToolApprovalChoice(
+      toolName,
+      payload.tool_input ?? {},
+    );
+    this.pendingChoices.set(sessionId, { type: 'tool_approval', question, choices, allQuestions });
+
+    // Copilot CLI broadcasts approval cards via permission.requested JSONL events
+    // (subscribePermissionEvents). The pending choice state is set above for backend
+    // consistency; JSONL handles the WS broadcast.
+    if (this.toolTypeId === 'copilot-cli') {
+      return;
+    }
+
+    // The Claude Code JSONL flush is held until the user resolves a paused tool call.
+    // The PreToolUse hook attachment is the first JSONL entry after approval; matching
+    // by toolUseID ensures we cancel only the right timer. If the timer has already
+    // fired (card is visible), broadcast resolution to clear it.
+    const cancelOnPreToolUseAck = (sid: string, ackId: string) => {
+      if (sid !== sessionId) {
+        return;
+      }
+      if (toolUseId && ackId && toolUseId !== ackId) {
+        return;
+      }
+      pendingChoiceEvents.off('session.pretooluse_ack', cancelOnPreToolUseAck);
+      const pending = this.pendingApprovalTimers.get(sessionId);
+      if (pending !== undefined) {
+        clearTimeout(pending);
+        this.pendingApprovalTimers.delete(sessionId);
+        this.pendingChoices.delete(sessionId);
+        return;
+      }
+      if (this.pendingChoices.has(sessionId)) {
+        this.pendingChoices.delete(sessionId);
+        const ts = new Date().toISOString();
+        broadcast({ type: 'session.pending_choice.resolved', timestamp: ts, data: { sessionId } });
+        pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
+      }
+    };
+    pendingChoiceEvents.on('session.pretooluse_ack', cancelOnPreToolUseAck);
+
+    // Delay the broadcast. PostToolUse (HTTP) and the JSONL pretooluse_ack event both
+    // resolve this timer once approval is observed. If neither fires within 500ms the
+    // tool is genuinely waiting for the user, so we show the approval card.
+    const timer = setTimeout(() => {
+      pendingChoiceEvents.off('session.pretooluse_ack', cancelOnPreToolUseAck);
+      this.pendingApprovalTimers.delete(sessionId);
+      if (!this.pendingChoices.has(sessionId)) {
+        return;
+      }
+      hookLog.info(
+        `PreToolUse timer fired, showing approval card sessionId=${sessionId} toolName=${toolName} toolUseId=${toolUseId ?? 'none'}`,
+      );
+      broadcast({
+        type: 'session.pending_choice',
+        timestamp: now,
+        data: { sessionId, question, choices, allQuestions },
+      });
+      pendingChoiceEvents.emit('session.pending_choice', {
+        sessionId,
+        question,
+        choices,
+        allQuestions,
+      });
+    }, 500);
+    this.pendingApprovalTimers.set(sessionId, timer);
+  }
+
+  protected handlePostToolApproval(
+    sessionId: string,
+    existing: Session | null | undefined,
+    now: string,
+  ): void {
+    if (!existing) {
+      return;
+    }
+    // Copilot CLI resolves approval cards via permission_resolved JSONL events, not here.
+    if (this.toolTypeId === 'copilot-cli') {
+      return;
+    }
+    // Cancel any pending broadcast timer — the tool was resolved before being shown.
+    const timer = this.pendingApprovalTimers.get(sessionId);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.pendingApprovalTimers.delete(sessionId);
+      this.pendingChoices.delete(sessionId);
+      return;
+    }
+    // The pretooluse_ack cancel may have already cleared the card; broadcast resolved
+    // only if a pending choice still exists.
+    if (!this.pendingChoices.has(sessionId)) {
       return;
     }
     this.pendingChoices.delete(sessionId);

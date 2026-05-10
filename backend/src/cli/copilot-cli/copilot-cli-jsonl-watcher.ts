@@ -2,10 +2,15 @@ import { join } from 'path';
 import { broadcast } from '../../api/ws/event-dispatcher.js';
 import { parseJsonlLine } from './copilot-cli-jsonl-parser.js';
 import { JsonlWatcherBase } from '../jsonl-watcher-base.js';
+import { pendingChoiceEvents } from '../pending-choice-events.js';
 import type { SessionOutput } from '../../models/index.js';
 
 export class CopilotJsonlWatcher extends JsonlWatcherBase {
   protected readonly tag = '[CopilotDetector]';
+
+  // Tracks the toolCallId of a pending permission.requested per session so we can
+  // resolve the approval card when tool.execution_complete fires for the same tool.
+  private readonly pendingPermissionCallIds = new Map<string, string>();
 
   protected parseLine(
     line: string,
@@ -14,6 +19,54 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
     makeId: (blockIndex: number) => string,
   ): SessionOutput[] {
     return parseJsonlLine(line, sessionId, seq, makeId);
+  }
+
+  protected override onRawLine(line: string, sessionId: string): void {
+    try {
+      const event = JSON.parse(line) as { type?: string; data?: Record<string, unknown> };
+      const type = event.type;
+      const data = event.data;
+
+      if (type === 'permission.requested') {
+        const req = data?.permissionRequest as Record<string, unknown> | undefined;
+        if (!req) {
+          return;
+        }
+        const toolCallId = typeof req.toolCallId === 'string' ? req.toolCallId : '';
+        const kind = typeof req.kind === 'string' ? req.kind : 'shell';
+        // Prefer fullCommandText; fall back to intention for write-kind tools.
+        const commandText =
+          typeof req.fullCommandText === 'string' && req.fullCommandText
+            ? req.fullCommandText
+            : typeof req.intention === 'string'
+              ? req.intention
+              : '';
+
+        if (this.pendingPermissionCallIds.has(sessionId)) {
+          // A card is already showing. Silently update the tracked toolCallId so that
+          // tool.execution_complete resolves the card even when the final completion
+          // event carries a different ID than the first permission.requested.
+          if (toolCallId) {
+            this.pendingPermissionCallIds.set(sessionId, toolCallId);
+          }
+          return;
+        }
+
+        if (toolCallId) {
+          this.pendingPermissionCallIds.set(sessionId, toolCallId);
+        }
+        pendingChoiceEvents.emit('session.permission_requested', sessionId, kind, commandText);
+      } else if (type === 'tool.execution_complete' || type === 'tool.execution_failed') {
+        const toolCallId = typeof data?.toolCallId === 'string' ? data.toolCallId : '';
+        const pendingId = this.pendingPermissionCallIds.get(sessionId);
+        if (pendingId && toolCallId === pendingId) {
+          this.pendingPermissionCallIds.delete(sessionId);
+          pendingChoiceEvents.emit('session.permission_resolved', sessionId);
+        }
+      }
+    } catch {
+      // Ignore malformed lines.
+    }
   }
 
   protected override onNewOutputs(sessionId: string, outputs: SessionOutput[]): void {
@@ -58,6 +111,16 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
         }
       }
     }
+  }
+
+  override closeWatcher(sessionId: string): void {
+    this.pendingPermissionCallIds.delete(sessionId);
+    super.closeWatcher(sessionId);
+  }
+
+  override stopWatchers(): void {
+    this.pendingPermissionCallIds.clear();
+    super.stopWatchers();
   }
 
   async watchFile(sessionId: string, dirPath: string): Promise<void> {

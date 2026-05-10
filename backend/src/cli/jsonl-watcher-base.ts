@@ -133,6 +133,7 @@ export abstract class JsonlWatcherBase {
 
       for (const line of lines) {
         seq++;
+        this.onRawLine(line.text, sessionId);
         const makeId = (blockIndex: number) => makeLineId(sessionId, line.byteOffset, blockIndex);
         outputs.push(...this.parseLine(line.text, sessionId, seq, makeId));
         if (!detectedModel) {
@@ -179,4 +180,8 @@ export abstract class JsonlWatcherBase {
   }
 
   protected onNewOutputs(_sessionId: string, _outputs: SessionOutput[]): void {}
+
+  /** Called for every raw JSONL line as it is read. Subclasses can inspect raw events
+   * (e.g. permission.requested) that the typed parser filters out. */
+  protected onRawLine(_line: string, _sessionId: string): void {}
 }

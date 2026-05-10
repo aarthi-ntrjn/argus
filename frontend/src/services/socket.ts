@@ -138,7 +138,11 @@ function applyOutputBatchEvent(qc: QueryClient, sessionId: string, outputs: Sess
 export function initSocketHandlers(qc: QueryClient): void {
   onEvent('session.created', (data) => {
     const session = data as Session;
-    qc.setQueryData<Session[]>(['sessions'], (old) => (old ? [session, ...old] : [session]));
+    qc.setQueryData<Session[]>(['sessions'], (old) => {
+      if (!old) return [session];
+      if (old.some((s) => s.id === session.id)) return old;
+      return [session, ...old];
+    });
   });
   onEvent('session.updated', (data) => {
     updateSessionInCache(qc, data as Session);

@@ -49,8 +49,10 @@ export function setCliManager(manager: {
 
 const hooksRoutes: FastifyPluginAsync = async (app) => {
   // Receives hook payloads injected by Claude Code into running sessions.
-  // Only SessionStart, SessionEnd, and AskUserQuestion tool events are processed;
-  // AskUserQuestion is only valid on PreToolUse and PostToolUse events.
+  // Processes SessionStart, SessionEnd, and all PreToolUse/PostToolUse events.
+  // AskUserQuestion tool events surface ask_user prompts; all other tool events
+  // surface tool approval prompts (bash commands, file writes, etc.).
+  // Yolo-mode sessions skip approval prompts — that filtering happens at session level.
   app.post<{ Body: HookPayload }>(
     '/hooks/claude',
     { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
@@ -87,10 +89,6 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      if (isToolUse && payload?.tool_name !== 'AskUserQuestion') {
-        return reply.send({ ok: true });
-      }
-
       req.log.debug({ hookEvent: payload.hook_event_name, payload }, 'claude-code hook received');
 
       if (_cliManager) {
@@ -101,9 +99,9 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
   );
 
   // Receives hook payloads injected by Copilot CLI into running sessions.
-  // Only SessionStart, SessionEnd, and ask_user tool events are processed;
-  // all others are acknowledged and discarded immediately.
-  // ask_user is only valid on preToolUse and postToolUse events.
+  // Processes SessionStart, SessionEnd, and all preToolUse/postToolUse events.
+  // ask_user tool events surface ask_user prompts; all other tool events
+  // surface tool approval prompts (bash commands, file writes, etc.).
   app.post<{ Querystring: { event?: string }; Body: CopilotRawPayload }>(
     '/hooks/copilot',
     { bodyLimit: HOOK_BODY_LIMIT, logLevel: 'warn' },
@@ -121,8 +119,6 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      const isToolUse = event === 'preToolUse' || event === 'postToolUse';
-
       const sessionId = body.sessionId;
 
       // Validate that sessionId is a well-formed UUID v4 string.
@@ -132,10 +128,6 @@ const hooksRoutes: FastifyPluginAsync = async (app) => {
           message: 'sessionId must be a valid UUID v4',
           requestId: req.id,
         });
-      }
-
-      if (isToolUse && body.toolName !== 'ask_user') {
-        return reply.send({ ok: true });
       }
 
       // toolArgs arrives as a JSON string; parse it into a structured object.

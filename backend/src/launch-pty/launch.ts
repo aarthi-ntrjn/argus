@@ -226,9 +226,14 @@ const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 //   await delay(WRITE_DELAY_MS);
 // };
 
-const sendInterrupt = (): void => {
+const sendInterrupt = async (): Promise<void> => {
   log(`pty.write interrupt`);
+  pty.write('\x1b[I');
+  await delay(WRITE_DELAY_MS);
   pty.write('\x1b');
+  await delay(WRITE_DELAY_MS);
+  pty.write('\x1b[O');
+  await delay(WRITE_DELAY_MS);
 };
 
 const sendPromptInterwriteDelayV2 = async (prompt: string, skipEnter = false): Promise<void> => {
@@ -274,7 +279,7 @@ client.onSendPrompt(async (actionId: string, prompt: string, skipEnter: boolean)
   log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length} skipEnter=${skipEnter}`);
   try {
     if (prompt === '\x1b') {
-      sendInterrupt();
+      await sendInterrupt();
     } else {
       await sendPromptInterwriteDelayV2(prompt, skipEnter);
     }

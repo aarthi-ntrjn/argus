@@ -214,7 +214,7 @@ function isAiToolName(name: string, type: SessionType): boolean {
 
 /**
  * Guard 3: verify the process at the given PID is the expected AI tool.
- * Fails open (returns true) when the process name cannot be read.
+ * Fails closed (returns false) when the process name cannot be read.
  *
  * On Windows: uses koffi FFI to call QueryFullProcessImageNameW directly —
  * sub-millisecond, no child-process spawn.
@@ -229,15 +229,15 @@ export function isExpectedProcess(pid: number, type: SessionType): boolean {
   if (PLATFORM === 'win32') {
     const name = getProcessNameWin32(pid);
     if (!name) {
-      return false;
-    } // cannot verify — fail closed
+      return false; // cannot verify — fail closed
+    }
     return isAiToolName(name, type);
   }
   // Linux/Mac: use the full command line — handles node-wrapped binaries like copilot.
   const cmdLine = getProcessCommandLine(pid);
   if (!cmdLine) {
-    return false;
-  } // cannot verify — fail closed
+    return false; // cannot verify — fail closed
+  }
   return isAiToolCmdLine(cmdLine, type);
 }
 

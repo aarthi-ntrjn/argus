@@ -161,6 +161,7 @@ export interface PendingChoiceItem {
 }
 
 export interface PendingChoice {
+  type: 'ask_user' | 'tool_approval';
   question: string;
   choices: string[];
   allQuestions?: PendingChoiceItem[];
