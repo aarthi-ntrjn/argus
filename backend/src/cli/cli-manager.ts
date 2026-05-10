@@ -2,7 +2,7 @@ import { ClaudeCodeDetector } from './claude-code/claude-code-detector.js';
 import { CopilotCliDetector } from './copilot-cli/copilot-cli-detector.js';
 import { ClaudeCodeHooksInjector } from './claude-code/claude-code-hooks-injector.js';
 import { CopilotHooksInjector } from './copilot-cli/copilot-cli-hooks-injector.js';
-import type { Session } from '../models/index.js';
+import type { Session, PendingChoice } from '../models/index.js';
 import type { CliHookPayload } from './cli-detector.js';
 
 /**
@@ -93,7 +93,7 @@ export class CliManager {
   // --- Pending choice (for the send-prompt route) ---
 
   /** Returns the pending question for a session, checking both detectors. */
-  getPendingChoice(sessionId: string): unknown {
+  getPendingChoice(sessionId: string): PendingChoice | null {
     return (
       this.claudeDetector.getPendingChoice(sessionId) ??
       this.copilotDetector.getPendingChoice(sessionId)

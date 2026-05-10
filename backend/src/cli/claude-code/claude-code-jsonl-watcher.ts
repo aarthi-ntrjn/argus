@@ -4,7 +4,11 @@ import { parseClaudeJsonlLine } from './claude-code-jsonl-parser.js';
 import { JsonlWatcherBase } from '../jsonl-watcher-base.js';
 import { broadcast } from '../../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from '../pending-choice-events.js';
+import { getSession } from '../../db/database.js';
+import { createTaggedLogger } from '../../utils/logger.js';
 import type { SessionOutput } from '../../models/index.js';
+
+const log = createTaggedLogger('[PreToolAck]', '\x1b[96m');
 
 const TOOL_USE_INTERRUPTED_SENTINEL = '[Request interrupted by user for tool use]';
 
@@ -24,6 +28,28 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
     return parseClaudeJsonlLine(line, sessionId, seq, makeId);
   }
 
+  // Claude Code holds JSONL flush until the user resolves a paused tool approval. The
+  // PreToolUse hook attachment is the first JSONL entry after approval; matching it by
+  // toolUseID lets handlePreToolApproval cancel or resolve the pending card precisely.
+  protected override onRawLine(line: string, sessionId: string): void {
+    try {
+      const entry = JSON.parse(line) as {
+        type?: string;
+        attachment?: { hookEvent?: string; toolUseID?: string };
+      };
+      if (entry.type === 'attachment' && entry.attachment?.hookEvent === 'PreToolUse') {
+        if (getSession(sessionId)?.yoloMode) {
+          return;
+        }
+        const toolUseId = entry.attachment.toolUseID ?? '';
+        log.info(`pretooluse_ack sessionId=${sessionId} toolUseId=${toolUseId}`);
+        pendingChoiceEvents.emit('session.pretooluse_ack', sessionId, toolUseId);
+      }
+    } catch {
+      // ignore malformed lines
+    }
+  }
+
   protected override onNewOutputs(sessionId: string, outputs: SessionOutput[]): void {
     const now = new Date().toISOString();
 
@@ -39,17 +65,18 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
 
       // Any tool_result for a tracked AskUserQuestion call resolves the pending choice
       // (covers normal answer, "clarify" rejection, and interrupt rejection)
-      if (output.type === 'tool_result' && output.toolCallId) {
-        const pendingId = this.pendingAskUserCallIds.get(sessionId);
-        if (pendingId === output.toolCallId) {
-          this.pendingAskUserCallIds.delete(sessionId);
-          broadcast({
-            type: 'session.pending_choice.resolved',
-            timestamp: now,
-            data: { sessionId },
-          });
-          pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
-        }
+      if (
+        output.type === 'tool_result' &&
+        output.toolCallId &&
+        this.pendingAskUserCallIds.get(sessionId) === output.toolCallId
+      ) {
+        this.pendingAskUserCallIds.delete(sessionId);
+        broadcast({
+          type: 'session.pending_choice.resolved',
+          timestamp: now,
+          data: { sessionId },
+        });
+        pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
       }
 
       // Belt-and-suspenders: interrupt sentinel clears any lingering banner even if

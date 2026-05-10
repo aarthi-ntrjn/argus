@@ -146,6 +146,10 @@ The alert appears for both read-only and connected sessions. It is never shown f
 
 - **GitHub Copilot sessions**: The backend monitors the session output stream. When an `ask_user` tool_use is detected without a subsequent `tool_result`, the backend broadcasts a `session.pending_choice` event via WebSocket. The frontend receives this event and shows the alert. It disappears once the `tool_result` (the user's answer) is written to the output.
 
+**Tool approval prompts (non-YOLO / non-`--allow-all` mode):**
+
+When a session is running without auto-approval, any tool use that requires confirmation (bash commands, file writes, etc.) is also surfaced on the session card. The same `PendingChoicePanel` appears with the tool name and input as the question. Choices are tier-aware: bash/shell commands offer "Yes, don't ask again for this project" (permanent per-project approval), while file-edit tools offer "Yes, don't ask again for this session" (session-only). Both Claude Code and Copilot CLI use the `PreToolUse` hook for this: Claude Code registers a wildcard PreToolUse hook in `~/.claude/settings.json`; Copilot CLI already sends all PreToolUse events. When the tool completes (or is denied), the prompt clears automatically.
+
 ### Prompt Bar
 
 Every session card has a prompt bar. For **live** (PTY-launched) sessions, type a message and click the send button (or press **Enter**) to send it.

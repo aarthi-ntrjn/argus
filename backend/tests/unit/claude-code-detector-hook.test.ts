@@ -168,7 +168,7 @@ describe('ClaudeCodeDetector — hook-based pending choice', () => {
     expect(detector.getPendingChoice(sessionId)).toBeNull();
   });
 
-  it('PreToolUse with non-AskUserQuestion tool_name does not store a pending choice', async () => {
+  it('PreToolUse with non-AskUserQuestion tool_name stores a tool approval pending choice', async () => {
     const sessionId = randomUUID();
     dbModule.upsertSession(makeSession(sessionId));
 
@@ -176,11 +176,70 @@ describe('ClaudeCodeDetector — hook-based pending choice', () => {
       hook_event_name: 'PreToolUse',
       session_id: sessionId,
       tool_name: 'Bash',
-      tool_input: { command: 'ls -la' },
+      tool_input: { command: 'touch /tmp/argus-test.txt' },
+      cwd: TEST_REPO_PATH,
+    });
+
+    const pending = detector.getPendingChoice(sessionId);
+    expect(pending).not.toBeNull();
+    expect(pending?.question).toBe('Bash: touch /tmp/argus-test.txt');
+    expect(pending?.choices).toEqual(['Yes', "Yes, don't ask again for this project", 'No']);
+  });
+
+  it('PreToolUse with non-AskUserQuestion tool is suppressed in yolo mode', async () => {
+    const sessionId = randomUUID();
+    dbModule.upsertSession({ ...makeSession(sessionId), yoloMode: true });
+
+    await detector.handleHookPayload({
+      hook_event_name: 'PreToolUse',
+      session_id: sessionId,
+      tool_name: 'Bash',
+      tool_input: { command: 'rm -rf /' },
       cwd: TEST_REPO_PATH,
     });
 
     expect(detector.getPendingChoice(sessionId)).toBeNull();
+  });
+
+  it('PostToolUse with non-AskUserQuestion tool_name clears the tool approval pending choice', async () => {
+    const sessionId = randomUUID();
+    dbModule.upsertSession(makeSession(sessionId));
+
+    await detector.handleHookPayload({
+      hook_event_name: 'PreToolUse',
+      session_id: sessionId,
+      tool_name: 'Bash',
+      tool_input: { command: 'echo hello' },
+      cwd: TEST_REPO_PATH,
+    });
+    expect(detector.getPendingChoice(sessionId)).not.toBeNull();
+
+    await detector.handleHookPayload({
+      hook_event_name: 'PostToolUse',
+      session_id: sessionId,
+      tool_name: 'Bash',
+      cwd: TEST_REPO_PATH,
+    });
+    expect(detector.getPendingChoice(sessionId)).toBeNull();
+  });
+
+  it('PreToolUse/AskUserQuestion is NOT handled by the tool approval path', async () => {
+    const sessionId = randomUUID();
+    dbModule.upsertSession(makeSession(sessionId));
+
+    await detector.handleHookPayload({
+      hook_event_name: 'PreToolUse',
+      session_id: sessionId,
+      tool_name: 'AskUserQuestion',
+      tool_use_id: 'toolu_ask',
+      tool_input: {
+        questions: [{ question: 'Which choice?', options: ['A', 'B'] }],
+      },
+      cwd: TEST_REPO_PATH,
+    });
+
+    const pending = detector.getPendingChoice(sessionId);
+    expect(pending?.choices).toEqual(['A', 'B']);
   });
 
   it('PreToolUse/AskUserQuestion with session_id not in any known session does nothing', async () => {
