@@ -11,7 +11,9 @@ const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json');
 const HOOK_EVENTS: Array<{ event: string; matcher: string }> = [
   { event: 'SessionStart', matcher: '' },
   { event: 'SessionEnd', matcher: '' },
+  { event: 'PreToolUse', matcher: 'AskUserQuestion' },
   { event: 'PreToolUse', matcher: '' },
+  { event: 'PostToolUse', matcher: 'AskUserQuestion' },
   { event: 'PostToolUse', matcher: '' },
 ];
 

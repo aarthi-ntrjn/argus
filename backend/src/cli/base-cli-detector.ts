@@ -739,11 +739,6 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     if (!existing) {
       return;
     }
-    // Copilot CLI drives approval cards via permission.requested JSONL events, not the
-    // PreToolUse hook. The hook is batched per-turn with toolName undefined, so bail early.
-    if (this.toolTypeId === 'copilot-cli') {
-      return;
-    }
     // In yolo mode the tool is auto-approved — no interactive prompt is shown.
     if (existing.yoloMode) {
       return;
@@ -771,6 +766,13 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       payload.tool_input ?? {},
     );
     this.pendingChoices.set(sessionId, { type: 'tool_approval', question, choices, allQuestions });
+
+    // Copilot CLI broadcasts approval cards via permission.requested JSONL events
+    // (subscribePermissionEvents). The pending choice state is set above for backend
+    // consistency; JSONL handles the WS broadcast.
+    if (this.toolTypeId === 'copilot-cli') {
+      return;
+    }
 
     // The Claude Code JSONL flush is held until the user resolves a paused tool call.
     // The PreToolUse hook attachment is the first JSONL entry after approval; matching

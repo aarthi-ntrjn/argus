@@ -1,6 +1,6 @@
 # Argus
 
-Your command centerfor Claude Code and GitHub Copilot CLI sessions. Watch every session live, send commands, and stop runaway agents, all from a single browser tab.
+Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every session live, send commands, and stop runaway agents, all from a single browser tab.
 
 ## Links
 
