@@ -1,4 +1,6 @@
-import { useState } from 'react';import { sendPrompt } from '../../services/api';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { sendPrompt } from '../../services/api';
 import type { Session } from '../../types';
 import type { PendingChoice, PendingChoiceItem } from '../../utils/sessionUtils';
 import { Button } from '../Button';
@@ -20,25 +22,28 @@ export default function PendingChoicePanel({
   onFocusPromptBar,
   onTypeAnswer,
 }: Props) {
+  const queryClient = useQueryClient();
   const questions: PendingChoiceItem[] = pendingChoice.allQuestions ?? [
     { question: pendingChoice.question, choices: pendingChoice.choices },
   ];
 
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
 
   const [prevPendingChoice, setPrevPendingChoice] = useState(pendingChoice);
   if (prevPendingChoice !== pendingChoice) {
     setPrevPendingChoice(pendingChoice);
     setError(null);
-    setSubmitted(false);
   }
 
   const canSend = session.launchMode === 'pty' && session.ptyConnected !== false;
   const showSubmitPanel = questions.length > 1;
   const allSelected = idx >= questions.length;
   const current = questions[Math.min(idx, questions.length - 1)];
+
+  const dismiss = () => {
+    queryClient.setQueryData(['session-pending-choice', session.id], null);
+  };
 
   const handleChoice = async (choice: string) => {
     if (!canSend) {
@@ -48,7 +53,11 @@ export default function PendingChoicePanel({
     setError(null);
     try {
       await sendPrompt(session.id, choice);
-      onAdvance();
+      if (showSubmitPanel) {
+        onAdvance();
+      } else {
+        dismiss();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send');
     } finally {
@@ -61,7 +70,7 @@ export default function PendingChoicePanel({
     setError(null);
     try {
       await sendPrompt(session.id, '1');
-      setSubmitted(true);
+      dismiss();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send');
     } finally {
@@ -74,7 +83,7 @@ export default function PendingChoicePanel({
     setError(null);
     try {
       await sendPrompt(session.id, '2');
-      setSubmitted(true);
+      dismiss();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send');
     } finally {
@@ -93,9 +102,7 @@ export default function PendingChoicePanel({
         )}
       </div>
 
-      {submitted ? (
-        <p className="text-xs text-gray-500 italic mt-1">Answers sent, waiting for Claude...</p>
-      ) : allSelected && showSubmitPanel ? (
+      {allSelected && showSubmitPanel ? (
         <>
           <div className="mt-1 text-gray-700">All questions answered. Confirm?</div>
           <div className="mt-1 flex flex-col gap-1">

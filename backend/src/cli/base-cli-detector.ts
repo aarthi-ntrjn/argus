@@ -30,6 +30,9 @@ import { telemetryService } from '../services/telemetry-service.js';
 import { ptyRegistry } from '../launch-pty/pty-registry.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from '../utils/process-utils.js';
 import * as logger from '../utils/logger.js';
+import { createTaggedLogger } from '../utils/logger.js';
+
+const hookLog = createTaggedLogger('[PreToolHook]', '\x1b[95m');
 import { JsonlWatcherBase } from './jsonl-watcher-base.js';
 import type { CliHookPayload } from './cli-detector.js';
 
@@ -728,6 +731,11 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     payload: CliHookPayload,
     now: string,
   ): void {
+    const toolName = payload.tool_name ?? 'Unknown';
+    const toolUseId = typeof payload.tool_use_id === 'string' ? payload.tool_use_id : null;
+    hookLog.info(
+      `handlePreToolApproval sessionId=${sessionId} toolType=${this.toolTypeId} toolName=${toolName} toolUseId=${toolUseId ?? 'none'} yoloMode=${existing?.yoloMode ?? 'n/a'} hasExisting=${!!existing}`,
+    );
     if (!existing) {
       return;
     }
@@ -740,7 +748,6 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     if (existing.yoloMode) {
       return;
     }
-    const toolName = payload.tool_name ?? 'Unknown';
     // Native read-only tools (LS, Read, Glob, Grep, etc.) and read-only Bash commands
     // are always auto-approved by Claude Code — skip the pending-choice flow entirely.
     if (CLAUDE_READONLY_TOOL_NAMES.has(toolName)) {
@@ -765,14 +772,18 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
     );
     this.pendingChoices.set(sessionId, { type: 'tool_approval', question, choices, allQuestions });
 
-    // The Claude Code JSONL flush is held until the user resolves a paused tool call,
-    // so any post-hook line means approval has happened. Cancel the debounce timer
-    // (or, if it has already fired, broadcast resolution to clear the card).
-    const cancelOnJsonlAdvanced = (sid: string) => {
+    // The Claude Code JSONL flush is held until the user resolves a paused tool call.
+    // The PreToolUse hook attachment is the first JSONL entry after approval; matching
+    // by toolUseID ensures we cancel only the right timer. If the timer has already
+    // fired (card is visible), broadcast resolution to clear it.
+    const cancelOnPreToolUseAck = (sid: string, ackId: string) => {
       if (sid !== sessionId) {
         return;
       }
-      pendingChoiceEvents.off('session.jsonl_advanced', cancelOnJsonlAdvanced);
+      if (toolUseId && ackId && toolUseId !== ackId) {
+        return;
+      }
+      pendingChoiceEvents.off('session.pretooluse_ack', cancelOnPreToolUseAck);
       const pending = this.pendingApprovalTimers.get(sessionId);
       if (pending !== undefined) {
         clearTimeout(pending);
@@ -787,16 +798,20 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
         pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
       }
     };
-    pendingChoiceEvents.on('session.jsonl_advanced', cancelOnJsonlAdvanced);
+    pendingChoiceEvents.on('session.pretooluse_ack', cancelOnPreToolUseAck);
 
-    // Delay the broadcast. PostToolUse (HTTP) and the JSONL jsonl_advanced event both
+    // Delay the broadcast. PostToolUse (HTTP) and the JSONL pretooluse_ack event both
     // resolve this timer once approval is observed. If neither fires within 500ms the
     // tool is genuinely waiting for the user, so we show the approval card.
     const timer = setTimeout(() => {
+      pendingChoiceEvents.off('session.pretooluse_ack', cancelOnPreToolUseAck);
       this.pendingApprovalTimers.delete(sessionId);
       if (!this.pendingChoices.has(sessionId)) {
         return;
       }
+      hookLog.info(
+        `PreToolUse timer fired, showing approval card sessionId=${sessionId} toolName=${toolName} toolUseId=${toolUseId ?? 'none'}`,
+      );
       broadcast({
         type: 'session.pending_choice',
         timestamp: now,
@@ -832,7 +847,7 @@ export abstract class BaseCliDetector<TEntry extends SessionEntry = SessionEntry
       this.pendingChoices.delete(sessionId);
       return;
     }
-    // The jsonl_advanced cancel may have already cleared the card; broadcast resolved
+    // The pretooluse_ack cancel may have already cleared the card; broadcast resolved
     // only if a pending choice still exists.
     if (!this.pendingChoices.has(sessionId)) {
       return;

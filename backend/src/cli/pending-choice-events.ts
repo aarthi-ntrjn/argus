@@ -12,12 +12,12 @@ export interface PendingChoice extends BasePendingChoice {
  * Events:
  *   'session.pending_choice'          (choice: PendingChoice)
  *   'session.pending_choice.resolved' (sessionId: string)
- *   'session.jsonl_advanced'          (sessionId: string) — a new line landed in the
- *                                     Claude Code JSONL stream. Claude Code holds the
- *                                     JSONL flush until the user approves a paused tool
- *                                     call, so any post-PreToolUse line means approval
- *                                     has happened. Used to cancel or resolve the
- *                                     pending-approval card.
+ *   'session.pretooluse_ack'          (sessionId: string, toolUseId: string) — the JSONL
+ *                                     attachment for a PreToolUse hook completion landed.
+ *                                     Claude Code holds the JSONL flush until the user
+ *                                     approves a paused tool call, so this attachment
+ *                                     appearing means approval has happened. Used to
+ *                                     cancel or resolve the pending-approval card.
  *   'session.permission_requested'    (sessionId: string, kind: string, commandText: string)
  *                                     — Copilot CLI emitted permission.requested in JSONL;
  *                                     the approval card should be shown immediately.

@@ -42,6 +42,16 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
               ? req.intention
               : '';
 
+        if (this.pendingPermissionCallIds.has(sessionId)) {
+          // A card is already showing. Silently update the tracked toolCallId so that
+          // tool.execution_complete resolves the card even when the final completion
+          // event carries a different ID than the first permission.requested.
+          if (toolCallId) {
+            this.pendingPermissionCallIds.set(sessionId, toolCallId);
+          }
+          return;
+        }
+
         if (toolCallId) {
           this.pendingPermissionCallIds.set(sessionId, toolCallId);
         }

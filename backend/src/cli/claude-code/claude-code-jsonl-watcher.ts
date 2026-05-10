@@ -4,8 +4,11 @@ import { parseClaudeJsonlLine } from './claude-code-jsonl-parser.js';
 import { JsonlWatcherBase } from '../jsonl-watcher-base.js';
 import { broadcast } from '../../api/ws/event-dispatcher.js';
 import { pendingChoiceEvents } from '../pending-choice-events.js';
-
+import { getSession } from '../../db/database.js';
+import { createTaggedLogger } from '../../utils/logger.js';
 import type { SessionOutput } from '../../models/index.js';
+
+const log = createTaggedLogger('[PreToolAck]', '\x1b[96m');
 
 const TOOL_USE_INTERRUPTED_SENTINEL = '[Request interrupted by user for tool use]';
 
@@ -25,12 +28,26 @@ export class ClaudeJsonlWatcher extends JsonlWatcherBase {
     return parseClaudeJsonlLine(line, sessionId, seq, makeId);
   }
 
-  // Claude Code holds JSONL flush until the user resolves a paused tool approval. Any
-  // line that lands after a PreToolUse hook fires therefore signals that approval has
-  // already happened. handlePreToolApproval listens for this to cancel or resolve the
-  // pending approval card without waiting for tool execution to complete.
-  protected override onRawLine(_line: string, sessionId: string): void {
-    pendingChoiceEvents.emit('session.jsonl_advanced', sessionId);
+  // Claude Code holds JSONL flush until the user resolves a paused tool approval. The
+  // PreToolUse hook attachment is the first JSONL entry after approval; matching it by
+  // toolUseID lets handlePreToolApproval cancel or resolve the pending card precisely.
+  protected override onRawLine(line: string, sessionId: string): void {
+    try {
+      const entry = JSON.parse(line) as {
+        type?: string;
+        attachment?: { hookEvent?: string; toolUseID?: string };
+      };
+      if (entry.type === 'attachment' && entry.attachment?.hookEvent === 'PreToolUse') {
+        if (getSession(sessionId)?.yoloMode) {
+          return;
+        }
+        const toolUseId = entry.attachment.toolUseID ?? '';
+        log.info(`pretooluse_ack sessionId=${sessionId} toolUseId=${toolUseId}`);
+        pendingChoiceEvents.emit('session.pretooluse_ack', sessionId, toolUseId);
+      }
+    } catch {
+      // ignore malformed lines
+    }
   }
 
   protected override onNewOutputs(sessionId: string, outputs: SessionOutput[]): void {
