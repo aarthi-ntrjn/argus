@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.18] - 2026-05-10
+
+### Added
+
+- **Bash and tool approval cards**: When a Claude Code or Copilot CLI session runs without auto-approval (no `--yolo` / `--allow-all`), any tool that requires confirmation now surfaces an interactive approval card on the session card. The card shows the tool name and input, with tier-aware choices: bash-tier tools offer a permanent per-project "don't ask again" option; file-edit tools offer a session-scoped option; Copilot CLI tools offer once/session/reject.
+
+### Fixed
+
+- **Approval card instant dismiss**: Selecting a choice or typing an answer in the prompt bar now dismisses the approval card immediately (optimistic dismiss) rather than waiting for a server acknowledgement.
+- **Copilot double approval card**: Commands such as `curl` that emit two `permission.requested` JSONL events no longer show the approval card twice. The first event shows the card; subsequent events silently update the tracked tool call ID so auto-dismiss still works.
+- **AskUserQuestion and wildcard hooks**: Claude Code's `settings.json` now registers both an `AskUserQuestion`-matcher entry and a wildcard entry for `PreToolUse`/`PostToolUse`, ensuring all tool events reach Argus.
+- **Prevent duplicate Copilot sessions on repo add**: Adding a repository that already has a running Copilot session no longer creates a duplicate session row.
+- **node-pty spawn-helper chmod**: The `chmod` for the node-pty spawn helper binary is now scoped to macOS only, preventing errors on Windows and Linux.
+- **ESC interrupt for Copilot CLI approval**: Pressing Esc in the approval panel now correctly sends the "No" choice rather than a raw escape byte, so the Copilot CLI agent receives a proper rejection.
+- **npm vulnerability**: Resolved a fast-uri audit vulnerability.
+
 ## [0.1.17] - 2026-05-09
 
 ### Added
