@@ -1,9 +1,7 @@
 import type { TourStep } from '../types';
 
-/**
- * Steps that always exist on the dashboard (empty or populated).
- */
-const ALWAYS_STEPS: TourStep[] = [
+/** Tour 1 — shown on first load (no repos yet). */
+export const FIRST_LOAD_STEPS: TourStep[] = [
   {
     target: '[data-tour-id="dashboard-header"]',
     title: '👋 Welcome!',
@@ -19,23 +17,28 @@ const ALWAYS_STEPS: TourStep[] = [
     placement: 'bottom',
     disableBeacon: true,
   },
+  {
+    target: '[data-tour-id="dashboard-todo"]',
+    title: '📝 To Do or Not To Do',
+    content: 'Track your wild ideas here.',
+    placement: 'left',
+    disableBeacon: true,
+  },
+  {
+    target: 'body',
+    title: "🎉 You're all set!",
+    content: "You're officially an Argus pro. Your AI team awaits. Go build something awesome!",
+    placement: 'center',
+    disableBeacon: true,
+  },
 ];
 
-/**
- * Steps that only make sense when at least one repo (and ideally sessions) exist.
- */
-const POPULATED_STEPS: TourStep[] = [
+/** Tour 2 — shown when the first repository is added. */
+export const REPO_CATCH_UP_STEPS: TourStep[] = [
   {
     target: '[data-tour-id="dashboard-repo-card"]',
     title: '🗂️ Your Repositories',
     content: 'Each card shows a repo and its active AI sessions, all updating live.',
-    placement: 'right',
-    disableBeacon: true,
-  },
-  {
-    target: '[data-tour-id="dashboard-session-card"]',
-    title: '🤖 AI Sessions',
-    content: 'Monitor your AI sessions here. Sessions launched outside of Argus are read-only.',
     placement: 'right',
     disableBeacon: true,
   },
@@ -48,12 +51,13 @@ const POPULATED_STEPS: TourStep[] = [
   },
 ];
 
-const CLOSING_STEPS: TourStep[] = [
+/** Tour 3 — shown when the first session appears. */
+export const SESSION_CATCH_UP_STEPS: TourStep[] = [
   {
-    target: '[data-tour-id="dashboard-todo"]',
-    title: '📝 To Do or Not To Do',
-    content: 'Track your wild ideas here.',
-    placement: 'left',
+    target: '[data-tour-id="dashboard-session-card"]',
+    title: '🤖 AI Sessions',
+    content: 'Monitor your AI sessions here. Sessions launched outside of Argus are read-only.',
+    placement: 'right',
     disableBeacon: true,
   },
   {
@@ -64,21 +68,16 @@ const CLOSING_STEPS: TourStep[] = [
     placement: 'bottom',
     disableBeacon: true,
   },
-  {
-    target: 'body',
-    title: "🎉 You're all set!",
-    content: "You're officially an Argus pro. Your AI team awaits. Go build something awesome!",
-    placement: 'center',
-    disableBeacon: true,
-  },
 ];
 
-export function buildDashboardTourSteps(hasRepos: boolean): TourStep[] {
-  return [...ALWAYS_STEPS, ...(hasRepos ? POPULATED_STEPS : []), ...CLOSING_STEPS];
-}
-
-/** Catch-up mini-tour: only the repo/session/launch steps the user missed. */
-export const REPO_CATCH_UP_STEPS: TourStep[] = [...POPULATED_STEPS];
-
 /** Default steps with all sections (for backwards compat with tests). */
-export const DASHBOARD_TOUR_STEPS = buildDashboardTourSteps(true);
+export const DASHBOARD_TOUR_STEPS: TourStep[] = [
+  ...FIRST_LOAD_STEPS,
+  ...REPO_CATCH_UP_STEPS,
+  ...SESSION_CATCH_UP_STEPS,
+];
+
+/** @deprecated Use FIRST_LOAD_STEPS directly. Kept for backwards compat. */
+export function buildDashboardTourSteps(_hasRepos: boolean): TourStep[] {
+  return FIRST_LOAD_STEPS;
+}
