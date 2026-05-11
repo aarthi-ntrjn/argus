@@ -57,6 +57,14 @@ const CLOSING_STEPS: TourStep[] = [
     disableBeacon: true,
   },
   {
+    target: '[data-tour-id="dashboard-integrations"]',
+    title: '🔔 Stream to Teams & Slack',
+    content:
+      'Configure Microsoft Teams and Slack to stream your CLI sessions directly to your channels. You can also command your CLIs from the channel.',
+    placement: 'bottom',
+    disableBeacon: true,
+  },
+  {
     target: 'body',
     title: "🎉 You're all set!",
     content: "You're officially an Argus pro. Your AI team awaits. Go build something awesome!",

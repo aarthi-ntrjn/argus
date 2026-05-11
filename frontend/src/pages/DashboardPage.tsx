@@ -441,7 +441,7 @@ export default function DashboardPage() {
               </span>
             </div>
             {integrationsEnabled && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3" data-tour-id="dashboard-integrations">
                 <TeamsIntegrationButton
                   disabled={isPending}
                   onToggle={() => toggle('teams')}
