@@ -150,7 +150,7 @@ The **To Do or Not To Do** panel lives on the right side of the dashboard. Use i
 
 <img src="docs/images/argus-responsive.png" alt="Responsive Layout" height="300">
 
-Argus is fully usable when you remote into your machine from mobile devices (390px and up). On narrow viewports:
+Argus is designed to sit side-by-side with your editor. On narrow viewports it reflows so you can snap it next to VS Code or any other tool without losing functionality.
 
 
 ## Dashboard Settings
