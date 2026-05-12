@@ -193,13 +193,15 @@ When **Yolo mode** is enabled, a warning dialog is shown. After confirmation:
 This applies to sessions launched directly from the Argus UI. 
 To disable, toggle Yolo mode off in Settings. No confirmation is required to disable.
 
-## Slack Integration
+## Integrations
+
+### Slack
 
 Argus posts AI session events to a Slack channel and accepts commands from your bot. Both features run on Slack's free tier.
 
 <img src="docs/images/argus-slack-stream.png" alt="Slack Session Stream" height="300">
 
-### Commands
+#### Commands
 
 | Command | Response |
 | ------- | -------- |
@@ -212,7 +214,7 @@ You can also send these commands as direct messages to the bot.
 <img src="docs/images/argus-slack-cmd.png" alt="Slack Command" height="300">
 <img src="docs/images/argus-slack-cmd-answer.png" alt="Slack Command Response" height="300">
 
-### Setup
+#### Setup
 
 Configure via the **Slack** tab in the Argus Settings dialog.
 
@@ -220,20 +222,20 @@ Configure via the **Slack** tab in the Argus Settings dialog.
 
 For full bot registration instructions, see [api.slack.com/apps](https://api.slack.com/apps).
 
-## Microsoft Teams Integration
+### Microsoft Teams
 
 Argus streams every AI session to a Microsoft Teams channel and accepts commands via thread replies.
 
 <img src="docs/images/argus-teams-stream.png" alt="Teams Session Stream" height="300">
 
-### Commands
+#### Commands
 
 Reply to any session thread in Teams to send a prompt directly to that session.
 
 <img src="docs/images/argus-teams-cmd.png" alt="Teams Command" height="300">
 <img src="docs/images/argus-teams-cmd-answer.png" alt="Teams Command Response" height="300">
 
-### Setup
+#### Setup
 
 Configure via the **Teams** tab in the Argus Settings dialog.
 
