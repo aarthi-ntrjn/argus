@@ -21,8 +21,8 @@ Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every
 - [GitHub Copilot CLI](https://github.com/features/copilot/cli/) and/or [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started) installed
 
 **Optional:**
-- [Slack app](https://api.slack.com/apps) for Slack integration
-- [Azure Bot](https://portal.azure.com) for Microsoft Teams integration
+- [Slack app](#slack) for Slack integration
+- [Azure Bot](#microsoft-teams) for Microsoft Teams integration
 
 ## Getting Started
 
