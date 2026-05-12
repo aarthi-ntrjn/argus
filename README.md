@@ -91,6 +91,8 @@ Click the **Launch with Argus** dropdown in any repo card header and select **La
 
 <img src="docs/images/argus-launched-sessions.png" alt="Launched Sessions with Prompt Control" height="300">
 
+Sessions launched from Argus appear as **connected** and show the prompt input bar.
+
 #### Headless Environments (Codespaces, SSH, no TTY)
 
 When Argus detects it is running in a headless environment (no interactive terminal available, such as GitHub Codespaces or a remote SSH session), the launch dropdown switches to copy mode. 
