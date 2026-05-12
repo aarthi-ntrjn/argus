@@ -138,7 +138,7 @@ Click **Add Repository**, type or paste a root folder path (e.g. `C:\source` or 
 
 Argus scans that folder recursively for git repos and registers all new ones in one go. Already-registered repos are skipped automatically.
 
-Each repo card shows the current branch name and, when the remote is a GitHub repository, three clickable surfaces: the repository name links to the repo's GitHub home page, the branch chip links to the branch's tree view on GitHub, and a pull-request icon links to GitHub's `/pull/new/<branch>` page 
+Each repo card shows the current branch name and, when the remote is a GitHub repository, three clickable surfaces: the **repository name** links to the repo's GitHub home page, the **branch chip** links to the branch's tree view on GitHub, and the **pull-request icon** links to GitHub's `/pull/new/<branch>` page 
 
 ## To Do or Not To Do
 
