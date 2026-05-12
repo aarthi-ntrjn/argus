@@ -117,8 +117,6 @@ The alert appears for both read-only and connected sessions.
 
 #### Tool approval in non-YOLO mode Alerts
 
-**Tool approval prompts (non-YOLO / non-`--allow-all` mode):**
-
 When a session is running without auto-approval, any tool use that requires confirmation (bash commands, file writes, etc.) is also surfaced on the session card. 
 
 <img src="docs/images/argus-bash-approval.png" alt="Bash Tool Approval Prompt" height="300">
