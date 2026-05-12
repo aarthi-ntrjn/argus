@@ -208,7 +208,7 @@ The **To Tackle** panel lives on the right side of the dashboard. Use it to jot 
 
 ## Mobile Browser Support
 
-<img src="docs/images/argus-mobile.png" alt="Mobile View" height="300">
+<img src="docs/images/argus-responsive.png" alt="Responsive Layout" height="300">
 
 Argus is fully usable when you remote into your machine from mobile devices (390px and up). On narrow viewports:
 
