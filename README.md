@@ -168,6 +168,7 @@ Monitor and control your AI sessions from anywhere. Argus integrates with Micros
 | ------- | -------- |
 | `@YourBot sessions` | Lists all active AI sessions |
 | `@YourBot status <sessionId>` | Shows details for a specific session |
+| `@YourBot <prompt text>` | Sends a prompt to the active session |
 | `@YourBot help` | Lists available commands |
 
 In Teams, reply to any session thread to send a prompt directly to that session. In Slack, you can also send commands as direct messages to the bot.
