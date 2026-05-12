@@ -22,30 +22,35 @@ Run with npx (no install required):
 npx argus-ai-hub
 ```
 
-Or install globally so `argus` is always on your path:
+Or install globally so `argus-ai-hub` is always on your path:
 
 ```sh
 npm install -g argus-ai-hub
-argus
+argus-ai-hub
 ```
 
 Open **http://localhost:7411** and you're in. The port is configurable in [`~/.argus/config.json`](#storage).
 
 ## Monitor
 
-<img src="docs/images/argus.png" alt="Argus Dashboard" height="300">
+<img src="docs/images/argus-2.png" alt="Argus Dashboard" height="300">
+<img src="docs/images/argus-3.png" alt="Argus Dashboard with Sessions" height="300">
 
 See everything happening across your AI sessions without switching terminals.
 
+When no repositories have been added yet, Argus shows an empty welcome state:
+
+<img src="docs/images/argus-empty.png" alt="Empty Dashboard" height="300">
+
 ### Session Cards
 
-<img src="docs/images/argus-sessions.png" alt="Session Cards" height="300">
+<img src="docs/images/argus-launched-sessions.png" alt="Session Cards" height="300">
 
 Each card is a live snapshot of a session:
 
-- **CLI badge** (copilot-cli / claude-code) Argus currently support GitHub Copilot CLI and Claude Code CLI
+- **CLI badge** (copilot-cli / claude-code) Argus currently supports GitHub Copilot CLI and Claude Code CLI
 - **status badge** (running / resting / ended) Running - for conversations that have had activity within the configured resting threshold (default: 20 minutes), resting for conversations that have had no activity beyond the threshold, Ended for conversations that have exited.
-- **session type** (readonly / live) readonly - for conversation that were started outside of Argus, these sessions can be monitored only, they cannot be controlled from Argus. live - for conversations that were started from Argus using _Lauch with Argus_, these sessions can be monitored and controlled from Argus using the send prompt input
+- **session type** (readonly / live) readonly - for conversations that were started outside of Argus, these sessions can be monitored only, they cannot be controlled from Argus. live - for conversations that were started from Argus using _Launch with Argus_, these sessions can be monitored and controlled from Argus using the send prompt input
 - **Model** in small monospace text when known (e.g. `claude-opus-4-5`)
 - **PID** when known. For Claude Code sessions without a detected PID, a **session ID prefix** is shown instead (e.g. `ID: abc12345`)
 - **Elapsed time** representing how long since the session start
@@ -108,6 +113,8 @@ Every session card and the session detail page have a **kill button** (■ icon)
 3. Click **Kill Session** to terminate the process, or **Cancel** to dismiss.
 4. If the kill fails (session already ended, not found, or a network error), the error message is shown in the dialog so you can retry or dismiss.
 
+<img src="docs/images/argus-kill-session.png" alt="Kill Session" height="300">
+
 ### Focusing a Terminal Window
 
 Each active session card has a **Focus** button (crosshair icon) next to the kill button. Clicking it brings the originating CLI terminal window to the foreground so you can type directly without hunting for the window.
@@ -116,7 +123,7 @@ The button is shown for all active sessions and is disabled (greyed out) when Ar
 
 ### Starting a Session with Prompt Control
 
-<img src="docs/images/argus-connected.png" alt="Connected Session" height="300">
+<img src="docs/images/argus-launched-sessions.png" alt="Launched Sessions with Prompt Control" height="300">
 
 To send prompts to a session, start it through Argus.This gives Argus a direct PTY write channel to the process.
 
@@ -140,6 +147,10 @@ The alert shows:
 
 The alert appears for both read-only and connected sessions. It is never shown for sessions with status `ended` or `completed`.
 
+<img src="docs/images/argus-ask-user-1.png" alt="Attention Needed - Question" height="300">
+<img src="docs/images/argus-ask-user-2.png" alt="Attention Needed - Choices" height="300">
+<img src="docs/images/argus-ask-user-3.png" alt="Attention Needed - Answered" height="300">
+
 **Detection methods by session type:**
 
 - **Claude Code sessions**: Argus uses a `PreToolUse` hook (auto-configured in `~/.claude/settings.json`) that fires the moment Claude calls `AskUserQuestion`, before the interactive menu is shown. This gives real-time detection independent of JSONL file updates. When the user answers, a `PostToolUse` hook clears the alert immediately. Argus manages these hook entries automatically alongside the existing `SessionStart` and `SessionEnd` hooks.
@@ -149,6 +160,8 @@ The alert appears for both read-only and connected sessions. It is never shown f
 **Tool approval prompts (non-YOLO / non-`--allow-all` mode):**
 
 When a session is running without auto-approval, any tool use that requires confirmation (bash commands, file writes, etc.) is also surfaced on the session card. The same `PendingChoicePanel` appears with the tool name and input as the question. Choices are tier-aware: bash/shell commands offer "Yes, don't ask again for this project" (permanent per-project approval), while file-edit tools offer "Yes, don't ask again for this session" (session-only). Both Claude Code and Copilot CLI use the `PreToolUse` hook for this: Claude Code registers a wildcard PreToolUse hook in `~/.claude/settings.json`; Copilot CLI already sends all PreToolUse events. When the tool completes (or is denied), the prompt clears automatically.
+
+<img src="docs/images/argus-bash-approval.png" alt="Bash Tool Approval Prompt" height="300">
 
 ### Prompt Bar
 
@@ -167,7 +180,7 @@ Press **Up arrow** to cycle backward through prompts you have sent in the curren
 
 ### Repository Management
 
-<img src="docs/images/argus-repos.png" alt="Repository Cards" height="300">
+<img src="docs/images/argus-addrepos.png" alt="Repository Cards" height="300">
 
 Click **Add Repository**, type or paste a root folder path (e.g. `C:\source` or `/home/user/projects`), then click **Scan &amp; Add**.
 
@@ -183,7 +196,7 @@ Each repo card shows the current branch name and, when the remote is a GitHub re
 
 <img src="docs/images/argus-todo.png" alt="To Tackle Panel" height="300">
 
-The **To Tackle** panel lives on the right side of the dashboard.Use it to jot down tasks, reminders, or notes essentially your brain dump.
+The **To Tackle** panel lives on the right side of the dashboard. Use it to jot down tasks, reminders, or notes essentially your brain dump.
 
 - **Type to filter**: typing in the input at the top filters the list in real time; the list narrows to items whose text contains what you typed (case-insensitive)
 - Press **Enter** to save the typed text as a new item; the filter clears and the full list is restored
@@ -197,7 +210,7 @@ The **To Tackle** panel lives on the right side of the dashboard.Use it to jot d
 
 <img src="docs/images/argus-mobile.png" alt="Mobile View" height="300">
 
-Argus is fully usablewhen you remote into your machine from mobile devices (390px and up). On narrow viewports:
+Argus is fully usable when you remote into your machine from mobile devices (390px and up). On narrow viewports:
 
 - Sessions and Tasks views are accessible via a **bottom tab bar** (Sessions / Tasks).
 - Tapping a session card opens the full **session detail page** instead of the inline output pane.
@@ -207,7 +220,7 @@ Desktop layout (two-column with inline output pane) is unchanged.
 
 ## Dashboard Settings
 
-<img src="docs/images/argus-settings.png" alt="Settings Panel" height="300">
+<img src="docs/images/argus-settings-menu.png" alt="Settings Panel" height="300">
 
 Click the **gear icon** (top-right) to open Settings.
 
@@ -221,9 +234,13 @@ Click the **gear icon** (top-right) to open Settings.
 
 These settings are saved in your browser (`localStorage`) and restored on every load.
 
+<img src="docs/images/argus-settings-general.png" alt="General Settings" height="300">
+
 ### About
 
 The bottom of the Settings panel has an **About** section with quick links to the Argus website, GitHub repository, and npm package page. The current Argus version is displayed next to the heading (e.g. `v0.1.9`), sourced from the running server.
+
+<img src="docs/images/argus-settings-about.png" alt="About Settings" height="300">
 
 ### Rescan Remote URLs
 
@@ -240,15 +257,38 @@ When **Yolo mode** is enabled, a warning dialog is shown. After confirmation:
 - **Claude Code** sessions are launched with `--dangerously-skip-permissions`
 - **Copilot CLI** sessions are launched with `--allow-all`
 
+<img src="docs/images/argus-yolo-on.png" alt="Yolo Mode Enabled" height="300">
+
 This applies to both sessions launched directly from the Argus UI and commands copied to clipboard. The setting is stored in `~/.argus/config.json` and persists across restarts.
 
 To disable, toggle Yolo mode off in Settings. No confirmation is required to disable.
 
 ## Onboarding
 
-<img src="docs/images/argus-welcome.png" alt="Onboarding Tour" height="300">
+New to Argus? An interactive tour launches automatically on your first visit. Dismiss it any time and replay it later from Settings.
 
-New to Argus? An interactive tour launches automatically on your first visit.Dismiss it any time and replay it later from Settings.
+### Tour 1: First Load
+
+On your first visit, a welcome tour introduces the main areas of the dashboard.
+
+<img src="docs/images/argus-tour1-welcome.png" alt="Welcome Tour Step" height="300">
+<img src="docs/images/argus-tour1-addrepo.png" alt="Add Repository Tour Step" height="300">
+<img src="docs/images/argus-tour1-todo.png" alt="To Do Panel Tour Step" height="300">
+<img src="docs/images/argus-tour1-go.png" alt="Tour Complete" height="300">
+
+### Tour 2: First Repository
+
+When you add your first repository, a short catch-up tour highlights the repo card and the Launch with Argus button.
+
+<img src="docs/images/argus-tour2-repocard.png" alt="Repo Card Tour Step" height="300">
+<img src="docs/images/argus-tour2-launchwith.png" alt="Launch With Argus Tour Step" height="300">
+
+### Tour 3: First Session
+
+When your first AI session appears, another catch-up tour covers the session card and the Teams/Slack integration buttons.
+
+<img src="docs/images/argus-tour3-sessioncard.png" alt="Session Card Tour Step" height="300">
+<img src="docs/images/argus-tour3-teams-slack.png" alt="Teams and Slack Integration Tour Step" height="300">
 
 ## Logging
 
@@ -349,6 +389,8 @@ Open the Argus Settings dialog and go to the **Slack** section. Enter:
 - **Channel ID**: The channel ID where Argus will post (e.g. `C01234ABCDE`)
 - **App Token** (`xapp-...`): Optional, enables Slack-to-Argus routing via Socket Mode
 
+<img src="docs/images/argus-settings-slack.png" alt="Slack Settings" height="300">
+
 Click **Save**. Config is stored in `~/.argus/slack.config`.
 
 To filter which session events are posted, set `enabledEventTypes` in `~/.argus/slack.config`:
@@ -375,6 +417,10 @@ If an App Token is configured, you can ask the bot questions in Slack:
 
 You can also send these commands as direct messages to the bot.
 
+<img src="docs/images/argus-slack-stream.png" alt="Slack Session Stream" height="300">
+<img src="docs/images/argus-slack-cmd.png" alt="Slack Command" height="300">
+<img src="docs/images/argus-slack-cmd-answer.png" alt="Slack Command Response" height="300">
+
 ### Runtime Configuration
 
 Change the channel or enabled event types without restarting Argus:
@@ -393,14 +439,21 @@ Argus collects anonymous usage data to help improve the product. No personal inf
 
 | Event | When |
 | ----- | ---- |
-| `app_started` | Argus server starts |
-| `session_started` | A new Claude Code or Copilot session is detected |
-| `session_ended` | A session completes or ends |
-| `session_prompt_sent` | A prompt is dispatched to a session via Argus |
-| `session_stopped` | A session is stopped via Argus |
+| `app_started` | The Argus backend server starts and begins listening |
+| `app_ended` | The Argus backend server shuts down gracefully (SIGTERM or SIGINT) |
+| `session_started` | A new session is detected |
+| `session_ended` | A session ends (process exits or is reconciled as finished) |
+| `session_stopped` | You manually stop a session using the Stop button |
+| `session_prompt_sent` | You send a prompt to a session via Argus |
+| `todo_added` | You add a new todo item in Argus |
+| `repo_diff_opened` | You click the "View diff on GitHub" button for a repository |
 | `request_error` | An HTTP request to the Argus API returns a 4xx or 5xx error |
+| `integration_started` | A Slack or Teams integration is enabled |
+| `integration_stopped` | A Slack or Teams integration is disabled |
+| `update_available` | A newer version of Argus is available on npm |
+| `update_attempt` | Argus attempts to apply an available update |
 
-Each event includes: an anonymous installation ID (a random UUID stored in `~/.argus/telemetry-id`), the Argus version, a timestamp, and approximate location (country and region) derived from your server's IP address via PostHog's built-in GeoIP enrichment. The raw IP address is not stored in any event record. No file paths, prompts, session content, or user-identifying information are included. The `request_error` event additionally includes a sanitized error message (file paths and IDs stripped), the HTTP status code, and the origin function name.
+Each event includes: an anonymous installation ID (a random UUID stored in `~/.argus/telemetry-id`), the Argus version, a timestamp, and approximate location (country and region) derived from your server's IP address via PostHog's built-in GeoIP enrichment. The raw IP address is not stored in any event record. Session events additionally include a per-session random UUID (not linked to any user or machine), the session type (Claude Code or Copilot), the launch mode (connected or readonly), and whether yolo mode was active. The `request_error` event additionally includes a sanitized error message (file paths and IDs stripped), the HTTP status code, and the origin function name. No file paths, prompts, session content, or user-identifying information are included.
 
 **How to disable:**
 
@@ -418,11 +471,17 @@ Argus can mirror every CLI session to a Microsoft Teams channel, streaming outpu
 - When the session ends, a final status message is posted.
 - You (the session owner) can reply to the thread to send a prompt directly to the running session.
 
+<img src="docs/images/argus-teams-stream.png" alt="Teams Session Stream" height="300">
+<img src="docs/images/argus-teams-cmd.png" alt="Teams Command" height="300">
+<img src="docs/images/argus-teams-cmd-answer.png" alt="Teams Command Response" height="300">
+
 ### Setup
 
 1. **Register a Bot Framework bot** in the [Azure portal](https://portal.azure.com) and create a client secret.
 2. **Install the bot** into the Teams channel where you want session threads to appear.
 3. **Configure Argus** via the Settings panel in the UI, or by writing `~/.argus/teams-config.json`:
+
+<img src="docs/images/argus-settings-teams.png" alt="Teams Settings" height="300">
 
 ```json
 {
@@ -456,6 +515,8 @@ See [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md) for architecture,
 ## Feedback
 
 Found a bug or have a feature idea? Use the **Feedback** dropdown in the top-right corner of the dashboard, or go directly to the [GitHub Issues page](https://github.com/aarthi-ntrjn/argus/issues).
+
+<img src="docs/images/argus-settings-feedback.png" alt="Feedback Settings" height="300">
 
 ## Uninstall and Cleanup
 
