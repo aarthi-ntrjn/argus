@@ -178,7 +178,7 @@ In Teams, reply to any session thread to send a prompt directly to that session.
 
 ### Setup
 
-Configure via the **Teams** and **Slack** tabs in the Argus Settings dialog. For registration instructions, see the [Azure Bot Framework documentation](https://portal.azure.com) (Teams) and [api.slack.com/apps](https://api.slack.com/apps) (Slack).
+Configure via the **Teams** and **Slack** tabs in the Argus Settings dialog.
 
 ## Dashboard Settings
 
