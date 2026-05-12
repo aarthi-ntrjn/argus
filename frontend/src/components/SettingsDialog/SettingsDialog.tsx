@@ -12,6 +12,8 @@ import {
 } from '../../config/feedback';
 import { SectionHeading } from '../SectionHeading';
 import { WebsiteIcon, GitHubIcon, NpmIcon } from '../BrandIcons';
+import { Checkbox } from '../Checkbox';
+import { useArgusSettings } from '../../hooks/useArgusSettings';
 import { GeneralSettingsContent } from './GeneralSettingsContent';
 import { IntegrationConfigContent } from './IntegrationConfigContent';
 import { DialogLinkItem } from './DialogLinkItem';
@@ -120,6 +122,7 @@ export function SettingsDialog({
     queryFn: getHealth,
     staleTime: Infinity,
   });
+  const { settings: argusSettings, patchSetting } = useArgusSettings();
 
   useEffect(() => {
     if (!open) {
@@ -206,6 +209,13 @@ export function SettingsDialog({
                     </a>
                   </div>
                 )}
+                <div className="mt-1 mb-1">
+                  <Checkbox
+                    label="Auto-update on exit"
+                    checked={argusSettings?.autoUpdate ?? true}
+                    onChange={(e) => patchSetting({ autoUpdate: e.target.checked })}
+                  />
+                </div>
                 <DialogLinkItem href="https://aarthi-ntrjn.github.io/argus" icon={<WebsiteIcon />}>
                   Website
                 </DialogLinkItem>
