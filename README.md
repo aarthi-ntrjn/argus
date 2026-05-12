@@ -1,6 +1,6 @@
 # Argus
 
-Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every session live, send commands, and stop runaway agents, all from a single browser tab. Access your dashboard from any device on the same network — no extra setup required.
+Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every session live, send commands, and stop runaway agents, all from a single browser tab. Access your dashboard from any device on the same network, no extra setup required.
 
 ## Supported
 
@@ -59,10 +59,10 @@ Each card is a live snapshot of a session:
 - **Drill in link**: displays a larger view of the session.
 - **Current prompt**: the most recent question you asked, shown below the badges and updated live as the conversation progresses
 - **Last output preview**: up to 2 lines of the session's current output state, rendered in a dark monospace box. Four display states:
-  - *Waiting for output...* (italic, gray) — no output received yet
-  - Assistant reply text (markdown-rendered) — AI replied, no active tool calls
-  - `Running... N tool call(s)` — AI is executing tools with no prior reply visible
-  - Assistant reply text + `+N tool call(s)` suffix — AI replied and is now making further tool calls
+  - *Waiting for output...* (italic, gray): no output received yet
+  - Assistant reply text (markdown-rendered): AI replied, no active tool calls
+  - `Running... N tool call(s)`: AI is executing tools with no prior reply visible
+  - Assistant reply text + `+N tool call(s)` suffix: AI replied and is now making further tool calls
 - **Send prompt input and button**: (only in live sessions) Type a prompt and send to the CLI session from Argus. This also supports prompt history navigation using Up and Down Arrow keys
 
 ### Session Output
