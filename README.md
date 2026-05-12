@@ -126,11 +126,11 @@ You can also type **/exit** in the input prompt to kill a session.
 
 ### Repository Management
 
-<img src="docs/images/argus-addrepos.png" alt="Repository Cards" height="300">
+<img src="docs/images/argus-addrepo.png" alt="Add Repository Dialog" height="300">
 
 Click **Add Repository**, type or paste a root folder path (e.g. `C:\source` or `/home/user/projects`), then click **Scan &amp; Add**.
 
-<img src="docs/images/argus-addrepo.png" alt="Add Repository Dialog" height="300">
+<img src="docs/images/argus-addrepos.png" alt="Repository Cards" height="300">
 
 Argus scans that folder recursively for git repos and registers all new ones in one go. Already-registered repos are skipped automatically.
 
