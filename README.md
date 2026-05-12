@@ -265,10 +265,6 @@ Found a bug or have a feature idea? Use the **Feedback** dropdown in the top-rig
 
 <img src="docs/images/argus-settings-feedback.png" alt="Feedback Settings" height="300">
 
-## For Contributors
-
-See [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md) for architecture, dev setup, API reference, security model, CI pipeline, and development guides.
-
 ## Uninstall and Cleanup
 
 If you installed Argus globally via npm:
@@ -295,3 +291,7 @@ Argus stores all data and config in `~/.argus/`:
 | `~/.argus/teams-config.json` | Teams integration credentials |
 
 Default port: **7411**. Override with `{ "port": 7411 }` in `~/.argus/config.json`.
+
+## For Contributors
+
+See [docs/README-CONTRIBUTORS.md](docs/README-CONTRIBUTORS.md) for architecture, dev setup, API reference, security model, CI pipeline, and development guides.
