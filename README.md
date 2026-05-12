@@ -79,6 +79,8 @@ To send prompts to a session, start it through Argus.This gives Argus a direct P
 
 The easiest way is to click the **Launch with Argus** dropdown in any repo card header and select **Launch Claude** or **Launch Copilot**. If neither tool is detected on your PATH, the dropdown shows install links for [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started) and [GitHub Copilot CLI](https://github.com/features/copilot/cli/).
 
+<img src="docs/images/argus-tour2-launchwith.png" alt="Launch with Argus dropdown" height="300">
+
 #### Headless Environments (Codespaces, SSH, no TTY)
 
 When Argus detects it is running in a headless environment (no interactive terminal available, such as GitHub Codespaces or a remote SSH session), the launch dropdown switches to copy mode. 
