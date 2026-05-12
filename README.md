@@ -144,9 +144,7 @@ Each repo card shows the current branch name and, when the remote is a GitHub re
 
 <img src="docs/images/argus-todo.png" alt="To Tackle Panel" height="300">
 
-The **To Do or Not To Do** panel lives on the right side of the dashboard. Use it to jot down tasks, reminders, or notes.
-
-- **Type to filter**: filters the list in real time; press **Enter** to save as a new item
+The **To Do or Not To Do** panel lives on the right side of the dashboard. Use it to jot down tasks, reminders, or notes. Type to filter the list in real time; press **Enter** to save as a new item.
 
 ## Reponsive UX
 
