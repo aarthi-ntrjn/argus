@@ -77,7 +77,7 @@ Toggle between **Focused** (default, noisy tool results collapsed) and **Verbose
 
 To send prompts to a session, start it through Argus.This gives Argus a direct PTY write channel to the process.
 
-The easiest way is to click the **Launch with Argus** dropdown in any repo card header and select **Launch Claude** or **Launch Copilot**. If neither tool is detected on your PATH, the dropdown shows install links for [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started) and [GitHub Copilot CLI](https://github.com/features/copilot/cli/).
+Click the **Launch with Argus** dropdown in any repo card header and select **Launch Claude** or **Launch Copilot**. If neither tool is detected on your PATH, the dropdown shows install links for [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started) and [GitHub Copilot CLI](https://github.com/features/copilot/cli/).
 
 <img src="docs/images/argus-tour2-launchwith.png" alt="Launch with Argus dropdown" height="300">
 
