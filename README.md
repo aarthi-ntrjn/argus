@@ -126,7 +126,7 @@ You can also type **/exit** in the input prompt to kill a session.
 
 ### Repository Management
 
-<img src="docs/images/argus-addrepo.png" alt="Add Repository Dialog" height="300">
+<img src="docs/images/argus-tour1-addrepo.png" alt="Add Repository Dialog" height="300">
 
 Click **Add Repository**, type or paste a root folder path (e.g. `C:\source` or `/home/user/projects`), then click **Scan &amp; Add**.
 
