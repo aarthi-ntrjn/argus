@@ -105,13 +105,7 @@ Sessions detected automatically (not started via `argus launch`) show a **read-o
 
 #### Ask User Question Alerts
 
-When an AI session is waiting for user input, the session card summary line changes to a bold red **ATTENTION NEEDED** indicator.
-
-The alert shows:
-- The question the AI asked (e.g., "Which option?")
-- Numbered choices when available (e.g., "1. Alpha / 2. Beta")
-
-The alert appears for both read-only and connected sessions.
+When an AI session is waiting for user input, the session card shows a bold red **ATTENTION NEEDED** indicator with the question and any numbered choices. Appears on both read-only and connected sessions.
 
 <img src="docs/images/argus-ask-user-1.png" alt="Attention Needed - Question" height="300">
 
