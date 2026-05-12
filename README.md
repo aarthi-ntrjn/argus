@@ -20,6 +20,10 @@ Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every
 - Node.js 22 LTS
 - [GitHub Copilot CLI](https://github.com/features/copilot/cli/) and/or [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started) installed
 
+**Optional:**
+- [Slack app](https://api.slack.com/apps) for Slack integration
+- [Azure Bot](https://portal.azure.com) for Microsoft Teams integration
+
 ## Getting Started
 
 Run with npx (no install required):
