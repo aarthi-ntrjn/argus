@@ -8,7 +8,7 @@ Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every
 
 **Integrates with:** Microsoft Teams · Slack
 
-**Tested on:** Windows · macOS · Ubuntu
+**Runs on:** Windows · macOS · Ubuntu
 
 ## Links
 
