@@ -157,6 +157,8 @@ The **To Do or Not To Do** panel lives on the right side of the dashboard. Use i
 
 ## Roaming Integrations
 
+Monitor and control your AI sessions from anywhere. Argus integrates with Microsoft Teams and Slack so you can receive live session updates and send prompts directly from your chat tool, without opening the dashboard.
+
 ### Microsoft Teams
 
 Argus streams every AI session to a Microsoft Teams channel and accepts commands via thread replies.
