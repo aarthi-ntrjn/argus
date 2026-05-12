@@ -59,12 +59,6 @@ Each card is a live snapshot of a session:
   - Assistant reply text + `+N tool call(s)` suffix — AI replied and is now making further tool calls
 - **Send prompt input and button**: (only in live sessions) Type a prompt and send to the CLI session from Argus. This also supports prompt history navigation using Up and Down Arrow keys
 
-### Session Detail Page
-
-The drill-in link on any session card opens a full-page immersive view of that session. 
-
-<img src="docs/images/argus-details-cc.png" alt="Claude Code Session Immersive View" height="300">
-
 ### Session Output
 
 Click any card to open a **live output pane** on the right inline. The card list stays visible on the left.
@@ -120,6 +114,12 @@ The alert appears for both read-only and connected sessions.
 When a session is running without auto-approval, any tool use that requires confirmation (bash commands, file writes, etc.) is also surfaced on the session card. 
 
 <img src="docs/images/argus-bash-approval.png" alt="Bash Tool Approval Prompt" height="300">
+
+### Session Detail Page
+
+The drill-in link on any session card opens a full-page immersive view of that session. 
+
+<img src="docs/images/argus-details-cc.png" alt="Claude Code Session Immersive View" height="300">
 
 ### Killing a Session
 
