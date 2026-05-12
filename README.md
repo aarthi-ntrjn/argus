@@ -144,15 +144,9 @@ Each repo card shows the current branch name and, when the remote is a GitHub re
 
 <img src="docs/images/argus-todo.png" alt="To Tackle Panel" height="300">
 
-The **To Do or Not To Do** panel lives on the right side of the dashboard. Use it to jot down tasks, reminders, or notes essentially your brain dump.
+The **To Do or Not To Do** panel lives on the right side of the dashboard. Use it to jot down tasks, reminders, or notes.
 
-- **Type to filter**: typing in the input at the top filters the list in real time; the list narrows to items whose text contains what you typed (case-insensitive)
-- Press **Enter** to save the typed text as a new item; the filter clears and the full list is restored
-- Tab out or click away to keep the typed text in the input and leave the filter active; clear the input manually to remove the filter
-- Check off completed items; toggle visibility of done items with the button in the header
-- Delete items with the trash icon that appears on hover
-- Toggle timestamps on/off to see when each item was added
-- Items are stored in the local database and survive page refreshes
+- **Type to filter**: filters the list in real time; press **Enter** to save as a new item
 
 ## Reponsive UX
 
