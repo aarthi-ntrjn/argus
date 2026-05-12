@@ -69,7 +69,7 @@ The drill-in link on any session card opens a full-page immersive view of that s
 
 Click any card to open a **live output pane** on the right inline. The card list stays visible on the left.
 
-<img src="docs/images/argus-session-stream.png" alt="Session Output" height="300">
+<img src="docs/images/argus-output-focused.png" alt="Session Output" height="300">
 
 Output lines carry type badges so you always know what's what: **YOU** (your input), **AI** (assistant reply), **TOOL** (tool call), **RESULT** (tool result), **STATUS** (status change), **ERR** (error). These are streamed in real time, including tool calls.
 
@@ -79,20 +79,9 @@ The output pane has two display modes, toggled via the **Focused / Verbose** but
 
 - **Focused** (default): hides noisy tool results. Consecutive tool calls are grouped into a collapsible counter bar — click the bar to expand and inspect individual calls. Click **show result** on any completed call to expand it inline. Your messages, AI replies, status changes, and errors are always visible.
 
-  <img src="docs/images/argus-output-focused.png" alt="Focused Mode" height="300">
-
 - **Verbose**: shows everything. Long tool results (over 40 lines) are truncated with a **show more** button. Tool calls show their full content.
 
-  <img src="docs/images/argus-output-verbose.png" alt="Verbose Mode" height="300">
-
 The selected mode persists across sessions and page reloads.
-
-### Killing a Session
-
-Every session card and the session detail page have a **kill button** (■ icon) next to the session badges. 
-You can also type **/exit** in the input prompt to kill a session.
-
-<img src="docs/images/argus-kill-session.png" alt="Kill Session" height="300">
 
 ### Starting a Session with Prompt Control
 
@@ -131,6 +120,13 @@ The alert appears for both read-only and connected sessions.
 When a session is running without auto-approval, any tool use that requires confirmation (bash commands, file writes, etc.) is also surfaced on the session card. 
 
 <img src="docs/images/argus-bash-approval.png" alt="Bash Tool Approval Prompt" height="300">
+
+### Killing a Session
+
+Every session card and the session detail page have a **kill button** (■ icon) next to the session badges. 
+You can also type **/exit** in the input prompt to kill a session.
+
+<img src="docs/images/argus-kill-session.png" alt="Kill Session" height="300">
 
 ### Repository Management
 
