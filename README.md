@@ -123,7 +123,7 @@ The drill-in link on any session card opens a full-page immersive view of that s
 
 ### Killing a Session
 
-Every session card and the session detail page have a **kill button** (■ icon) next to the session badges. 
+Every session card and the session detail page have a **kill button** (⏻ icon) next to the session badges. 
 You can also type **/exit** in the input prompt to kill a session.
 
 <img src="docs/images/argus-kill-session.png" alt="Kill Session" height="300">
