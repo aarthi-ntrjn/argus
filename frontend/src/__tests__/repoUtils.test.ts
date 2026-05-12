@@ -65,21 +65,21 @@ describe('buildGitHubPrUrl', () => {
     expect(buildGitHubPrUrl('https://gitlab.com/owner/repo', 'feature')).toBeNull();
   });
 
-  it('builds new-or-existing-PR URL for a feature branch with slash', () => {
+  it('builds compare URL for a feature branch with slash', () => {
     expect(buildGitHubPrUrl('https://github.com/owner/repo', 'feature/foo')).toBe(
-      'https://github.com/owner/repo/pull/new/feature%2Ffoo',
+      'https://github.com/owner/repo/compare/feature/foo',
     );
   });
 
-  it('URL-encodes branch with space', () => {
+  it('URL-encodes branch segment with space', () => {
     expect(buildGitHubPrUrl('https://github.com/owner/repo', 'feat/foo bar')).toBe(
-      'https://github.com/owner/repo/pull/new/feat%2Ffoo%20bar',
+      'https://github.com/owner/repo/compare/feat/foo%20bar',
     );
   });
 
   it('works for SSH remote on default branch', () => {
     expect(buildGitHubPrUrl('git@github.com:owner/repo.git', 'master')).toBe(
-      'https://github.com/owner/repo/pull/new/master',
+      'https://github.com/owner/repo/compare/master',
     );
   });
 });

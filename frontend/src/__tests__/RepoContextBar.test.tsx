@@ -42,10 +42,10 @@ describe('RepoContextBar link indicators', () => {
       expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/tree/feature%2Ffoo');
     });
 
-    it('renders pull-request indicator pointing at /pull/new/<branch>', () => {
+    it('renders pull-request indicator pointing at /compare/<branch>', () => {
       render(<RepoContextBar repo={makeRepo()} />);
       const link = screen.getByRole('link', { name: /open or view pull request on github/i });
-      expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/pull/new/feature%2Ffoo');
+      expect(link).toHaveAttribute('href', 'https://github.com/owner/repo/compare/feature/foo');
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     });

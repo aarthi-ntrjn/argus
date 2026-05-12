@@ -53,7 +53,7 @@ test.describe('SC-076: Repo card GitHub link indicators', () => {
     const pr = ghCard.getByRole('link', { name: /open or view pull request on github/i });
     await expect(pr).toHaveAttribute(
       'href',
-      'https://github.com/owner/repo/pull/new/feature%2Ffoo',
+      'https://github.com/owner/repo/compare/feature/foo',
     );
   });
 

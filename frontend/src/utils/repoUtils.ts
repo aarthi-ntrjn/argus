@@ -48,7 +48,7 @@ export function buildGitHubPrUrl(
   if (!parsed || !branch) {
     return null;
   }
-  return `${parsed.baseUrl}/pull/new/${encodeURIComponent(branch)}`;
+  return `${parsed.baseUrl}/compare/${branch.split('/').map(encodeURIComponent).join('/')}`;
 }
 
 export function buildGitHubHomeUrl(remoteUrl: string | null | undefined): string | null {
