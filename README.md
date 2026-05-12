@@ -1,14 +1,12 @@
 # Argus
 
-Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every session live, send commands, and stop runaway agents, all from a single browser tab.
+Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every session live, send commands, and stop runaway agents, all from a single browser tab. Access your dashboard from any device on the same network — no extra setup required.
 
 ## Supported
 
-**Works with:** Claude Code · GitHub Copilot CLI
-
-**Integrates with:** Microsoft Teams · Slack
-
-**Runs on:** Windows · macOS · Ubuntu
+- **Works with:** Claude Code · GitHub Copilot CLI 
+- **Integrates with:** Microsoft Teams · Slack 
+- **Runs on:** Windows · macOS · Ubuntu 
 
 ## Links
 
