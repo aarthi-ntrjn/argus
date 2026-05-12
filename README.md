@@ -69,13 +69,7 @@ Output lines carry type badges so you always know what's what: **YOU** (your inp
 
 #### Focused and Verbose Mode
 
-The output pane has two display modes, toggled via the **Focused / Verbose** button in the pane header:
-
-- **Focused** (default): hides noisy tool results. Consecutive tool calls are grouped into a collapsible counter bar — click the bar to expand and inspect individual calls. Click **show result** on any completed call to expand it inline. Your messages, AI replies, status changes, and errors are always visible.
-
-- **Verbose**: shows everything. Long tool results (over 40 lines) are truncated with a **show more** button. Tool calls show their full content.
-
-The selected mode persists across sessions and page reloads.
+Toggle between **Focused** (default, noisy tool results collapsed) and **Verbose** (everything expanded) using the button in the pane header. The selected mode persists across sessions.
 
 ### Starting a Session with Prompt Control
 
