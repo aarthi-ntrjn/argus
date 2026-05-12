@@ -140,20 +140,43 @@ Argus scans that folder recursively for git repos and registers all new ones in 
 
 Each repo card shows the current branch name and, when the remote is a GitHub repository, three clickable surfaces: the **repository name** links to the repo's GitHub home page, the **branch chip** links to the branch's tree view on GitHub, and the **pull-request icon** links to GitHub's `/pull/new/<branch>` page 
 
+#### Reponsive UX
+
+<img src="docs/images/argus-responsive.png" alt="Responsive Layout" height="300">
+
+Argus is designed to sit side-by-side with your editor. On narrow viewports it reflows so you can snap it next to VS Code or any other tool without losing functionality.
+
 ## To Do or Not To Do
 
 <img src="docs/images/argus-todo.png" alt="To Tackle Panel" height="300">
 
 The **To Do or Not To Do** panel lives on the right side of the dashboard. Use it to jot down tasks, reminders, or notes. Type to filter the list in real time; press **Enter** to save as a new item.
 
-## Reponsive UX
 
-<img src="docs/images/argus-responsive.png" alt="Responsive Layout" height="300">
-
-Argus is designed to sit side-by-side with your editor. On narrow viewports it reflows so you can snap it next to VS Code or any other tool without losing functionality.
 
 
 ## Roaming Integrations
+
+### Microsoft Teams
+
+Argus streams every AI session to a Microsoft Teams channel and accepts commands via thread replies.
+
+<img src="docs/images/argus-teams-stream.png" alt="Teams Session Stream" height="300">
+
+#### Commands
+
+Reply to any session thread in Teams to send a prompt directly to that session.
+
+<img src="docs/images/argus-teams-cmd.png" alt="Teams Command" height="300">
+<img src="docs/images/argus-teams-cmd-answer.png" alt="Teams Command Response" height="300">
+
+#### Setup
+
+Configure via the **Teams** tab in the Argus Settings dialog.
+
+<img src="docs/images/argus-settings-teams.png" alt="Teams Settings" height="300">
+
+For bot registration instructions, see the [Azure Bot Framework documentation](https://portal.azure.com).
 
 ### Slack
 
@@ -181,27 +204,6 @@ Configure via the **Slack** tab in the Argus Settings dialog.
 <img src="docs/images/argus-settings-slack.png" alt="Slack Settings" height="300">
 
 For full bot registration instructions, see [api.slack.com/apps](https://api.slack.com/apps).
-
-### Microsoft Teams
-
-Argus streams every AI session to a Microsoft Teams channel and accepts commands via thread replies.
-
-<img src="docs/images/argus-teams-stream.png" alt="Teams Session Stream" height="300">
-
-#### Commands
-
-Reply to any session thread in Teams to send a prompt directly to that session.
-
-<img src="docs/images/argus-teams-cmd.png" alt="Teams Command" height="300">
-<img src="docs/images/argus-teams-cmd-answer.png" alt="Teams Command Response" height="300">
-
-#### Setup
-
-Configure via the **Teams** tab in the Argus Settings dialog.
-
-<img src="docs/images/argus-settings-teams.png" alt="Teams Settings" height="300">
-
-For bot registration instructions, see the [Azure Bot Framework documentation](https://portal.azure.com).
 
 ## Dashboard Settings
 
