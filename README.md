@@ -193,15 +193,6 @@ When **Yolo mode** is enabled, a warning dialog is shown. After confirmation:
 This applies to sessions launched directly from the Argus UI. 
 To disable, toggle Yolo mode off in Settings. No confirmation is required to disable.
 
-## Auto Update
-
-Argus checks npm for a newer version at startup and every 4 hours. When a newer version is available:
-
-- An **Update to vX.Y.Z** button appears in the header, visible from any page. Click it to apply the update immediately.
-- When you stop Argus (Ctrl+C), it applies the update automatically before exiting.
-
-To turn off the on-exit update, uncheck **Auto-update on exit** in the Settings **About** tab.
-
 ## Slack Integration
 
 Argus posts AI session events to a Slack channel and accepts commands from your bot. Both features run on Slack's free tier.
@@ -249,6 +240,15 @@ Configure via the **Teams** tab in the Argus Settings dialog.
 <img src="docs/images/argus-settings-teams.png" alt="Teams Settings" height="300">
 
 For bot registration instructions, see the [Azure Bot Framework documentation](https://portal.azure.com).
+
+## Auto Update
+
+Argus checks npm for a newer version at startup and every 4 hours. When a newer version is available:
+
+- An **Update to vX.Y.Z** button appears in the header, visible from any page. Click it to apply the update immediately.
+- When you stop Argus (Ctrl+C), it applies the update automatically before exiting.
+
+To turn off the on-exit update, uncheck **Auto-update on exit** in the Settings **About** tab.
 
 ## Telemetry
 
