@@ -153,7 +153,7 @@ The **To Do or Not To Do** panel lives on the right side of the dashboard. Use i
 Argus is designed to sit side-by-side with your editor. On narrow viewports it reflows so you can snap it next to VS Code or any other tool without losing functionality.
 
 
-## Integrations
+## Roaming Integrations
 
 ### Slack
 
