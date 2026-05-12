@@ -159,34 +159,10 @@ The **To Do or Not To Do** panel lives on the right side of the dashboard. Use i
 
 Monitor and control your AI sessions from anywhere. Argus integrates with Microsoft Teams and Slack so you can receive live session updates and send prompts directly from your chat tool, without opening the dashboard.
 
-### Microsoft Teams
-
-Argus streams every AI session to a Microsoft Teams channel and accepts commands via thread replies.
-
 <img src="docs/images/argus-teams-stream.png" alt="Teams Session Stream" height="300">
-
-#### Commands
-
-Reply to any session thread in Teams to send a prompt directly to that session.
-
-<img src="docs/images/argus-teams-cmd.png" alt="Teams Command" height="300">
-<img src="docs/images/argus-teams-cmd-answer.png" alt="Teams Command Response" height="300">
-
-#### Setup
-
-Configure via the **Teams** tab in the Argus Settings dialog.
-
-<img src="docs/images/argus-settings-teams.png" alt="Teams Settings" height="300">
-
-For bot registration instructions, see the [Azure Bot Framework documentation](https://portal.azure.com).
-
-### Slack
-
-Argus posts AI session events to a Slack channel and accepts commands from your bot. Both features run on Slack's free tier.
-
 <img src="docs/images/argus-slack-stream.png" alt="Slack Session Stream" height="300">
 
-#### Commands
+### Commands
 
 | Command | Response |
 | ------- | -------- |
@@ -194,18 +170,14 @@ Argus posts AI session events to a Slack channel and accepts commands from your 
 | `@YourBot status <sessionId>` | Shows details for a specific session |
 | `@YourBot help` | Lists available commands |
 
-You can also send these commands as direct messages to the bot.
+In Teams, reply to any session thread to send a prompt directly to that session. In Slack, you can also send commands as direct messages to the bot.
 
+<img src="docs/images/argus-teams-cmd.png" alt="Teams Command" height="300">
 <img src="docs/images/argus-slack-cmd.png" alt="Slack Command" height="300">
-<img src="docs/images/argus-slack-cmd-answer.png" alt="Slack Command Response" height="300">
 
-#### Setup
+### Setup
 
-Configure via the **Slack** tab in the Argus Settings dialog.
-
-<img src="docs/images/argus-settings-slack.png" alt="Slack Settings" height="300">
-
-For full bot registration instructions, see [api.slack.com/apps](https://api.slack.com/apps).
+Configure via the **Teams** and **Slack** tabs in the Argus Settings dialog. For registration instructions, see the [Azure Bot Framework documentation](https://portal.azure.com) (Teams) and [api.slack.com/apps](https://api.slack.com/apps) (Slack).
 
 ## Dashboard Settings
 
