@@ -34,7 +34,6 @@ Open **http://localhost:7411** and you're in. The port is configurable in [`~/.a
 ## Monitor
 
 <img src="docs/images/argus-2.png" alt="Argus Dashboard" height="300">
-<img src="docs/images/argus-3.png" alt="Argus Dashboard with Sessions" height="300">
 
 See everything happening across your AI sessions without switching terminals.
 
