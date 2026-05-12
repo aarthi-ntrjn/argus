@@ -66,7 +66,10 @@ Each card is a live snapshot of a session:
 
 ### Session Detail Page
 
-The drill-in link on any session card opens a full-page view. At the top, when the session belongs to a registered repository, a **repo context bar** shows the repository name, full path, current branch badge, and (when the remote is GitHub) the same set of clickable surfaces as the dashboard repo card: linkable repo name, linkable branch chip, and a pull-request icon. Below that is the session status card, followed by the full output stream. When a session has ended, the prompt input bar is replaced with a **This session has ended** notice.
+The drill-in link on any session card opens a full-page immersive view of that session. At the top, when the session belongs to a registered repository, a **repo context bar** shows the repository name, full path, current branch badge, and (when the remote is GitHub) the same set of clickable surfaces as the dashboard repo card: linkable repo name, linkable branch chip, and a pull-request icon. Below that is the session status card, followed by the full output stream. When a session has ended, the prompt input bar is replaced with a **This session has ended** notice.
+
+<img src="docs/images/argus-details-cc.png" alt="Claude Code Session Immersive View" height="300">
+<img src="docs/images/argus-details-ghcp.png" alt="Copilot CLI Session Immersive View" height="300">
 
 ### Session Output
 
