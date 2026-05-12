@@ -153,38 +153,6 @@ The **To Do or Not To Do** panel lives on the right side of the dashboard. Use i
 Argus is designed to sit side-by-side with your editor. On narrow viewports it reflows so you can snap it next to VS Code or any other tool without losing functionality.
 
 
-## Dashboard Settings
-
-<img src="docs/images/argus-settings-menu.png" alt="Settings Panel" height="300">
-
-Click the **gear icon** (top-right) to open Settings.
-
-| Setting                            | Default  | Description                                                                        |
-| ---------------------------------- | -------- | ---------------------------------------------------------------------------------- |
-| Hide ended sessions                | On       | Hides sessions with status `completed` or `ended`                                  |
-| Hide repos with no active sessions | Off      | Hides repo cards that have no sessions with status `active`, `waiting`, or `error` |
-| Hide inactive sessions             | Off      | Hides sessions with no output in the last N minutes (see Resting threshold below)  |
-| Hide To Do panel                   | Off      | Removes the To Do panel from the dashboard entirely                                 |
-| Resting after (minutes)            | 20       | Minutes of inactivity before a session is shown as **resting**. Valid range: 1 to 60. Click **Reset** to restore the default. |
-
-These settings are saved in your browser (`localStorage`) and restored on every load.
-
-### Launch Behaviour: Yolo Mode
-
-| Setting    | Default | Description                                                                             |
-| ---------- | ------- | --------------------------------------------------------------------------------------- |
-| Yolo mode  | Off     | Launches all sessions with all permission checks and safety prompts disabled            |
-
-When **Yolo mode** is enabled, a warning dialog is shown. After confirmation:
-
-- **Claude Code** sessions are launched with `--dangerously-skip-permissions`
-- **Copilot CLI** sessions are launched with `--allow-all`
-
-<img src="docs/images/argus-yolo-on.png" alt="Yolo Mode Enabled" height="300">
-
-This applies to sessions launched directly from the Argus UI. 
-To disable, toggle Yolo mode off in Settings. No confirmation is required to disable.
-
 ## Integrations
 
 ### Slack
@@ -234,6 +202,38 @@ Configure via the **Teams** tab in the Argus Settings dialog.
 <img src="docs/images/argus-settings-teams.png" alt="Teams Settings" height="300">
 
 For bot registration instructions, see the [Azure Bot Framework documentation](https://portal.azure.com).
+
+## Dashboard Settings
+
+<img src="docs/images/argus-settings-menu.png" alt="Settings Panel" height="300">
+
+Click the **gear icon** (top-right) to open Settings.
+
+| Setting                            | Default  | Description                                                                        |
+| ---------------------------------- | -------- | ---------------------------------------------------------------------------------- |
+| Hide ended sessions                | On       | Hides sessions with status `completed` or `ended`                                  |
+| Hide repos with no active sessions | Off      | Hides repo cards that have no sessions with status `active`, `waiting`, or `error` |
+| Hide inactive sessions             | Off      | Hides sessions with no output in the last N minutes (see Resting threshold below)  |
+| Hide To Do panel                   | Off      | Removes the To Do panel from the dashboard entirely                                 |
+| Resting after (minutes)            | 20       | Minutes of inactivity before a session is shown as **resting**. Valid range: 1 to 60. Click **Reset** to restore the default. |
+
+These settings are saved in your browser (`localStorage`) and restored on every load.
+
+### Launch Behaviour: Yolo Mode
+
+| Setting    | Default | Description                                                                             |
+| ---------- | ------- | --------------------------------------------------------------------------------------- |
+| Yolo mode  | Off     | Launches all sessions with all permission checks and safety prompts disabled            |
+
+When **Yolo mode** is enabled, a warning dialog is shown. After confirmation:
+
+- **Claude Code** sessions are launched with `--dangerously-skip-permissions`
+- **Copilot CLI** sessions are launched with `--allow-all`
+
+<img src="docs/images/argus-yolo-on.png" alt="Yolo Mode Enabled" height="300">
+
+This applies to sessions launched directly from the Argus UI. 
+To disable, toggle Yolo mode off in Settings. No confirmation is required to disable.
 
 ## Auto Update
 
