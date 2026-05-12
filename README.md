@@ -89,9 +89,9 @@ Click the **Launch with Argus** dropdown in any repo card header and select **La
 
 <img src="docs/images/argus-tour2-launchwith.png" alt="Launch with Argus dropdown" height="300">
 
-<img src="docs/images/argus-launched-sessions.png" alt="Launched Sessions with Prompt Control" height="300">
-
 Sessions launched from Argus appear as **connected** and show the prompt input bar.
+
+<img src="docs/images/argus-launched-sessions.png" alt="Launched Sessions with Prompt Control" height="300">
 
 #### Headless Environments (Codespaces, SSH, no TTY)
 
