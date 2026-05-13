@@ -167,8 +167,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
               pendingChoice
                 ? pendingQuestions.length > 1
                   ? () => setQuestionIdx((i) => i + 1)
-                  : () =>
-                      queryClient.setQueryData(['session-pending-choice', session.id], null)
+                  : () => queryClient.setQueryData(['session-pending-choice', session.id], null)
                 : undefined
             }
           />

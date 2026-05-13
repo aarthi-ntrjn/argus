@@ -89,8 +89,9 @@ Argus needs the channel ID (not the channel name) to post messages.
 Open the Argus Settings dialog and go to the **Slack** section. Enter the values from the previous steps:
 
 - **Bot Token** (`xoxb-...`): from Step 5
-- **Channel ID**: from Step 6
 - **App Token** (`xapp-...`): from Step 3 (optional, enables inbound commands)
+- **Channel ID**: from Step 6
+- **Owner Sender ID** (optional): restricts inbound command access to you only. To find it: in Slack, click your profile picture → **View profile** → the **⋯** menu → **Copy member ID**.
 
 Click **Save**. Config is stored in `~/.argus/slack.config`.
 
@@ -98,7 +99,7 @@ Click **Save**. Config is stored in `~/.argus/slack.config`.
 
 ## Step 8: Verify the Connection
 
-Restart Argus. You should see these lines in the server logs:
+After saving, connect the integration. You should see these lines in the server logs:
 
 ```
 [SlackNotifier] Initialized, posting to channel C01234ABCDE
@@ -182,7 +183,7 @@ You can use a partial session ID (first 8 characters) with the `status` command.
 ## Troubleshooting
 
 **No messages appearing in Slack**
-- Check that `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` are set and the server has been restarted.
+- Check that **Bot Token** and **Channel ID** are saved in Settings and the integration is connected.
 - Confirm the bot has been invited to the channel (`/invite @Argus`).
 - Check the Argus server logs for `[SlackNotifier]` warning lines.
 

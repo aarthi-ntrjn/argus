@@ -42,7 +42,7 @@ describe('onboardingStorage', () => {
       const stored: OnboardingState = {
         schemaVersion: 1,
         userId: null,
-        dashboardTour: { status: 'completed', completedAt: '2026-04-04T00:00:00.000Z', skippedAt: null, seenRepoSteps: false },
+        dashboardTour: { status: 'completed', completedAt: '2026-04-04T00:00:00.000Z', skippedAt: null, seenRepoSteps: false, seenSessionSteps: false },
         sessionHints: { dismissed: ['session-status'] },
       };
       localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(stored));

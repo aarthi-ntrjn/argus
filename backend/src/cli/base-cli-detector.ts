@@ -25,7 +25,13 @@ import {
   getRepositoryByPath,
   getSession,
 } from '../db/database.js';
-import { parsePendingChoicePayload, buildToolApprovalChoice, isClaudeReadOnlyBashCommand, CLAUDE_READONLY_TOOL_NAMES, COPILOT_READONLY_TOOL_NAMES } from './pending-choice-utils.js';
+import {
+  parsePendingChoicePayload,
+  buildToolApprovalChoice,
+  isClaudeReadOnlyBashCommand,
+  CLAUDE_READONLY_TOOL_NAMES,
+  COPILOT_READONLY_TOOL_NAMES,
+} from './pending-choice-utils.js';
 import { telemetryService } from '../services/telemetry-service.js';
 import { ptyRegistry } from '../launch-pty/pty-registry.js';
 import { detectYoloModeFromPids, isPidRunning, isExpectedProcess } from '../utils/process-utils.js';

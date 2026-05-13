@@ -295,6 +295,16 @@ code {
   color: #334155;            /* slate-700 */
 }
 
+.hero__badge--teams {
+  background-color: #ede9fe; /* violet-100 */
+  color: #4c1d95;            /* violet-900 */
+}
+
+.hero__badge--slack {
+  background-color: #fdf4ff; /* fuchsia-50 */
+  color: #701a75;            /* fuchsia-900 */
+}
+
 .hero__subheadline {
   font-size: 1.125rem;
   color: var(--color-text-muted);
@@ -403,8 +413,14 @@ code {
 }
 
 .why-argus__lead {
-  max-width: 54ch;
   margin-inline: auto;
+}
+
+.why-argus__equations {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
 }
 
 .why-argus__equation {
@@ -413,7 +429,6 @@ code {
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  margin-bottom: 2.5rem;
 }
 
 .why-argus__term {
