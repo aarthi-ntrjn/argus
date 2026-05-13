@@ -214,12 +214,7 @@ To turn off the on-exit update, uncheck **Auto-update on exit** in the Settings 
 
 ## Telemetry
 
-Argus collects anonymous usage data (session counts, feature usage, errors) to help improve the product. No prompts, file paths, or personal information are ever sent. Each installation is identified by a random UUID stored in `~/.argus/telemetry-id`.
-
-**To disable:**
-
-- On first launch, uncheck "Send telemetry" in the banner before clicking "Got it".
-- At any time, open Settings and uncheck **Send anonymous usage telemetry** under the Privacy section.
+Argus collects anonymous usage data (session counts, feature usage, errors). No prompts, file paths, or personal information are ever sent. Disable it at any time in Settings under Privacy.
 
 ## Feedback
 
