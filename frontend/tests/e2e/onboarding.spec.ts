@@ -39,7 +39,7 @@ async function seedOnboardingCompleted(page: import('@playwright/test').Page) {
   await page.evaluate(() => {
     localStorage.setItem('argus:onboarding', JSON.stringify({
       schemaVersion: 1, userId: null,
-      dashboardTour: { status: 'completed', completedAt: new Date().toISOString(), skippedAt: null, seenRepoSteps: true },
+      dashboardTour: { status: 'completed', completedAt: new Date().toISOString(), skippedAt: null, seenRepoSteps: true, seenSessionSteps: true },
       sessionHints: { dismissed: [] },
     }));
   });
@@ -58,8 +58,8 @@ test.describe('US1: First-Time Dashboard Tour', () => {
     await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Welcome!')).toBeVisible();
 
-    // Advance through all 7 steps
-    for (let i = 0; i < 6; i++) {
+    // Advance through all 4 steps (3 Next + 1 Done)
+    for (let i = 0; i < 3; i++) {
       const nextBtn = page.getByRole('button', { name: /next/i });
       await expect(nextBtn).toBeVisible();
       await nextBtn.click();
@@ -122,7 +122,7 @@ test.describe('US3: Restart Tour from Settings', () => {
     await expect(page.getByText('Welcome!')).not.toBeVisible({ timeout: 2000 });
 
     // Open settings
-    await page.getByRole('button', { name: /settings/i }).click();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await page.getByRole('button', { name: /advanced settings/i }).click();
     await page.getByRole('button', { name: /about/i }).click();
     await expect(page.getByRole('button', { name: /restart tour/i })).toBeVisible();
@@ -145,7 +145,7 @@ test.describe('US4: Reset Onboarding', () => {
     await page.reload();
 
     // Open settings and click Restart Tour
-    await page.getByRole('button', { name: /settings/i }).click();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await page.getByRole('button', { name: /advanced settings/i }).click();
     await page.getByRole('button', { name: /about/i }).click();
     await expect(page.getByRole('button', { name: /restart tour/i })).toBeVisible();
