@@ -51,7 +51,7 @@ export default function TelemetryPage() {
               The raw IP address is not stored in any analytics event record.
             </li>
             <li>
-              <span className="font-medium text-gray-900">Anonymous installation ID:</span>a random
+              <span className="font-medium text-gray-900">Anonymous installation ID:</span> a random
               UUID generated on first run. It is not linked to your identity, account, or machine.
             </li>
             <li>

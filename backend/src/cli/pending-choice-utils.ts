@@ -4,10 +4,7 @@ import type { PendingChoiceItem } from '../models/index.js';
  * Bash-tier tools (Claude Code): approval persists permanently per project directory and command.
  * Maps to Claude Code's "Yes, don't ask again for this project" option.
  */
-const BASH_TIER_TOOLS = new Set([
-  'Bash',
-  'computer',
-]);
+const BASH_TIER_TOOLS = new Set(['Bash', 'computer']);
 
 /**
  * Edit-tier tools (Claude Code): approval persists only until the session ends.
@@ -29,9 +26,9 @@ const EDIT_TIER_TOOLS = new Set([
  */
 const COPILOT_TIER_TOOLS = new Set([
   'run_shell_command', // shell kind
-  'bash',             // shell kind (alternate name per official docs)
-  'shell',            // shell kind (alternate name)
-  'edit',             // write kind (per official docs)
+  'bash', // shell kind (alternate name per official docs)
+  'shell', // shell kind (alternate name)
+  'edit', // write kind (per official docs)
 ]);
 
 /**
@@ -55,9 +52,9 @@ export const CLAUDE_READONLY_TOOL_NAMES = new Set([
  * Skip the pending-choice flow entirely for these.
  */
 export const COPILOT_READONLY_TOOL_NAMES = new Set([
-  'view',        // list directory contents or read file
-  'glob',        // file pattern matching
-  'grep',        // text search in files
+  'view', // list directory contents or read file
+  'glob', // file pattern matching
+  'grep', // text search in files
   'report_intent', // internal meta tool — always auto-approved
   'fetch_copilot_cli_documentation', // read-only docs lookup
   'list_powershell',
@@ -65,7 +62,7 @@ export const COPILOT_READONLY_TOOL_NAMES = new Set([
   'stop_powershell',
   'list_agents',
   'read_agent',
-  'sql',         // session DB queries (read-only from the hook perspective)
+  'sql', // session DB queries (read-only from the hook perspective)
   'ide-get_diagnostics',
   'ide-get_selection',
   'github-mcp-server-search_code',
@@ -94,7 +91,17 @@ export const COPILOT_READONLY_TOOL_NAMES = new Set([
  * We skip the pending-choice flow entirely for these rather than relying on the debounce.
  */
 const CLAUDE_READONLY_BASH_STEMS = new Set([
-  'ls', 'cat', 'head', 'tail', 'grep', 'find', 'wc', 'diff', 'stat', 'du', 'cd',
+  'ls',
+  'cat',
+  'head',
+  'tail',
+  'grep',
+  'find',
+  'wc',
+  'diff',
+  'stat',
+  'du',
+  'cd',
 ]);
 
 /**
@@ -102,9 +109,22 @@ const CLAUDE_READONLY_BASH_STEMS = new Set([
  * the subcommand is in this set is always auto-approved by Claude Code.
  */
 const CLAUDE_READONLY_GIT_SUBCOMMANDS = new Set([
-  'status', 'log', 'diff', 'show', 'branch', 'remote', 'tag', 'stash',
-  'describe', 'shortlog', 'blame', 'ls-files', 'ls-tree', 'rev-parse',
-  'rev-list', 'for-each-ref',
+  'status',
+  'log',
+  'diff',
+  'show',
+  'branch',
+  'remote',
+  'tag',
+  'stash',
+  'describe',
+  'shortlog',
+  'blame',
+  'ls-files',
+  'ls-tree',
+  'rev-parse',
+  'rev-list',
+  'for-each-ref',
 ]);
 
 /**

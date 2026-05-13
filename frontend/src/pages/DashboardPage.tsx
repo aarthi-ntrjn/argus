@@ -26,7 +26,11 @@ import TodoPanel from '../components/TodoPanel/TodoPanel';
 import MobileNav from '../components/MobileNav/MobileNav';
 import { isInactive } from '../utils/sessionUtils';
 import { OnboardingTour } from '../components/Onboarding';
-import { buildDashboardTourSteps, REPO_CATCH_UP_STEPS, SESSION_CATCH_UP_STEPS } from '../config/dashboardTourSteps';
+import {
+  buildDashboardTourSteps,
+  REPO_CATCH_UP_STEPS,
+  SESSION_CATCH_UP_STEPS,
+} from '../config/dashboardTourSteps';
 import RepoCard from '../components/RepoCard/RepoCard';
 import type { RepoWithSessions } from '../components/RepoCard/RepoCard';
 import FolderInputDialog from '../components/FolderInputDialog/FolderInputDialog';

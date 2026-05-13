@@ -118,11 +118,13 @@ export class CopilotCliDetector
     pendingChoiceEvents.on(
       'session.permission_requested',
       (sessionId: string, kind: string, commandText: string) => {
-        const { question, choices, allQuestions } = buildCopilotPermissionChoice(
-          kind,
-          commandText,
-        );
-        this.pendingChoices.set(sessionId, { type: 'tool_approval', question, choices, allQuestions });
+        const { question, choices, allQuestions } = buildCopilotPermissionChoice(kind, commandText);
+        this.pendingChoices.set(sessionId, {
+          type: 'tool_approval',
+          question,
+          choices,
+          allQuestions,
+        });
         const now = new Date().toISOString();
         broadcast({
           type: 'session.pending_choice',

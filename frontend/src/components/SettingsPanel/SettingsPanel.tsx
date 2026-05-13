@@ -105,7 +105,6 @@ export function SettingsPanel({ settings, onToggle, onOpenAllSettings }: Setting
             </a>
           </div>
         </div>
-
       </div>
 
       <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-3">
