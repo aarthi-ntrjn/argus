@@ -27,7 +27,9 @@
     posthog.init('phc_utcNEdTjgVREGCdpmyDeMWVwjDmL9LBZSFvhrNkPUZGr', {
       api_host: 'https://us.i.posthog.com',
       person_profiles: 'never',
+      bootstrap: { featureFlags: {} },
     });
+    posthog.register({ page_version: '1' });
   </script>
 </head>
 <body>
