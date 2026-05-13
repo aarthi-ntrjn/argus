@@ -24,7 +24,7 @@ test.describe('SC-027: Kill Session', () => {
     await page.addInitScript(() => {
       localStorage.setItem('argus:onboarding', JSON.stringify({
         schemaVersion: 1, userId: null,
-        dashboardTour: { status: 'completed', completedAt: '2024-01-01T00:00:00.000Z', skippedAt: null, seenRepoSteps: true },
+        dashboardTour: { status: 'completed', completedAt: '2024-01-01T00:00:00.000Z', skippedAt: null, seenRepoSteps: true, seenSessionSteps: true },
         sessionHints: { dismissed: [] },
       }));
     });
