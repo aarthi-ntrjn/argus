@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-05-13
+
+### Fixed
+
+- **E2E test suite**: All mock spec files now correctly seed `seenSessionSteps: true` in onboarding state, preventing the session catch-up tour from blocking pointer events during tests. The first-load tour step count and Settings button selector in the onboarding spec were also corrected.
+
+## [1.0.0] - 2026-05-13
+
+### Added
+
+- **Landing page analytics**: The landing page now includes PostHog telemetry to track page visits and version. See the privacy policy for details.
+
+### Fixed
+
+- **Repository PR link encoding**: The "Open pull request" link on repository cards now uses the correct `/compare` URL with proper slash encoding, so it opens the right GitHub comparison page.
+
+### Changed
+
+- **Onboarding restructured into 3 progressive tours**: The single onboarding walkthrough has been replaced with three targeted tours. The first-load tour introduces the dashboard on a new install. A repo catch-up tour fires the first time a repository is added. A session catch-up tour fires the first time a session appears, highlighting session cards and integrations.
+- **Auto-update on exit moved to About tab**: The "Auto-update on exit" toggle has been moved from the General tab to the About tab in the Settings dialog, keeping update-related controls together.
+- **Documentation refresh**: The README has been comprehensively updated with new screenshots, a restructured navigation flow, consolidated Teams and Slack integration docs under "Roaming Integrations", and a new Supported Platforms section.
+
 ## [0.1.18] - 2026-05-10
 
 ### Added

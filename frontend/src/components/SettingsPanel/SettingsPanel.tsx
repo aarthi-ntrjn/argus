@@ -11,8 +11,6 @@ import { SectionHeading } from '../SectionHeading';
 import { WebsiteIcon, GitHubIcon, NpmIcon } from '../BrandIcons';
 import { ClaudeIcon, CopilotIcon } from '../SessionTypeIcon/SessionTypeIcon';
 import { GeneralSettingsContent } from '../SettingsDialog/GeneralSettingsContent';
-import { Checkbox } from '../Checkbox';
-import { useArgusSettings } from '../../hooks/useArgusSettings';
 
 interface SettingsPanelProps {
   settings: DashboardSettings;
@@ -26,8 +24,6 @@ export function SettingsPanel({ settings, onToggle, onOpenAllSettings }: Setting
     queryFn: getHealth,
     staleTime: Infinity,
   });
-  const { settings: argusSettings, patchSetting } = useArgusSettings();
-
   return (
     <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-5 max-h-[calc(100vh-4rem)] overflow-y-auto">
       <SectionHeading className="mb-2">Settings</SectionHeading>
@@ -109,12 +105,6 @@ export function SettingsPanel({ settings, onToggle, onOpenAllSettings }: Setting
             </a>
           </div>
         </div>
-
-        <Checkbox
-          label="Auto-update on exit"
-          checked={argusSettings?.autoUpdate ?? true}
-          onChange={(e) => void patchSetting({ autoUpdate: e.target.checked })}
-        />
       </div>
 
       <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-3">

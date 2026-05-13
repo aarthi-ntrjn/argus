@@ -26,7 +26,11 @@ import TodoPanel from '../components/TodoPanel/TodoPanel';
 import MobileNav from '../components/MobileNav/MobileNav';
 import { isInactive } from '../utils/sessionUtils';
 import { OnboardingTour } from '../components/Onboarding';
-import { buildDashboardTourSteps, REPO_CATCH_UP_STEPS } from '../config/dashboardTourSteps';
+import {
+  buildDashboardTourSteps,
+  REPO_CATCH_UP_STEPS,
+  SESSION_CATCH_UP_STEPS,
+} from '../config/dashboardTourSteps';
 import RepoCard from '../components/RepoCard/RepoCard';
 import type { RepoWithSessions } from '../components/RepoCard/RepoCard';
 import FolderInputDialog from '../components/FolderInputDialog/FolderInputDialog';
@@ -82,14 +86,17 @@ export default function DashboardPage() {
   const {
     tourStatus,
     seenRepoSteps,
+    seenSessionSteps,
     startTour,
     skipTour,
     completeTour,
     markRepoStepsSeen,
+    markSessionStepsSeen,
     resetOnboarding,
   } = useOnboarding();
   const [tourRun, setTourRun] = useState(false);
   const [catchUpRun, setCatchUpRun] = useState(false);
+  const [sessionCatchUpRun, setSessionCatchUpRun] = useState(false);
 
   const handleTelemetryDismiss = () => {
     patchSetting({ telemetryPromptSeen: true });
@@ -254,14 +261,29 @@ export default function DashboardPage() {
 
   const hasRepos = repos.length > 0;
   const tourSteps = useMemo(() => buildDashboardTourSteps(hasRepos), [hasRepos]);
+  const hasSessions = sessions.length > 0;
 
-  // Auto-trigger catch-up mini-tour when repos appear and user hasn't seen repo steps
+  // Auto-trigger repo catch-up tour when first repo appears and user hasn't seen repo steps
   useEffect(() => {
     if (repos.length > 0 && !seenRepoSteps && tourStatus !== 'not_started' && !tourRun) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCatchUpRun(true);
     }
   }, [repos.length, seenRepoSteps, tourStatus, tourRun]);
+
+  // Auto-trigger session catch-up tour when first session appears and user hasn't seen session steps
+  useEffect(() => {
+    if (
+      hasSessions &&
+      !seenSessionSteps &&
+      tourStatus !== 'not_started' &&
+      !tourRun &&
+      !catchUpRun
+    ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSessionCatchUpRun(true);
+    }
+  }, [hasSessions, seenSessionSteps, tourStatus, tourRun, catchUpRun]);
 
   const reposWithSessions = useMemo<RepoWithSessions[]>(
     () =>
@@ -441,7 +463,7 @@ export default function DashboardPage() {
               </span>
             </div>
             {integrationsEnabled && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3" data-tour-id="dashboard-integrations">
                 <TeamsIntegrationButton
                   disabled={isPending}
                   onToggle={() => toggle('teams')}
@@ -702,6 +724,21 @@ export default function DashboardPage() {
           onSkip={() => {
             markRepoStepsSeen();
             setCatchUpRun(false);
+          }}
+        />
+      )}
+
+      {sessionCatchUpRun && (
+        <OnboardingTour
+          run={sessionCatchUpRun}
+          steps={SESSION_CATCH_UP_STEPS}
+          onComplete={() => {
+            markSessionStepsSeen();
+            setSessionCatchUpRun(false);
+          }}
+          onSkip={() => {
+            markSessionStepsSeen();
+            setSessionCatchUpRun(false);
           }}
         />
       )}
