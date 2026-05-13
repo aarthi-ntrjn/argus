@@ -179,8 +179,9 @@ Output a pre-merge report:
 | Frontend build | ✅ PASS | Build succeeded |
 | E2E mock tests (Tier 1) | ✅ PASS | N tests passed |
 | E2E real-server tests (Tier 2) | ✅ PASS / N/A | N tests passed / server not available |
+| PR created / existed | ✅ Created / ✅ Existed | PR URL: <url> |
+| CI gate — PR branch | ✅ PASS | Last run: <sha>, all checks green |
 | CI gate — main branch | ✅ PASS / ⚠ N/A | Last run: <sha> / No recent run found |
-| CI gate — feature branch PR | ✅ PASS / ⚠ N/A | Last run: <sha> / No PR open |
 | README updated | ✅ PASS / ❌ FIXED / N/A | ... |
 | Tasks complete | ✅ PASS | All T### tasks marked [X] |
 | Test-first coverage | ✅ PASS | ... |
@@ -192,48 +193,86 @@ Output a pre-merge report:
 
 ---
 
-### Step 6b — CI gate (pre-merge)
+### Step 6b — PR and CI gate (pre-merge)
 
-Before touching `main`, verify that CI is currently green. A failing CI on `main` means a previous push broke the build — merging on top of it compounds the problem.
+This step ensures a PR exists for the feature branch (creating one if needed), waits for CI to complete on both the PR and on `main`, and blocks the merge if either is failing.
 
 #### Detect the remote
 
 Extract `OWNER` and `REPO` from `git remote get-url origin`:
 - `https://github.com/OWNER/REPO.git` or `git@github.com:OWNER/REPO.git`
 
-#### Check CI on main
+#### Ensure a PR exists
 
 Run:
+```
+gh pr list --repo <OWNER>/<REPO> --head <FEATURE_BRANCH> --state open --json number,url,title --limit 1
+```
+
+If a PR already exists, record its URL and number. Skip to "Wait for CI on the PR" below.
+
+If no PR exists, create one now. Build the PR body from the commit log:
+```
+git --no-pager log <MAIN_BRANCH>..HEAD --pretty=format:"- %s" --no-merges
+```
+
+Then create the PR:
+```
+gh pr create \
+  --repo <OWNER>/<REPO> \
+  --title "<one-line summary: use the branch name or the most recent commit subject>" \
+  --body "$(cat <<'PRBODY'
+## Summary
+<bullet points from the commit log above>
+
+## CI gate
+Created automatically by /merge to trigger CI before merging.
+PRBODY
+)" \
+  --base <MAIN_BRANCH> \
+  --head <FEATURE_BRANCH>
+```
+
+Output the PR URL. Record the PR number from the command output.
+
+#### Wait for CI on the PR
+
+After the PR is open, CI should trigger within ~30 seconds. Poll every 15 seconds (up to 3 minutes) until a workflow run appears for this branch:
+```
+gh run list --repo <OWNER>/<REPO> --branch <FEATURE_BRANCH> --workflow ci.yml --limit 1 --json databaseId,status,conclusion,headSha,url
+```
+
+If no run appears after 3 minutes, **STOP**: "CI did not start on the PR after 3 minutes. Check GitHub Actions configuration. PR URL: `<url>`"
+
+Once a run appears, record its `databaseId` as `PR_RUN_ID`. Then poll every 30 seconds (up to 15 minutes) until `status === "completed"`:
+```
+gh run view <PR_RUN_ID> --repo <OWNER>/<REPO> --json status,conclusion,url
+```
+
+If still running after 15 minutes, **STOP**: "CI is still running after 15 minutes. Check manually: `<url>`. Re-run `/merge` once CI completes."
+
+Evaluate the final result:
+
+| conclusion | Action |
+|-----------|--------|
+| `success` | ✅ PR CI is green — proceed |
+| `failure` or `cancelled` | ❌ **STOP** — "CI failed on the PR. Fix the failures and re-run `/merge`. Run URL: `<url>`". Fetch and print the last 50 lines of failed job logs with `gh run view <PR_RUN_ID> --repo <OWNER>/<REPO> --log-failed`. |
+
+#### Check CI on main
+
+Also verify main is currently green before merging on top of it:
 ```
 gh run list --repo <OWNER>/<REPO> --branch <MAIN_BRANCH> --workflow ci.yml --limit 1 --json status,conclusion,headSha,url
 ```
 
-Evaluate the result:
-
 | status | conclusion | Action |
 |--------|-----------|--------|
 | `completed` | `success` | ✅ Main is green — proceed |
-| `completed` | `failure` or `cancelled` | ❌ **STOP** — main CI is failing. Output the run URL and tell the user: "CI is failing on `<MAIN_BRANCH>`. Fix the failure before merging. Run URL: `<url>`" |
-| `in_progress` or `queued` | (any) | ❌ **STOP** — CI is still running on `<MAIN_BRANCH>`. Tell the user: "CI is in progress on `<MAIN_BRANCH>`. Wait for it to finish, then re-run `/merge`. Run URL: `<url>`" |
-| (no runs returned) | | ⚠️ No recent CI run found on `<MAIN_BRANCH>` — allow the merge but note this in the Step 8 report. |
+| `completed` | `failure` or `cancelled` | ❌ **STOP** — "CI is failing on `<MAIN_BRANCH>`. Fix the failure before merging. Run URL: `<url>`" |
+| `in_progress` or `queued` | (any) | ❌ **STOP** — "CI is in progress on `<MAIN_BRANCH>`. Wait for it to finish, then re-run `/merge`. Run URL: `<url>`" |
+| (no runs returned) | | ⚠️ No recent CI run found on `<MAIN_BRANCH>` — allow but note in the Step 8 report. |
 
-#### Check CI on the feature branch (if a PR exists)
-
-Run:
-```
-gh pr list --repo <OWNER>/<REPO> --head <FEATURE_BRANCH> --state open --json number,url --limit 1
-```
-
-If a PR exists, also check its CI:
-```
-gh run list --repo <OWNER>/<REPO> --branch <FEATURE_BRANCH> --workflow ci.yml --limit 1 --json status,conclusion,headSha,url
-```
-
-Apply the same pass/fail/pending logic. If CI is failing or pending on the feature branch PR, **STOP** with the same blocking message pattern.
-
-If no PR exists for the feature branch, skip this sub-check (the feature branch was not pushed to a PR workflow).
-
-Only continue to Step 7 if all applicable CI checks are green (or no runs exist).
+Only continue to Step 7 if both the PR CI and the main CI are green (or main has no recent run).
 
 ---
 
