@@ -58,6 +58,9 @@ export const test = base.extend({
     await page.route('**/api/v1/todos**', route =>
       route.fulfill({ contentType: 'application/json', body: JSON.stringify([]) })
     );
+    await page.route('**/api/v1/update/status', route =>
+      route.fulfill({ contentType: 'application/json', body: JSON.stringify({ currentVersion: '0.0.0', latestVersion: null, updateAvailable: false, lastChecked: null, updateInProgress: false }) })
+    );
     await page.route('**/api/health', route =>
       route.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 'ok', version: '0.0.0', uptime: 0 }) })
     );
