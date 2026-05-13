@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-05-13
+
+### Fixed
+
+- **E2E test suite**: All mock spec files now correctly seed `seenSessionSteps: true` in onboarding state, preventing the session catch-up tour from blocking pointer events during tests. The first-load tour step count and Settings button selector in the onboarding spec were also corrected.
+
 ## [1.0.0] - 2026-05-13
 
 ### Added
