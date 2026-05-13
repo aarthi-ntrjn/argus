@@ -181,7 +181,7 @@ In Slack, you can also send commands as direct messages to the bot.
 
 ### Setup
 
-Configure via the **Teams** and **Slack** tabs in the Argus Settings dialog.
+Configure via the **Teams** and **Slack** tabs in the Argus Settings dialog. For full setup instructions, see [docs/README-TEAMS-APP.md](docs/README-TEAMS-APP.md) and [docs/README-SLACK-APP.md](docs/README-SLACK-APP.md).
 
 ## Dashboard Settings
 
