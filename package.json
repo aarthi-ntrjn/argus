@@ -23,6 +23,7 @@
     "bin/",
     "backend/dist/",
     "frontend/dist/",
+    "scripts/fix-node-pty-helper.mjs",
     "CHANGELOG.md"
   ],
   "keywords": [
