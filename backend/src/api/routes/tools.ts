@@ -148,11 +148,15 @@ function openTerminalWithCommand(cmd: string): void {
   }
 
   // Linux: try common terminal emulators in order of preference.
+  // Wrap cmd in `bash -c` so bash splits/quotes it. Modern terminals like ptyxis
+  // (often the system's x-terminal-emulator) do not shell-parse a raw -e string.
+  // `; exec bash` keeps the window open after the launched command exits.
+  const bashWrap = ['bash', '-c', `${cmd}; exec bash`];
   const terminals = [
-    { bin: 'x-terminal-emulator', args: ['-e', cmd] },
-    { bin: 'gnome-terminal', args: ['--', 'bash', '-c', `${cmd}; exec bash`] },
-    { bin: 'xterm', args: ['-e', cmd] },
-    { bin: 'konsole', args: ['--noclose', '-e', cmd] },
+    { bin: 'x-terminal-emulator', args: ['-e', ...bashWrap] },
+    { bin: 'gnome-terminal', args: ['--', ...bashWrap] },
+    { bin: 'xterm', args: ['-e', ...bashWrap] },
+    { bin: 'konsole', args: ['--noclose', '-e', ...bashWrap] },
   ];
   for (const t of terminals) {
     if (spawnSync('which', [t.bin], { encoding: 'utf-8', timeout: 2000 }).status === 0) {
