@@ -12,6 +12,17 @@ function getConfigDir(): string {
   return process.env.ARGUS_CONFIG_PATH ? dirname(path) : join(homedir(), '.argus');
 }
 
+// Keys that live in memory only and are never persisted to config.json
+const TRANSIENT_KEYS: (keyof ArgusConfig)[] = ['integrationsDisabled'];
+
+function stripTransientKeys(obj: Record<string, unknown>): Record<string, unknown> {
+  const copy = { ...obj };
+  for (const key of TRANSIENT_KEYS) {
+    delete copy[key];
+  }
+  return copy;
+}
+
 const DEFAULTS: ArgusConfig = {
   port: 7411,
   watchDirectories: [],
@@ -22,7 +33,7 @@ const DEFAULTS: ArgusConfig = {
   restingThresholdMinutes: 20,
   telemetryEnabled: true,
   telemetryPromptSeen: false,
-  integrationsEnabled: true,
+  integrationsDisabled: false,
   autoUpdate: true,
   updateCheckIntervalHours: 4,
 };
@@ -33,7 +44,7 @@ export function loadConfig(): ArgusConfig {
   let fileConfig: Partial<ArgusConfig> = {};
   if (!existsSync(configPath)) {
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(configPath, JSON.stringify(DEFAULTS, null, 2), 'utf-8');
+    writeFileSync(configPath, JSON.stringify(stripTransientKeys(DEFAULTS as unknown as Record<string, unknown>), null, 2), 'utf-8');
   } else {
     try {
       fileConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
@@ -41,10 +52,11 @@ export function loadConfig(): ArgusConfig {
       // fall through to defaults
     }
   }
-  // Migrate: flip integrationsEnabled to true for configs written before v1.0.6
-  if (fileConfig.integrationsEnabled === false) {
-    fileConfig.integrationsEnabled = true;
-    writeFileSync(configPath, JSON.stringify({ ...DEFAULTS, ...fileConfig }, null, 2), 'utf-8');
+  // Clean up legacy integrationsEnabled flag from config files
+  const raw = fileConfig as Record<string, unknown>;
+  if ('integrationsEnabled' in raw) {
+    delete raw.integrationsEnabled;
+    writeFileSync(configPath, JSON.stringify(stripTransientKeys({ ...DEFAULTS, ...fileConfig }), null, 2), 'utf-8');
   }
 
   const config = { ...DEFAULTS, ...fileConfig };
@@ -65,5 +77,5 @@ export function saveConfig(config: ArgusConfig): void {
   } catch {
     /* use empty */
   }
-  writeFileSync(configPath, JSON.stringify({ ...existing, ...config }, null, 2), 'utf-8');
+  writeFileSync(configPath, JSON.stringify(stripTransientKeys({ ...existing, ...config }), null, 2), 'utf-8');
 }

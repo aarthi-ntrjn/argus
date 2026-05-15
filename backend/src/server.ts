@@ -106,7 +106,7 @@ export async function buildServer(): Promise<{
 
   // Initialize Teams SDK App with Fastify adapter before static/catch-all routes
   let teamsApp: App | null = null;
-  if (config.integrationsEnabled) {
+  if (!config.integrationsDisabled) {
     const teamsBootConfig = loadTeamsConfig();
     teamsApp = new App({
       httpServerAdapter: new FastifyTeamsAdapter(app),
@@ -218,7 +218,7 @@ export async function startServer(): Promise<FastifyInstance> {
   await monitor.start();
   startPruningJob();
 
-  await initializeIntegrations(config.integrationsEnabled, teamsApp, monitor);
+  await initializeIntegrations(!config.integrationsDisabled, teamsApp, monitor);
 
   setUpdateService(updateService);
   setUpdateServiceForRoutes(updateService);
