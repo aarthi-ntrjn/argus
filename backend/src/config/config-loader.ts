@@ -41,6 +41,12 @@ export function loadConfig(): ArgusConfig {
       // fall through to defaults
     }
   }
+  // Migrate: flip integrationsEnabled to true for configs written before v1.0.6
+  if (fileConfig.integrationsEnabled === false) {
+    fileConfig.integrationsEnabled = true;
+    writeFileSync(configPath, JSON.stringify({ ...DEFAULTS, ...fileConfig }, null, 2), 'utf-8');
+  }
+
   const config = { ...DEFAULTS, ...fileConfig };
   if (process.env.ARGUS_PORT) {
     config.port = parseInt(process.env.ARGUS_PORT, 10);
