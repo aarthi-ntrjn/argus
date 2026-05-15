@@ -24,12 +24,19 @@ export default function LaunchDropdown({ repoPath, onLaunchError, onLaunchPendin
   const [copied, setCopied] = useState<'claude' | 'copilot' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const { data: tools } = useQuery({
+  const { data: tools, refetch } = useQuery({
     queryKey: ['available-tools'],
     queryFn: getAvailableTools,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    void refetch();
+  }, [open, refetch]);
 
   // Close on outside click
   useEffect(() => {

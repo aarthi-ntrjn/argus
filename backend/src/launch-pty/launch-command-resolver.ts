@@ -1,5 +1,13 @@
+import path from 'path';
 import { SessionTypes, ToolCommands } from '../models/index.js';
 import type { SessionType } from '../models/index.js';
+
+const GITHUB_CLI_COMMAND = 'gh';
+const WINDOWS_EXECUTABLE_SUFFIX = /\.(cmd|exe|bat)$/i;
+
+function normalizeCommandName(cmd: string): string {
+  return path.basename(cmd).replace(WINDOWS_EXECUTABLE_SUFFIX, '');
+}
 
 export interface LaunchCommand {
   sessionType: SessionType;
@@ -13,13 +21,18 @@ export function resolveLaunchCommand(args: string[]): LaunchCommand {
   }
 
   const [cmd, ...cmdArgs] = args;
+  const normalizedCmd = normalizeCommandName(cmd);
 
-  if (cmd === ToolCommands.CLAUDE) {
+  if (normalizedCmd === ToolCommands.CLAUDE) {
     return { sessionType: SessionTypes.CLAUDE_CODE, cmd, cmdArgs };
   }
 
   // GitHub Copilot CLI (standalone)
-  if (cmd === ToolCommands.COPILOT) {
+  if (normalizedCmd === ToolCommands.COPILOT) {
+    return { sessionType: SessionTypes.COPILOT_CLI, cmd, cmdArgs };
+  }
+
+  if (cmd === GITHUB_CLI_COMMAND && cmdArgs[0] === ToolCommands.COPILOT) {
     return { sessionType: SessionTypes.COPILOT_CLI, cmd, cmdArgs };
   }
 

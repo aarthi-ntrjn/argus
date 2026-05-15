@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import supertest from 'supertest';
 
 // vi.mock is hoisted — factory must not reference variables defined after it.
@@ -104,5 +104,101 @@ describe('Tools API — launch-terminal returns ptyLaunchId', () => {
     const { ptyLaunchId } = res.body as { ptyLaunchId: string };
     const allArgs = spawnedArgs.flat().join(' ');
     expect(allArgs).toContain(`--launch-id ${ptyLaunchId}`);
+  });
+
+  it('detects Copilot via gh copilot when no standalone copilot binary exists', async () => {
+    const fakeHome = join(tmpdir(), `argus-tools-gh-home-${randomUUID()}`);
+    const originalHome = process.env.HOME;
+    process.env.HOME = fakeHome;
+
+    try {
+      mockSpawnSync.mockImplementation((file: string, args?: string[]) => {
+        if (file === 'which' && args?.[0] === 'copilot') {
+          return { status: 1 };
+        }
+        if (file === 'which' && args?.[0] === 'claude') {
+          return { status: 1 };
+        }
+        if (file === 'gh' && args?.[0] === 'copilot' && args?.[1] === '--help') {
+          return { status: 0 };
+        }
+        return { status: 1 };
+      });
+
+      const res = await request.get('/api/v1/tools');
+
+      expect(res.status).toBe(200);
+      expect(res.body.copilot).toBe(true);
+      expect(res.body.copilotCmd).toContain(' gh copilot');
+    } finally {
+      process.env.HOME = originalHome;
+    }
+  });
+
+  it('launches Copilot with gh copilot when that is the installed form', async () => {
+    const spawnedArgs: string[][] = [];
+    const fakeHome = join(tmpdir(), `argus-tools-gh-launch-home-${randomUUID()}`);
+    const originalHome = process.env.HOME;
+    process.env.HOME = fakeHome;
+
+    try {
+      mockSpawnSync.mockImplementation((file: string, args?: string[]) => {
+        if (file === 'which' && args?.[0] === 'copilot') {
+          return { status: 1 };
+        }
+        if (file === 'gh' && args?.[0] === 'copilot' && args?.[1] === '--help') {
+          return { status: 0 };
+        }
+        if (file === 'which' && args?.[0] === 'x-terminal-emulator') {
+          return { status: 0 };
+        }
+        return { status: 1 };
+      });
+      mockSpawn.mockImplementation((_file: string, args: string[]) => {
+        spawnedArgs.push(args);
+        return { on: vi.fn(), unref: vi.fn() };
+      });
+
+      const res = await request.post('/api/v1/sessions/launch-terminal').send({ tool: 'copilot' });
+
+      expect(res.status).toBe(202);
+      expect(spawnedArgs.flat().join(' ')).toContain(' gh copilot');
+    } finally {
+      process.env.HOME = originalHome;
+    }
+  });
+
+  it('detects Copilot from ~/.local/bin when the backend PATH does not include it', async () => {
+    const fakeHome = join(tmpdir(), `argus-tools-home-${randomUUID()}`);
+    const localBin = join(fakeHome, '.local', 'bin');
+    const originalHome = process.env.HOME;
+
+    mkdirSync(localBin, { recursive: true });
+    writeFileSync(join(localBin, 'copilot'), '#!/bin/sh\n');
+    process.env.HOME = fakeHome;
+
+    try {
+      mockSpawnSync.mockImplementation((file: string, args?: string[]) => {
+        if (file === 'which' && args?.[0] === 'copilot') {
+          return { status: 1 };
+        }
+        if (file === 'which' && args?.[0] === 'claude') {
+          return { status: 1 };
+        }
+        if (file === 'gh' && args?.[0] === 'copilot' && args?.[1] === '--help') {
+          return { status: 1 };
+        }
+        return { status: 1 };
+      });
+
+      const res = await request.get('/api/v1/tools');
+
+      expect(res.status).toBe(200);
+      expect(res.body.copilot).toBe(true);
+      expect(res.body.copilotCmd).toContain(`${localBin}/copilot`);
+    } finally {
+      process.env.HOME = originalHome;
+      rmSync(fakeHome, { recursive: true, force: true });
+    }
   });
 });
