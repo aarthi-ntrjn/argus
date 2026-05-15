@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2026-05-15
+
+### Fixed
+
+- **Linux terminal launch on ptyxis and other modern emulators**: The Launch action wraps the command in `bash -c` so terminals that pass `-e` directly to `execve()` (such as ptyxis, now the default `x-terminal-emulator` on Debian/Ubuntu) parse the command correctly instead of failing with "Failed to find executable".
+- **Claude detection in `~/.local/bin`**: The dashboard now finds and launches `claude` even when the backend process (e.g. started via `npx`) does not inherit `~/.local/bin` in `PATH`. The absolute path is also baked into the launch command so the spawned terminal works regardless of its own `PATH`.
+
 ## [1.0.7] - 2026-05-14
 
 ### Fixed
