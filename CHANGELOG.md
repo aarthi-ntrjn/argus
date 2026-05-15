@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2026-05-14
+
+### Fixed
+
+- **Installed tool detection**: Refresh detection of installed AI tools so the dashboard accurately reflects which CLIs are available.
+
+### Changed
+
+- **Landing page**: Moved prerequisites into the step cards (Node.js 22+ in Install, cloned repo requirement in Add Repositories). Added a bold statement in the Monitor section clarifying that Argus is an add-on, not a CLI replacement.
+
 ## [1.0.6] - 2026-05-14
 
 ### Added
