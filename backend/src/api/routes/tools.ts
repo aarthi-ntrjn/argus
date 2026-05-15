@@ -77,6 +77,11 @@ function getDirectCommandPath(cmd: string): string | null {
   return existsSync(fallbackPath) ? fallbackPath : null;
 }
 
+function getClaudeLaunchArgs(): string[] | null {
+  const directClaude = getDirectCommandPath(ToolCommands.CLAUDE);
+  return directClaude ? [directClaude] : null;
+}
+
 function getCopilotLaunchArgs(): string[] | null {
   const directCopilot = getDirectCommandPath(ToolCommands.COPILOT);
   if (directCopilot) {
@@ -143,11 +148,15 @@ function openTerminalWithCommand(cmd: string): void {
   }
 
   // Linux: try common terminal emulators in order of preference.
+  // Wrap cmd in `bash -c` so bash splits/quotes it. Modern terminals like ptyxis
+  // (often the system's x-terminal-emulator) do not shell-parse a raw -e string.
+  // `; exec bash` keeps the window open after the launched command exits.
+  const bashWrap = ['bash', '-c', `${cmd}; exec bash`];
   const terminals = [
-    { bin: 'x-terminal-emulator', args: ['-e', cmd] },
-    { bin: 'gnome-terminal', args: ['--', 'bash', '-c', `${cmd}; exec bash`] },
-    { bin: 'xterm', args: ['-e', cmd] },
-    { bin: 'konsole', args: ['--noclose', '-e', cmd] },
+    { bin: 'x-terminal-emulator', args: ['-e', ...bashWrap] },
+    { bin: 'gnome-terminal', args: ['--', ...bashWrap] },
+    { bin: 'xterm', args: ['-e', ...bashWrap] },
+    { bin: 'konsole', args: ['--noclose', '-e', ...bashWrap] },
   ];
   for (const t of terminals) {
     if (spawnSync('which', [t.bin], { encoding: 'utf-8', timeout: 2000 }).status === 0) {
@@ -164,7 +173,8 @@ function openTerminalWithCommand(cmd: string): void {
 
 const toolsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/v1/tools', async (_req, reply) => {
-    const hasClaude = isInstalled(ToolCommands.CLAUDE);
+    const claudeLaunchArgs = getClaudeLaunchArgs();
+    const hasClaude = claudeLaunchArgs !== null;
     const copilotLaunchArgs = getCopilotLaunchArgs();
     const hasCopilot = copilotLaunchArgs !== null;
     const { yoloMode } = loadConfig();
@@ -172,7 +182,9 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
       claude: hasClaude,
       copilot: hasCopilot,
       terminalAvailable: canLaunchTerminal(),
-      claudeCmd: hasClaude ? buildLaunchCmdBase(ToolCommands.CLAUDE, yoloMode) : undefined,
+      claudeCmd: hasClaude
+        ? buildLaunchCmdBase(ToolCommands.CLAUDE, yoloMode, undefined, claudeLaunchArgs)
+        : undefined,
       copilotCmd: hasCopilot
         ? buildLaunchCmdBase(ToolCommands.COPILOT, yoloMode, undefined, copilotLaunchArgs)
         : undefined,
@@ -198,7 +210,9 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
       const { yoloMode } = loadConfig();
       const ptyLaunchId = randomUUID();
       const launchArgs =
-        tool === ToolCommands.COPILOT ? (getCopilotLaunchArgs() ?? [ToolCommands.COPILOT]) : [tool];
+        tool === ToolCommands.COPILOT
+          ? (getCopilotLaunchArgs() ?? [ToolCommands.COPILOT])
+          : (getClaudeLaunchArgs() ?? [ToolCommands.CLAUDE]);
       const cmd = repoPath
         ? buildLaunchCmdWithCwd(tool, repoPath, yoloMode, ptyLaunchId, launchArgs)
         : buildLaunchCmdBase(tool, yoloMode, ptyLaunchId, launchArgs);
