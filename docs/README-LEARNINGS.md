@@ -5,6 +5,17 @@ Each entry explains what went wrong, why it was missed, and how to prevent it.
 
 ---
 
+## T118 — tool install status stays stale after install
+
+**Date**: 2026-05-14
+**Symptom**: After installing Copilot CLI, the launch menu still showed "No supported tools installed" even though `copilot` worked in a shell on the same machine.
+**Root cause**: Two layers kept the stale result alive. `backend/src/api/routes/tools.ts` only checked the backend process PATH, so a running server started before `~/.local/bin/copilot` existed kept reporting `copilot: false` until restart. `LaunchDropdown` then cached that false `/api/v1/tools` response and never refreshed it when the menu reopened.
+**Why it was missed**: The existing tests assumed the backend PATH and the interactive shell PATH matched, and the frontend tests only exercised launch errors after tools were already available. No regression test covered "tool installed after Argus started" or "binary exists in ~/.local/bin but not in PATH".
+**How to prevent**: Installed-tool detection must not rely solely on inherited PATH when the product runs as a long-lived process. For machine-state UI like installed tools, refresh the check on the user action that needs the latest state, and add tests that simulate binaries appearing in fallback install locations after process startup.
+**Fix summary**: `backend/src/api/routes/tools.ts` now falls back to `~/.local/bin/copilot` and emits the resolved absolute command, `backend/src/launch-pty/launch-command-resolver.ts` now recognizes absolute copilot paths, and `frontend/src/components/LaunchDropdown/LaunchDropdown.tsx` now refetches tool availability whenever the menu opens.
+
+---
+
 ## T126 — Copilot ask_user question text not shown when no choices provided
 
 **Date**: 2026-05-02
