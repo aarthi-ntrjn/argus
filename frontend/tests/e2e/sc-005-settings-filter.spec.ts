@@ -93,13 +93,13 @@ test.describe('SC-005: Dashboard Settings — Filter Ended Sessions', () => {
   test('gear icon is visible in the dashboard header', async ({ page }) => {
     await mockApis(page);
     await page.goto('/');
-    await expect(page.getByRole('button', { name: /settings/i })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeVisible({ timeout: 5000 });
   });
 
   test('clicking gear icon opens settings panel with Hide ended sessions toggle', async ({ page }) => {
     await mockApis(page);
     await page.goto('/');
-    await page.getByRole('button', { name: /settings/i }).click();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(page.getByText('Hide ended sessions')).toBeVisible({ timeout: 3000 });
   });
 
@@ -108,7 +108,7 @@ test.describe('SC-005: Dashboard Settings — Filter Ended Sessions', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'active-repo' })).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Completed session')).not.toBeVisible();
-    await page.getByRole('button', { name: /settings/i }).click();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await page.getByRole('checkbox', { name: /hide ended sessions/i }).uncheck();
     await expect(page.getByText('Completed session', { exact: true })).toBeVisible();
     await expect(page.getByText('Ended session', { exact: true })).toBeVisible();
@@ -176,7 +176,7 @@ test.describe('SC-005: Dashboard Settings — Hide Repos with No Active Sessions
   test('Hide repos with no active sessions toggle is visible in settings panel', async ({ page }) => {
     await mockTwoRepoApis(page);
     await page.goto('/');
-    await page.getByRole('button', { name: /settings/i }).click();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(page.getByText(/hide repos with no active sessions/i)).toBeVisible({ timeout: 3000 });
   });
 
@@ -185,7 +185,7 @@ test.describe('SC-005: Dashboard Settings — Hide Repos with No Active Sessions
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'active-repo' })).toBeVisible({ timeout: 5000 });
     await expect(page.getByRole('heading', { name: 'idle-repo' })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: /settings/i }).click();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await page.getByRole('checkbox', { name: /hide repos with no active sessions/i }).check();
     await expect(page.getByRole('heading', { name: 'idle-repo' })).not.toBeVisible();
     await expect(page.getByRole('heading', { name: 'active-repo' })).toBeVisible();
