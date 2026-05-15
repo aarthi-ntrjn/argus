@@ -77,6 +77,11 @@ function getDirectCommandPath(cmd: string): string | null {
   return existsSync(fallbackPath) ? fallbackPath : null;
 }
 
+function getClaudeLaunchArgs(): string[] | null {
+  const directClaude = getDirectCommandPath(ToolCommands.CLAUDE);
+  return directClaude ? [directClaude] : null;
+}
+
 function getCopilotLaunchArgs(): string[] | null {
   const directCopilot = getDirectCommandPath(ToolCommands.COPILOT);
   if (directCopilot) {
@@ -164,7 +169,8 @@ function openTerminalWithCommand(cmd: string): void {
 
 const toolsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/v1/tools', async (_req, reply) => {
-    const hasClaude = isInstalled(ToolCommands.CLAUDE);
+    const claudeLaunchArgs = getClaudeLaunchArgs();
+    const hasClaude = claudeLaunchArgs !== null;
     const copilotLaunchArgs = getCopilotLaunchArgs();
     const hasCopilot = copilotLaunchArgs !== null;
     const { yoloMode } = loadConfig();
@@ -172,7 +178,9 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
       claude: hasClaude,
       copilot: hasCopilot,
       terminalAvailable: canLaunchTerminal(),
-      claudeCmd: hasClaude ? buildLaunchCmdBase(ToolCommands.CLAUDE, yoloMode) : undefined,
+      claudeCmd: hasClaude
+        ? buildLaunchCmdBase(ToolCommands.CLAUDE, yoloMode, undefined, claudeLaunchArgs)
+        : undefined,
       copilotCmd: hasCopilot
         ? buildLaunchCmdBase(ToolCommands.COPILOT, yoloMode, undefined, copilotLaunchArgs)
         : undefined,
@@ -198,7 +206,9 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
       const { yoloMode } = loadConfig();
       const ptyLaunchId = randomUUID();
       const launchArgs =
-        tool === ToolCommands.COPILOT ? (getCopilotLaunchArgs() ?? [ToolCommands.COPILOT]) : [tool];
+        tool === ToolCommands.COPILOT
+          ? (getCopilotLaunchArgs() ?? [ToolCommands.COPILOT])
+          : (getClaudeLaunchArgs() ?? [ToolCommands.CLAUDE]);
       const cmd = repoPath
         ? buildLaunchCmdWithCwd(tool, repoPath, yoloMode, ptyLaunchId, launchArgs)
         : buildLaunchCmdBase(tool, yoloMode, ptyLaunchId, launchArgs);
