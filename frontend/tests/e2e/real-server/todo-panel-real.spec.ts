@@ -164,7 +164,7 @@ test.describe('To Tackle panel (real server)', () => {
       await expect(trashBtn).toBeVisible();
       await trashBtn.click();
 
-      await expect(textarea).not.toBeVisible({ timeout: 5000 });
+      await expect(textarea).not.toBeVisible();
 
       // Verify removed from DB
       const res = await api.get('/api/v1/todos');
@@ -189,7 +189,7 @@ test.describe('To Tackle panel (real server)', () => {
       await page.keyboard.press('Backspace');
       await input.press('Backspace');
 
-      await expect(page.getByRole('textbox', { name: /edit task: Backspace delete E2E/i })).not.toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole('textbox', { name: /edit task: Backspace delete E2E/i })).not.toBeVisible();
 
       const res = await api.get('/api/v1/todos');
       const todos = await res.json() as { id: string }[];
