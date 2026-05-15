@@ -22,7 +22,7 @@ const DEFAULTS: ArgusConfig = {
   restingThresholdMinutes: 20,
   telemetryEnabled: true,
   telemetryPromptSeen: false,
-  integrationsEnabled: false,
+  integrationsEnabled: true,
   autoUpdate: true,
   updateCheckIntervalHours: 4,
 };
