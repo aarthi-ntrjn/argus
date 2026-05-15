@@ -248,6 +248,7 @@ const sendPromptInterwriteDelayV2 = async (prompt: string, skipEnter = false): P
     // Without this keyboard mimic of '\r', Windows does not recognize the end of the sentence.
     log(`pty.write enter`);
     pty.write('\r');
+    await delay(WRITE_DELAY_MS);
   } else {
     log(`pty.write enter skipped (skipEnter=true, promptLen=1)`);
   }
