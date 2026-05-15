@@ -109,7 +109,7 @@ export interface ArgusConfig {
   restingThresholdMinutes: number;
   telemetryEnabled: boolean;
   telemetryPromptSeen: boolean;
-  integrationsEnabled: boolean;
+  integrationsDisabled: boolean;
   autoUpdate: boolean;
   updateCheckIntervalHours: number;
 }

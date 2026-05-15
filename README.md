@@ -26,6 +26,11 @@ Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every
 
 ## Getting Started
 
+Before you start:
+
+- Node.js and npm must be installed.
+- You must have a repository ready to clone.
+
 Run with npx (no install required):
 
 ```sh

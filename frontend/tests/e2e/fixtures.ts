@@ -20,7 +20,7 @@ export const SETTINGS_RESPONSE = {
 };
 
 export const INTEGRATIONS_RESPONSE = {
-  integrationsEnabled: false,
+  integrationsEnabled: true,
   slack: { connectionStatus: 'unconfigured', notifier: null, listener: null },
   teams: { connectionStatus: 'unconfigured', notifier: null, listener: null },
 };

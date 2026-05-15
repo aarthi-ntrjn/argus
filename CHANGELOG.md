@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-05-14
+
+### Added
+
+- **Integrations enabled by default**: Teams and Slack buttons now always show in the dashboard header, even when not configured, so users can discover and set them up.
+
+### Fixed
+
+- **Optimistic todo deletion**: Deleting a todo now removes it from the UI instantly instead of waiting for two server round trips.
+- **Frontend unit tests on Node v25**: Added an in-memory localStorage polyfill to work around Node.js v25's broken native localStorage that broke all tests using localStorage.
+- **E2E settings selector**: Fixed strict mode violations in e2e tests caused by integration buttons matching the settings button selector.
+
+### Changed
+
+- **Config flag renamed**: Replaced `integrationsEnabled` with `integrationsDisabled` (defaults to `false`, never written to config file). Existing configs with the old flag are cleaned up automatically.
+
 ## [1.0.5] - 2026-05-14
 
 ### Added

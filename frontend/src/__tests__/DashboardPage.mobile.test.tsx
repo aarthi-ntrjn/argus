@@ -20,7 +20,7 @@ vi.mock('../services/api', () => ({
     .fn()
     .mockResolvedValue({ autoRegisterRepos: false, yoloMode: false, restingThresholdMinutes: 20 }),
   getIntegrationStatus: vi.fn().mockResolvedValue({
-    integrationsEnabled: false,
+    integrationsEnabled: true,
     slack: { notifier: null, listener: null },
     teams: { notifier: null, listener: null },
   }),

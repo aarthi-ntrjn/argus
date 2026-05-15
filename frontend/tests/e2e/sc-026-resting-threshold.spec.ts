@@ -61,7 +61,7 @@ async function stubDashboard(page: import('@playwright/test').Page) {
 }
 
 async function openSettings(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: /settings/i }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByRole('button', { name: /advanced settings/i }).click();
 }
 
