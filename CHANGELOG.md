@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-05-16
+
+### Added
+
+- **Yolo mode status in Launch dropdown**: The "Launch with Argus" dropdown now shows whether Yolo mode is ON or OFF, with a gear icon to jump directly to Settings.
+- **First-time setup hint**: The pending session placeholder card shows a helpful message about completing CLI first-time setup and trusting the folder.
+
+### Fixed
+
+- **PTY enter key timing**: Added a wait after sending the enter key to the PTY to avoid dropped input.
+
 ## [1.0.8] - 2026-05-15
 
 ### Fixed
