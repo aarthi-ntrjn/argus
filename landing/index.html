@@ -75,7 +75,7 @@
             macOS
           </span>
           <span class="hero__badge hero__badge--os">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" aria-label="Ubuntu"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4.5a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5zM6.75 9.75a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5zm10.5 0a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5zM12 10.5c.78 0 1.5.3 2.03.79l3.03-1.75a6.02 6.02 0 0 0-1.19-1.24l-1.75 3.03A2.24 2.24 0 0 0 12 10.5zm-2.03.79A2.24 2.24 0 0 0 9.75 12c0 .35.08.68.22.97L6.94 14.72a6.02 6.02 0 0 0 1.19 1.24l1.75-3.03c.33.18.7.28 1.09.29l.03.03zm2.03 2.46c-.39 0-.76-.1-1.09-.29l-1.75 3.03c.38.19.78.34 1.19.44V13.8c.22-.01.43-.05.62-.12zm1.09-.29c-.33.18-.7.28-1.09.29v3.22a6.02 6.02 0 0 0 1.19-.44l-1.75-3.03c.19-.07.4-.11.62-.12l.03-.03c.39-.01.76.11 1.09.29l1.75-3.03A2.24 2.24 0 0 0 14.25 12c0-.35-.08-.68-.22-.97l1.75-3.03"/></svg>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" aria-label="Ubuntu"><path d="M17.61.455a3.41 3.41 0 0 0-3.41 3.41 3.41 3.41 0 0 0 3.41 3.41 3.41 3.41 0 0 0 3.41-3.41 3.41 3.41 0 0 0-3.41-3.41zM12.92.8C8.923.777 5.137 2.941 3.148 6.451a4.5 4.5 0 0 1 .26-.007 4.92 4.92 0 0 1 2.585.737A8.316 8.316 0 0 1 12.688 3.6 4.944 4.944 0 0 1 13.723.834 11.008 11.008 0 0 0 12.92.8zm9.226 4.994a4.915 4.915 0 0 1-1.918 2.246 8.36 8.36 0 0 1-.273 8.303 4.89 4.89 0 0 1 1.632 2.54 11.156 11.156 0 0 0 .559-13.089zM3.41 7.932A3.41 3.41 0 0 0 0 11.342a3.41 3.41 0 0 0 3.41 3.409 3.41 3.41 0 0 0 3.41-3.41 3.41 3.41 0 0 0-3.41-3.41zm2.027 7.866a4.908 4.908 0 0 1-2.915.358 11.1 11.1 0 0 0 7.991 6.698 11.234 11.234 0 0 0 2.422.249 4.879 4.879 0 0 1-.999-2.85 8.484 8.484 0 0 1-.836-.136 8.304 8.304 0 0 1-5.663-4.32zm11.405.928a3.41 3.41 0 0 0-3.41 3.41 3.41 3.41 0 0 0 3.41 3.41 3.41 3.41 0 0 0 3.41-3.41 3.41 3.41 0 0 0-3.41-3.41z"/></svg>
             Ubuntu
           </span>
         </p>
@@ -92,20 +92,36 @@
         </p>
         <p class="hero__subheadline">
           Manage <strong>Claude Code</strong> and <strong>GitHub Copilot CLI</strong> sessions
-          from a single browser tab. See what your agents are doing, stream their output live,
-          and take back control at any moment.
+          from a single browser tab. See what your agents are doing, stream their output live to Teams or Slack,
+          and stay in control from anywhere.
         </p>
-        <div class="hero__install">
-          <code class="install-command" id="install-command">npx argus-ai-hub</code>
-          <button
-            class="btn btn--ghost install-copy"
-            id="copy-btn"
-            data-testid="copy-btn"
-            data-copy="npx argus-ai-hub"
-            aria-label="Copy install command"
-          >
-            <span data-testid="copy-feedback" class="copy-label">Copy</span>
-          </button>
+        <div class="hero__install-wrap">
+          <div class="install-tabs install-tabs--bordered" role="tablist" aria-label="Choose your platform">
+            <button class="install-tab active" role="tab" aria-selected="true" data-platform="default">
+              <span class="install-tab__pair">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                Windows
+              </span>
+              <span class="install-tab__sep">/</span>
+              <span class="install-tab__pair">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>
+                macOS
+              </span>
+            </button>
+            <button class="install-tab" role="tab" aria-selected="false" data-platform="ubuntu">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M17.61.455a3.41 3.41 0 0 0-3.41 3.41 3.41 3.41 0 0 0 3.41 3.41 3.41 3.41 0 0 0 3.41-3.41 3.41 3.41 0 0 0-3.41-3.41zM12.92.8C8.923.777 5.137 2.941 3.148 6.451a4.5 4.5 0 0 1 .26-.007 4.92 4.92 0 0 1 2.585.737A8.316 8.316 0 0 1 12.688 3.6 4.944 4.944 0 0 1 13.723.834 11.008 11.008 0 0 0 12.92.8zm9.226 4.994a4.915 4.915 0 0 1-1.918 2.246 8.36 8.36 0 0 1-.273 8.303 4.89 4.89 0 0 1 1.632 2.54 11.156 11.156 0 0 0 .559-13.089zM3.41 7.932A3.41 3.41 0 0 0 0 11.342a3.41 3.41 0 0 0 3.41 3.409 3.41 3.41 0 0 0 3.41-3.41 3.41 3.41 0 0 0-3.41-3.41zm2.027 7.866a4.908 4.908 0 0 1-2.915.358 11.1 11.1 0 0 0 7.991 6.698 11.234 11.234 0 0 0 2.422.249 4.879 4.879 0 0 1-.999-2.85 8.484 8.484 0 0 1-.836-.136 8.304 8.304 0 0 1-5.663-4.32zm11.405.928a3.41 3.41 0 0 0-3.41 3.41 3.41 3.41 0 0 0 3.41 3.41 3.41 3.41 0 0 0 3.41-3.41 3.41 3.41 0 0 0-3.41-3.41z"/></svg>
+              Ubuntu
+            </button>
+          </div>
+          <div class="hero__install">
+            <div class="install-commands">
+              <code class="install-command" id="install-command">npm install -g argus-ai-hub</code>
+              <code class="install-command install-command--run">argus</code>
+            </div>
+            <button class="btn btn--ghost install-copy" id="copy-btn" data-testid="copy-btn" data-copy="npm install -g argus-ai-hub" aria-label="Copy install command">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
         </div>
         <div class="hero__ctas">
           <a
@@ -175,7 +191,8 @@
         <div class="step-card">
           <div class="step-card__number" aria-hidden="true">1</div>
           <h3 class="step-card__title">Install</h3>
-          <p class="step-card__body">Run <code>npx argus-ai-hub</code> in any terminal. No global install needed; it starts up instantly. Requires <strong>Node.js 22+</strong>.</p>
+          <p class="step-card__body">Run <code>npm install -g argus-ai-hub</code>, then run <code>argus</code> in any terminal. Requires <strong>Node.js 22+</strong>.</p>
+          <p class="step-card__footnote">Ubuntu: <code>sudo npm install -g argus-ai-hub</code></p>
         </div>
         <div class="step-card">
           <div class="step-card__number" aria-hidden="true">2</div>

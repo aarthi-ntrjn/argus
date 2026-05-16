@@ -26,22 +26,24 @@ Your command center for Claude Code and GitHub Copilot CLI sessions. Watch every
 
 ## Getting Started
 
-Before you start:
+**Requirements:** Node.js 22+ and npm.
 
-- Node.js and npm must be installed.
-- You must have a repository ready to clone.
-
-Run with npx (no install required):
-
-```sh
-npx argus-ai-hub
-```
-
-Or install globally so `argus-ai-hub` is always on your path:
+### Install
 
 ```sh
 npm install -g argus-ai-hub
-argus-ai-hub
+```
+
+On Ubuntu/Linux, prefix with `sudo`:
+
+```sh
+sudo npm install -g argus-ai-hub
+```
+
+### Run
+
+```sh
+argus
 ```
 
 Open **http://localhost:7411** and you're in. The port is configurable in [`~/.argus/config.json`](#storage).
