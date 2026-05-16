@@ -44,7 +44,11 @@ export function loadConfig(): ArgusConfig {
   let fileConfig: Partial<ArgusConfig> = {};
   if (!existsSync(configPath)) {
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(configPath, JSON.stringify(stripTransientKeys(DEFAULTS as unknown as Record<string, unknown>), null, 2), 'utf-8');
+    writeFileSync(
+      configPath,
+      JSON.stringify(stripTransientKeys(DEFAULTS as unknown as Record<string, unknown>), null, 2),
+      'utf-8',
+    );
   } else {
     try {
       fileConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
@@ -56,7 +60,11 @@ export function loadConfig(): ArgusConfig {
   const raw = fileConfig as Record<string, unknown>;
   if ('integrationsEnabled' in raw) {
     delete raw.integrationsEnabled;
-    writeFileSync(configPath, JSON.stringify(stripTransientKeys({ ...DEFAULTS, ...fileConfig }), null, 2), 'utf-8');
+    writeFileSync(
+      configPath,
+      JSON.stringify(stripTransientKeys({ ...DEFAULTS, ...fileConfig }), null, 2),
+      'utf-8',
+    );
   }
 
   const config = { ...DEFAULTS, ...fileConfig };
@@ -77,5 +85,9 @@ export function saveConfig(config: ArgusConfig): void {
   } catch {
     /* use empty */
   }
-  writeFileSync(configPath, JSON.stringify(stripTransientKeys({ ...existing, ...config }), null, 2), 'utf-8');
+  writeFileSync(
+    configPath,
+    JSON.stringify(stripTransientKeys({ ...existing, ...config }), null, 2),
+    'utf-8',
+  );
 }
