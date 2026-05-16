@@ -317,6 +317,54 @@ code {
   font-weight: 600;
 }
 
+.hero__install-wrap {
+  margin-bottom: 1.5rem;
+  max-width: 26rem;
+}
+
+.install-tabs {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.install-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+}
+
+.install-tab__pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.install-tab__sep {
+  opacity: 0.4;
+}
+
+.install-tab:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+.install-tab.active {
+  color: var(--color-text);
+  border-color: var(--color-primary, #3b82f6);
+  background-color: rgba(59 130 246 / 0.05);
+}
+
 .hero__install {
   display: flex;
   align-items: center;
@@ -324,17 +372,31 @@ code {
   background-color: var(--color-code-bg);
   color: var(--color-code-text);
   border-radius: var(--radius-md);
-  padding: 0.625rem 0.75rem;
-  margin-bottom: 1.5rem;
-  max-width: 26rem;
+  padding: 0.75rem 0.75rem;
   font-family: var(--font-mono);
 }
 
-.install-command {
+.install-commands {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.install-command {
   font-size: 0.9375rem;
   color: var(--color-code-text);
   font-family: var(--font-mono);
+}
+
+.install-command--run {
+  font-size: 0.9375rem;
+  color: var(--color-code-text);
+}
+
+.install-command--run::before {
+  content: "$ ";
+  opacity: 0.5;
 }
 
 .install-copy {
@@ -342,11 +404,16 @@ code {
   border-color: transparent;
   flex-shrink: 0;
   margin-left: 0.5rem;
+  align-self: flex-start;
 }
 
 .install-copy:hover {
   background-color: rgba(255 255 255 / 0.1);
   color: #fff;
+}
+
+.install-copy.copied {
+  color: #4ade80;
 }
 
 .install-copy.copied .copy-label::before {
@@ -578,6 +645,20 @@ code {
   border-radius: var(--radius-sm);
   font-size: 0.875em;
   color: var(--color-accent);
+}
+
+.step-card__footnote {
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  opacity: 0.75;
+}
+
+.step-card__footnote code {
+  background-color: var(--color-surface-muted);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  font-size: 0.875em;
 }
 
 .privacy-pills {
