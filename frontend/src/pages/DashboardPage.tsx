@@ -391,6 +391,7 @@ export default function DashboardPage() {
             onSelectSession={handleSessionSelect}
             onLaunchError={setLaunchError}
             onLaunchPending={(id, tool) => addPending(id, repo.path, tool)}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
         );
       })}

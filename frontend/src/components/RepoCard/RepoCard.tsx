@@ -22,6 +22,7 @@ interface RepoCardProps {
   onSelectSession: (id: string) => void;
   onLaunchError: (msg: string) => void;
   onLaunchPending: (ptyLaunchId: string, tool: 'claude' | 'copilot') => void;
+  onOpenSettings?: () => void;
 }
 
 export default function RepoCard({
@@ -35,6 +36,7 @@ export default function RepoCard({
   onSelectSession,
   onLaunchError,
   onLaunchPending,
+  onOpenSettings,
 }: RepoCardProps) {
   return (
     <div data-tour-id="dashboard-repo-card" className="bg-white rounded-lg shadow p-4 md:p-6">
@@ -51,6 +53,7 @@ export default function RepoCard({
               repoPath={repo.path}
               onLaunchError={onLaunchError}
               onLaunchPending={onLaunchPending}
+              onOpenSettings={onOpenSettings}
             />
             <button
               onClick={(e) => {

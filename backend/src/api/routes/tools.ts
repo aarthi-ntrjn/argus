@@ -182,6 +182,7 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
       claude: hasClaude,
       copilot: hasCopilot,
       terminalAvailable: canLaunchTerminal(),
+      yoloMode,
       claudeCmd: hasClaude
         ? buildLaunchCmdBase(ToolCommands.CLAUDE, yoloMode, undefined, claudeLaunchArgs)
         : undefined,
