@@ -71,5 +71,15 @@ describe('Tools API — yolo mode flag injection', () => {
         expect(res.body.copilotCmd).not.toContain('--allow-all');
       }
     });
+
+    it('exposes yoloMode boolean in the response', async () => {
+      await request.patch('/api/v1/settings').send({ yoloMode: false });
+      const off = await request.get('/api/v1/tools');
+      expect(off.body.yoloMode).toBe(false);
+
+      await request.patch('/api/v1/settings').send({ yoloMode: true });
+      const on = await request.get('/api/v1/tools');
+      expect(on.body.yoloMode).toBe(true);
+    });
   });
 });

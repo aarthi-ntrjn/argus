@@ -90,7 +90,7 @@ Toggle between **Focused** (default, noisy tool results collapsed) and **Verbose
 
 To send prompts to a session, start it through Argus.This gives Argus a direct PTY write channel to the process.
 
-Click the **Launch with Argus** dropdown in any repo card header and select **Launch Claude** or **Launch Copilot**. If neither tool is detected on your PATH, the dropdown shows install links for [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started) and [GitHub Copilot CLI](https://github.com/features/copilot/cli/).
+Click the **Launch with Argus** dropdown in any repo card header and select **Launch Claude** or **Launch Copilot**. If neither tool is detected on your PATH, the dropdown shows install links for [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started) and [GitHub Copilot CLI](https://github.com/features/copilot/cli/). The dropdown footer shows the current **Yolo mode** status (ON/OFF) with a settings shortcut to change it.
 
 <img src="docs/images/argus-tour2-launchwith.png" alt="Launch with Argus dropdown" height="300">
 
@@ -205,7 +205,8 @@ When **Yolo mode** is enabled, a warning dialog is shown. After confirmation:
 
 <img src="docs/images/argus-yolo-on.png" alt="Yolo Mode Enabled" height="300">
 
-This applies to sessions launched directly from the Argus UI. 
+This applies to sessions launched directly from the Argus UI.
+The current Yolo mode status is also visible in the **Launch with Argus** dropdown, with a gear icon to quickly jump to Settings.
 To disable, toggle Yolo mode off in Settings. No confirmation is required to disable.
 
 ## Auto Update
