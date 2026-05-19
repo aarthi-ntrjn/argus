@@ -127,6 +127,9 @@ export type TelemetryEventType =
   | 'todo_deleted'
   | 'todo_done'
   | 'repo_diff_opened'
+  | 'repo_card_home_opened'
+  | 'repo_card_branch_opened'
+  | 'repo_card_pr_opened'
   | 'repo_scan'
   | 'repo_added'
   | 'repo_removed'
@@ -148,6 +151,9 @@ export const TELEMETRY_EVENT_TYPES = new Set<TelemetryEventType>([
   'todo_deleted',
   'todo_done',
   'repo_diff_opened',
+  'repo_card_home_opened',
+  'repo_card_branch_opened',
+  'repo_card_pr_opened',
   'repo_scan',
   'repo_added',
   'repo_removed',
