@@ -123,7 +123,9 @@ export type TelemetryEventType =
   | 'update_available'
   | 'update_attempt'
   | 'session_stopped'
-  | 'todo_added'
+  | 'todo_add'
+  | 'todo_remove'
+  | 'todo_done'
   | 'repo_diff_opened'
   | 'repo_scan'
   | 'repo_added'
@@ -142,7 +144,9 @@ export const TELEMETRY_EVENT_TYPES = new Set<TelemetryEventType>([
   'session_ended',
   'session_prompt_sent',
   'session_stopped',
-  'todo_added',
+  'todo_add',
+  'todo_remove',
+  'todo_done',
   'repo_diff_opened',
   'repo_scan',
   'repo_added',
