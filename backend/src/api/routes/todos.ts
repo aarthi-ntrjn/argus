@@ -41,7 +41,7 @@ const todosRoutes: FastifyPluginAsync = async (app) => {
       { action: 'todo_created', todoId: todo.id, userId: DEFAULT_USER },
       'Todo item created',
     );
-    telemetryService.sendEvent('todo_add');
+    telemetryService.sendEvent('todo_added');
     return reply.status(201).send(todo);
   });
 
@@ -120,7 +120,7 @@ const todosRoutes: FastifyPluginAsync = async (app) => {
       });
     }
     req.log.info({ action: 'todo_deleted', todoId: id, userId: DEFAULT_USER }, 'Todo item deleted');
-    telemetryService.sendEvent('todo_remove');
+    telemetryService.sendEvent('todo_deleted');
     return reply.status(204).send();
   });
 };
