@@ -23,7 +23,7 @@ export async function fsRoutes(app: FastifyInstance): Promise<void> {
       });
     }
     app.log.info({ scanPath }, 'Starting recursive git repo scan');
-    telemetryService.sendEvent('repo_scan_requested');
+    telemetryService.sendEvent('repo_scan');
     try {
       const repos = await findGitRepos(scanPath);
       app.log.info({ scanPath, count: repos.length }, 'Scan complete');
