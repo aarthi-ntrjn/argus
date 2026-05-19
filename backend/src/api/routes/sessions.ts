@@ -108,6 +108,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
         timestamp: new Date().toISOString(),
         data: { sessionId: req.params.id },
       });
+      telemetryService.sendEvent('session_interrupted');
       return reply.status(202).send({ actionId: action.id, status: action.status });
     } catch (err: unknown) {
       const e = err as { code?: string; message?: string };
@@ -223,6 +224,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
           choiceNumber,
           prompt,
         );
+        telemetryService.sendEvent('session_choice_made');
         return reply.status(202).send({ actionId: action.id, status: action.status });
       } catch (err: unknown) {
         const e = err as { code?: string; message?: string };
@@ -258,6 +260,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
       timestamp: new Date().toISOString(),
       data: { sessionId: req.params.id },
     });
+    telemetryService.sendEvent('session_tool_rejected');
     return reply.send({ status: 'rejected' });
   });
 };

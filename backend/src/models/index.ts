@@ -130,7 +130,10 @@ export type TelemetryEventType =
   | 'repo_removed'
   | 'request_error'
   | 'integration_started'
-  | 'integration_stopped';
+  | 'integration_stopped'
+  | 'session_interrupted'
+  | 'session_choice_made'
+  | 'session_tool_rejected';
 
 export const TELEMETRY_EVENT_TYPES = new Set<TelemetryEventType>([
   'app_started',
@@ -149,6 +152,9 @@ export const TELEMETRY_EVENT_TYPES = new Set<TelemetryEventType>([
   'integration_stopped',
   'update_available',
   'update_attempt',
+  'session_interrupted',
+  'session_choice_made',
+  'session_tool_rejected',
 ]);
 
 export interface TelemetryEvent {
