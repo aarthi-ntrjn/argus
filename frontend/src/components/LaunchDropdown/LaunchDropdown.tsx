@@ -202,7 +202,7 @@ export default function LaunchDropdown({ repoPath, onLaunchError, onLaunchPendin
                 />
               )}
               <div className="border-t border-gray-100 mt-1 px-3 pt-1.5 pb-2 space-y-1">
-                <p className="text-xs text-gray-400 flex items-center gap-1">
+                <p className="text-xs text-gray-500 flex items-center gap-1">
                   <span>
                     Yolo mode:{' '}
                     <span className={tools.yoloMode ? 'text-amber-700 font-medium' : ''}>
@@ -212,7 +212,7 @@ export default function LaunchDropdown({ repoPath, onLaunchError, onLaunchPendin
                   <button
                     type="button"
                     className="icon-btn text-gray-400 hover:text-blue-600"
-                    title="Change in Settings"
+                    aria-label="Change in Settings"
                     onClick={() => {
                       setOpen(false);
                       onOpenSettings?.();
@@ -222,7 +222,7 @@ export default function LaunchDropdown({ repoPath, onLaunchError, onLaunchPendin
                   </button>
                 </p>
                 {headless && (
-                  <p className="text-[10px] text-gray-400">
+                  <p className="text-[10px] text-gray-500">
                     No terminal available. Copy and run manually.
                   </p>
                 )}

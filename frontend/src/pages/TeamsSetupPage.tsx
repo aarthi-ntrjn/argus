@@ -22,7 +22,7 @@ const STEPS: SetupStep[] = [
         <p className="text-sm text-gray-600 mb-1">Create a persistent tunnel (one-time):</p>
         <div className="flex items-center gap-3 mt-2 mb-2">
           <Mono>devtunnel login</Mono>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-500">
             Sign in with your GitHub or personal Microsoft account.
           </span>
         </div>
@@ -47,7 +47,7 @@ const STEPS: SetupStep[] = [
           <strong>Client Secret</strong>, <strong>Tenant ID</strong>), and prints an install link.
           Open the install link to add the bot to your team.
         </p>
-        <p className="text-xs text-gray-400 mt-2">
+        <p className="text-xs text-gray-500 mt-2">
           Use your tunnel URL for <Mono>{'<endpoint>'}</Mono> during local dev, or your server's
           public domain in production.
         </p>

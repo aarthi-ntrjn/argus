@@ -96,7 +96,7 @@ export default function PendingChoicePanel({
       <div className="flex items-center gap-2">
         <span className="font-bold text-red-600">ATTENTION NEEDED</span>
         {questions.length > 1 && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-500">
             {Math.min(idx + 1, questions.length)}/{questions.length}
           </span>
         )}
@@ -163,7 +163,7 @@ export default function PendingChoicePanel({
                       {i + 1}. {c}
                     </span>
                     {current.descriptions?.[i] && (
-                      <span className="text-xs text-gray-400 font-normal mt-0.5">
+                      <span className="text-xs text-gray-500 font-normal mt-0.5">
                         {current.descriptions[i]}
                       </span>
                     )}
@@ -174,7 +174,7 @@ export default function PendingChoicePanel({
                       {i + 1}. {c}
                     </div>
                     {current.descriptions?.[i] && (
-                      <div className="text-xs text-gray-400 ml-4">{current.descriptions[i]}</div>
+                      <div className="text-xs text-gray-500 ml-4">{current.descriptions[i]}</div>
                     )}
                   </div>
                 ),
