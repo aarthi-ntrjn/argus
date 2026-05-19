@@ -93,9 +93,6 @@ function getCopilotLaunchArgs(): string[] | null {
   return null;
 }
 
-function isCopilotInstalled(): boolean {
-  return getCopilotLaunchArgs() !== null;
-}
 
 // Detect whether the server can open a GUI terminal window.
 // Returns false in headless environments (Codespaces, SSH-only, no display server).

@@ -125,6 +125,9 @@ export type TelemetryEventType =
   | 'session_stopped'
   | 'todo_added'
   | 'repo_diff_opened'
+  | 'repo_scan_requested'
+  | 'repo_added'
+  | 'repo_removed'
   | 'request_error'
   | 'integration_started'
   | 'integration_stopped';
@@ -138,6 +141,9 @@ export const TELEMETRY_EVENT_TYPES = new Set<TelemetryEventType>([
   'session_stopped',
   'todo_added',
   'repo_diff_opened',
+  'repo_scan_requested',
+  'repo_added',
+  'repo_removed',
   'request_error',
   'integration_started',
   'integration_stopped',
