@@ -20,7 +20,12 @@ function toLaunchErrorMessage(err: unknown): string {
   return `Failed to launch session: ${raw}`;
 }
 
-export default function LaunchDropdown({ repoPath, onLaunchError, onLaunchPending, onOpenSettings }: Props) {
+export default function LaunchDropdown({
+  repoPath,
+  onLaunchError,
+  onLaunchPending,
+  onOpenSettings,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<'claude' | 'copilot' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
