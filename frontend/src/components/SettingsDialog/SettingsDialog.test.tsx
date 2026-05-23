@@ -21,7 +21,9 @@ vi.mock('../../services/api', () => ({
     autoUpdate: false,
   } as any),
   getTeamsSettings: vi.fn().mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' }),
-  patchTeamsSettings: vi.fn().mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' }),
+  patchTeamsSettings: vi
+    .fn()
+    .mockResolvedValue({ enabled: false, connectionStatus: 'unconfigured' }),
   getSlackSettings: vi.fn().mockRejectedValue(new Error('not configured')),
   getHealth: vi.fn().mockResolvedValue({ status: 'ok', version: '1.2.3', uptime: 0 }),
   rescanRemoteUrls: vi.fn().mockResolvedValue(undefined),
@@ -44,7 +46,9 @@ const defaultSettings: DashboardSettings = {
 };
 
 function renderDialog(tab: 'general' | 'about' = 'about') {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
