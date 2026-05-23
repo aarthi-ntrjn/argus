@@ -138,7 +138,7 @@ const SessionPromptBar = forwardRef<SessionPromptBarHandle, Props>(function Sess
           {history.indicator && (
             <span
               aria-live="polite"
-              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 tabular-nums"
+              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 tabular-nums"
             >
               {history.indicator}
             </span>
