@@ -22,6 +22,22 @@ const TOOLS_WITH_CLAUDE = {
   terminalAvailable: true,
 };
 
+const NO_TOOLS = {
+  claude: false,
+  copilot: false,
+  claudeCmd: null,
+  copilotCmd: null,
+  terminalAvailable: true,
+};
+
+const TOOLS_WITH_COPILOT = {
+  claude: false,
+  copilot: true,
+  claudeCmd: null,
+  copilotCmd: 'copilot',
+  terminalAvailable: true,
+};
+
 function renderDropdown(onLaunchError = vi.fn()) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return {
@@ -94,5 +110,26 @@ describe('LaunchDropdown — error message translation', () => {
 
     await waitFor(() => expect(mockLaunchInTerminal).toHaveBeenCalled());
     expect(onLaunchError).not.toHaveBeenCalled();
+  });
+});
+
+describe('LaunchDropdown — available tools refresh', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('rechecks available tools when the menu opens so newly installed Copilot appears', async () => {
+    mockGetAvailableTools
+      .mockResolvedValueOnce(NO_TOOLS as any)
+      .mockResolvedValueOnce(TOOLS_WITH_COPILOT as any);
+
+    renderDropdown();
+
+    await waitFor(() => expect(mockGetAvailableTools).toHaveBeenCalledTimes(1));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Launch with Argus' }));
+
+    await waitFor(() => expect(mockGetAvailableTools).toHaveBeenCalledTimes(2));
+    await waitFor(() => screen.getByText('Launch Copilot'));
   });
 });

@@ -226,9 +226,14 @@ const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 //   await delay(WRITE_DELAY_MS);
 // };
 
-const sendInterrupt = (): void => {
+const sendInterrupt = async (): Promise<void> => {
   log(`pty.write interrupt`);
+  pty.write('\x1b[I');
+  await delay(WRITE_DELAY_MS);
   pty.write('\x1b');
+  await delay(WRITE_DELAY_MS);
+  pty.write('\x1b[O');
+  await delay(WRITE_DELAY_MS);
 };
 
 const sendPromptInterwriteDelayV2 = async (prompt: string, skipEnter = false): Promise<void> => {
@@ -243,6 +248,7 @@ const sendPromptInterwriteDelayV2 = async (prompt: string, skipEnter = false): P
     // Without this keyboard mimic of '\r', Windows does not recognize the end of the sentence.
     log(`pty.write enter hex=${Buffer.from('\r').toString('hex')}`);
     pty.write('\r');
+    await delay(WRITE_DELAY_MS);
   } else {
     log(`pty.write enter skipped (skipEnter=true, promptLen=1)`);
   }
@@ -274,7 +280,7 @@ client.onSendPrompt(async (actionId: string, prompt: string, skipEnter: boolean)
   log(`onSendPrompt actionId=${actionId} promptLen=${prompt.length} skipEnter=${skipEnter}`);
   try {
     if (prompt === '\x1b') {
-      sendInterrupt();
+      await sendInterrupt();
     } else {
       await sendPromptInterwriteDelayV2(prompt, skipEnter);
     }

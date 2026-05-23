@@ -163,6 +163,7 @@ export interface AvailableTools {
   claude: boolean;
   copilot: boolean;
   terminalAvailable: boolean;
+  yoloMode: boolean;
   claudeCmd?: string;
   copilotCmd?: string;
 }

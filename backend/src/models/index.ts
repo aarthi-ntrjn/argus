@@ -109,7 +109,7 @@ export interface ArgusConfig {
   restingThresholdMinutes: number;
   telemetryEnabled: boolean;
   telemetryPromptSeen: boolean;
-  integrationsEnabled: boolean;
+  integrationsDisabled: boolean;
   autoUpdate: boolean;
   updateCheckIntervalHours: number;
 }
@@ -124,10 +124,21 @@ export type TelemetryEventType =
   | 'update_attempt'
   | 'session_stopped'
   | 'todo_added'
+  | 'todo_deleted'
+  | 'todo_done'
   | 'repo_diff_opened'
+  | 'repo_card_home_opened'
+  | 'repo_card_branch_opened'
+  | 'repo_card_pr_opened'
+  | 'repo_scan'
+  | 'repo_added'
+  | 'repo_removed'
   | 'request_error'
   | 'integration_started'
-  | 'integration_stopped';
+  | 'integration_stopped'
+  | 'session_interrupted'
+  | 'session_choice_made'
+  | 'session_tool_rejected';
 
 export const TELEMETRY_EVENT_TYPES = new Set<TelemetryEventType>([
   'app_started',
@@ -137,12 +148,23 @@ export const TELEMETRY_EVENT_TYPES = new Set<TelemetryEventType>([
   'session_prompt_sent',
   'session_stopped',
   'todo_added',
+  'todo_deleted',
+  'todo_done',
   'repo_diff_opened',
+  'repo_card_home_opened',
+  'repo_card_branch_opened',
+  'repo_card_pr_opened',
+  'repo_scan',
+  'repo_added',
+  'repo_removed',
   'request_error',
   'integration_started',
   'integration_stopped',
   'update_available',
   'update_attempt',
+  'session_interrupted',
+  'session_choice_made',
+  'session_tool_rejected',
 ]);
 
 export interface TelemetryEvent {
@@ -161,6 +183,7 @@ export interface PendingChoiceItem {
 }
 
 export interface PendingChoice {
+  type: 'ask_user' | 'tool_approval';
   question: string;
   choices: string[];
   allQuestions?: PendingChoiceItem[];

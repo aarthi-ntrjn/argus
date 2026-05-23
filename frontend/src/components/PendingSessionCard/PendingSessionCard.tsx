@@ -32,6 +32,10 @@ export default function PendingSessionCard({ tool }: Props) {
         {icon}
         <span className="text-sm text-gray-500">Launching {label}…</span>
       </div>
+      <p className="text-sm text-gray-400 mt-2">
+        Complete the first-time setup in the CLI and trust this folder so Argus can fully control
+        the session.
+      </p>
     </div>
   );
 }

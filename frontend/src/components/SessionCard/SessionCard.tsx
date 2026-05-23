@@ -1,5 +1,5 @@
 import { memo, useState, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Session } from '../../types';
@@ -37,6 +37,7 @@ function SessionCard({ session, selected, onSelect }: Props) {
     gcTime: Infinity,
   });
 
+  const queryClient = useQueryClient();
   const kill = useKillSession();
 
   const [questionIdx, setQuestionIdx] = useState(0);
@@ -160,9 +161,15 @@ function SessionCard({ session, selected, onSelect }: Props) {
             ref={promptBarRef}
             session={session}
             customChoiceNumber={customChoiceNumber}
-            implicitChoiceNumber={pendingChoice ? implicitChoiceNumber : null}
+            implicitChoiceNumber={pendingChoice?.type === 'ask_user' ? implicitChoiceNumber : null}
             onCustomAnswerSent={() => setCustomChoiceNumber(null)}
-            onPromptSent={pendingChoice ? () => setQuestionIdx((i) => i + 1) : undefined}
+            onPromptSent={
+              pendingChoice
+                ? pendingQuestions.length > 1
+                  ? () => setQuestionIdx((i) => i + 1)
+                  : () => queryClient.setQueryData(['session-pending-choice', session.id], null)
+                : undefined
+            }
           />
         </div>
       )}

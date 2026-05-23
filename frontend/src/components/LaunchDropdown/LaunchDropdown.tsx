@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Terminal, Copy, ChevronDown, Check } from 'lucide-react';
+import { Terminal, Copy, ChevronDown, Check, Settings } from 'lucide-react';
 import { ClaudeIcon, CopilotIcon } from '../SessionTypeIcon/SessionTypeIcon';
 import { getAvailableTools, launchInTerminal } from '../../services/api';
 import { Button } from '../Button';
@@ -9,6 +9,7 @@ interface Props {
   repoPath: string;
   onLaunchError: (msg: string) => void;
   onLaunchPending?: (ptyLaunchId: string, tool: 'claude' | 'copilot') => void;
+  onOpenSettings?: () => void;
 }
 
 function toLaunchErrorMessage(err: unknown): string {
@@ -19,17 +20,29 @@ function toLaunchErrorMessage(err: unknown): string {
   return `Failed to launch session: ${raw}`;
 }
 
-export default function LaunchDropdown({ repoPath, onLaunchError, onLaunchPending }: Props) {
+export default function LaunchDropdown({
+  repoPath,
+  onLaunchError,
+  onLaunchPending,
+  onOpenSettings,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<'claude' | 'copilot' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const { data: tools } = useQuery({
+  const { data: tools, refetch } = useQuery({
     queryKey: ['available-tools'],
     queryFn: getAvailableTools,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    void refetch();
+  }, [open, refetch]);
 
   // Close on outside click
   useEffect(() => {
@@ -194,15 +207,30 @@ export default function LaunchDropdown({ repoPath, onLaunchError, onLaunchPendin
                 />
               )}
               <div className="border-t border-gray-100 mt-1 px-3 pt-1.5 pb-2 space-y-1">
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <span>
+                    Yolo mode:{' '}
+                    <span className={tools.yoloMode ? 'text-amber-700 font-medium' : ''}>
+                      {tools.yoloMode ? 'ON' : 'OFF'}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="icon-btn text-gray-400 hover:text-blue-600"
+                    title="Change in Settings"
+                    onClick={() => {
+                      setOpen(false);
+                      onOpenSettings?.();
+                    }}
+                  >
+                    <Settings size={14} aria-hidden="true" />
+                  </button>
+                </p>
                 {headless && (
                   <p className="text-[10px] text-gray-400">
                     No terminal available. Copy and run manually.
                   </p>
                 )}
-                <p className="text-[10px] text-gray-400">
-                  Log in to the CLI and trust this folder first so Argus can fully control the
-                  session.
-                </p>
               </div>
             </>
           )}

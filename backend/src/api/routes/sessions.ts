@@ -5,14 +5,15 @@ import { SessionController } from '../../services/session-controller.js';
 import { ptyRegistry } from '../../launch-pty/pty-registry.js';
 import { telemetryService } from '../../services/telemetry-service.js';
 import { broadcast } from '../ws/event-dispatcher.js';
+import type { PendingChoice } from '../../models/index.js';
 
 let _cliManager: {
-  getPendingChoice(sessionId: string): unknown;
+  getPendingChoice(sessionId: string): PendingChoice | null;
   clearPendingChoice(sessionId: string): void;
 } | null = null;
 
 export function setCliManager(manager: {
-  getPendingChoice(sessionId: string): unknown;
+  getPendingChoice(sessionId: string): PendingChoice | null;
   clearPendingChoice(sessionId: string): void;
 }): void {
   _cliManager = manager;
@@ -107,6 +108,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
         timestamp: new Date().toISOString(),
         data: { sessionId: req.params.id },
       });
+      telemetryService.sendEvent('session_interrupted');
       return reply.status(202).send({ actionId: action.id, status: action.status });
     } catch (err: unknown) {
       const e = err as { code?: string; message?: string };
@@ -179,7 +181,8 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
             .send({ error: 'NOT_FOUND', message: `Session ${req.params.id} not found` });
         }
 
-        const skipEnter = raw ? true : !!_cliManager?.getPendingChoice(req.params.id);
+        const pendingChoice = _cliManager?.getPendingChoice(req.params.id);
+        const skipEnter = raw ? true : pendingChoice?.type === 'ask_user';
         const action = await sessionController.sendPrompt(req.params.id, prompt, skipEnter);
         return reply.status(202).send({ actionId: action.id, status: action.status });
       } catch (err: unknown) {
@@ -221,6 +224,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
           choiceNumber,
           prompt,
         );
+        telemetryService.sendEvent('session_choice_made');
         return reply.status(202).send({ actionId: action.id, status: action.status });
       } catch (err: unknown) {
         const e = err as { code?: string; message?: string };
@@ -256,6 +260,7 @@ const sessionsRoutes: FastifyPluginAsync = async (app) => {
       timestamp: new Date().toISOString(),
       data: { sessionId: req.params.id },
     });
+    telemetryService.sendEvent('session_tool_rejected');
     return reply.send({ status: 'rejected' });
   });
 };

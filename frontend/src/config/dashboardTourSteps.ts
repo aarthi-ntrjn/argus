@@ -1,9 +1,7 @@
 import type { TourStep } from '../types';
 
-/**
- * Steps that always exist on the dashboard (empty or populated).
- */
-const ALWAYS_STEPS: TourStep[] = [
+/** Tour 1 — shown on first load (no repos yet). */
+export const FIRST_LOAD_STEPS: TourStep[] = [
   {
     target: '[data-tour-id="dashboard-header"]',
     title: '👋 Welcome!',
@@ -19,36 +17,6 @@ const ALWAYS_STEPS: TourStep[] = [
     placement: 'bottom',
     disableBeacon: true,
   },
-];
-
-/**
- * Steps that only make sense when at least one repo (and ideally sessions) exist.
- */
-const POPULATED_STEPS: TourStep[] = [
-  {
-    target: '[data-tour-id="dashboard-repo-card"]',
-    title: '🗂️ Your Repositories',
-    content: 'Each card shows a repo and its active AI sessions, all updating live.',
-    placement: 'right',
-    disableBeacon: true,
-  },
-  {
-    target: '[data-tour-id="dashboard-session-card"]',
-    title: '🤖 AI Sessions',
-    content: 'Monitor your AI sessions here. Sessions launched outside of Argus are read-only.',
-    placement: 'right',
-    disableBeacon: true,
-  },
-  {
-    target: '[data-tour-id="dashboard-launch"]',
-    title: '🚀 Launch with Argus',
-    content: 'You can control your AI sessions when launched from Argus.',
-    placement: 'bottom',
-    disableBeacon: true,
-  },
-];
-
-const CLOSING_STEPS: TourStep[] = [
   {
     target: '[data-tour-id="dashboard-todo"]',
     title: '📝 To Do or Not To Do',
@@ -65,12 +33,51 @@ const CLOSING_STEPS: TourStep[] = [
   },
 ];
 
-export function buildDashboardTourSteps(hasRepos: boolean): TourStep[] {
-  return [...ALWAYS_STEPS, ...(hasRepos ? POPULATED_STEPS : []), ...CLOSING_STEPS];
-}
+/** Tour 2 — shown when the first repository is added. */
+export const REPO_CATCH_UP_STEPS: TourStep[] = [
+  {
+    target: '[data-tour-id="dashboard-repo-card"]',
+    title: '🗂️ Your Repositories',
+    content: 'Each card shows a repo and its active AI sessions, all updating live.',
+    placement: 'right',
+    disableBeacon: true,
+  },
+  {
+    target: '[data-tour-id="dashboard-launch"]',
+    title: '🚀 Launch with Argus',
+    content: 'You can control your AI sessions when launched from Argus.',
+    placement: 'bottom',
+    disableBeacon: true,
+  },
+];
 
-/** Catch-up mini-tour: only the repo/session/launch steps the user missed. */
-export const REPO_CATCH_UP_STEPS: TourStep[] = [...POPULATED_STEPS];
+/** Tour 3 — shown when the first session appears. */
+export const SESSION_CATCH_UP_STEPS: TourStep[] = [
+  {
+    target: '[data-tour-id="dashboard-session-card"]',
+    title: '🤖 AI Sessions',
+    content: 'Monitor your AI sessions here. Sessions launched outside of Argus are read-only.',
+    placement: 'right',
+    disableBeacon: true,
+  },
+  {
+    target: '[data-tour-id="dashboard-integrations"]',
+    title: '🔔 Stream to Teams & Slack',
+    content:
+      'Configure Microsoft Teams and Slack to stream your CLI sessions directly to your channels. You can also command your CLIs from the channel.',
+    placement: 'bottom',
+    disableBeacon: true,
+  },
+];
 
 /** Default steps with all sections (for backwards compat with tests). */
-export const DASHBOARD_TOUR_STEPS = buildDashboardTourSteps(true);
+export const DASHBOARD_TOUR_STEPS: TourStep[] = [
+  ...FIRST_LOAD_STEPS,
+  ...REPO_CATCH_UP_STEPS,
+  ...SESSION_CATCH_UP_STEPS,
+];
+
+/** @deprecated Use FIRST_LOAD_STEPS directly. Kept for backwards compat. */
+export function buildDashboardTourSteps(_hasRepos: boolean): TourStep[] {
+  return FIRST_LOAD_STEPS;
+}

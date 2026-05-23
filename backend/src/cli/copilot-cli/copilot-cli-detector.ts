@@ -5,6 +5,9 @@ import { load as yamlLoad } from 'js-yaml';
 import { randomUUID } from 'crypto';
 import { getSessions, getServerState, setServerState } from '../../db/database.js';
 import { CopilotJsonlWatcher } from './copilot-cli-jsonl-watcher.js';
+import { pendingChoiceEvents } from '../pending-choice-events.js';
+import { broadcast } from '../../api/ws/event-dispatcher.js';
+import { buildCopilotPermissionChoice } from '../pending-choice-utils.js';
 import type { Session, Repository } from '../../models/index.js';
 import type { CliDetector } from '../cli-detector.js';
 import { BaseCliDetector, type SessionEntry } from '../base-cli-detector.js';
@@ -106,6 +109,43 @@ export class CopilotCliDetector
     this.sessionsDir = sessionsDir;
     const stored = getServerState('copilot_last_scan_time');
     this.lastScanTime = stored ? parseInt(stored, 10) : 0;
+    this.subscribePermissionEvents();
+  }
+
+  /** Drives Copilot approval cards via JSONL permission.requested / permission_resolved events
+   * instead of the PreToolUse/PostToolUse hook debounce path (which is batched per-turn). */
+  private subscribePermissionEvents(): void {
+    pendingChoiceEvents.on(
+      'session.permission_requested',
+      (sessionId: string, kind: string, commandText: string) => {
+        const { question, choices, allQuestions } = buildCopilotPermissionChoice(kind, commandText);
+        this.pendingChoices.set(sessionId, {
+          type: 'tool_approval',
+          question,
+          choices,
+          allQuestions,
+        });
+        const now = new Date().toISOString();
+        broadcast({
+          type: 'session.pending_choice',
+          timestamp: now,
+          data: { sessionId, question, choices, allQuestions },
+        });
+        pendingChoiceEvents.emit('session.pending_choice', {
+          sessionId,
+          question,
+          choices,
+          allQuestions,
+        });
+      },
+    );
+
+    pendingChoiceEvents.on('session.permission_resolved', (sessionId: string) => {
+      this.pendingChoices.delete(sessionId);
+      const now = new Date().toISOString();
+      broadcast({ type: 'session.pending_choice.resolved', timestamp: now, data: { sessionId } });
+      pendingChoiceEvents.emit('session.pending_choice.resolved', sessionId);
+    });
   }
 
   /**

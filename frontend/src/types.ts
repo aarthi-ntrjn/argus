@@ -126,6 +126,7 @@ export interface DashboardTourState {
   completedAt: string | null;
   skippedAt: string | null;
   seenRepoSteps: boolean;
+  seenSessionSteps: boolean;
 }
 
 export interface SessionHintsState {

@@ -5,6 +5,118 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.10] - 2026-05-16
+
+### Added
+
+- **Tabbed install on landing page**: Platform-specific install commands (Windows/macOS vs Ubuntu with sudo) using bordered card tabs, copy icon, and auto-detection of the user's OS.
+
+## [1.0.9] - 2026-05-16
+
+### Added
+
+- **Yolo mode status in Launch dropdown**: The "Launch with Argus" dropdown now shows whether Yolo mode is ON or OFF, with a gear icon to jump directly to Settings.
+- **First-time setup hint**: The pending session placeholder card shows a helpful message about completing CLI first-time setup and trusting the folder.
+
+### Fixed
+
+- **PTY enter key timing**: Added a wait after sending the enter key to the PTY to avoid dropped input.
+
+## [1.0.8] - 2026-05-15
+
+### Fixed
+
+- **Linux terminal launch on ptyxis and other modern emulators**: The Launch action wraps the command in `bash -c` so terminals that pass `-e` directly to `execve()` (such as ptyxis, now the default `x-terminal-emulator` on Debian/Ubuntu) parse the command correctly instead of failing with "Failed to find executable".
+- **Claude detection in `~/.local/bin`**: The dashboard now finds and launches `claude` even when the backend process (e.g. started via `npx`) does not inherit `~/.local/bin` in `PATH`. The absolute path is also baked into the launch command so the spawned terminal works regardless of its own `PATH`.
+
+## [1.0.7] - 2026-05-14
+
+### Fixed
+
+- **Installed tool detection**: Refresh detection of installed AI tools so the dashboard accurately reflects which CLIs are available.
+
+### Changed
+
+- **Landing page**: Moved prerequisites into the step cards (Node.js 22+ in Install, cloned repo requirement in Add Repositories). Added a bold statement in the Monitor section clarifying that Argus is an add-on, not a CLI replacement.
+
+## [1.0.6] - 2026-05-14
+
+### Added
+
+- **Integrations enabled by default**: Teams and Slack buttons now always show in the dashboard header, even when not configured, so users can discover and set them up.
+
+### Fixed
+
+- **Optimistic todo deletion**: Deleting a todo now removes it from the UI instantly instead of waiting for two server round trips.
+- **Frontend unit tests on Node v25**: Added an in-memory localStorage polyfill to work around Node.js v25's broken native localStorage that broke all tests using localStorage.
+- **E2E settings selector**: Fixed strict mode violations in e2e tests caused by integration buttons matching the settings button selector.
+
+### Changed
+
+- **Config flag renamed**: Replaced `integrationsEnabled` with `integrationsDisabled` (defaults to `false`, never written to config file). Existing configs with the old flag are cleaned up automatically.
+
+## [1.0.5] - 2026-05-14
+
+### Added
+
+- **Auto-open browser**: Running `argus` now automatically opens the dashboard in your default browser. Use `--no-open` to skip.
+
+## [1.0.4] - 2026-05-14
+
+### Fixed
+
+- **Missing runtime dependencies**: Backend dependencies (`@microsoft/teams.apps`, `@slack/web-api`, `@slack/socket-mode`, `@azure/msal-node`, `jose`, `koffi`) were only listed in the workspace `backend/package.json`, not in the root. Global installs would fail at startup with `ERR_MODULE_NOT_FOUND`.
+
+## [1.0.3] - 2026-05-14
+
+### Fixed
+
+- **CLI permission denied**: The `bin/argus.js` entry point was missing the executable bit, causing `zsh: permission denied` when running `argus` after a global install.
+
+## [1.0.2] - 2026-05-14
+
+### Fixed
+
+- **npm install failure**: The postinstall script (`fix-node-pty-helper.mjs`) was missing from the published npm package, causing `npm install -g argus-ai-hub` to fail with exit code 1. Added the script to the `files` array in `package.json`.
+
+## [1.0.1] - 2026-05-13
+
+### Fixed
+
+- **E2E test suite**: All mock spec files now correctly seed `seenSessionSteps: true` in onboarding state, preventing the session catch-up tour from blocking pointer events during tests. The first-load tour step count and Settings button selector in the onboarding spec were also corrected.
+
+## [1.0.0] - 2026-05-13
+
+### Added
+
+- **Landing page analytics**: The landing page now includes PostHog telemetry to track page visits and version. See the privacy policy for details.
+
+### Fixed
+
+- **Repository PR link encoding**: The "Open pull request" link on repository cards now uses the correct `/compare` URL with proper slash encoding, so it opens the right GitHub comparison page.
+
+### Changed
+
+- **Onboarding restructured into 3 progressive tours**: The single onboarding walkthrough has been replaced with three targeted tours. The first-load tour introduces the dashboard on a new install. A repo catch-up tour fires the first time a repository is added. A session catch-up tour fires the first time a session appears, highlighting session cards and integrations.
+- **Auto-update on exit moved to About tab**: The "Auto-update on exit" toggle has been moved from the General tab to the About tab in the Settings dialog, keeping update-related controls together.
+- **Documentation refresh**: The README has been comprehensively updated with new screenshots, a restructured navigation flow, consolidated Teams and Slack integration docs under "Roaming Integrations", and a new Supported Platforms section.
+
+## [0.1.18] - 2026-05-10
+
+### Added
+
+- **Bash and tool approval cards**: When a Claude Code or Copilot CLI session runs without auto-approval (no `--yolo` / `--allow-all`), any tool that requires confirmation now surfaces an interactive approval card on the session card. The card shows the tool name and input, with tier-aware choices: bash-tier tools offer a permanent per-project "don't ask again" option; file-edit tools offer a session-scoped option; Copilot CLI tools offer once/session/reject.
+
+### Fixed
+
+- **Approval card instant dismiss**: Selecting a choice or typing an answer in the prompt bar now dismisses the approval card immediately (optimistic dismiss) rather than waiting for a server acknowledgement.
+- **Copilot double approval card**: Commands such as `curl` that emit two `permission.requested` JSONL events no longer show the approval card twice. The first event shows the card; subsequent events silently update the tracked tool call ID so auto-dismiss still works.
+- **AskUserQuestion and wildcard hooks**: Claude Code's `settings.json` now registers both an `AskUserQuestion`-matcher entry and a wildcard entry for `PreToolUse`/`PostToolUse`, ensuring all tool events reach Argus.
+- **Prevent duplicate Copilot sessions on repo add**: Adding a repository that already has a running Copilot session no longer creates a duplicate session row.
+- **node-pty spawn-helper chmod**: The `chmod` for the node-pty spawn helper binary is now scoped to macOS only, preventing errors on Windows and Linux.
+- **ESC interrupt for Copilot CLI approval**: Pressing Esc in the approval panel now correctly sends the "No" choice rather than a raw escape byte, so the Copilot CLI agent receives a proper rejection.
+- **npm vulnerability**: Resolved a fast-uri audit vulnerability.
+
 ## [0.1.17] - 2026-05-09
 
 ### Added

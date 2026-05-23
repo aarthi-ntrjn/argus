@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import * as logger from '../../utils/logger.js';
 import { spawnSync } from 'child_process';
-import { platform } from 'os';
+import { existsSync } from 'fs';
+import { homedir, platform } from 'os';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -21,11 +22,22 @@ const YOLO_FLAGS: Record<ToolCommand, string> = {
   claude: '--dangerously-skip-permissions',
   copilot: '--allow-all',
 };
+const GITHUB_CLI_COMMAND = 'gh';
+const COPILOT_HELP_ARGS = [ToolCommands.COPILOT, '--help'] as const;
+
+function getLinuxLocalBinDir(): string {
+  return path.join(homedir(), '.local', 'bin');
+}
 
 // Base command (no --cwd): safe to copy and run manually from any directory.
-function buildLaunchCmdBase(tool: ToolCommand, yoloMode = false, launchId?: string): string {
+function buildLaunchCmdBase(
+  tool: ToolCommand,
+  yoloMode = false,
+  launchId?: string,
+  launchArgs: string[] = [tool],
+): string {
   const launchScript = path.join(ARGUS_ROOT, 'backend', 'dist', 'launch-pty', 'launch.js');
-  const base = `node "${launchScript}" ${tool}`;
+  const base = `node "${launchScript}" ${launchArgs.join(' ')}`;
   const withYolo = yoloMode ? `${base} ${YOLO_FLAGS[tool]}` : base;
   return launchId ? `${withYolo} --launch-id ${launchId}` : withYolo;
 }
@@ -36,8 +48,9 @@ function buildLaunchCmdWithCwd(
   repoPath: string,
   yoloMode = false,
   launchId?: string,
+  launchArgs: string[] = [tool],
 ): string {
-  return `${buildLaunchCmdBase(tool, yoloMode, launchId)} --cwd "${repoPath}"`;
+  return `${buildLaunchCmdBase(tool, yoloMode, launchId, launchArgs)} --cwd "${repoPath}"`;
 }
 
 function isInstalled(cmd: string): boolean {
@@ -46,8 +59,38 @@ function isInstalled(cmd: string): boolean {
   return result.status === 0;
 }
 
-function isCopilotInstalled(): boolean {
-  return isInstalled(ToolCommands.COPILOT);
+function isCommandRunnable(cmd: string, args: readonly string[]): boolean {
+  const result = spawnSync(cmd, [...args], { encoding: 'utf-8', timeout: 3000 });
+  return result.status === 0;
+}
+
+function getDirectCommandPath(cmd: string): string | null {
+  if (isInstalled(cmd)) {
+    return cmd;
+  }
+
+  if (platform() !== 'linux') {
+    return null;
+  }
+
+  const fallbackPath = path.join(getLinuxLocalBinDir(), cmd);
+  return existsSync(fallbackPath) ? fallbackPath : null;
+}
+
+function getClaudeLaunchArgs(): string[] | null {
+  const directClaude = getDirectCommandPath(ToolCommands.CLAUDE);
+  return directClaude ? [directClaude] : null;
+}
+
+function getCopilotLaunchArgs(): string[] | null {
+  const directCopilot = getDirectCommandPath(ToolCommands.COPILOT);
+  if (directCopilot) {
+    return [directCopilot];
+  }
+  if (isCommandRunnable(GITHUB_CLI_COMMAND, COPILOT_HELP_ARGS)) {
+    return [GITHUB_CLI_COMMAND, ToolCommands.COPILOT];
+  }
+  return null;
 }
 
 // Detect whether the server can open a GUI terminal window.
@@ -101,11 +144,15 @@ function openTerminalWithCommand(cmd: string): void {
   }
 
   // Linux: try common terminal emulators in order of preference.
+  // Wrap cmd in `bash -c` so bash splits/quotes it. Modern terminals like ptyxis
+  // (often the system's x-terminal-emulator) do not shell-parse a raw -e string.
+  // `; exec bash` keeps the window open after the launched command exits.
+  const bashWrap = ['bash', '-c', `${cmd}; exec bash`];
   const terminals = [
-    { bin: 'x-terminal-emulator', args: ['-e', cmd] },
-    { bin: 'gnome-terminal', args: ['--', 'bash', '-c', `${cmd}; exec bash`] },
-    { bin: 'xterm', args: ['-e', cmd] },
-    { bin: 'konsole', args: ['--noclose', '-e', cmd] },
+    { bin: 'x-terminal-emulator', args: ['-e', ...bashWrap] },
+    { bin: 'gnome-terminal', args: ['--', ...bashWrap] },
+    { bin: 'xterm', args: ['-e', ...bashWrap] },
+    { bin: 'konsole', args: ['--noclose', '-e', ...bashWrap] },
   ];
   for (const t of terminals) {
     if (spawnSync('which', [t.bin], { encoding: 'utf-8', timeout: 2000 }).status === 0) {
@@ -122,15 +169,22 @@ function openTerminalWithCommand(cmd: string): void {
 
 const toolsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/v1/tools', async (_req, reply) => {
-    const hasClaude = isInstalled(ToolCommands.CLAUDE);
-    const hasCopilot = isCopilotInstalled();
+    const claudeLaunchArgs = getClaudeLaunchArgs();
+    const hasClaude = claudeLaunchArgs !== null;
+    const copilotLaunchArgs = getCopilotLaunchArgs();
+    const hasCopilot = copilotLaunchArgs !== null;
     const { yoloMode } = loadConfig();
     return reply.send({
       claude: hasClaude,
       copilot: hasCopilot,
       terminalAvailable: canLaunchTerminal(),
-      claudeCmd: hasClaude ? buildLaunchCmdBase(ToolCommands.CLAUDE, yoloMode) : undefined,
-      copilotCmd: hasCopilot ? buildLaunchCmdBase(ToolCommands.COPILOT, yoloMode) : undefined,
+      yoloMode,
+      claudeCmd: hasClaude
+        ? buildLaunchCmdBase(ToolCommands.CLAUDE, yoloMode, undefined, claudeLaunchArgs)
+        : undefined,
+      copilotCmd: hasCopilot
+        ? buildLaunchCmdBase(ToolCommands.COPILOT, yoloMode, undefined, copilotLaunchArgs)
+        : undefined,
     });
   });
 
@@ -152,9 +206,13 @@ const toolsRoutes: FastifyPluginAsync = async (app) => {
       const { tool, repoPath } = req.body;
       const { yoloMode } = loadConfig();
       const ptyLaunchId = randomUUID();
+      const launchArgs =
+        tool === ToolCommands.COPILOT
+          ? (getCopilotLaunchArgs() ?? [ToolCommands.COPILOT])
+          : (getClaudeLaunchArgs() ?? [ToolCommands.CLAUDE]);
       const cmd = repoPath
-        ? buildLaunchCmdWithCwd(tool, repoPath, yoloMode, ptyLaunchId)
-        : buildLaunchCmdBase(tool, yoloMode, ptyLaunchId);
+        ? buildLaunchCmdWithCwd(tool, repoPath, yoloMode, ptyLaunchId, launchArgs)
+        : buildLaunchCmdBase(tool, yoloMode, ptyLaunchId, launchArgs);
       try {
         openTerminalWithCommand(cmd);
         return reply.status(202).send({ status: 'launched', ptyLaunchId });
