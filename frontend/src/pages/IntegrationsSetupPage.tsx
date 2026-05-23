@@ -327,7 +327,7 @@ const SLACK_STEPS: SetupStep[] = [
     ),
   },
   {
-    title: 'Get your channel ID',
+    title: 'Get your channel ID and owner sender ID',
     body: (
       <>
         <ol className="space-y-1.5 text-sm text-gray-600 list-decimal pl-4 mb-2">
@@ -337,6 +337,11 @@ const SLACK_STEPS: SetupStep[] = [
           </li>
           <li>
             Scroll to the bottom and copy the Channel ID (format: <Mono>C01234ABCDE</Mono>).
+          </li>
+          <li>
+            Copy your Slack Member ID (this is the Owner Sender ID): click your profile picture &rarr;{' '}
+            <strong>View profile</strong> &rarr; <strong>More</strong> &rarr; <strong>Copy member ID</strong>{' '}
+            (format: <Mono>U...</Mono>).
           </li>
           <li>Invite the bot to the channel:</li>
         </ol>
@@ -357,6 +362,9 @@ const SLACK_STEPS: SetupStep[] = [
           </li>
           <li>
             <strong>Channel ID</strong> of the channel where Argus will post
+          </li>
+          <li>
+            <strong>Owner Sender ID</strong> (your Slack Member ID, format: <Mono>U...</Mono>)
           </li>
           <li>
             <strong>App Token</strong> (<Mono>xapp-...</Mono>) for inbound commands via Socket Mode
@@ -402,8 +410,8 @@ const SLACK_TROUBLESHOOTING: { symptom: string; fix: React.ReactNode }[] = [
     symptom: 'No messages appearing in Slack',
     fix: (
       <>
-        Check that Bot Token and Channel ID are saved in Settings and Argus has been restarted.
-        Confirm the bot has been invited to the channel with <Mono>/invite @Argus</Mono>. Check the
+        Check that Bot Token, Channel ID, and Owner Sender ID are saved in Settings and Argus has
+        been restarted. Confirm the bot has been invited to the channel with <Mono>/invite @Argus</Mono>. Check the
         server logs for <Mono>[SlackNotifier]</Mono> warning lines.
       </>
     ),

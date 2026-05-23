@@ -57,7 +57,8 @@
     "test:e2e": "npm run test:e2e --workspace=frontend",
     "test:e2e:real": "npm run test:e2e:real --workspace=frontend",
     "test:e2e:ui": "npm run test:e2e:ui --workspace=frontend",
-    "test:e2e:real:ui": "npm run test:e2e:real:ui --workspace=frontend"
+    "test:e2e:real:ui": "npm run test:e2e:real:ui --workspace=frontend",
+    "install-local": "npm install --prefix ~/.local"
   },
   "dependencies": {
     "@azure/msal-node": "^5.2.0",
