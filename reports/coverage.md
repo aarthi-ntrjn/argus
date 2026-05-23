@@ -18,13 +18,13 @@
 | `backend/scripts/check-actions.ts` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `backend/scripts/seed-test-thread.ts` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `backend/scripts/test-outbound.ts` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
-| `backend/src/api/routes/fs.ts` | 🟡 77.77% | 🟢 88.88% | 🟢 100.00% | 🟡 77.77% |
+| `backend/src/api/routes/fs.ts` | 🟡 78.94% | 🟢 88.88% | 🟢 100.00% | 🟡 78.94% |
 | `backend/src/api/routes/health.ts` | 🟢 82.79% | 🔴 20.00% | 🔴 33.33% | 🟢 82.79% |
 | `backend/src/api/routes/hooks.ts` | 🟢 85.18% | 🟡 75.86% | 🔴 50.00% | 🟢 85.18% |
 | `backend/src/api/routes/launcher.ts` | 🔴 31.04% | 🔴 37.50% | 🟡 66.66% | 🔴 31.04% |
 | `backend/src/api/routes/metrics.ts` | 🔴 58.97% | 🟢 100.00% | 🟢 100.00% | 🔴 58.97% |
-| `backend/src/api/routes/repositories.ts` | 🔴 54.83% | 🔴 53.84% | 🔴 33.33% | 🔴 54.83% |
-| `backend/src/api/routes/sessions.ts` | 🔴 55.31% | 🔴 56.25% | 🟡 66.66% | 🔴 55.31% |
+| `backend/src/api/routes/repositories.ts` | 🔴 55.11% | 🔴 53.84% | 🔴 33.33% | 🔴 55.11% |
+| `backend/src/api/routes/sessions.ts` | 🔴 55.04% | 🔴 56.25% | 🟡 66.66% | 🔴 55.04% |
 | `backend/src/api/routes/settings.ts` | 🟡 76.11% | 🟢 88.88% | 🟢 100.00% | 🟡 76.11% |
 | `backend/src/api/routes/teams-settings.ts` | 🟡 62.50% | 🟢 100.00% | 🟢 100.00% | 🟡 62.50% |
 | `backend/src/api/routes/telemetry.ts` | 🟢 100.00% | 🟢 90.00% | 🟢 100.00% | 🟢 100.00% |
@@ -75,7 +75,7 @@
 | `backend/src/server.ts` | 🟡 60.16% | 🔴 52.63% | 🟢 80.00% | 🟡 60.16% |
 | `backend/src/services/repository-scanner.ts` | 🔴 50.34% | 🟢 82.75% | 🔴 33.33% | 🔴 50.34% |
 | `backend/src/services/session-controller.ts` | 🔴 52.03% | 🟡 71.42% | 🟡 71.42% | 🔴 52.03% |
-| `backend/src/services/telemetry-service.ts` | 🟢 94.73% | 🟢 89.18% | 🟢 85.71% | 🟢 94.73% |
+| `backend/src/services/telemetry-service.ts` | 🟢 94.73% | 🟢 85.29% | 🟢 85.71% | 🟢 94.73% |
 | `backend/src/services/update-service.ts` | 🟢 92.85% | 🟡 68.08% | 🟢 85.71% | 🟢 92.85% |
 | `backend/src/utils/logger.ts` | 🟢 93.65% | 🟡 73.68% | 🟢 100.00% | 🟢 93.65% |
 | `backend/src/utils/message-queue.ts` | 🟢 86.84% | 🟢 90.90% | 🟢 80.00% | 🟢 86.84% |
