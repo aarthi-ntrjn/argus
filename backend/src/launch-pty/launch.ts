@@ -124,7 +124,7 @@ if (process.stdin.isTTY) {
 }
 process.stdin.resume();
 process.stdin.on('data', (chunk: Buffer) => {
-  log(`stdin.data len=${chunk.length} chunk=${chunk.toString('utf8')} hex=${chunk.toString('hex')}`);
+  log(`stdin.data len=${chunk.length} chunk=${chunk.toString('utf8')}`);
   pty.write(chunk.toString('binary'));
 });
 
@@ -240,13 +240,13 @@ const sendPromptInterwriteDelayV2 = async (prompt: string, skipEnter = false): P
   log(`focus-in`);
   pty.write('\x1b[I');
   await delay(WRITE_DELAY_MS);
-  log(`pty.write promptLen=${prompt.length} prompt=${prompt} hex=${Buffer.from(prompt).toString('hex')}`);
+  log(`pty.write promptLen=${prompt.length}`);
   pty.write(prompt);
   await delay(WRITE_DELAY_MS);
   // Single-char prompts (choice index digits) respect skipEnter; longer prompts always need Enter.
   if (!skipEnter || prompt.length > 1) {
     // Without this keyboard mimic of '\r', Windows does not recognize the end of the sentence.
-    log(`pty.write enter hex=${Buffer.from('\r').toString('hex')}`);
+    log(`pty.write enter`);
     pty.write('\r');
     await delay(WRITE_DELAY_MS);
   } else {
