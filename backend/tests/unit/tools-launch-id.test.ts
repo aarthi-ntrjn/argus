@@ -168,7 +168,7 @@ describe('Tools API — launch-terminal returns ptyLaunchId', () => {
     }
   });
 
-  it('detects Copilot from ~/.local/bin when the backend PATH does not include it', async () => {
+  it.skipIf(process.platform !== 'linux')('detects Copilot from ~/.local/bin when the backend PATH does not include it', async () => {
     const fakeHome = join(tmpdir(), `argus-tools-home-${randomUUID()}`);
     const localBin = join(fakeHome, '.local', 'bin');
     const originalHome = process.env.HOME;

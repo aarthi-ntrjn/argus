@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.11] - 2026-05-23
+
+### Added
+
+- **Todo telemetry events**: New events `todo_added`, `todo_deleted`, `todo_done` emitted when todo items are created, removed, or completed.
+- **Session telemetry events**: New events `session_interrupted`, `session_choice_made`, `session_tool_rejected` for finer-grained session activity tracking.
+- **Repository telemetry events**: New events `repo_scan`, `repo_added`, `repo_removed` for repository lifecycle tracking.
+
+### Fixed
+
+- **WCAG 2.1 AA accessibility**: Comprehensive accessibility pass across all frontend components (LaunchDropdown, PendingChoicePanel, PendingSessionCard, SessionDetail, SessionPromptBar, IntegrationConfigContent, DashboardPage, and setup pages).
+- **Security**: 6 moderate npm vulnerabilities resolved (ws, uuid, brace-expansion, qs).
+- **Telemetry event names**: Corrected `todo_add`/`todo_remove`/`todo_done` to `todo_added`/`todo_deleted`/`todo_done`; registered missing repo card telemetry events (`repo_card_home_opened`, `repo_card_branch_opened`, `repo_card_pr_opened`).
+
+### Changed
+
+- **Telemetry**: Renamed event `repo_scan_requested` to `repo_scan` for consistency with other event naming.
+
 ## [1.0.10] - 2026-05-16
 
 ### Added

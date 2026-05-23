@@ -81,7 +81,7 @@ const STEPS: SetupStep[] = [
             Copy the <Mono>xapp-...</Mono> token — this is your <strong>App Token</strong>.
           </li>
         </ol>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-500">
           Skip this step if you only need outbound notifications and don't need the bot to respond
           to commands.
         </p>

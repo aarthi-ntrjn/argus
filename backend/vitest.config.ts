@@ -14,6 +14,7 @@ export default defineConfig({
     exclude: ['node_modules', 'dist'],
     env: {
       ARGUS_DB_PATH: join(tmpdir(), `argus-test-${Date.now()}.db`),
+      TELEMETRY_URL: '',
     },
     coverage: {
       provider: 'v8',

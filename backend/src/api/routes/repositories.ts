@@ -15,6 +15,7 @@ import {
 } from '../../db/database.js';
 import { broadcast } from '../ws/event-dispatcher.js';
 import { getCurrentBranch, getRemoteUrl } from '../../services/repository-scanner.js';
+import { telemetryService } from '../../services/telemetry-service.js';
 
 let _monitor: { triggerScan(force?: boolean): void } | null = null;
 let _cliManager: {
@@ -94,6 +95,7 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
     logger.debug(`[Repositories] injectHooks — ${Date.now() - tHooks}ms`);
 
     broadcast({ type: 'repository.added', timestamp: new Date().toISOString(), data: repo });
+    telemetryService.sendEvent('repo_added');
     logger.debug(`[Repositories] POST handler total before triggers — ${Date.now() - tRepo}ms`);
     _monitor?.triggerScan(true);
     return reply.status(201).send(repo);
@@ -150,6 +152,7 @@ const repositoriesRoutes: FastifyPluginAsync = async (app) => {
     }
 
     broadcast({ type: 'repository.removed', timestamp: new Date().toISOString(), data: { id } });
+    telemetryService.sendEvent('repo_removed');
     return reply.status(204).send();
   });
 };

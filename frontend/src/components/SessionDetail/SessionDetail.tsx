@@ -360,7 +360,7 @@ export default function SessionDetail({
                                 {summariseToolUse(gi.toolUse)}
                               </span>
                               <span
-                                className={`text-[10px] ${dark ? 'text-gray-500' : 'text-gray-400'}`}
+                                className={`text-[10px] ${dark ? 'text-gray-500' : 'text-gray-500'}`}
                               >
                                 running…
                               </span>

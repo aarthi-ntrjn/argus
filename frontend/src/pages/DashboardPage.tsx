@@ -403,8 +403,8 @@ export default function DashboardPage() {
       {repos.length === 0 ? (
         <>
           <div className="flex-1 flex flex-col justify-center space-y-1">
-            <p className="text-xl font-semibold text-gray-400">No repositories added yet.</p>
-            <p className="text-xl text-gray-400">
+            <p className="text-xl font-semibold text-gray-500">No repositories added yet.</p>
+            <p className="text-xl text-gray-500">
               Click "<span className="font-semibold">Add Repositories</span>" to start managing
               sessions.
             </p>
@@ -420,8 +420,8 @@ export default function DashboardPage() {
         </>
       ) : (
         <div className="flex-1 flex flex-col justify-center space-y-1">
-          <p className="text-base text-gray-400">No repositories to show.</p>
-          <p className="text-sm text-gray-400">
+          <p className="text-base text-gray-500">No repositories to show.</p>
+          <p className="text-sm text-gray-500">
             All repositories are hidden by your current settings.
           </p>
         </div>

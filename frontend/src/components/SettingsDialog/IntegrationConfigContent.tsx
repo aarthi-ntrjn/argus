@@ -105,7 +105,7 @@ function ConfigForm({
             autoComplete="off"
             className="w-full text-xs font-mono border border-gray-200 rounded px-2 py-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
           />
-          {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+          {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
         </div>
       ))}
       {saveError && (
@@ -117,7 +117,7 @@ function ConfigForm({
         <Button type="submit" variant="primary" size="sm" disabled={saving}>
           {saving ? 'Saving…' : saved ? 'Saved!' : 'Save'}
         </Button>
-        <p className="text-xs text-gray-400">Changes apply on next Connect.</p>
+        <p className="text-xs text-gray-500">Changes apply on next Connect.</p>
       </div>
     </form>
   );
@@ -166,7 +166,7 @@ function TeamsConfigContent({ showSetupGuide }: { showSetupGuide: boolean }) {
         onSave={save}
       />
       <div className="mt-2">
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-500">
           Webhook URL:{' '}
           <span className="font-mono">{window.location.origin}/api/v1/teams/webhook</span>
         </p>
