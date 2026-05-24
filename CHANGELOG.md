@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.12] - 2026-05-24
+
+### Added
+
+- **Node.js version enforcement**: `engine-strict=true` in `.npmrc` and `>=22 <26` constraint in `package.json` so installs on Node v26 fail with a clear error instead of a confusing Python/gyp compile failure from `better-sqlite3`.
+- **`.nvmrc`**: Pinned to Node 22 so fnm/nvm users automatically switch to a supported version.
+
 ## [1.0.11] - 2026-05-23
 
 ### Added
