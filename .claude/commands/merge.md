@@ -132,7 +132,7 @@ node scripts/generate-coverage-report.mjs
 
 This reads the four `coverage-summary.json` files and writes `reports/coverage.md` with a summary table plus a per-file breakdown for each suite. Missing files (e.g. when a suite is skipped) produce `N/A` rows automatically.
 
-**Do NOT commit or push `reports/coverage.md` here.** It will be committed directly to `<MAIN_BRANCH>` after the merge in Step 7. This avoids merge conflicts caused by two feature branches both committing the generated file.
+**Do NOT commit or push `reports/coverage.md` here.** The `coverage.yml` workflow will commit it automatically to `<MAIN_BRANCH>` after the push in Step 7 and will also send the Teams/Slack notification. No manual commit is needed.
 
 ---
 
@@ -295,15 +295,13 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 
 If the merge has conflicts, stop and report: list the conflicting files and ask the user to resolve them manually, then re-run `/merge`.
 
-After a clean merge, commit `reports/coverage.md` directly to `<MAIN_BRANCH>` (generated in Step 4):
+After a clean merge, push to `<MAIN_BRANCH>`:
 
 ```
-git add reports/coverage.md
-git commit -m "chore: update coverage report
-
-Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 git push origin <MAIN_BRANCH>
 ```
+
+The `coverage.yml` workflow will trigger automatically on this push, re-run unit coverage, commit the updated `reports/coverage.md` to `<MAIN_BRANCH>`, and send Teams/Slack notifications. No manual coverage commit is needed here.
 
 **Do NOT delete the feature branch yet** — that happens in Step 9 after CI passes.
 
@@ -323,7 +321,7 @@ Output a final merge summary:
 
 ### Step 9 — Monitor CI workflow
 
-After pushing to the main branch, find the triggered GitHub Actions workflow run and monitor it to completion.
+After pushing to the main branch, find the triggered GitHub Actions workflow run and monitor it to completion. Note that **two workflows** will trigger on this push: `ci.yml` (tests/lint) and `coverage.yml` (coverage + Teams/Slack notification). Monitor `ci.yml` as the primary gate for branch deletion; `coverage.yml` runs independently and its notification delivery does not block the merge outcome.
 
 #### 8a — Detect the remote
 
