@@ -80,7 +80,7 @@ jobs:
               json.dump(details, f)
           EOF
 
-      - name: Create GitHub Issue
+      - name: Create or update GitHub Issue
         if: steps.audit.outputs.total != '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,7 +91,7 @@ jobs:
         run: |
           gh label create "security-audit" --color "FF0000" --description "Automated security audit findings" --force 2>/dev/null || true
           python3 - <<'EOF'
-          import os, subprocess, datetime
+          import os, subprocess, json, datetime
           date = datetime.date.today().isoformat()
           total    = os.environ["AUDIT_TOTAL"]
           critical = os.environ["AUDIT_CRITICAL"]
@@ -107,14 +107,33 @@ jobs:
           )
           with open("issue-body.md", "w") as f:
               f.write(body)
-          result = subprocess.run([
-              "gh", "issue", "create",
-              "--title", f"Security Audit ({date}): {total} vulnerabilities found",
-              "--body-file", "issue-body.md",
+          # Check for an existing open issue with the security-audit label.
+          existing = subprocess.run([
+              "gh", "issue", "list",
               "--label", "security-audit",
-          ], check=True, capture_output=True, text=True)
-          issue_url = result.stdout.strip()
-          print(f"Issue created: {issue_url}")
+              "--state", "open",
+              "--limit", "1",
+              "--json", "number,url",
+          ], capture_output=True, text=True)
+          issues = json.loads(existing.stdout or "[]")
+          if issues:
+              issue_number = issues[0]["number"]
+              issue_url    = issues[0]["url"]
+              subprocess.run([
+                  "gh", "issue", "edit", str(issue_number),
+                  "--title", f"Security Audit ({date}): {total} vulnerabilities found",
+                  "--body-file", "issue-body.md",
+              ], check=True)
+              print(f"Issue updated: {issue_url}")
+          else:
+              result = subprocess.run([
+                  "gh", "issue", "create",
+                  "--title", f"Security Audit ({date}): {total} vulnerabilities found",
+                  "--body-file", "issue-body.md",
+                  "--label", "security-audit",
+              ], check=True, capture_output=True, text=True)
+              issue_url = result.stdout.strip()
+              print(f"Issue created: {issue_url}")
           with open("issue-url.txt", "w") as f:
               f.write(issue_url)
           EOF
