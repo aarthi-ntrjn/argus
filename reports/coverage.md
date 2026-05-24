@@ -1,15 +1,15 @@
 # Coverage Report
 
-*Generated: May 23, 2026, 8:40 AM*
+*Generated: May 23, 2026, 4:08 PM*
 
 ## Summary
 
 | Suite | Files | Tests | Statements | Branches | Functions | Lines | Covers |
 |-------|-------|-------|------------|----------|-----------|-------|--------|
-| backend unit   | 210 | 🟢 560/561 | 🟡 64.89% | 🟡 74.50% | 🟡 71.03% | 🟡 64.89% | backend/src |
-| frontend unit  | 151 | 🟢 435/435 | 🟢 88.76% | 🟡 78.29% | 🔴 51.45% | 🟢 88.76% | frontend/src |
-| e2e mock       | 16 | 🟢 156/156 (2 skipped) | 🟡 76.15% | 🟡 62.73% | 🟡 79.45% | 🟡 77.83% | frontend/src |
-| e2e real       | 7 | 🟢 48/48 | 🔴 53.52% | 🟡 62.25% | 🟡 61.52% | 🔴 53.52% | backend/src |
+| backend unit   | 210 | 🟢 560/561 | 🟡 64.85% | 🟡 74.27% | 🟡 71.03% | 🟡 64.85% | backend/src |
+| frontend unit  | 151 | 🟢 435/435 | 🟢 88.95% | 🟡 78.36% | 🔴 51.58% | 🟢 88.95% | frontend/src |
+| e2e mock       | 16 | 🟢 156/156 (2 skipped) | 🟡 73.88% | 🟡 65.58% | 🟡 77.41% | 🟡 73.61% | frontend/src |
+| e2e real       | 7 | 🟢 48/48 | 🔴 56.66% | 🟡 63.29% | 🟡 62.80% | 🔴 56.66% | backend/src |
 
 ## Backend unit - per file
 
@@ -29,11 +29,11 @@
 | `backend/src/api/routes/teams-settings.ts` | 🟡 62.50% | 🟢 100.00% | 🟢 100.00% | 🟡 62.50% |
 | `backend/src/api/routes/telemetry.ts` | 🟢 100.00% | 🟢 90.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/api/routes/test-utils.ts` | 🔴 0.00% | 🟢 100.00% | 🟢 100.00% | 🔴 0.00% |
-| `backend/src/api/routes/todos.ts` | 🟢 89.28% | 🟢 83.33% | 🟢 100.00% | 🟢 89.28% |
+| `backend/src/api/routes/todos.ts` | 🟢 89.65% | 🟢 84.61% | 🟢 100.00% | 🟢 89.65% |
 | `backend/src/api/routes/tools.ts` | 🟡 77.65% | 🟡 76.74% | 🟢 91.66% | 🟡 77.65% |
 | `backend/src/api/routes/update.ts` | 🔴 47.16% | 🟡 60.00% | 🔴 50.00% | 🔴 47.16% |
 | `backend/src/api/ws/event-dispatcher.ts` | 🔴 33.33% | 🔴 50.00% | 🔴 25.00% | 🔴 33.33% |
-| `backend/src/cli/base-cli-detector.ts` | 🟢 81.33% | 🟡 73.57% | 🟡 70.96% | 🟢 81.33% |
+| `backend/src/cli/base-cli-detector.ts` | 🟢 80.00% | 🟡 72.14% | 🟡 70.96% | 🟢 80.00% |
 | `backend/src/cli/claude-code/claude-code-detector.ts` | 🟢 83.33% | 🟡 77.27% | 🟢 100.00% | 🟢 83.33% |
 | `backend/src/cli/claude-code/claude-code-hooks-injector.ts` | 🟢 93.33% | 🟢 81.48% | 🟢 100.00% | 🟢 93.33% |
 | `backend/src/cli/claude-code/claude-code-jsonl-parser.ts` | 🟢 86.95% | 🟡 69.56% | 🟢 100.00% | 🟢 86.95% |
@@ -125,7 +125,7 @@
 | `frontend/src/components/SettingsDialog/SettingsDialog.tsx` | 🟢 82.68% | 🟡 77.27% | 🔴 50.00% | 🟢 82.68% |
 | `frontend/src/components/SettingsPanel/index.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/SettingsPanel/SettingsPanel.tsx` | 🟢 93.38% | 🟡 75.00% | 🟢 100.00% | 🟢 93.38% |
-| `frontend/src/components/SetupPage/SetupPage.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
+| `frontend/src/components/SetupPage/SetupPage.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/TelemetryBanner/index.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/TelemetryBanner/TelemetryBanner.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/TodoPanel/TodoPanel.tsx` | 🟢 91.81% | 🟢 94.68% | 🟢 100.00% | 🟢 91.81% |
@@ -478,158 +478,162 @@
 | `frontend/src/components/Badge.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/BrandIcons.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/Button.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/components/Checkbox.tsx` | 🟢 100.00% | 🟢 81.81% | 🟢 100.00% | 🟢 100.00% |
+| `frontend/src/components/Checkbox.tsx` | 🟢 90.00% | 🟢 83.33% | 🟢 100.00% | 🟢 90.00% |
 | `frontend/src/components/FolderInputDialog/FolderInputDialog.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
-| `frontend/src/components/IntegrationButton/IntegrationButton.tsx` | 🔴 54.41% | 🔴 23.07% | 🔴 54.16% | 🟡 63.63% |
-| `frontend/src/components/KillSessionDialog/KillSessionDialog.tsx` | 🟢 100.00% | 🟡 76.66% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/components/LaunchDropdown/LaunchDropdown.tsx` | 🟡 71.29% | 🔴 14.78% | 🟢 85.07% | 🟢 83.17% |
+| `frontend/src/components/IntegrationButton/IntegrationButton.tsx` | 🔴 55.55% | 🔴 37.50% | 🔴 41.66% | 🟡 60.60% |
+| `frontend/src/components/KillSessionDialog/KillSessionDialog.tsx` | 🟢 85.71% | 🔴 56.25% | 🟢 100.00% | 🟢 85.71% |
+| `frontend/src/components/LaunchDropdown/LaunchDropdown.tsx` | 🔴 55.86% | 🔴 15.38% | 🟢 83.33% | 🟡 67.36% |
 | `frontend/src/components/MobileNav/MobileNav.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `frontend/src/components/Onboarding/index.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/components/Onboarding/OnboardingTour.tsx` | 🟢 84.61% | 🔴 42.85% | 🟢 100.00% | 🟢 88.46% |
-| `frontend/src/components/OutputPane/OutputPane.tsx` | 🟢 97.77% | 🟡 74.07% | 🟢 100.00% | 🟢 96.42% |
-| `frontend/src/components/PendingChoicePanel/PendingChoicePanel.tsx` | 🟡 71.81% | 🔴 55.55% | 🟢 100.00% | 🟢 90.32% |
+| `frontend/src/components/Onboarding/OnboardingTour.tsx` | 🟡 68.18% | 🔴 42.85% | 🟢 100.00% | 🟡 68.18% |
+| `frontend/src/components/OutputPane/OutputPane.tsx` | 🟢 80.00% | 🟡 71.42% | 🟡 75.00% | 🟡 79.16% |
+| `frontend/src/components/PendingChoicePanel/PendingChoicePanel.tsx` | 🟡 62.13% | 🔴 51.35% | 🟢 100.00% | 🟡 73.41% |
 | `frontend/src/components/PendingSessionCard/PendingSessionCard.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `frontend/src/components/RemoveConfirmDialog.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
-| `frontend/src/components/RepoCard/RepoCard.tsx` | 🟡 70.00% | 🟢 85.29% | 🟢 100.00% | 🟢 80.00% |
+| `frontend/src/components/RepoCard/RepoCard.tsx` | 🟢 86.66% | 🟢 84.00% | 🟢 100.00% | 🟢 95.00% |
 | `frontend/src/components/RepoContextBar/RepoContextBar.tsx` | 🟡 66.66% | 🔴 50.00% | 🟡 66.66% | 🟡 66.66% |
 | `frontend/src/components/RepoLinks.tsx` | 🟡 71.42% | 🟢 100.00% | 🔴 50.00% | 🟡 71.42% |
 | `frontend/src/components/SectionHeading.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/components/SessionCard/SessionCard.tsx` | 🟢 96.29% | 🟢 91.72% | 🟢 88.46% | 🟢 97.05% |
-| `frontend/src/components/SessionDetail/SessionDetail.tsx` | 🟢 88.20% | 🟡 66.04% | 🟢 98.57% | 🟢 89.28% |
-| `frontend/src/components/SessionDetail/sessionDetailUtils.ts` | 🟡 65.51% | 🔴 47.54% | 🟡 68.75% | 🟡 67.96% |
-| `frontend/src/components/SessionMetaRow/SessionMetaRow.tsx` | 🟢 100.00% | 🟢 94.59% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/components/SessionPromptBar/SessionPromptBar.tsx` | 🟢 96.96% | 🟡 72.34% | 🟢 92.30% | 🟢 98.48% |
+| `frontend/src/components/SessionCard/SessionCard.tsx` | 🟢 100.00% | 🟢 95.85% | 🟢 100.00% | 🟢 100.00% |
+| `frontend/src/components/SessionDetail/SessionDetail.tsx` | 🟢 90.27% | 🟡 70.76% | 🟢 96.00% | 🟢 91.47% |
+| `frontend/src/components/SessionDetail/sessionDetailUtils.ts` | 🔴 56.75% | 🔴 44.44% | 🟡 62.50% | 🔴 56.16% |
+| `frontend/src/components/SessionMetaRow/SessionMetaRow.tsx` | 🟢 100.00% | 🟢 94.73% | 🟢 100.00% | 🟢 100.00% |
+| `frontend/src/components/SessionPromptBar/SessionPromptBar.tsx` | 🟡 79.62% | 🟡 71.42% | 🟢 87.50% | 🟡 78.84% |
 | `frontend/src/components/SessionTypeIcon/SessionTypeIcon.tsx` | 🟢 100.00% | 🟢 80.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/SettingsDialog/DialogLinkItem.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/components/SettingsDialog/GeneralSettingsContent.tsx` | 🟢 89.09% | 🟡 74.68% | 🟢 100.00% | 🟢 91.66% |
-| `frontend/src/components/SettingsDialog/IntegrationConfigContent.tsx` | 🔴 2.50% | 🔴 0.00% | 🔴 0.00% | 🔴 2.70% |
-| `frontend/src/components/SettingsDialog/SettingsDialog.tsx` | 🟢 100.00% | 🟢 83.82% | 🟢 100.00% | 🟢 100.00% |
+| `frontend/src/components/SettingsDialog/GeneralSettingsContent.tsx` | 🟡 65.00% | 🟡 71.42% | 🔴 41.17% | 🟡 66.10% |
+| `frontend/src/components/SettingsDialog/IntegrationConfigContent.tsx` | 🔴 3.12% | 🔴 0.00% | 🔴 0.00% | 🔴 3.33% |
+| `frontend/src/components/SettingsDialog/SettingsDialog.tsx` | 🟢 100.00% | 🟢 86.95% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/SettingsPanel/index.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/SettingsPanel/SettingsPanel.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/SetupPage/SetupPage.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `frontend/src/components/TelemetryBanner/index.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/TelemetryBanner/TelemetryBanner.tsx` | 🔴 25.00% | 🟢 100.00% | 🔴 0.00% | 🔴 25.00% |
-| `frontend/src/components/TodoPanel/TodoPanel.tsx` | 🟢 90.43% | 🟡 79.77% | 🟢 100.00% | 🟢 92.39% |
+| `frontend/src/components/TodoPanel/TodoPanel.tsx` | 🟢 89.41% | 🟡 74.71% | 🟢 100.00% | 🟢 89.56% |
 | `frontend/src/components/ToggleIconButton.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/components/YoloWarningDialog/YoloWarningDialog.tsx` | 🟡 66.66% | 🔴 50.00% | 🟢 100.00% | 🟡 66.66% |
 | `frontend/src/config/dashboardTourSteps.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/config/feedback.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/hooks/useArgusSettings.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/hooks/useIntegrationControl.ts` | 🟢 84.00% | 🔴 42.85% | 🟢 100.00% | 🟢 89.47% |
+| `frontend/src/hooks/useIntegrationControl.ts` | 🟡 64.28% | 🔴 50.00% | 🔴 33.33% | 🟡 64.28% |
 | `frontend/src/hooks/useIsMobile.ts` | 🟢 90.90% | 🟢 100.00% | 🟢 80.00% | 🟢 100.00% |
-| `frontend/src/hooks/useKillSession.ts` | 🟡 63.52% | 🔴 41.66% | 🟢 100.00% | 🟡 68.96% |
+| `frontend/src/hooks/useKillSession.ts` | 🔴 58.69% | 🔴 41.66% | 🟢 90.00% | 🔴 57.77% |
 | `frontend/src/hooks/useOnboarding.ts` | 🔴 51.42% | 🟢 100.00% | 🔴 57.14% | 🔴 51.61% |
 | `frontend/src/hooks/usePendingLaunchers.ts` | 🔴 30.00% | 🔴 0.00% | 🔴 28.57% | 🔴 26.31% |
-| `frontend/src/hooks/usePromptHistory.ts` | 🟡 61.94% | 🔴 41.07% | 🟢 91.66% | 🟡 67.85% |
-| `frontend/src/hooks/useRepositoryManagement.ts` | 🔴 31.14% | 🔴 0.00% | 🔴 43.33% | 🔴 41.25% |
+| `frontend/src/hooks/usePromptHistory.ts` | 🔴 57.33% | 🔴 43.33% | 🟡 66.66% | 🔴 56.52% |
+| `frontend/src/hooks/useRepositoryManagement.ts` | 🔴 23.61% | 🔴 0.00% | 🔴 11.76% | 🔴 24.61% |
 | `frontend/src/hooks/useSettings.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/hooks/useSlackSettings.ts` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `frontend/src/hooks/useTeamsSettings.ts` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
-| `frontend/src/hooks/useTodos.ts` | 🟢 95.55% | 🔴 25.00% | 🟢 96.87% | 🟢 93.10% |
+| `frontend/src/hooks/useTodos.ts` | 🟢 92.85% | 🔴 25.00% | 🟢 94.73% | 🟢 92.00% |
 | `frontend/src/hooks/useUpdateStatus.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/main.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/pages/DashboardPage.tsx` | 🟢 96.87% | 🟡 79.80% | 🟢 97.74% | 🟢 98.25% |
-| `frontend/src/pages/IntegrationsSetupPage.tsx` | 🔴 44.23% | 🔴 0.00% | 🔴 7.69% | 🔴 44.89% |
-| `frontend/src/pages/SessionPage.tsx` | 🟢 96.66% | 🟢 94.11% | 🟢 91.66% | 🟢 100.00% |
-| `frontend/src/pages/TelemetryPage.tsx` | 🔴 14.28% | 🟢 100.00% | 🔴 0.00% | 🔴 16.66% |
-| `frontend/src/services/api.ts` | 🔴 47.18% | 🔴 42.00% | 🔴 52.94% | 🔴 52.99% |
+| `frontend/src/pages/DashboardPage.tsx` | 🟢 93.31% | 🟡 74.73% | 🟢 97.07% | 🟢 96.44% |
+| `frontend/src/pages/IntegrationsSetupPage.tsx` | 🔴 44.44% | 🔴 0.00% | 🔴 7.69% | 🔴 46.15% |
+| `frontend/src/pages/SessionPage.tsx` | 🟢 83.33% | 🟢 94.11% | 🔴 57.14% | 🟢 87.50% |
+| `frontend/src/pages/TelemetryPage.tsx` | 🔴 20.00% | 🟢 100.00% | 🔴 0.00% | 🔴 20.00% |
+| `frontend/src/services/api.ts` | 🔴 47.25% | 🔴 43.75% | 🔴 45.09% | 🔴 50.00% |
 | `frontend/src/services/onboardingEvents.ts` | 🟢 100.00% | 🟢 100.00% | 🔴 25.00% | 🟢 100.00% |
 | `frontend/src/services/onboardingStorage.ts` | 🟢 97.22% | 🟡 75.00% | 🟢 100.00% | 🟢 96.00% |
-| `frontend/src/services/socket.ts` | 🔴 59.62% | 🔴 19.71% | 🔴 56.09% | 🔴 59.09% |
+| `frontend/src/services/socket.ts` | 🔴 54.81% | 🔴 23.25% | 🔴 49.01% | 🔴 54.71% |
 | `frontend/src/types.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/utils/repoUtils.ts` | 🟡 76.78% | 🔴 57.14% | 🟢 100.00% | 🟢 83.78% |
-| `frontend/src/utils/sessionUtils.ts` | 🟢 89.28% | 🟢 80.43% | 🟢 85.71% | 🟢 90.47% |
+| `frontend/src/utils/repoUtils.ts` | 🟢 83.72% | 🟡 71.87% | 🟢 100.00% | 🟢 86.11% |
+| `frontend/src/utils/sessionUtils.ts` | 🟢 88.00% | 🟡 79.54% | 🟢 83.33% | 🟢 90.47% |
 
 ## E2e real - per file
 
 | File | Stmts | Branch | Funcs | Lines |
 |------|-------|--------|-------|-------|
-| `backend/src/api/routes/fs.ts` | 🔴 23.07% | 🟢 100.00% | 🟡 66.66% | 🔴 23.07% |
-| `backend/src/api/routes/health.ts` | 🟢 91.66% | 🔴 33.33% | 🟢 100.00% | 🟢 91.66% |
-| `backend/src/api/routes/hooks.ts` | 🔴 56.21% | 🔴 32.00% | 🟢 100.00% | 🔴 56.21% |
-| `backend/src/api/routes/integrations.ts` | 🟡 66.35% | 🔴 50.00% | 🟢 100.00% | 🟡 66.35% |
-| `backend/src/api/routes/launcher.ts` | 🔴 43.20% | 🔴 37.50% | 🟡 60.00% | 🔴 43.20% |
+| `backend/src/api/routes/fs.ts` | 🔴 24.00% | 🟢 100.00% | 🟢 80.00% | 🔴 24.00% |
+| `backend/src/api/routes/health.ts` | 🟢 94.44% | 🔴 35.71% | 🟢 100.00% | 🟢 94.44% |
+| `backend/src/api/routes/hooks.ts` | 🔴 48.58% | 🔴 54.54% | 🟢 100.00% | 🔴 48.58% |
+| `backend/src/api/routes/integrations.ts` | 🔴 56.93% | 🔴 55.55% | 🟡 75.00% | 🔴 56.93% |
+| `backend/src/api/routes/launcher.ts` | 🔴 45.58% | 🔴 38.88% | 🟡 60.00% | 🔴 45.58% |
 | `backend/src/api/routes/metrics.ts` | 🔴 55.31% | 🟢 100.00% | 🟢 100.00% | 🔴 55.31% |
-| `backend/src/api/routes/repositories.ts` | 🟡 69.42% | 🔴 53.84% | 🟢 100.00% | 🟡 69.42% |
-| `backend/src/api/routes/sessions.ts` | 🔴 38.86% | 🟡 67.85% | 🟢 100.00% | 🔴 38.86% |
-| `backend/src/api/routes/settings.ts` | 🔴 43.58% | 🟢 100.00% | 🟢 100.00% | 🔴 43.58% |
+| `backend/src/api/routes/repositories.ts` | 🟡 63.05% | 🔴 52.00% | 🟢 100.00% | 🟡 63.05% |
+| `backend/src/api/routes/sessions.ts` | 🔴 43.34% | 🟡 67.74% | 🟢 100.00% | 🔴 43.34% |
+| `backend/src/api/routes/settings.ts` | 🔴 55.12% | 🟢 100.00% | 🟢 100.00% | 🔴 55.12% |
 | `backend/src/api/routes/teams-settings.ts` | 🟡 60.52% | 🟢 100.00% | 🟢 100.00% | 🟡 60.52% |
 | `backend/src/api/routes/telemetry.ts` | 🔴 44.73% | 🟢 100.00% | 🟢 100.00% | 🔴 44.73% |
 | `backend/src/api/routes/test-utils.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/api/routes/todos.ts` | 🟡 66.12% | 🔴 52.63% | 🟢 100.00% | 🟡 66.12% |
-| `backend/src/api/routes/tools.ts` | 🔴 45.61% | 🔴 51.42% | 🔴 54.54% | 🔴 45.61% |
+| `backend/src/api/routes/todos.ts` | 🟡 63.70% | 🔴 46.66% | 🟢 100.00% | 🟡 63.70% |
+| `backend/src/api/routes/tools.ts` | 🟡 64.81% | 🔴 51.42% | 🟡 60.86% | 🟡 64.81% |
 | `backend/src/api/routes/update.ts` | 🔴 31.74% | 🟢 80.00% | 🟢 100.00% | 🔴 31.74% |
-| `backend/src/api/ws/event-dispatcher.ts` | 🟢 91.91% | 🟢 85.71% | 🟢 80.00% | 🟢 91.91% |
-| `backend/src/cli/base-cli-detector.ts` | 🔴 38.69% | 🟡 61.22% | 🟡 60.65% | 🔴 38.69% |
+| `backend/src/api/ws/event-dispatcher.ts` | 🟢 91.30% | 🟢 85.71% | 🟢 80.00% | 🟢 91.30% |
+| `backend/src/cli/base-cli-detector.ts` | 🔴 52.35% | 🟡 61.61% | 🟡 66.07% | 🔴 52.35% |
 | `backend/src/cli/claude-code/claude-code-detector.ts` | 🟢 83.94% | 🟡 73.33% | 🟢 80.00% | 🟢 83.94% |
-| `backend/src/cli/claude-code/claude-code-hooks-injector.ts` | 🟢 88.18% | 🔴 59.18% | 🟢 100.00% | 🟢 88.18% |
-| `backend/src/cli/claude-code/claude-code-jsonl-parser.ts` | 🔴 19.90% | 🟢 100.00% | 🔴 16.66% | 🔴 19.90% |
-| `backend/src/cli/claude-code/claude-code-jsonl-watcher.ts` | 🔴 18.09% | 🟢 100.00% | 🟡 66.66% | 🔴 18.09% |
+| `backend/src/cli/claude-code/claude-code-hooks-injector.ts` | 🟢 85.60% | 🔴 59.57% | 🟢 100.00% | 🟢 85.60% |
+| `backend/src/cli/claude-code/claude-code-jsonl-parser.ts` | 🔴 16.99% | 🟢 100.00% | 🔴 14.28% | 🔴 16.99% |
+| `backend/src/cli/claude-code/claude-code-jsonl-watcher.ts` | 🔴 41.02% | 🟢 100.00% | 🟡 66.66% | 🔴 41.02% |
 | `backend/src/cli/cli-detector.ts` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `backend/src/cli/cli-hooks-injector.ts` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `backend/src/cli/cli-manager.ts` | 🟢 93.75% | 🟢 100.00% | 🟢 83.33% | 🟢 93.75% |
-| `backend/src/cli/copilot-cli/copilot-cli-detector.ts` | 🟡 77.66% | 🔴 55.55% | 🟡 76.92% | 🟡 77.66% |
+| `backend/src/cli/copilot-cli/copilot-cli-detector.ts` | 🟡 71.74% | 🔴 52.54% | 🟡 76.19% | 🟡 71.74% |
 | `backend/src/cli/copilot-cli/copilot-cli-hooks-injector.ts` | 🟢 88.19% | 🔴 55.55% | 🟢 100.00% | 🟢 88.19% |
 | `backend/src/cli/copilot-cli/copilot-cli-jsonl-parser.ts` | 🔴 17.91% | 🟢 100.00% | 🔴 25.00% | 🔴 17.91% |
-| `backend/src/cli/copilot-cli/copilot-cli-jsonl-watcher.ts` | 🔴 10.07% | 🟢 100.00% | 🔴 30.76% | 🔴 10.07% |
-| `backend/src/cli/jsonl-watcher-base.ts` | 🔴 55.08% | 🟡 66.66% | 🔴 25.00% | 🔴 55.08% |
+| `backend/src/cli/copilot-cli/copilot-cli-jsonl-watcher.ts` | 🔴 24.24% | 🟢 100.00% | 🔴 55.55% | 🔴 24.24% |
+| `backend/src/cli/jsonl-watcher-base.ts` | 🔴 52.74% | 🟡 66.66% | 🔴 26.66% | 🔴 52.74% |
 | `backend/src/cli/pending-choice-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/cli/pending-choice-utils.ts` | 🔴 29.09% | 🟢 100.00% | 🔴 12.50% | 🔴 29.09% |
+| `backend/src/cli/pending-choice-utils.ts` | 🔴 15.27% | 🟢 100.00% | 🔴 50.00% | 🔴 15.27% |
 | `backend/src/cli/session-monitor.ts` | 🟡 67.58% | 🟡 70.58% | 🟢 90.00% | 🟡 67.58% |
 | `backend/src/cli/session-pid-resolver.ts` | 🔴 24.71% | 🟢 100.00% | 🔴 25.00% | 🔴 24.71% |
 | `backend/src/cli/watcher-session-helpers.ts` | 🔴 21.27% | 🟢 100.00% | 🔴 25.00% | 🔴 21.27% |
-| `backend/src/config/config-loader.ts` | 🔴 43.01% | 🔴 42.85% | 🟡 60.00% | 🔴 43.01% |
-| `backend/src/config/slack-config-loader.ts` | 🔴 21.15% | 🔴 22.22% | 🔴 57.14% | 🔴 21.15% |
+| `backend/src/config/config-loader.ts` | 🟡 69.84% | 🔴 44.44% | 🟡 66.66% | 🟡 69.84% |
+| `backend/src/config/slack-config-loader.ts` | 🟡 63.46% | 🔴 30.00% | 🟡 60.00% | 🟡 63.46% |
 | `backend/src/config/teams-config-loader.ts` | 🟡 63.82% | 🔴 50.00% | 🟡 60.00% | 🟡 63.82% |
 | `backend/src/constants/event-names.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/constants/slack-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/db/database.ts` | 🟡 63.48% | 🟡 66.66% | 🟡 63.71% | 🟡 63.48% |
+| `backend/src/db/database.ts` | 🟡 74.24% | 🟡 66.66% | 🟡 64.10% | 🟡 74.24% |
 | `backend/src/db/output-store.ts` | 🔴 36.08% | 🟢 100.00% | 🔴 37.50% | 🔴 36.08% |
 | `backend/src/db/pruning-job.ts` | 🔴 33.33% | 🟢 100.00% | 🔴 50.00% | 🔴 33.33% |
 | `backend/src/db/schema.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/integration/integration-manager.ts` | 🔴 57.91% | 🔴 53.19% | 🟡 76.47% | 🔴 57.91% |
+| `backend/src/integration/integration-manager.ts` | 🔴 54.44% | 🔴 52.85% | 🟡 76.00% | 🔴 54.44% |
 | `backend/src/integration/integration-status.ts` | 🟡 77.77% | 🔴 50.00% | 🟢 100.00% | 🟡 77.77% |
 | `backend/src/integration/session-diff-tracker.ts` | 🟡 67.44% | 🟢 100.00% | 🔴 55.55% | 🟡 67.44% |
-| `backend/src/integration/slack/slack-listener.ts` | 🔴 22.92% | 🟡 76.47% | 🔴 45.83% | 🔴 22.92% |
-| `backend/src/integration/slack/slack-notifier.ts` | 🔴 32.28% | 🔴 44.15% | 🔴 48.78% | 🔴 32.28% |
-| `backend/src/integration/teams/teams-listener.ts` | 🔴 15.51% | 🟡 75.00% | 🔴 30.00% | 🔴 15.51% |
-| `backend/src/integration/teams/teams-notifier.ts` | 🔴 30.71% | 🔴 56.00% | 🔴 51.28% | 🔴 30.71% |
+| `backend/src/integration/slack/slack-listener.ts` | 🔴 32.48% | 🟡 77.77% | 🔴 46.15% | 🔴 32.48% |
+| `backend/src/integration/slack/slack-notifier.ts` | 🔴 29.88% | 🔴 44.31% | 🔴 42.18% | 🔴 29.88% |
+| `backend/src/integration/teams/teams-listener.ts` | 🔴 24.48% | 🟢 83.33% | 🔴 41.66% | 🔴 24.48% |
+| `backend/src/integration/teams/teams-notifier.ts` | 🔴 27.02% | 🔴 56.89% | 🔴 41.66% | 🔴 27.02% |
 | `backend/src/integration/teams/teams-sdk-adapter.ts` | 🔴 56.00% | 🟢 100.00% | 🟢 100.00% | 🔴 56.00% |
 | `backend/src/launch-pty/argus-launch-client.ts` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `backend/src/launch-pty/launch-command-resolver.ts` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `backend/src/launch-pty/launch.ts` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `backend/src/launch-pty/pty-registry.ts` | 🟡 61.12% | 🟡 66.66% | 🔴 55.00% | 🟡 61.12% |
 | `backend/src/models/index.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/server.ts` | 🟡 74.10% | 🟡 77.55% | 🔴 50.00% | 🟡 74.10% |
-| `backend/src/services/claude-code-detector.ts` | 🟡 60.96% | 🔴 57.89% | 🟡 63.15% | 🟡 60.96% |
-| `backend/src/services/claude-code-jsonl-parser.ts` | 🔴 29.71% | 🟢 100.00% | 🔴 16.66% | 🔴 29.71% |
-| `backend/src/services/claude-jsonl-watcher.ts` | 🔴 47.94% | 🟢 100.00% | 🔴 55.55% | 🔴 47.94% |
-| `backend/src/services/claude-session-registry.ts` | 🟢 90.69% | 🔴 53.84% | 🟢 100.00% | 🟢 90.69% |
-| `backend/src/services/copilot-cli-detector.ts` | 🔴 59.35% | 🔴 45.09% | 🟡 72.72% | 🔴 59.35% |
-| `backend/src/services/copilot-cli-jsonl-parser.ts` | 🔴 26.05% | 🟢 100.00% | 🔴 25.00% | 🔴 26.05% |
-| `backend/src/services/copilot-jsonl-watcher.ts` | 🔴 32.72% | 🟢 100.00% | 🔴 42.85% | 🔴 32.72% |
-| `backend/src/services/integration-status.ts` | 🟢 100.00% | 🔴 50.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/services/jsonl-watcher-base.ts` | 🔴 53.17% | 🟡 66.66% | 🔴 40.00% | 🔴 53.17% |
-| `backend/src/services/message-queue.ts` | 🟢 89.13% | 🟢 90.00% | 🟢 83.33% | 🟢 89.13% |
-| `backend/src/services/output-store.ts` | 🔴 39.02% | 🟢 100.00% | 🔴 37.50% | 🔴 39.02% |
+| `backend/src/server.ts` | 🟡 72.66% | 🟡 74.60% | 🔴 47.05% | 🟡 72.66% |
+| `backend/src/services/base-cli-detector.ts` | 🔴 59.34% | 🟡 64.58% | 🟡 63.33% | 🔴 59.34% |
+| `backend/src/services/claude-code-detector.ts` | 🟢 83.94% | 🟡 73.33% | 🟢 80.00% | 🟢 83.94% |
+| `backend/src/services/claude-code-hooks-injector.ts` | 🟢 86.40% | 🟡 60.00% | 🟢 100.00% | 🟢 86.40% |
+| `backend/src/services/claude-code-jsonl-parser.ts` | 🔴 19.90% | 🟢 100.00% | 🔴 16.66% | 🔴 19.90% |
+| `backend/src/services/claude-code-jsonl-watcher.ts` | 🔴 41.02% | 🟢 100.00% | 🟡 71.42% | 🔴 41.02% |
+| `backend/src/services/cli-manager.ts` | 🟢 93.75% | 🟢 100.00% | 🟢 83.33% | 🟢 93.75% |
+| `backend/src/services/copilot-cli-detector.ts` | 🟢 85.50% | 🔴 55.55% | 🟡 76.92% | 🟢 85.50% |
+| `backend/src/services/copilot-cli-hooks-injector.ts` | 🟢 88.19% | 🔴 55.55% | 🟢 100.00% | 🟢 88.19% |
+| `backend/src/services/copilot-cli-jsonl-parser.ts` | 🔴 17.91% | 🟢 100.00% | 🔴 25.00% | 🔴 17.91% |
+| `backend/src/services/copilot-cli-jsonl-watcher.ts` | 🔴 22.72% | 🟢 100.00% | 🔴 50.00% | 🔴 22.72% |
+| `backend/src/services/integration-status.ts` | 🟡 77.77% | 🔴 50.00% | 🟢 100.00% | 🟡 77.77% |
+| `backend/src/services/jsonl-watcher-base.ts` | 🔴 56.59% | 🟡 66.66% | 🔴 36.36% | 🔴 56.59% |
+| `backend/src/services/message-queue.ts` | 🟢 87.75% | 🟢 90.00% | 🟢 83.33% | 🟢 87.75% |
+| `backend/src/services/output-store.ts` | 🔴 36.08% | 🟢 100.00% | 🔴 37.50% | 🔴 36.08% |
 | `backend/src/services/pending-choice-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/services/pid-validator.ts` | 🔴 32.50% | 🟢 100.00% | 🔴 33.33% | 🔴 32.50% |
-| `backend/src/services/process-utils.ts` | 🟢 88.25% | 🔴 53.19% | 🟢 91.66% | 🟢 88.25% |
-| `backend/src/services/pruning-job.ts` | 🔴 42.85% | 🟢 100.00% | 🔴 50.00% | 🔴 42.85% |
-| `backend/src/services/pty-registry.ts` | 🟡 65.72% | 🟡 66.66% | 🔴 55.00% | 🟡 65.72% |
-| `backend/src/services/repository-scanner.ts` | 🔴 45.56% | 🟡 62.50% | 🔴 52.63% | 🔴 45.56% |
-| `backend/src/services/session-controller.ts` | 🔴 27.66% | 🔴 55.55% | 🔴 52.94% | 🔴 27.66% |
-| `backend/src/services/session-diff-tracker.ts` | 🟡 75.72% | 🟢 100.00% | 🔴 55.55% | 🟡 75.72% |
-| `backend/src/services/session-monitor.ts` | 🔴 56.32% | 🟡 63.04% | 🟢 94.44% | 🔴 56.32% |
-| `backend/src/services/session-pid-resolver.ts` | 🔴 36.06% | 🟢 100.00% | 🔴 25.00% | 🔴 36.06% |
-| `backend/src/services/telemetry-service.ts` | 🔴 45.11% | 🔴 55.55% | 🔴 58.33% | 🔴 45.11% |
-| `backend/src/services/update-service.ts` | 🟡 61.82% | 🔴 52.00% | 🟡 75.00% | 🟡 61.82% |
-| `backend/src/services/watcher-session-helpers.ts` | 🔴 27.02% | 🟢 100.00% | 🔴 25.00% | 🔴 27.02% |
-| `backend/src/utils/logger.ts` | 🟢 92.75% | 🟡 74.07% | 🟢 100.00% | 🟢 92.75% |
+| `backend/src/services/pending-choice-utils.ts` | 🔴 15.27% | 🟢 100.00% | 🔴 50.00% | 🔴 15.27% |
+| `backend/src/services/pid-validator.ts` | 🔴 30.95% | 🟢 100.00% | 🔴 33.33% | 🔴 30.95% |
+| `backend/src/services/process-utils.ts` | 🟡 79.51% | 🔴 44.18% | 🟢 91.66% | 🟡 79.51% |
+| `backend/src/services/pruning-job.ts` | 🔴 33.33% | 🟢 100.00% | 🔴 50.00% | 🔴 33.33% |
+| `backend/src/services/pty-registry.ts` | 🟡 62.06% | 🟡 68.18% | 🟡 60.00% | 🟡 62.06% |
+| `backend/src/services/repository-scanner.ts` | 🟡 62.87% | 🔴 58.33% | 🟡 63.63% | 🟡 62.87% |
+| `backend/src/services/session-controller.ts` | 🔴 25.64% | 🔴 55.55% | 🔴 52.94% | 🔴 25.64% |
+| `backend/src/services/session-diff-tracker.ts` | 🟡 67.44% | 🟢 100.00% | 🔴 55.55% | 🟡 67.44% |
+| `backend/src/services/session-monitor.ts` | 🟡 67.58% | 🟡 70.58% | 🟢 90.00% | 🟡 67.58% |
+| `backend/src/services/session-pid-resolver.ts` | 🔴 24.71% | 🟢 100.00% | 🔴 25.00% | 🔴 24.71% |
+| `backend/src/services/telemetry-service.ts` | 🔴 45.86% | 🟡 64.28% | 🟡 66.66% | 🔴 45.86% |
+| `backend/src/services/update-service.ts` | 🟡 67.74% | 🟡 62.96% | 🟡 75.00% | 🟡 67.74% |
+| `backend/src/services/watcher-session-helpers.ts` | 🔴 17.02% | 🟢 100.00% | 🔴 16.66% | 🔴 17.02% |
+| `backend/src/utils/logger.ts` | 🟢 85.50% | 🟡 72.22% | 🟢 100.00% | 🟢 85.50% |
 | `backend/src/utils/message-queue.ts` | 🟢 87.75% | 🟢 90.00% | 🟢 83.33% | 🟢 87.75% |
 | `backend/src/utils/path-sandbox.ts` | 🔴 40.90% | 🟡 66.66% | 🟡 66.66% | 🔴 40.90% |
 | `backend/src/utils/pid-validator.ts` | 🔴 30.95% | 🟢 100.00% | 🔴 33.33% | 🔴 30.95% |
-| `backend/src/utils/process-utils.ts` | 🟢 82.29% | 🔴 49.12% | 🟢 93.33% | 🟢 82.29% |
+| `backend/src/utils/process-utils.ts` | 🟢 80.90% | 🔴 50.00% | 🟢 91.66% | 🟢 80.90% |
 | `backend/start-test-server.mjs` | 🟡 74.50% | 🔴 37.50% | 🟢 100.00% | 🟡 74.50% |
 | `frontend/tests/e2e/real-server/global-setup.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/tests/e2e/real-server/global-teardown.ts` | 🟢 91.66% | 🔴 50.00% | 🟢 100.00% | 🟢 91.66% |
@@ -637,9 +641,9 @@
 | `frontend/tests/e2e/real-server/sc-001-real-repo-overview.spec.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/tests/e2e/real-server/sc-001-real-session-card.spec.ts` | 🟢 98.23% | 🟢 92.30% | 🟢 100.00% | 🟢 98.23% |
 | `frontend/tests/e2e/real-server/sc-005-real-settings-filter.spec.ts` | 🟢 92.30% | 🟢 100.00% | 🟢 100.00% | 🟢 92.30% |
-| `frontend/tests/e2e/real-server/sc-020-real-send-prompt.spec.ts` | 🟢 98.48% | 🟢 89.18% | 🟢 100.00% | 🟢 98.48% |
+| `frontend/tests/e2e/real-server/sc-020-real-send-prompt.spec.ts` | 🟢 97.47% | 🟡 77.50% | 🟢 100.00% | 🟢 97.47% |
 | `frontend/tests/e2e/real-server/session-detail-real.spec.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/tests/e2e/real-server/test-config.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/tests/e2e/real-server/todo-panel-real.spec.ts` | 🟢 97.94% | 🟢 90.00% | 🟢 100.00% | 🟢 97.94% |
+| `frontend/tests/e2e/real-server/todo-panel-real.spec.ts` | 🟢 97.94% | 🟢 89.18% | 🟢 100.00% | 🟢 97.94% |
 | `playwright.real.config.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `scripts/kill-port.mjs` | 🟡 64.51% | 🔴 42.85% | 🟢 100.00% | 🟡 64.51% |
