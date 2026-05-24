@@ -8,7 +8,7 @@
     "url": "https://github.com/aarthi-ntrjn/argus/issues"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22 <26"
   },
   "type": "module",
   "bin": {
