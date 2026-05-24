@@ -131,9 +131,10 @@ jobs:
                   "--title", f"Security Audit ({date}): {total} vulnerabilities found",
                   "--body-file", "issue-body.md",
                   "--label", "security-audit",
+                  "--assignee", "Copilot",
               ], check=True, capture_output=True, text=True)
               issue_url = result.stdout.strip()
-              print(f"Issue created: {issue_url}")
+              print(f"Issue created and assigned to Copilot: {issue_url}")
           with open("issue-url.txt", "w") as f:
               f.write(issue_url)
           EOF
