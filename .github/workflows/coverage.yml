@@ -1,0 +1,218 @@
+# Coverage workflow — runs backend and frontend unit tests with coverage,
+# updates reports/coverage.md, commits it back on pushes to master,
+# and sends a Teams notification with the summary.
+#
+# Requirements:
+#   - TEAMS_WEBHOOK_URL secret — Teams incoming webhook URL (same as pr-notify.yml)
+#
+# Triggers:
+#   - Push to master
+#   - Pull requests targeting master
+#   - Manual dispatch (workflow_dispatch)
+
+name: Coverage
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # needed to commit reports/coverage.md back on push to master
+
+env:
+  TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # Fetch the full history so the commit-back step can push cleanly
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (lockfile-enforced, scripts suppressed)
+        run: npm ci --ignore-scripts --engine-strict
+
+      - name: Rebuild allowlisted lifecycle packages
+        # Restores native module bindings (e.g., better-sqlite3) that
+        # --ignore-scripts suppressed. Required for backend unit tests.
+        run: |
+          python3 -c "
+          import yaml, subprocess
+          with open('.github/supply-chain/lifecycle-allowlist.yml') as f:
+              data = yaml.safe_load(f)
+          for entry in data.get('allowed', []):
+              if 'ci' in entry.get('environments', []):
+                  print(f'Rebuilding {entry[\"package\"]}...')
+                  subprocess.run(['npm', 'rebuild', entry['package']], check=True)
+          "
+
+      - name: Run backend coverage
+        run: npm run test:coverage --workspace=backend
+
+      - name: Run frontend coverage
+        run: npm run test:coverage --workspace=frontend
+
+      - name: Generate coverage report
+        run: node scripts/generate-coverage-report.mjs
+
+      - name: Commit updated coverage report
+        # Only commit on pushes to master. On PRs, the report is generated but not
+        # persisted — the Teams notification still fires with the latest numbers.
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/coverage.md
+          git diff --staged --quiet || git commit -m "chore: update coverage report [skip ci]"
+          git push
+
+      - name: Notify Teams
+        if: env.TEAMS_WEBHOOK_URL != ''
+        env:
+          GITHUB_REF_NAME:   ${{ github.ref_name }}
+          GITHUB_SHA:        ${{ github.sha }}
+          GITHUB_ACTOR:      ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          EVENT_NAME:        ${{ github.event_name }}
+          PR_NUMBER:         ${{ github.event.pull_request.number }}
+          PR_TITLE:          ${{ github.event.pull_request.title }}
+          PR_URL:            ${{ github.event.pull_request.html_url }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, urllib.request, urllib.error
+
+          def read_json(path):
+              try:
+                  with open(path) as f:
+                      return json.load(f)
+              except Exception:
+                  return None
+
+          def pct(val):
+              return f"{val:.1f}%" if isinstance(val, (int, float)) else "N/A"
+
+          def badge(val):
+              if not isinstance(val, (int, float)):
+                  return "⬜"
+              if val >= 80:
+                  return "🟢"
+              if val >= 60:
+                  return "🟡"
+              return "🔴"
+
+          def suite_fact(name, summary_path, results_path, results_format):
+              cov  = read_json(summary_path)
+              res  = read_json(results_path)
+
+              if cov is None:
+                  return {"title": name, "value": "No data"}
+
+              t = cov.get("total", {})
+              lines_pct = t.get("lines", {}).get("pct")
+              icon = badge(lines_pct)
+
+              if res and results_format == "vitest":
+                  passed = res.get("numPassedTests", 0)
+                  total  = res.get("numTotalTests",  0)
+                  failed = res.get("numFailedTests", 0)
+                  test_icon = "🔴" if failed > 0 else "🟢"
+                  tests = f"{test_icon} {passed}/{total}"
+              else:
+                  tests = "N/A"
+
+              value = (
+                  f"{tests} tests | "
+                  f"Lines: {pct(lines_pct)} | "
+                  f"Stmts: {pct(t.get('statements', {}).get('pct'))} | "
+                  f"Branches: {pct(t.get('branches', {}).get('pct'))} | "
+                  f"Funcs: {pct(t.get('functions', {}).get('pct'))}"
+              )
+              return {"title": f"{icon} {name}", "value": value}
+
+          suites = [
+              ("Backend unit",  "backend/coverage/coverage-summary.json",  "backend/coverage/test-results.json",  "vitest"),
+              ("Frontend unit", "frontend/coverage/coverage-summary.json", "frontend/coverage/test-results.json", "vitest"),
+          ]
+          facts = [suite_fact(*s) for s in suites]
+
+          event      = os.environ["EVENT_NAME"]
+          ref        = os.environ["GITHUB_REF_NAME"]
+          sha        = os.environ["GITHUB_SHA"][:7]
+          actor      = os.environ["GITHUB_ACTOR"]
+          repo       = os.environ["GITHUB_REPOSITORY"]
+          server_url = os.environ["GITHUB_SERVER_URL"]
+          pr_number  = os.environ.get("PR_NUMBER", "")
+          pr_title   = os.environ.get("PR_TITLE", "")
+          pr_url     = os.environ.get("PR_URL", "")
+
+          if event == "pull_request" and pr_number:
+              context_line = f"PR #{pr_number}: {pr_title}"
+              run_url = pr_url
+          else:
+              context_line = f"Branch: {ref} @ {sha}"
+              run_url = f"{server_url}/{repo}/commit/{os.environ['GITHUB_SHA']}"
+
+          heading = f"Coverage Report — {repo}"
+
+          card = {
+              "type":    "AdaptiveCard",
+              "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+              "version": "1.4",
+              "body": [
+                  {
+                      "type":   "TextBlock",
+                      "size":   "Medium",
+                      "weight": "Bolder",
+                      "text":   heading,
+                      "wrap":   True,
+                  },
+                  {
+                      "type":     "TextBlock",
+                      "text":     context_line,
+                      "wrap":     True,
+                      "isSubtle": True,
+                  },
+                  {
+                      "type":      "FactSet",
+                      "separator": True,
+                      "facts":     facts,
+                  },
+                  {
+                      "type":     "TextBlock",
+                      "text":     f"Triggered by: {actor}",
+                      "wrap":     True,
+                      "isSubtle": True,
+                  },
+              ],
+              "actions": [
+                  {"type": "Action.OpenUrl", "title": "View Run", "url": run_url},
+              ],
+          }
+
+          req = urllib.request.Request(
+              os.environ["TEAMS_WEBHOOK_URL"],
+              data=json.dumps(card).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              urllib.request.urlopen(req)
+              print("Teams notified with coverage summary.")
+          except urllib.error.HTTPError as e:
+              body = e.read().decode()
+              print(f"Teams webhook HTTP {e.code}: {e.reason} — {body}")
+              raise
+          EOF
