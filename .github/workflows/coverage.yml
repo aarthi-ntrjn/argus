@@ -143,49 +143,62 @@ jobs:
                   return "🟡"
               return "🔴"
 
-          def suite_fact(name, summary_path, results_path, results_format):
-              cov  = read_json(summary_path)
-              res  = read_json(results_path)
-
-              if cov is None:
-                  return {"title": name, "value": "No data"}
-
-              t = cov.get("total", {})
+          def parse_suite(name, summary_path, results_path, results_format):
+              cov = read_json(summary_path)
+              res = read_json(results_path)
+              t   = (cov or {}).get("total", {})
               lines_pct = t.get("lines", {}).get("pct")
-              icon = badge(lines_pct)
 
               if res and results_format == "vitest":
                   passed = res.get("numPassedTests", 0)
                   total  = res.get("numTotalTests",  0)
                   failed = res.get("numFailedTests", 0)
-                  test_icon = "🔴" if failed > 0 else "🟢"
-                  tests = f"{test_icon} {passed}/{total}"
               elif res and results_format == "playwright":
-                  s = res.get("stats", {})
+                  s      = res.get("stats", {})
                   passed = s.get("expected", 0)
                   failed = s.get("unexpected", 0)
                   total  = passed + failed
-                  test_icon = "🔴" if failed > 0 else "🟢"
-                  tests = f"{test_icon} {passed}/{total}"
               else:
-                  tests = "N/A"
+                  passed = failed = total = None
 
-              value = (
-                  f"{tests} tests | "
-                  f"Lines: {pct(lines_pct)} | "
-                  f"Stmts: {pct(t.get('statements', {}).get('pct'))} | "
-                  f"Branches: {pct(t.get('branches', {}).get('pct'))} | "
-                  f"Funcs: {pct(t.get('functions', {}).get('pct'))}"
-              )
-              return {"title": f"{icon} {name}", "value": value}
+              tests = f"{'🔴' if failed else '🟢'} {passed}/{total}" if total is not None else "N/A"
+              return {
+                  "name":     name,
+                  "tests":    tests,
+                  "lines":    f"{badge(lines_pct)} {pct(lines_pct)}" if cov else "N/A",
+                  "stmts":    pct(t.get("statements", {}).get("pct")),
+                  "branches": pct(t.get("branches",   {}).get("pct")),
+                  "funcs":    pct(t.get("functions",  {}).get("pct")),
+              }
 
-          suites = [
-              ("Backend unit",  "backend/coverage/coverage-summary.json",  "backend/coverage/test-results.json",  "vitest"),
-              ("Frontend unit", "frontend/coverage/coverage-summary.json", "frontend/coverage/test-results.json", "vitest"),
-              ("E2E mock",      "frontend/coverage-e2e/coverage-summary.json", "frontend/coverage-e2e/test-results.json", "playwright"),
-              ("E2E real",      "backend/coverage-e2e/coverage-summary.json",  "backend/coverage-e2e/test-results.json",  "playwright"),
+          suite_data = [
+              parse_suite("Backend unit",  "backend/coverage/coverage-summary.json",  "backend/coverage/test-results.json",       "vitest"),
+              parse_suite("Frontend unit", "frontend/coverage/coverage-summary.json", "frontend/coverage/test-results.json",      "vitest"),
+              parse_suite("E2E mock",      "frontend/coverage-e2e/coverage-summary.json", "frontend/coverage-e2e/test-results.json", "playwright"),
+              parse_suite("E2E real",      "backend/coverage-e2e/coverage-summary.json",  "backend/coverage-e2e/test-results.json",  "playwright"),
           ]
-          facts = [suite_fact(*s) for s in suites]
+
+          def cell(text, weight="Default", width="auto"):
+              return {
+                  "type": "Column", "width": width,
+                  "items": [{"type": "TextBlock", "text": str(text),
+                             "weight": weight, "wrap": False, "size": "Small"}],
+              }
+
+          COLS = ["Suite", "Tests", "Lines", "Stmts", "Branches", "Funcs"]
+          KEYS = ["name", "tests", "lines", "stmts", "branches", "funcs"]
+
+          header_row = {
+              "type": "ColumnSet", "separator": True,
+              "columns": [cell(h, "Bolder", "stretch" if i == 0 else "auto") for i, h in enumerate(COLS)],
+          }
+          data_rows = [
+              {
+                  "type": "ColumnSet",
+                  "columns": [cell(s[k], width="stretch" if i == 0 else "auto") for i, k in enumerate(KEYS)],
+              }
+              for s in suite_data
+          ]
 
           event      = os.environ["EVENT_NAME"]
           ref        = os.environ["GITHUB_REF_NAME"]
@@ -204,41 +217,20 @@ jobs:
               context_line = f"Branch: {ref} @ {sha}"
               run_url = f"{server_url}/{repo}/commit/{os.environ['GITHUB_SHA']}"
 
-          heading = f"Coverage Report — {repo}"
-
           card = {
               "type":    "AdaptiveCard",
               "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
               "version": "1.4",
               "body": [
-                  {
-                      "type":   "TextBlock",
-                      "size":   "Medium",
-                      "weight": "Bolder",
-                      "text":   heading,
-                      "wrap":   True,
-                  },
-                  {
-                      "type":     "TextBlock",
-                      "text":     context_line,
-                      "wrap":     True,
-                      "isSubtle": True,
-                  },
-                  {
-                      "type":      "FactSet",
-                      "separator": True,
-                      "facts":     facts,
-                  },
-                  {
-                      "type":     "TextBlock",
-                      "text":     f"Triggered by: {actor}",
-                      "wrap":     True,
-                      "isSubtle": True,
-                  },
+                  {"type": "TextBlock", "size": "Medium", "weight": "Bolder",
+                   "text": f"Coverage Report \u2014 {repo}", "wrap": True},
+                  {"type": "TextBlock", "text": context_line, "wrap": True, "isSubtle": True},
+                  header_row,
+                  *data_rows,
+                  {"type": "TextBlock", "text": f"Triggered by: {actor}",
+                   "wrap": True, "isSubtle": True, "size": "Small"},
               ],
-              "actions": [
-                  {"type": "Action.OpenUrl", "title": "View Run", "url": run_url},
-              ],
+              "actions": [{"type": "Action.OpenUrl", "title": "View Run", "url": run_url}],
           }
 
           req = urllib.request.Request(
@@ -249,10 +241,10 @@ jobs:
           )
           try:
               urllib.request.urlopen(req)
-              print("Teams notified with coverage summary.")
+              print("Teams notified with coverage table.")
           except urllib.error.HTTPError as e:
               body = e.read().decode()
-              print(f"Teams webhook HTTP {e.code}: {e.reason} — {body}")
+              print(f"Teams webhook HTTP {e.code}: {e.reason} - {body}")
               raise
           EOF
 
@@ -284,55 +276,62 @@ jobs:
 
           def badge(val):
               if not isinstance(val, (int, float)):
-                  return "⬜"
+                  return "-"
               if val >= 80:
-                  return "🟢"
+                  return "OK"
               if val >= 60:
-                  return "🟡"
-              return "🔴"
+                  return "~"
+              return "!!"
 
-          def suite_text(name, summary_path, results_path):
+          def parse_suite(name, summary_path, results_path, results_format):
               cov = read_json(summary_path)
               res = read_json(results_path)
-
-              if cov is None:
-                  return f"*{name}*: no data"
-
-              t = cov.get("total", {})
+              t   = (cov or {}).get("total", {})
               lines_pct = t.get("lines", {}).get("pct")
-              icon = badge(lines_pct)
 
-              if res and "numPassedTests" in res:
+              if res and results_format == "vitest":
                   passed = res.get("numPassedTests", 0)
                   total  = res.get("numTotalTests",  0)
                   failed = res.get("numFailedTests", 0)
-                  test_icon = "🔴" if failed > 0 else "🟢"
-                  tests = f"{test_icon} {passed}/{total}"
-              elif res and "stats" in res:
-                  s = res.get("stats", {})
+              elif res and results_format == "playwright":
+                  s      = res.get("stats", {})
                   passed = s.get("expected", 0)
                   failed = s.get("unexpected", 0)
                   total  = passed + failed
-                  test_icon = "🔴" if failed > 0 else "🟢"
-                  tests = f"{test_icon} {passed}/{total}"
               else:
-                  tests = "N/A"
+                  passed = failed = total = None
 
-              return (
-                  f"{icon} *{name}*\n"
-                  f"{tests} tests | "
-                  f"Lines: {pct(lines_pct)} | "
-                  f"Stmts: {pct(t.get('statements', {}).get('pct'))} | "
-                  f"Branches: {pct(t.get('branches', {}).get('pct'))} | "
-                  f"Funcs: {pct(t.get('functions', {}).get('pct'))}"
-              )
+              status = "PASS" if (total is not None and failed == 0) else ("FAIL" if failed else "N/A")
+              tests  = f"{passed}/{total}" if total is not None else "N/A"
+              return {
+                  "name":     name,
+                  "status":   status,
+                  "tests":    tests,
+                  "lines":    f"{badge(lines_pct)} {pct(lines_pct)}" if cov else "N/A",
+                  "stmts":    pct(t.get("statements", {}).get("pct")),
+                  "branches": pct(t.get("branches",   {}).get("pct")),
+                  "funcs":    pct(t.get("functions",  {}).get("pct")),
+              }
 
-          suites = [
-              ("Backend unit",  "backend/coverage/coverage-summary.json",  "backend/coverage/test-results.json"),
-              ("Frontend unit", "frontend/coverage/coverage-summary.json", "frontend/coverage/test-results.json"),
-              ("E2E mock",      "frontend/coverage-e2e/coverage-summary.json", "frontend/coverage-e2e/test-results.json"),
-              ("E2E real",      "backend/coverage-e2e/coverage-summary.json",  "backend/coverage-e2e/test-results.json"),
+          suite_data = [
+              parse_suite("Backend unit",  "backend/coverage/coverage-summary.json",  "backend/coverage/test-results.json",       "vitest"),
+              parse_suite("Frontend unit", "frontend/coverage/coverage-summary.json", "frontend/coverage/test-results.json",      "vitest"),
+              parse_suite("E2E mock",      "frontend/coverage-e2e/coverage-summary.json", "frontend/coverage-e2e/test-results.json", "playwright"),
+              parse_suite("E2E real",      "backend/coverage-e2e/coverage-summary.json",  "backend/coverage-e2e/test-results.json",  "playwright"),
           ]
+
+          # Build monospace table for Slack code block
+          C = [14, 6, 8, 9, 8, 8, 8]  # column widths
+          def row(vals):
+              return " ".join(str(v).ljust(C[i]) for i, v in enumerate(vals))
+
+          header = row(["Suite", "Status", "Tests", "Lines", "Stmts", "Branches", "Funcs"])
+          sep    = "-" * len(header)
+          lines  = [header, sep]
+          for s in suite_data:
+              lines.append(row([s["name"], s["status"], s["tests"],
+                                s["lines"], s["stmts"], s["branches"], s["funcs"]]))
+          table = "```\n" + "\n".join(lines) + "\n```"
 
           event      = os.environ["EVENT_NAME"]
           ref        = os.environ["GITHUB_REF_NAME"]
@@ -352,29 +351,15 @@ jobs:
               run_url = f"{server_url}/{repo}/commit/{os.environ['GITHUB_SHA']}"
 
           blocks = [
-              {
-                  "type": "header",
-                  "text": {"type": "plain_text", "text": f"Coverage Report — {repo}"},
-              },
-              {
-                  "type": "context",
-                  "elements": [{"type": "mrkdwn", "text": f"{context_line}  |  Triggered by: {actor}"}],
-              },
-              {"type": "divider"},
+              {"type": "header", "text": {"type": "plain_text", "text": f"Coverage Report - {repo}"}},
+              {"type": "context", "elements": [
+                  {"type": "mrkdwn", "text": f"{context_line}  |  Triggered by: {actor}"}
+              ]},
+              {"type": "section", "text": {"type": "mrkdwn", "text": table}},
+              {"type": "actions", "elements": [
+                  {"type": "button", "text": {"type": "plain_text", "text": "View Run"}, "url": run_url}
+              ]},
           ]
-
-          for name, summary_path, results_path in suites:
-              blocks.append({
-                  "type": "section",
-                  "text": {"type": "mrkdwn", "text": suite_text(name, summary_path, results_path)},
-              })
-
-          blocks.append({
-              "type": "actions",
-              "elements": [
-                  {"type": "button", "text": {"type": "plain_text", "text": "View Run"}, "url": run_url},
-              ],
-          })
 
           payload = {"blocks": blocks}
           req = urllib.request.Request(
@@ -385,9 +370,9 @@ jobs:
           )
           try:
               urllib.request.urlopen(req)
-              print("Slack notified with coverage summary.")
+              print("Slack notified with coverage table.")
           except urllib.error.HTTPError as e:
               body = e.read().decode()
-              print(f"Slack webhook HTTP {e.code}: {e.reason} — {body}")
+              print(f"Slack webhook HTTP {e.code}: {e.reason} - {body}")
               raise
           EOF
