@@ -71,7 +71,7 @@ jobs:
       - name: Commit updated coverage report
         # Only commit on pushes to master. On PRs, the report is generated but not
         # persisted — the Teams notification still fires with the latest numbers.
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
