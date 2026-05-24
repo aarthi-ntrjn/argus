@@ -132,15 +132,7 @@ node scripts/generate-coverage-report.mjs
 
 This reads the four `coverage-summary.json` files and writes `reports/coverage.md` with a summary table plus a per-file breakdown for each suite. Missing files (e.g. when a suite is skipped) produce `N/A` rows automatically.
 
-Then stage and commit to the feature branch:
-
-```
-git add reports/coverage.md
-git commit -m "chore: update coverage report
-
-Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
-git push
-```
+**Do NOT commit or push `reports/coverage.md` here.** It will be committed directly to `<MAIN_BRANCH>` after the merge in Step 7. This avoids merge conflicts caused by two feature branches both committing the generated file.
 
 ---
 
@@ -299,10 +291,19 @@ Constitution gate: PASSED
 Branch: <FEATURE_BRANCH>
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
-git push origin <MAIN_BRANCH>
 ```
 
 If the merge has conflicts, stop and report: list the conflicting files and ask the user to resolve them manually, then re-run `/merge`.
+
+After a clean merge, commit `reports/coverage.md` directly to `<MAIN_BRANCH>` (generated in Step 4):
+
+```
+git add reports/coverage.md
+git commit -m "chore: update coverage report
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+git push origin <MAIN_BRANCH>
+```
 
 **Do NOT delete the feature branch yet** — that happens in Step 9 after CI passes.
 
