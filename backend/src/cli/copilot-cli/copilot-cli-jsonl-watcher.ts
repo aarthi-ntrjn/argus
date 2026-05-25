@@ -12,13 +12,35 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
   // resolve the approval card when tool.execution_complete fires for the same tool.
   private readonly pendingPermissionCallIds = new Map<string, string>();
 
+  // Tracks the toolCallId of an in-flight task_complete tool call so both the
+  // tool_use and its tool_result can be suppressed. task_complete is an internal
+  // end-of-turn sentinel emitted by newer Copilot CLI versions; it is not a real
+  // tool invocation and must not appear as a pending tool in the session output.
+  private readonly pendingTaskCompleteCallIds = new Map<string, string>();
+
   protected parseLine(
     line: string,
     sessionId: string,
     seq: number,
     makeId: (blockIndex: number) => string,
   ): SessionOutput[] {
-    return parseJsonlLine(line, sessionId, seq, makeId);
+    const outputs = parseJsonlLine(line, sessionId, seq, makeId);
+    return outputs.filter((output) => {
+      if (output.type === 'tool_use' && output.toolName === 'task_complete') {
+        if (output.toolCallId) {
+          this.pendingTaskCompleteCallIds.set(sessionId, output.toolCallId);
+        }
+        return false;
+      }
+      if (output.type === 'tool_result' && output.toolCallId) {
+        const trackedId = this.pendingTaskCompleteCallIds.get(sessionId);
+        if (trackedId === output.toolCallId) {
+          this.pendingTaskCompleteCallIds.delete(sessionId);
+          return false;
+        }
+      }
+      return true;
+    });
   }
 
   protected override onRawLine(line: string, sessionId: string): void {
@@ -60,6 +82,13 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
         const toolCallId = typeof data?.toolCallId === 'string' ? data.toolCallId : '';
         const pendingId = this.pendingPermissionCallIds.get(sessionId);
         if (pendingId && toolCallId === pendingId) {
+          this.pendingPermissionCallIds.delete(sessionId);
+          pendingChoiceEvents.emit('session.permission_resolved', sessionId);
+        }
+      } else if (type === 'session.task_complete') {
+        // Newer Copilot CLI versions emit session.task_complete at end of turn.
+        // Resolve any stuck permission card that was not cleared by tool.execution_complete.
+        if (this.pendingPermissionCallIds.has(sessionId)) {
           this.pendingPermissionCallIds.delete(sessionId);
           pendingChoiceEvents.emit('session.permission_resolved', sessionId);
         }
@@ -115,11 +144,13 @@ export class CopilotJsonlWatcher extends JsonlWatcherBase {
 
   override closeWatcher(sessionId: string): void {
     this.pendingPermissionCallIds.delete(sessionId);
+    this.pendingTaskCompleteCallIds.delete(sessionId);
     super.closeWatcher(sessionId);
   }
 
   override stopWatchers(): void {
     this.pendingPermissionCallIds.clear();
+    this.pendingTaskCompleteCallIds.clear();
     super.stopWatchers();
   }
 
