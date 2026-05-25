@@ -5,7 +5,6 @@ import { CodeBlock, Mono, ExternalA } from '../components/SetupPage/SetupPage';
 import type { SetupStep } from '../components/SetupPage/SetupPage';
 import teamsUrl from '../images/microsoft-teams.svg?url';
 import slackUrl from '../images/slack.svg?url';
-import slackManifest from '../../../docs/slack-manifest.argus.json';
 
 // ---------------------------------------------------------------------------
 // Teams content
@@ -210,8 +209,6 @@ const TEAMS_TROUBLESHOOTING: { symptom: string; fix: React.ReactNode }[] = [
 const LOG_BLOCK = `[SlackNotifier] Initialized, posting to channel C01234ABCDE
 [SlackListener] Socket Mode connected, listening for app mentions and DMs`;
 
-const MANIFEST_BLOCK = JSON.stringify(slackManifest, null, 2);
-
 const SLACK_STEPS: SetupStep[] = [
   {
     title: 'Create the app from manifest',
@@ -225,12 +222,15 @@ const SLACK_STEPS: SetupStep[] = [
           <li>
             Click <strong>Create New App</strong> &rarr; <strong>From an app manifest</strong>.
           </li>
-          <li>Select your workspace, paste this manifest, then click Create:</li>
           <li>
-            Source file: <Mono>docs/slack-manifest.argus.json</Mono>
+            Open{' '}
+            <ExternalA href="https://github.com/aarthi-ntrjn/argus-private/blob/master/docs/slack-manifest.argus.json">
+              docs/slack-manifest.argus.json
+            </ExternalA>{' '}
+            in this repository.
           </li>
+          <li>Copy the full JSON and paste it into Slack, then click Create.</li>
         </ol>
-        <CodeBlock value={MANIFEST_BLOCK} />
       </>
     ),
   },
