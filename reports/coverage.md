@@ -1,12 +1,12 @@
 # Coverage Report
 
-*Generated: May 24, 2026, 9:15 PM*
+*Generated: May 25, 2026, 4:08 AM*
 
 ## Summary
 
 | Suite | Files | Tests | Statements | Branches | Functions | Lines | Covers |
 |-------|-------|-------|------------|----------|-----------|-------|--------|
-| backend unit   | 210 | 🟢 561/561 | 🟡 63.95% | 🟡 74.73% | 🟡 71.79% | 🟡 63.95% | backend/src |
+| backend unit   | 210 | 🟢 561/561 | 🟡 63.89% | 🟡 74.67% | 🟡 71.79% | 🟡 63.89% | backend/src |
 | frontend unit  | 151 | 🟢 435/435 | 🔴 41.30% | 🟡 78.42% | 🔴 51.72% | 🔴 41.30% | frontend/src |
 | e2e mock       | 16 | 🟢 156/156 (2 skipped) | 🔴 58.16% | 🔴 54.08% | 🔴 50.99% | 🔴 58.48% | frontend/src |
 | e2e real       | 7 | 🟢 48/48 | 🔴 51.11% | 🟡 66.43% | 🔴 55.88% | 🔴 51.11% | backend/src |
@@ -44,7 +44,7 @@
 | `backend/src/cli/copilot-cli/copilot-cli-detector.ts` | 🟡 74.01% | 🔴 39.47% | 🟢 100.00% | 🟡 74.01% |
 | `backend/src/cli/copilot-cli/copilot-cli-hooks-injector.ts` | 🟢 85.71% | 🟡 76.66% | 🟢 87.50% | 🟢 85.71% |
 | `backend/src/cli/copilot-cli/copilot-cli-jsonl-parser.ts` | 🟢 94.92% | 🟢 92.53% | 🟢 100.00% | 🟢 94.92% |
-| `backend/src/cli/copilot-cli/copilot-cli-jsonl-watcher.ts` | 🟡 75.92% | 🟡 78.26% | 🟢 100.00% | 🟡 75.92% |
+| `backend/src/cli/copilot-cli/copilot-cli-jsonl-watcher.ts` | 🟡 70.45% | 🟡 74.19% | 🟢 100.00% | 🟡 70.45% |
 | `backend/src/cli/jsonl-watcher-base.ts` | 🟢 96.45% | 🟢 88.63% | 🟢 100.00% | 🟢 96.45% |
 | `backend/src/cli/pending-choice-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/cli/pending-choice-utils.ts` | 🟢 93.50% | 🟢 90.74% | 🟢 83.33% | 🟢 93.50% |
@@ -293,18 +293,18 @@
 | `backend/src/cli/copilot-cli/copilot-cli-detector.ts` | 🔴 55.01% | 🟢 83.33% | 🔴 35.71% | 🔴 55.01% |
 | `backend/src/cli/copilot-cli/copilot-cli-hooks-injector.ts` | 🟢 85.41% | 🔴 55.55% | 🟢 100.00% | 🟢 85.41% |
 | `backend/src/cli/copilot-cli/copilot-cli-jsonl-parser.ts` | 🔴 17.91% | 🟢 100.00% | 🔴 25.00% | 🔴 17.91% |
-| `backend/src/cli/copilot-cli/copilot-cli-jsonl-watcher.ts` | 🔴 20.15% | 🟢 100.00% | 🔴 33.33% | 🔴 20.15% |
+| `backend/src/cli/copilot-cli/copilot-cli-jsonl-watcher.ts` | 🔴 20.00% | 🟢 100.00% | 🔴 33.33% | 🔴 20.00% |
 | `backend/src/cli/jsonl-watcher-base.ts` | 🔴 34.22% | 🟡 66.66% | 🔴 33.33% | 🔴 34.22% |
 | `backend/src/cli/pending-choice-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/cli/pending-choice-utils.ts` | 🔴 57.85% | 🟢 100.00% | 🔴 14.28% | 🔴 57.85% |
-| `backend/src/cli/session-monitor.ts` | 🟡 67.58% | 🟡 70.58% | 🟢 90.00% | 🟡 67.58% |
+| `backend/src/cli/session-monitor.ts` | 🟡 72.41% | 🟡 65.00% | 🟢 90.00% | 🟡 72.41% |
 | `backend/src/cli/session-pid-resolver.ts` | 🔴 24.71% | 🟢 100.00% | 🔴 25.00% | 🔴 24.71% |
 | `backend/src/cli/watcher-session-helpers.ts` | 🔴 21.27% | 🟢 100.00% | 🔴 25.00% | 🔴 21.27% |
 | `backend/src/config/config-loader.ts` | 🔴 59.13% | 🔴 50.00% | 🟡 66.66% | 🔴 59.13% |
 | `backend/src/config/slack-config-loader.ts` | 🔴 32.69% | 🟡 75.00% | 🟡 60.00% | 🔴 32.69% |
 | `backend/src/config/teams-config-loader.ts` | 🔴 36.17% | 🟡 75.00% | 🟡 60.00% | 🔴 36.17% |
 | `backend/src/constants/event-names.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/db/database.ts` | 🟡 66.21% | 🟡 62.82% | 🔴 51.28% | 🟡 66.21% |
+| `backend/src/db/database.ts` | 🟡 66.66% | 🟡 64.19% | 🔴 51.28% | 🟡 66.66% |
 | `backend/src/db/output-store.ts` | 🔴 36.08% | 🟢 100.00% | 🔴 37.50% | 🔴 36.08% |
 | `backend/src/db/pruning-job.ts` | 🔴 33.33% | 🟢 100.00% | 🔴 50.00% | 🔴 33.33% |
 | `backend/src/db/schema.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
