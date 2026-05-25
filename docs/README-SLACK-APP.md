@@ -14,49 +14,7 @@ This guide walks through creating and configuring the Slack App that Argus uses 
 1. Go to [api.slack.com/apps](https://api.slack.com/apps) and sign in with your workspace account.
 2. Click **Create New App** > **From an app manifest**.
 3. Select your workspace.
-4. Copy and paste this manifest into Slack:
-
-```json
-{
-  "_metadata": {
-    "major_version": 1,
-    "minor_version": 1
-  },
-  "display_information": {
-    "name": "Argus",
-    "description": "Argus session notifications and commands",
-    "background_color": "#1f2937"
-  },
-  "features": {
-    "bot_user": {
-      "display_name": "Argus",
-      "always_online": true
-    }
-  },
-  "oauth_config": {
-    "scopes": {
-      "bot": [
-        "app_mentions:read",
-        "channels:read",
-        "chat:write",
-        "im:history"
-      ]
-    }
-  },
-  "settings": {
-    "event_subscriptions": {
-      "bot_events": [
-        "app_mention",
-        "message.im"
-      ]
-    },
-    "org_deploy_enabled": false,
-    "socket_mode_enabled": true,
-    "token_rotation_enabled": false
-  }
-}
-```
-
+4. Open [`docs/slack-manifest.argus.json`](./slack-manifest.argus.json), copy the JSON, and paste it into Slack.
 5. Click **Next** and **Create**.
 
 ---

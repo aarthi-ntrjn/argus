@@ -5,6 +5,7 @@ import { CodeBlock, Mono, ExternalA } from '../components/SetupPage/SetupPage';
 import type { SetupStep } from '../components/SetupPage/SetupPage';
 import teamsUrl from '../images/microsoft-teams.svg?url';
 import slackUrl from '../images/slack.svg?url';
+import slackManifest from '../../../docs/slack-manifest.argus.json';
 
 // ---------------------------------------------------------------------------
 // Teams content
@@ -209,44 +210,7 @@ const TEAMS_TROUBLESHOOTING: { symptom: string; fix: React.ReactNode }[] = [
 const LOG_BLOCK = `[SlackNotifier] Initialized, posting to channel C01234ABCDE
 [SlackListener] Socket Mode connected, listening for app mentions and DMs`;
 
-const MANIFEST_BLOCK = `{
-  "_metadata": {
-    "major_version": 1,
-    "minor_version": 1
-  },
-  "display_information": {
-    "name": "Argus",
-    "description": "Argus session notifications and commands",
-    "background_color": "#1f2937"
-  },
-  "features": {
-    "bot_user": {
-      "display_name": "Argus",
-      "always_online": true
-    }
-  },
-  "oauth_config": {
-    "scopes": {
-      "bot": [
-        "app_mentions:read",
-        "channels:read",
-        "chat:write",
-        "im:history"
-      ]
-    }
-  },
-  "settings": {
-    "event_subscriptions": {
-      "bot_events": [
-        "app_mention",
-        "message.im"
-      ]
-    },
-    "org_deploy_enabled": false,
-    "socket_mode_enabled": true,
-    "token_rotation_enabled": false
-  }
-}`;
+const MANIFEST_BLOCK = JSON.stringify(slackManifest, null, 2);
 
 const SLACK_STEPS: SetupStep[] = [
   {
@@ -262,6 +226,9 @@ const SLACK_STEPS: SetupStep[] = [
             Click <strong>Create New App</strong> &rarr; <strong>From an app manifest</strong>.
           </li>
           <li>Select your workspace, paste this manifest, then click Create:</li>
+          <li>
+            Source file: <Mono>docs/slack-manifest.argus.json</Mono>
+          </li>
         </ol>
         <CodeBlock value={MANIFEST_BLOCK} />
       </>
