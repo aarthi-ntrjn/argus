@@ -1,15 +1,15 @@
 # Coverage Report
 
-*Generated: May 25, 2026, 4:08 AM*
+*Generated: May 25, 2026, 4:25 PM*
 
 ## Summary
 
 | Suite | Files | Tests | Statements | Branches | Functions | Lines | Covers |
 |-------|-------|-------|------------|----------|-----------|-------|--------|
 | backend unit   | 210 | 🟢 561/561 | 🟡 63.89% | 🟡 74.67% | 🟡 71.79% | 🟡 63.89% | backend/src |
-| frontend unit  | 151 | 🟢 435/435 | 🔴 41.30% | 🟡 78.42% | 🔴 51.72% | 🔴 41.30% | frontend/src |
-| e2e mock       | 16 | 🟢 156/156 (2 skipped) | 🔴 58.16% | 🔴 54.08% | 🔴 50.99% | 🔴 58.48% | frontend/src |
-| e2e real       | 7 | 🟢 48/48 | 🔴 51.11% | 🟡 66.43% | 🔴 55.88% | 🔴 51.11% | backend/src |
+| frontend unit  | 151 | 🟢 435/435 | 🔴 42.29% | 🟡 78.49% | 🔴 51.86% | 🔴 42.29% | frontend/src |
+| e2e mock       | 16 | 🟢 156/156 (2 skipped) | 🔴 58.19% | 🔴 54.24% | 🔴 50.90% | 🔴 58.52% | frontend/src |
+| e2e real       | 7 | 🟢 48/48 | 🔴 51.03% | 🟡 66.43% | 🔴 55.88% | 🔴 51.03% | backend/src |
 
 ## Backend unit - per file
 
@@ -150,7 +150,6 @@
 | `frontend/src/pages/DashboardPage.tsx` | 🔴 56.28% | 🔴 52.63% | 🔴 9.37% | 🔴 56.28% |
 | `frontend/src/pages/IntegrationsSetupPage.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `frontend/src/pages/SessionPage.tsx` | 🟢 90.19% | 🟢 80.00% | 🔴 50.00% | 🟢 90.19% |
-| `frontend/src/pages/SlackSetupPage.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `frontend/src/pages/TeamsSetupPage.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `frontend/src/pages/TelemetryPage.tsx` | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% | 🔴 0.00% |
 | `frontend/src/services/api.ts` | 🔴 17.67% | 🟡 66.66% | 🔴 2.85% | 🔴 17.67% |
@@ -251,8 +250,8 @@
 | `frontend/src/hooks/useTodos.ts` | 🟢 92.30% | 🔴 25.00% | 🟢 94.11% | 🟢 91.66% |
 | `frontend/src/hooks/useUpdateStatus.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `frontend/src/main.tsx` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `frontend/src/pages/DashboardPage.tsx` | 🟡 66.84% | 🟡 60.47% | 🔴 53.96% | 🟡 66.10% |
-| `frontend/src/pages/IntegrationsSetupPage.tsx` | 🔴 44.44% | 🔴 0.00% | 🔴 7.69% | 🔴 46.15% |
+| `frontend/src/pages/DashboardPage.tsx` | 🟡 67.37% | 🟡 61.67% | 🔴 53.96% | 🟡 66.66% |
+| `frontend/src/pages/IntegrationsSetupPage.tsx` | 🔴 42.30% | 🔴 0.00% | 🔴 0.00% | 🔴 44.00% |
 | `frontend/src/pages/SessionPage.tsx` | 🟢 83.33% | 🟢 94.11% | 🔴 57.14% | 🟢 87.50% |
 | `frontend/src/pages/TelemetryPage.tsx` | 🔴 20.00% | 🟢 100.00% | 🔴 0.00% | 🔴 20.00% |
 | `frontend/src/services/api.ts` | 🔴 53.84% | 🔴 54.16% | 🔴 50.00% | 🔴 53.84% |
@@ -297,14 +296,14 @@
 | `backend/src/cli/jsonl-watcher-base.ts` | 🔴 34.22% | 🟡 66.66% | 🔴 33.33% | 🔴 34.22% |
 | `backend/src/cli/pending-choice-events.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
 | `backend/src/cli/pending-choice-utils.ts` | 🔴 57.85% | 🟢 100.00% | 🔴 14.28% | 🔴 57.85% |
-| `backend/src/cli/session-monitor.ts` | 🟡 72.41% | 🟡 65.00% | 🟢 90.00% | 🟡 72.41% |
+| `backend/src/cli/session-monitor.ts` | 🟡 67.58% | 🟡 70.58% | 🟢 90.00% | 🟡 67.58% |
 | `backend/src/cli/session-pid-resolver.ts` | 🔴 24.71% | 🟢 100.00% | 🔴 25.00% | 🔴 24.71% |
 | `backend/src/cli/watcher-session-helpers.ts` | 🔴 21.27% | 🟢 100.00% | 🔴 25.00% | 🔴 21.27% |
 | `backend/src/config/config-loader.ts` | 🔴 59.13% | 🔴 50.00% | 🟡 66.66% | 🔴 59.13% |
 | `backend/src/config/slack-config-loader.ts` | 🔴 32.69% | 🟡 75.00% | 🟡 60.00% | 🔴 32.69% |
 | `backend/src/config/teams-config-loader.ts` | 🔴 36.17% | 🟡 75.00% | 🟡 60.00% | 🔴 36.17% |
 | `backend/src/constants/event-names.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
-| `backend/src/db/database.ts` | 🟡 66.66% | 🟡 64.19% | 🔴 51.28% | 🟡 66.66% |
+| `backend/src/db/database.ts` | 🟡 66.21% | 🟡 62.82% | 🔴 51.28% | 🟡 66.21% |
 | `backend/src/db/output-store.ts` | 🔴 36.08% | 🟢 100.00% | 🔴 37.50% | 🔴 36.08% |
 | `backend/src/db/pruning-job.ts` | 🔴 33.33% | 🟢 100.00% | 🔴 50.00% | 🔴 33.33% |
 | `backend/src/db/schema.ts` | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% | 🟢 100.00% |
