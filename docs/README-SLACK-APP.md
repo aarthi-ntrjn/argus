@@ -9,58 +9,59 @@ This guide walks through creating and configuring the Slack App that Argus uses 
 
 ---
 
-## Step 1: Create the App
+## Step 1: Create the App from Manifest
 
 1. Go to [api.slack.com/apps](https://api.slack.com/apps) and sign in with your workspace account.
-2. Click **Create New App** > **From scratch**.
-3. Name the app (e.g. `Argus`) and select your workspace.
-4. Click **Create App**.
+2. Click **Create New App** > **From an app manifest**.
+3. Select your workspace.
+4. Copy the manifest from `docs/slack-manifest.argus.json` in this repo, or copy/paste the manifest below into Slack:
+
+```json
+{
+  "_metadata": {
+    "major_version": 1,
+    "minor_version": 1
+  },
+  "display_information": {
+    "name": "Argus",
+    "description": "Argus session notifications and commands",
+    "background_color": "#1f2937"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Argus",
+      "always_online": true
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "channels:read",
+        "chat:write",
+        "im:history"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "bot_events": [
+        "app_mention",
+        "message.im"
+      ]
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": true,
+    "token_rotation_enabled": false
+  }
+}
+```
+
+5. Click **Next** and **Create**.
 
 ---
 
-## Step 2: Add Bot Token Scopes
-
-1. In the left sidebar, click **OAuth and Permissions**.
-2. Scroll down to **Scopes** > **Bot Token Scopes**.
-3. Click **Add an OAuth Scope** and add all four:
-
-   | Scope | Purpose |
-   | ----- | ------- |
-   | `chat:write` | Post messages and thread replies |
-   | `channels:read` | Look up channel information |
-   | `app_mentions:read` | Receive @mention events |
-   | `im:history` | Receive direct messages |
-
----
-
-## Step 3: Enable Socket Mode
-
-Socket Mode lets Argus receive incoming Slack messages without exposing a public HTTP endpoint. Argus connects outbound to Slack, so this works on a local machine with no port forwarding required.
-
-1. In the left sidebar, click **Socket Mode**.
-2. Toggle **Enable Socket Mode** on.
-3. When prompted, create an App-level token:
-   - Name it anything (e.g. `argus-socket`).
-   - Add the scope `connections:write`.
-   - Click **Generate**.
-4. Copy the `xapp-...` token. This is your **App Token** (go into the App Token field in Settings).
-
-> Socket Mode is only required for the Slack-to-Argus routing feature (asking the bot questions). If you only want outbound notifications, you can skip this step and omit `SLACK_APP_TOKEN`.
-
----
-
-## Step 4: Subscribe to Bot Events
-
-1. In the left sidebar, click **Event Subscriptions**.
-2. Toggle **Enable Events** on.
-3. Under **Subscribe to bot events**, add:
-   - `app_mention` - fires when a user @mentions the bot in a channel
-   - `message.im` - fires when a user sends the bot a direct message
-4. Click **Save Changes**.
-
----
-
-## Step 5: Install to Your Workspace
+## Step 2: Install to Your Workspace
 
 1. In the left sidebar, click **OAuth and Permissions**.
 2. Scroll to the top and click **Install to Workspace**.
@@ -69,7 +70,20 @@ Socket Mode lets Argus receive incoming Slack messages without exposing a public
 
 ---
 
-## Step 6: Get Your Channel ID
+## Step 3: Create an App-Level Token (for inbound commands)
+
+Socket Mode lets Argus receive incoming Slack messages without exposing a public HTTP endpoint.
+
+1. In the left sidebar, click **Basic Information**.
+2. Scroll to **App-Level Tokens** and click **Generate Token and Scopes**.
+3. Name it anything (e.g. `argus-socket`) and add scope `connections:write`.
+4. Click **Generate** and copy the `xapp-...` token. This is your `SLACK_APP_TOKEN`.
+
+> If you only need outbound notifications and do not need bot command replies, you can skip this step and leave `SLACK_APP_TOKEN` empty.
+
+---
+
+## Step 4: Get Your Channel ID
 
 Argus needs the channel ID (not the channel name) to post messages.
 
@@ -84,20 +98,20 @@ Argus needs the channel ID (not the channel name) to post messages.
 
 ---
 
-## Step 7: Configure Argus
+## Step 5: Configure Argus
 
 Open the Argus Settings dialog and go to the **Slack** section. Enter the values from the previous steps:
 
-- **Bot Token** (`xoxb-...`): from Step 5
+- **Bot Token** (`xoxb-...`): from Step 2
 - **App Token** (`xapp-...`): from Step 3 (optional, enables inbound commands)
-- **Channel ID**: from Step 6
+- **Channel ID**: from Step 4
 - **Owner Sender ID** (optional): restricts inbound command access to you only. To find it: in Slack, click your profile picture → **View profile** → the **⋯** menu → **Copy member ID**.
 
 Click **Save**. Config is stored in `~/.argus/slack.config`.
 
 ---
 
-## Step 8: Verify the Connection
+## Step 6: Verify the Connection
 
 After saving, connect the integration. You should see these lines in the server logs:
 
@@ -113,6 +127,29 @@ To confirm the bot is working, type this in your Slack channel:
 ```
 
 The bot should reply with a list of supported commands.
+
+---
+
+## Manual setup (without manifest)
+
+If you prefer not to use the manifest, configure the app manually:
+
+1. **Create app from scratch**: In [api.slack.com/apps](https://api.slack.com/apps), click **Create New App** > **From scratch**.
+2. **Add bot token scopes** under **OAuth and Permissions** > **Scopes** > **Bot Token Scopes**:
+
+   | Scope | Purpose |
+   | ----- | ------- |
+   | `chat:write` | Post messages and thread replies |
+   | `channels:read` | Look up channel information |
+   | `app_mentions:read` | Receive @mention events |
+   | `im:history` | Receive direct messages |
+
+3. **Enable event subscriptions** under **Event Subscriptions** and add bot events:
+   - `app_mention`
+   - `message.im`
+4. **Enable Socket Mode** under **Socket Mode**.
+
+Then continue from **Step 2** above.
 
 ---
 
@@ -192,5 +229,5 @@ You can use a partial session ID (first 8 characters) with the `status` command.
 - Check the logs for `[SlackListener]` lines. If Socket Mode failed to connect, the error will appear there.
 
 **Token was revoked**
-- Re-install the app to your workspace (Step 5) to generate a new Bot token.
+- Re-install the app to your workspace (Step 2) to generate a new Bot token.
 - For the App token, go to **Basic Information** > **App-Level Tokens** and regenerate it.

@@ -5,6 +5,7 @@ import { CodeBlock, Mono, ExternalA } from '../components/SetupPage/SetupPage';
 import type { SetupStep } from '../components/SetupPage/SetupPage';
 import teamsUrl from '../images/microsoft-teams.svg?url';
 import slackUrl from '../images/slack.svg?url';
+import slackManifest from '../../../docs/slack-manifest.argus.json';
 
 // ---------------------------------------------------------------------------
 // Teams content
@@ -206,107 +207,33 @@ const TEAMS_TROUBLESHOOTING: { symptom: string; fix: React.ReactNode }[] = [
 // Slack content
 // ---------------------------------------------------------------------------
 
-const SCOPES = [
-  ['chat:write', 'Post messages and thread replies'],
-  ['channels:read', 'Look up channel information'],
-  ['app_mentions:read', 'Receive @mention events'],
-  ['im:history', 'Receive direct messages'],
-] as const;
-
 const LOG_BLOCK = `[SlackNotifier] Initialized, posting to channel C01234ABCDE
 [SlackListener] Socket Mode connected, listening for app mentions and DMs`;
 
+const MANIFEST_BLOCK = JSON.stringify(slackManifest, null, 2);
+
 const SLACK_STEPS: SetupStep[] = [
   {
-    title: 'Create the app',
-    body: (
-      <ol className="space-y-1.5 text-sm text-gray-600 list-decimal pl-4">
-        <li>
-          Go to <ExternalA href="https://api.slack.com/apps">api.slack.com/apps</ExternalA> and sign
-          in.
-        </li>
-        <li>
-          Click <strong>Create New App</strong> &rarr; <strong>From scratch</strong>.
-        </li>
-        <li>
-          Name the app (e.g. <Mono>Argus</Mono>) and select your workspace.
-        </li>
-        <li>
-          Click <strong>Create App</strong>.
-        </li>
-      </ol>
-    ),
-  },
-  {
-    title: 'Add bot token scopes',
+    title: 'Create the app from manifest',
     body: (
       <>
-        <ol className="space-y-1.5 text-sm text-gray-600 list-decimal pl-4 mb-3">
+        <ol className="space-y-1.5 text-sm text-gray-600 list-decimal pl-4 mb-2">
           <li>
-            In the left sidebar, click <strong>OAuth and Permissions</strong>.
+            Go to <ExternalA href="https://api.slack.com/apps">api.slack.com/apps</ExternalA> and
+            sign in.
           </li>
           <li>
-            Scroll to <strong>Scopes &rarr; Bot Token Scopes</strong> and add these four:
+            Click <strong>Create New App</strong> &rarr; <strong>From an app manifest</strong>.
           </li>
+          <li>Select your workspace.</li>
+          <li>
+            Copy and paste the manifest from <Mono>docs/slack-manifest.argus.json</Mono> in this repo,
+            or copy/paste the manifest below.
+          </li>
+          <li>Click Create.</li>
         </ol>
-        <table className="w-full text-xs border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left font-medium text-gray-500 py-1.5 pr-6 w-2/5">Scope</th>
-              <th className="text-left font-medium text-gray-500 py-1.5">Purpose</th>
-            </tr>
-          </thead>
-          <tbody>
-            {SCOPES.map(([scope, purpose]) => (
-              <tr key={scope} className="border-b border-gray-100">
-                <td className="py-1.5 pr-6 font-mono text-gray-800">{scope}</td>
-                <td className="py-1.5 text-gray-600">{purpose}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <CodeBlock value={MANIFEST_BLOCK} />
       </>
-    ),
-  },
-  {
-    title: 'Enable Socket Mode',
-    body: (
-      <>
-        <ol className="space-y-1.5 text-sm text-gray-600 list-decimal pl-4 mb-3">
-          <li>
-            Click <strong>Socket Mode</strong> in the sidebar and toggle it on.
-          </li>
-          <li>
-            Create an App-level token: name it (e.g. <Mono>argus-socket</Mono>), add scope{' '}
-            <Mono>connections:write</Mono>, click <strong>Generate</strong>.
-          </li>
-          <li>
-            Copy the <Mono>xapp-...</Mono> token — this is your <strong>App Token</strong>.
-          </li>
-        </ol>
-        <p className="text-xs text-gray-500">
-          Skip this step if you only need outbound notifications and don't need the bot to respond
-          to commands.
-        </p>
-      </>
-    ),
-  },
-  {
-    title: 'Subscribe to bot events',
-    body: (
-      <ol className="space-y-1.5 text-sm text-gray-600 list-decimal pl-4">
-        <li>
-          Click <strong>Event Subscriptions</strong> in the sidebar and toggle{' '}
-          <strong>Enable Events</strong> on.
-        </li>
-        <li>
-          Under <strong>Subscribe to bot events</strong>, add <Mono>app_mention</Mono> and{' '}
-          <Mono>message.im</Mono>.
-        </li>
-        <li>
-          Click <strong>Save Changes</strong>.
-        </li>
-      </ol>
     ),
   },
   {
@@ -314,7 +241,7 @@ const SLACK_STEPS: SetupStep[] = [
     body: (
       <ol className="space-y-1.5 text-sm text-gray-600 list-decimal pl-4">
         <li>
-          Click <strong>OAuth and Permissions</strong> in the sidebar.
+          In the left sidebar, click <strong>OAuth and Permissions</strong>.
         </li>
         <li>
           Click <strong>Install to Workspace</strong> and allow the permissions.
@@ -327,6 +254,28 @@ const SLACK_STEPS: SetupStep[] = [
     ),
   },
   {
+    title: 'Create an App Token',
+    body: (
+      <>
+        <ol className="space-y-1.5 text-sm text-gray-600 list-decimal pl-4 mb-3">
+          <li>
+            In the left sidebar, click <strong>Basic Information</strong>.
+          </li>
+          <li>
+            Under <strong>App-Level Tokens</strong>, click <strong>Generate Token and Scopes</strong>.
+          </li>
+          <li>
+            Add <Mono>connections:write</Mono>, click <strong>Generate</strong>, and copy the{' '}
+            <Mono>xapp-...</Mono> token.
+          </li>
+        </ol>
+        <p className="text-xs text-gray-400">
+          Optional: if you only need outbound notifications, you can leave App Token empty.
+        </p>
+      </>
+    ),
+  },
+  {
     title: 'Get your channel ID',
     body: (
       <>
@@ -336,7 +285,7 @@ const SLACK_STEPS: SetupStep[] = [
             Right-click the channel name &rarr; <strong>View channel details</strong>.
           </li>
           <li>
-            Scroll to the bottom and copy the Channel ID (format: <Mono>C01234ABCDE</Mono>).
+            Copy the Channel ID (format: <Mono>C01234ABCDE</Mono>).
           </li>
           <li>Invite the bot to the channel:</li>
         </ol>
@@ -349,18 +298,21 @@ const SLACK_STEPS: SetupStep[] = [
     body: (
       <>
         <p className="text-sm text-gray-600 mb-2">
-          Open the Argus Settings dialog and go to the <strong>Slack</strong> section. Enter:
+          Open Settings &rarr; <strong>Slack</strong> and enter:
         </p>
         <ul className="space-y-1 text-sm text-gray-600 list-disc pl-4 mb-3">
           <li>
-            <strong>Bot Token</strong> (<Mono>xoxb-...</Mono>) from the OAuth &amp; Permissions page
+            <strong>Bot Token</strong> (<Mono>xoxb-...</Mono>) from Step 2
           </li>
           <li>
-            <strong>Channel ID</strong> of the channel where Argus will post
+            <strong>App Token</strong> (<Mono>xapp-...</Mono>) from Step 3 (optional)
           </li>
           <li>
-            <strong>App Token</strong> (<Mono>xapp-...</Mono>) for inbound commands via Socket Mode
-            (optional)
+            <strong>Channel ID</strong> from Step 4
+          </li>
+          <li>
+            <strong>Owner Sender ID</strong> (optional): in Slack, open your profile and copy member
+            ID (<Mono>U...</Mono>)
           </li>
         </ul>
         <p className="text-sm text-gray-600">
@@ -373,11 +325,9 @@ const SLACK_STEPS: SetupStep[] = [
     title: 'Verify the connection',
     body: (
       <>
-        <p className="text-sm text-gray-600 mb-1">Restart Argus and check the server logs for:</p>
+        <p className="text-sm text-gray-600 mb-1">Check the server logs for:</p>
         <CodeBlock value={LOG_BLOCK} />
-        <p className="text-sm text-gray-600 mt-3 mb-1">
-          Type this in your Slack channel to confirm the bot responds:
-        </p>
+        <p className="text-sm text-gray-600 mt-3 mb-1">Then send:</p>
         <CodeBlock value="@Argus help" />
       </>
     ),
