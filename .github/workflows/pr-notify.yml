@@ -1,0 +1,230 @@
+# Posts a Teams and/or Slack notification whenever a pull request is opened.
+# Triggered on: PR opened (including drafts by default).
+#
+# Requirements:
+#   - TEAMS_WEBHOOK_URL secret (optional) — Power Automate webhook URL
+#   - SLACK_WEBHOOK_URL secret (optional) — Slack incoming webhook URL
+
+name: PR Notification
+
+on:
+  pull_request:
+    types: [opened]
+
+# ── Notification config ──────────────────────────────────────────────────────
+# Edit these values to change notification behaviour without touching the steps.
+env:
+  NOTIFY_ON_DRAFT: 'true'        # Set to 'false' to skip notifications for draft PRs
+  TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+# ────────────────────────────────────────────────────────────────────────────
+
+permissions:
+  pull-requests: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check notification config
+        id: config
+        run: |
+          DRAFT="${{ github.event.pull_request.draft }}"
+          if [[ "$DRAFT" == "true" && "$NOTIFY_ON_DRAFT" != "true" ]]; then
+            echo "should_notify=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_notify=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write PR body to file
+        if: steps.config.outputs.should_notify == 'true'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "$PR_BODY" > pr-body.txt
+
+      - name: Notify Teams
+        if: steps.config.outputs.should_notify == 'true' && env.TEAMS_WEBHOOK_URL != ''
+        env:
+          PR_TITLE:     ${{ github.event.pull_request.title }}
+          PR_NUMBER:    ${{ github.event.pull_request.number }}
+          PR_AUTHOR:    ${{ github.event.pull_request.user.login }}
+          PR_URL:       ${{ github.event.pull_request.html_url }}
+          PR_HEAD:      ${{ github.event.pull_request.head.ref }}
+          PR_BASE:      ${{ github.event.pull_request.base.ref }}
+          PR_DRAFT:     ${{ github.event.pull_request.draft }}
+          PR_LABELS:    ${{ join(github.event.pull_request.labels.*.name, ', ') }}
+          PR_COMMITS:   ${{ github.event.pull_request.commits }}
+          PR_FILES:     ${{ github.event.pull_request.changed_files }}
+          PR_ADDITIONS: ${{ github.event.pull_request.additions }}
+          PR_DELETIONS: ${{ github.event.pull_request.deletions }}
+          PR_REPO:      ${{ github.repository }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, urllib.request, urllib.error
+
+          draft     = os.environ["PR_DRAFT"] == "true"
+          title     = os.environ["PR_TITLE"]
+          number    = os.environ["PR_NUMBER"]
+          author    = os.environ["PR_AUTHOR"]
+          url       = os.environ["PR_URL"]
+          head      = os.environ["PR_HEAD"]
+          base      = os.environ["PR_BASE"]
+          labels    = os.environ["PR_LABELS"]
+          commits   = os.environ["PR_COMMITS"]
+          files     = os.environ["PR_FILES"]
+          additions = os.environ["PR_ADDITIONS"]
+          deletions = os.environ["PR_DELETIONS"]
+          repo      = os.environ["PR_REPO"]
+
+          try:
+              with open("pr-body.txt") as f:
+                  body_text = f.read().strip()
+          except Exception:
+              body_text = ""
+          body_excerpt = (body_text[:200] + "...") if len(body_text) > 200 else body_text
+
+          heading = f"{'[Draft] ' if draft else ''}PR #{number}: {title}"
+
+          facts = [
+              {"title": "Author",    "value": author},
+              {"title": "Branch",    "value": f"{head} → {base}"},
+              {"title": "Repo",      "value": repo},
+              {"title": "Status",    "value": "Draft" if draft else "Ready for review"},
+              {"title": "Commits",   "value": commits},
+              {"title": "Files",     "value": files},
+              {"title": "Changes",   "value": f"+{additions} / -{deletions}"},
+              {"title": "Labels",    "value": labels if labels else "—"},
+          ]
+
+          card_body = [
+              {
+                  "type": "TextBlock",
+                  "size": "Medium",
+                  "weight": "Bolder",
+                  "text": heading,
+                  "wrap": True,
+              },
+          ]
+
+          if body_excerpt:
+              card_body.append({
+                  "type": "TextBlock",
+                  "text": body_excerpt,
+                  "wrap": True,
+                  "isSubtle": True,
+              })
+
+          card_body.append({"type": "FactSet", "separator": True, "facts": facts})
+
+          card = {
+              "type":    "AdaptiveCard",
+              "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+              "version": "1.4",
+              "body":    card_body,
+              "actions": [
+                  {"type": "Action.OpenUrl", "title": "View Pull Request", "url": url},
+              ],
+          }
+
+          req = urllib.request.Request(
+              os.environ["TEAMS_WEBHOOK_URL"],
+              data=json.dumps(card).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              urllib.request.urlopen(req)
+              print(f"Teams notified for PR #{number}")
+          except urllib.error.HTTPError as e:
+              print(f"HTTP {e.code}: {e.reason} — {e.read().decode()}")
+              raise
+          EOF
+
+      - name: Notify Slack
+        if: steps.config.outputs.should_notify == 'true' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          PR_TITLE:     ${{ github.event.pull_request.title }}
+          PR_NUMBER:    ${{ github.event.pull_request.number }}
+          PR_AUTHOR:    ${{ github.event.pull_request.user.login }}
+          PR_URL:       ${{ github.event.pull_request.html_url }}
+          PR_HEAD:      ${{ github.event.pull_request.head.ref }}
+          PR_BASE:      ${{ github.event.pull_request.base.ref }}
+          PR_DRAFT:     ${{ github.event.pull_request.draft }}
+          PR_LABELS:    ${{ join(github.event.pull_request.labels.*.name, ', ') }}
+          PR_COMMITS:   ${{ github.event.pull_request.commits }}
+          PR_FILES:     ${{ github.event.pull_request.changed_files }}
+          PR_ADDITIONS: ${{ github.event.pull_request.additions }}
+          PR_DELETIONS: ${{ github.event.pull_request.deletions }}
+          PR_REPO:      ${{ github.repository }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, urllib.request
+
+          draft     = os.environ["PR_DRAFT"] == "true"
+          title     = os.environ["PR_TITLE"]
+          number    = os.environ["PR_NUMBER"]
+          author    = os.environ["PR_AUTHOR"]
+          url       = os.environ["PR_URL"]
+          head      = os.environ["PR_HEAD"]
+          base      = os.environ["PR_BASE"]
+          labels    = os.environ["PR_LABELS"]
+          commits   = os.environ["PR_COMMITS"]
+          files     = os.environ["PR_FILES"]
+          additions = os.environ["PR_ADDITIONS"]
+          deletions = os.environ["PR_DELETIONS"]
+          repo      = os.environ["PR_REPO"]
+
+          try:
+              with open("pr-body.txt") as f:
+                  body_text = f.read().strip()
+          except Exception:
+              body_text = ""
+          body_excerpt = (body_text[:200] + "...") if len(body_text) > 200 else body_text
+
+          status = "Draft PR" if draft else "New PR"
+          header = f"{status} #{number}: {title}"
+
+          fields = [
+              {"type": "mrkdwn", "text": f"*Author:* {author}"},
+              {"type": "mrkdwn", "text": f"*Branch:* `{head}` → `{base}`"},
+              {"type": "mrkdwn", "text": f"*Repo:* {repo}"},
+              {"type": "mrkdwn", "text": f"*Status:* {'Draft' if draft else 'Ready for review'}"},
+              {"type": "mrkdwn", "text": f"*Commits:* {commits}"},
+              {"type": "mrkdwn", "text": f"*Files:* {files}"},
+              {"type": "mrkdwn", "text": f"*Changes:* +{additions} / -{deletions}"},
+              {"type": "mrkdwn", "text": f"*Labels:* {labels if labels else '—'}"},
+          ]
+
+          blocks = [
+              {"type": "header",  "text": {"type": "plain_text", "text": header}},
+              {"type": "section", "fields": fields},
+          ]
+
+          if body_excerpt:
+              blocks.append({
+                  "type": "section",
+                  "text": {"type": "mrkdwn", "text": body_excerpt},
+              })
+
+          blocks.append({
+              "type": "actions",
+              "elements": [
+                  {
+                      "type": "button",
+                      "text": {"type": "plain_text", "text": "View Pull Request"},
+                      "url": url,
+                  }
+              ],
+          })
+
+          payload = {"blocks": blocks}
+          req = urllib.request.Request(
+              os.environ["SLACK_WEBHOOK_URL"],
+              data=json.dumps(payload).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          urllib.request.urlopen(req)
+          print(f"Slack notified for PR #{number}")
+          EOF
