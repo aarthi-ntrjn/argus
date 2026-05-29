@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.13] - 2026-05-28
+
+### Fixed
+
+- **Copilot task_complete sentinel**: Newer Copilot CLI versions emit a `task_complete` tool call at the end of each turn. Argus was parsing it as a real `tool_use` row, causing the session card to show a tool-in-progress overlay after the AI had already finished responding. Both the `tool_use` and its matching `tool_result` are now suppressed. Fully backward-compatible with older CLI versions that do not emit this event.
+
+### Added
+
+- **PR notification workflow**: GitHub Actions workflow that posts Teams and Slack notifications when a pull request is opened or updated.
+- **Security audit automation**: Daily workflow that creates or updates a GitHub Issue with the security audit results, and assigns the Copilot coding agent to it.
+- **Coverage workflow**: Automated test coverage runs with results posted to Teams and Slack, including a table layout for notification messages.
+
+### Changed
+
+- **Slack setup guide**: Restored manifest-first setup docs, added owner sender ID instructions, linked the manifest file directly from setup steps, and deduplicated guide content.
+
 ## [1.0.12] - 2026-05-24
 
 ### Added
